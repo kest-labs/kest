@@ -1,7 +1,7 @@
 # 🦅 Kest CLI 
 
-> **The CLI-first API Testing Tool for Vibe Coding.**  
-> *Instant testing, automatic recording, and effortless replay.*
+> **Keep Every Step Tested.**  
+> *The CLI-first API Testing Tool for Vibe Coding.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kest-lab/kest-cli)](https://goreportcard.com/report/github.com/kest-lab/kest-cli)
