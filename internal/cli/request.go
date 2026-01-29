@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kest-dev/cli/internal/client"
-	"github.com/kest-dev/cli/internal/config"
-	"github.com/kest-dev/cli/internal/output"
-	"github.com/kest-dev/cli/internal/storage"
-	"github.com/kest-dev/cli/internal/variable"
+	"github.com/kest-lab/kest-cli/internal/client"
+	"github.com/kest-lab/kest-cli/internal/config"
+	"github.com/kest-lab/kest-cli/internal/output"
+	"github.com/kest-lab/kest-cli/internal/storage"
+	"github.com/kest-lab/kest-cli/internal/variable"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 )

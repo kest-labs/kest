@@ -1,4 +1,4 @@
-module github.com/kest-dev/cli
+module github.com/kest-lab/kest-cli
 
 go 1.25.5
 

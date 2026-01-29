@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kest-dev/cli/internal/config"
-	"github.com/kest-dev/cli/internal/storage"
+	"github.com/kest-lab/kest-cli/internal/config"
+	"github.com/kest-lab/kest-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 

@@ -9,7 +9,7 @@ Kest CLI 是一个专为开发者设计的 **CLI-first** API 测试工具。它�
 确保你已经安装了 Go 环境，然后运行：
 
 ```bash
-go install github.com/kest-dev/cli/cmd/kest@latest
+go install github.com/kest-lab/kest-cli/cmd/kest@latest
 ```
 
 安装完成后，请确保 `$(go env GOPATH)/bin` 已加入你的系统 `PATH`。
