@@ -9,12 +9,18 @@ Kest is designed for "Vibe Coding"—a flow state where AI and developers collab
 - **Automation**: Easy to chain requests using variables.
 
 ## Core Interactions
-- **Testing**: Use `kest get|post|put|delete` for all manual testing.
+- **REST Testing**: Use `kest get|post|put|delete` for all manual testing.
+- **LLM Streaming**: Use `--stream` (or `-S`) to test real-time AI responses.
+- **gRPC Testing**: Use `kest grpc` with a `.proto` file to test gRPC services.
+- **Scenario Management**: Use `kest run` to execute `.kest` scenario files.
+- **Automatic Generation**: Use `kest generate` to bootstrap tests from OpenAPI/Swagger specs.
 - **Capturing**: Use `-c var=path` to store response data.
 - **Asserting**: Use `-a key=val` to define expectations.
+- **Debugging**: Use `-v` for verbose output or `kest show last` for history.
 - **Verifying**: Use `kest replay last --diff` after every code change.
 
 ## AI Instructions
 1. When asked to "test the API", try to use `kest` commands.
-2. If an API call fails, run `kest show last` to get the full debug info.
+2. If an API call fails, run `kest show last -v` to get the full debug info.
 3. If you need to link two API calls, use the capture `-c` and interpolation `{{var}}` features.
+4. For LLM stream verification, always use the `--stream` flag to ensure the AI understands the chunked response format.

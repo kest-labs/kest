@@ -44,6 +44,12 @@ kest get /search -q "q=kest" -q "page=1"
 
 # 使用简写 (如果启用了别名，可选)
 kest p /users -d '{"email": "test@example.com"}'
+
+# 开启详细模式 (查看完整 Headers)
+kest get /users/1 -v
+
+# 测试 LLM 流式响应 (Server-Sent Events)
+kest post /chat/completions -d '{"stream": true, ...}' --stream
 ```
 
 #### 在 Vibe Coding 中如何使用？
@@ -96,11 +102,56 @@ kest get /orders/{{last_id}} -a "status=200" -a "body.status=pending"
 
 ---
 
-## 4. 历史记录与追溯 (History & Tracing)
+## 4. gRPC 支持
+
+Kest 通过动态反射支持 gRPC 测试，无需预编译。
+
+```bash
+# 调用 gRPC 方法
+# 格式: kest grpc [地址] [服务/方法] -p [proto文件] -d [JSON参数]
+kest grpc localhost:50051 User/GetInfo -p user.proto -d '{"id": 1}'
+
+# 同样支持 Verbose 模式
+kest grpc localhost:50051 User/GetInfo -p user.proto -d '{}' -v
+```
+
+---
+
+## 5. 场景脚本与自动生成 (Scenarios)
+
+当你有一连串的接口需要批量执行时，可以使用 `.kest` 脚本。
+
+### 5.1 场景脚本示例 (api.kest)
+```text
+# 这是一个场景文件
+# 登录并捕获 Token
+POST /login -d '{"user":"admin"}' -c "token=auth.token"
+
+# 使用 Token 获取配置
+GET /config -H "Authorization: Bearer {{token}}" -a "status=200"
+
+# 测试流式生成
+POST /generate -d '{"model":"gpt"}' --stream
+```
+
+### 5.2 执行场景
+```bash
+kest run api.kest
+```
+
+### 5.3 从 OpenAPI 自动生成
+你可以快速根据 Swagger/OpenAPI 定义生成一个初步的场景脚本。
+```bash
+kest generate --from-openapi swagger.json -o project.kest
+```
+
+---
+
+## 6. 历史记录与追溯 (History & Tracing)
 
 Kest 最强大的功能之一是它会自动记录你每一次的敲击。
 
-### 3.1 查看历史
+### 6.1 查看历史
 默认情况下，`history` 仅显示当前项目的记录。
 
 ```bash
@@ -114,7 +165,7 @@ kest history --global
 kest history -n 50
 ```
 
-### 3.2 查看详情
+### 6.2 查看详情
 你可以查看任何一条历史记录的完整 Request 和 Response（包括全部 Headers 和格式化后的 Body）。
 
 ```bash
@@ -127,16 +178,16 @@ kest show last
 
 ---
 
-## 4. 回放与对比 (Replay & Diff)
+## 7. 回放与对比 (Replay & Diff)
 
 当你修改了代码，想验证接口结果是否发生非预期变化时，可以使用 `replay`。
 
-### 4.1 重新执行
+### 7.1 重新执行
 ```bash
 kest replay 42
 ```
 
-### 4.2 结果对比 (Visual Diff)
+### 7.2 结果对比 (Visual Diff)
 Kest 会自动抓取回放的新结果，并与旧记录进行 Body 级别的对比。
 
 ```bash
@@ -145,11 +196,11 @@ kest replay 42 --diff
 
 ---
 
-## 5. 环境管理 (Environments)
+## 8. 环境管理 (Environments)
 
 在 `.kest/config.yaml` 中你可以定义多个环境（如 `dev`, `staging`, `prod`）。
 
-### 5.1 查看与切换环境
+### 8.1 查看与切换环境
 ```bash
 # 列出所有环境
 kest env list
@@ -162,7 +213,7 @@ kest env use staging
 
 ---
 
-## 6. 配置参考 (Config.yaml)
+## 9. 配置参考 (Config.yaml)
 
 ```yaml
 version: 1
@@ -185,7 +236,7 @@ active_env: dev
 
 ---
 
-## 7. 数据存储位置
+## 10. 数据存储位置
 
 *   **全局数据库**: `~/.kest/records.db` (存储所有测试记录)
 *   **全局配置**: `~/.kest/config.yaml`

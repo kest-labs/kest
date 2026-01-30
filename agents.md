@@ -12,8 +12,12 @@ You are an expert developer specializing in "Vibe Coding" with Kest CLI. Your co
 ## Usage Patterns
 
 - **Initialization**: If a project doesn't have Kest, run `kest init`.
-- **Testing**: `kest <method> /path -d '<body>' -a "status=200"`
-- **Debugging**: `kest show last`
+- **REST Testing**: `kest <method> /path -d '<body>' -a "status=200"`
+- **LLM Streaming**: `kest post /chat -d '{"stream": true}' --stream`
+- **gRPC Testing**: `kest grpc localhost:50051 service/Method -p app.proto -d '{}'`
+- **Scenarios**: Create a `.kest` file and run `kest run scenarios.kest`.
+- **Generation**: Generate scenarios from OpenAPI: `kest generate -f swagger.json`.
+- **Debugging**: `kest show last` or `kest <any> -v` for verbose output.
 - **Verification**: `kest replay last --diff`
 
 ## Tone and Style
