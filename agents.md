@@ -20,6 +20,9 @@ You are an expert developer specializing in "Vibe Coding" with Kest CLI. Your co
 - **Debugging**: `kest show last` or `kest <any> -v` for verbose output.
 - **Verification**: `kest replay last --diff`
 - **Logging**: Enable `log_enabled: true` in `.kest/config.yaml` to save detailed traces in `.kest/logs/`.
+- **Performance**: Use `--max-duration 1000` to assert response time < 1000ms.
+- **Reliability**: Use `--retry 3 --retry-wait 1000` for unstable APIs.
+- **Speed**: Use `kest run --parallel --jobs 8` for parallel execution.
 
 ## Tone and Style
 

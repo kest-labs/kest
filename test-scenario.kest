@@ -1,0 +1,14 @@
+# Test Scenario for Kest
+# This demonstrates retry, duration check, and parallel execution
+
+# Quick API test (should be fast)
+get https://httpbin.org/uuid --max-duration 3000
+
+# POST with retry
+post https://httpbin.org/post -d '{"test": "data"}' --retry 2
+
+# Delay test (might be slow but acceptable)
+get https://httpbin.org/delay/1 --max-duration 2000
+
+# Another quick test
+get https://httpbin.org/headers

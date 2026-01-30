@@ -19,27 +19,33 @@ import (
 )
 
 type RequestOptions struct {
-	Method   string
-	URL      string
-	Data     string
-	Headers  []string
-	Queries  []string
-	Captures []string
-	Asserts  []string
-	Verbose  bool
-	Stream   bool
-	NoRecord bool
+	Method      string
+	URL         string
+	Data        string
+	Headers     []string
+	Queries     []string
+	Captures    []string
+	Asserts     []string
+	Verbose     bool
+	Stream      bool
+	NoRecord    bool
+	MaxDuration int // Max duration in milliseconds
+	Retry       int // Number of retries (0 = no retry)
+	RetryWait   int // Wait time between retries in milliseconds
 }
 
 var (
-	reqData     string
-	reqHeaders  []string
-	reqQueries  []string
-	reqCaptures []string
-	reqAsserts  []string
-	reqVerbose  bool
-	reqStream   bool
-	reqNoRec    bool
+	reqData        string
+	reqHeaders     []string
+	reqQueries     []string
+	reqCaptures    []string
+	reqAsserts     []string
+	reqVerbose     bool
+	reqStream      bool
+	reqNoRec       bool
+	reqMaxDuration int
+	reqRetry       int
+	reqRetryWait   int
 )
 
 func init() {
@@ -57,16 +63,19 @@ func createRequestCmd(method string) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return ExecuteRequest(RequestOptions{
-				Method:   method,
-				URL:      args[0],
-				Data:     reqData,
-				Headers:  reqHeaders,
-				Queries:  reqQueries,
-				Captures: reqCaptures,
-				Asserts:  reqAsserts,
-				Verbose:  reqVerbose,
-				Stream:   reqStream,
-				NoRecord: reqNoRec,
+				Method:      method,
+				URL:         args[0],
+				Data:        reqData,
+				Headers:     reqHeaders,
+				Queries:     reqQueries,
+				Captures:    reqCaptures,
+				Asserts:     reqAsserts,
+				Verbose:     reqVerbose,
+				Stream:      reqStream,
+				NoRecord:    reqNoRec,
+				MaxDuration: reqMaxDuration,
+				Retry:       reqRetry,
+				RetryWait:   reqRetryWait,
 			})
 		},
 	}
@@ -79,6 +88,9 @@ func createRequestCmd(method string) *cobra.Command {
 	cmd.Flags().BoolVarP(&reqVerbose, "verbose", "v", false, "Show detailed request/response info")
 	cmd.Flags().BoolVarP(&reqStream, "stream", "S", false, "Handle streaming response")
 	cmd.Flags().BoolVar(&reqNoRec, "no-record", false, "Do not record this request")
+	cmd.Flags().IntVar(&reqMaxDuration, "max-duration", 0, "Max duration in milliseconds (0 = no limit)")
+	cmd.Flags().IntVar(&reqRetry, "retry", 0, "Number of retries on failure")
+	cmd.Flags().IntVar(&reqRetryWait, "retry-wait", 1000, "Wait time between retries in milliseconds")
 
 	return cmd
 }
@@ -156,17 +168,50 @@ func ExecuteRequest(opts RequestOptions) error {
 		}
 	}
 
-	resp, err := client.Execute(client.RequestOptions{
-		Method:  strings.ToUpper(method),
-		URL:     finalURL,
-		Headers: headers,
-		Body:    body,
-		Timeout: time.Duration(30) * time.Second,
-		Stream:  opts.Stream,
-	})
-	if err != nil {
-		fmt.Printf("❌ Request Failed: %v\n", err)
-		return err
+	// Execute request with retry logic
+	var resp *client.Response
+	var err error
+	maxRetries := opts.Retry
+	if maxRetries < 0 {
+		maxRetries = 0
+	}
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			fmt.Printf("⏱️  Retry attempt %d/%d (waiting %dms)...\n", attempt, maxRetries, opts.RetryWait)
+			time.Sleep(time.Duration(opts.RetryWait) * time.Millisecond)
+		}
+
+		resp, err = client.Execute(client.RequestOptions{
+			Method:  strings.ToUpper(method),
+			URL:     finalURL,
+			Headers: headers,
+			Body:    body,
+			Timeout: time.Duration(30) * time.Second,
+			Stream:  opts.Stream,
+		})
+
+		// Check duration assertion
+		if err == nil && opts.MaxDuration > 0 {
+			durationMs := resp.Duration.Milliseconds()
+			if durationMs > int64(opts.MaxDuration) {
+				err = fmt.Errorf("duration assertion failed: %dms > %dms", durationMs, opts.MaxDuration)
+			}
+		}
+
+		// Break if successful or no more retries
+		if err == nil {
+			if attempt > 0 {
+				fmt.Printf("✅ Request succeeded on retry %d\n", attempt)
+			}
+			break
+		}
+
+		// If last attempt, show error
+		if attempt == maxRetries {
+			fmt.Printf("❌ Request Failed after %d attempts: %v\n", attempt+1, err)
+			return err
+		}
 	}
 
 	// Logging
