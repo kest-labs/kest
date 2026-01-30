@@ -10,6 +10,7 @@ import (
 
 	"github.com/kest-lab/kest-cli/internal/client"
 	"github.com/kest-lab/kest-cli/internal/config"
+	"github.com/kest-lab/kest-cli/internal/logger"
 	"github.com/kest-lab/kest-cli/internal/output"
 	"github.com/kest-lab/kest-cli/internal/storage"
 	"github.com/kest-lab/kest-cli/internal/variable"
@@ -167,6 +168,9 @@ func ExecuteRequest(opts RequestOptions) error {
 		fmt.Printf("❌ Request Failed: %v\n", err)
 		return err
 	}
+
+	// Logging
+	logger.LogRequest(method, finalURL, headers, string(body), resp.Status, resp.Headers, string(resp.Body), resp.Duration)
 
 	if opts.Verbose || resp.Status >= 400 {
 		fmt.Printf("\n--- Debug Info ---\n")

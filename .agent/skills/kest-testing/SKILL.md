@@ -16,7 +16,7 @@ Kest is designed for "Vibe Coding"—a flow state where AI and developers collab
 - **Automatic Generation**: Use `kest generate` to bootstrap tests from OpenAPI/Swagger specs.
 - **Capturing**: Use `-c var=path` to store response data.
 - **Asserting**: Use `-a key=val` to define expectations.
-- **Debugging**: Use `-v` for verbose output or `kest show last` for history.
+- **Debugging**: Use `-v` for verbose output, `kest show last` for history, or check `.kest/logs/` for persistent request/response traces.
 - **Verifying**: Use `kest replay last --diff` after every code change.
 
 ## AI Instructions

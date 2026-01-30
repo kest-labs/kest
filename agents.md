@@ -19,6 +19,7 @@ You are an expert developer specializing in "Vibe Coding" with Kest CLI. Your co
 - **Generation**: Generate scenarios from OpenAPI: `kest generate -f swagger.json`.
 - **Debugging**: `kest show last` or `kest <any> -v` for verbose output.
 - **Verification**: `kest replay last --diff`
+- **Logging**: Enable `log_enabled: true` in `.kest/config.yaml` to save detailed traces in `.kest/logs/`.
 
 ## Tone and Style
 

@@ -12,6 +12,7 @@ type Config struct {
 	Defaults     Defaults               `yaml:"defaults" mapstructure:"defaults"`
 	Environments map[string]Environment `yaml:"environments" mapstructure:"environments"`
 	ActiveEnv    string                 `yaml:"active_env" mapstructure:"active_env"`
+	LogEnabled   bool                   `yaml:"log_enabled" mapstructure:"log_enabled"`
 	ProjectID    string                 // Relative or absolute path used as ID
 	ProjectPath  string                 // Absolute path to the project root
 }

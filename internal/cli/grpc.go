@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kest-lab/kest-cli/internal/client"
+	"github.com/kest-lab/kest-cli/internal/logger"
 	"github.com/kest-lab/kest-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -37,6 +38,9 @@ var grpcCmd = &cobra.Command{
 			fmt.Printf("❌ gRPC Request Failed: %v\n", err)
 			return err
 		}
+
+		// Logging
+		logger.LogRequest("gRPC", addr+"/"+method, nil, grpcData, 200, nil, string(resp.Data), resp.Duration)
 
 		if grpcVerbose {
 			fmt.Printf("\n--- Debug Info ---\n")
