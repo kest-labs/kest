@@ -216,6 +216,17 @@ cat .kest/logs/2026-01-30_00-30-16_GET_api_users.log
 Kest stores everything locally on your machine:
 - **Database**: `~/.kest/records.db` (SQLite)
 - **Config**: `~/.kest/config.yaml`
+- **Logs**: `.kest/logs/` (project) or `~/.kest/logs/` (global)
+
+---
+
+## 📖 Documentation
+
+- **[SCENARIO_GUIDE.md](SCENARIO_GUIDE.md)** - Complete guide on creating and managing test scenarios
+- **[NEW_FEATURES.md](NEW_FEATURES.md)** - Detailed documentation of new features
+- **[GUIDE.md](GUIDE.md)** - User guide (Chinese)
+- **[FAQ.md](FAQ.md)** - Frequently asked questions
+- **[UPDATE_SUMMARY.md](UPDATE_SUMMARY.md)** - Latest update summary
 
 ---
 
