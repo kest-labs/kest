@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/kest-lab/kest-cli/internal/client"
+	"github.com/kest-lab/kest-cli/internal/config"
 	"github.com/kest-lab/kest-cli/internal/logger"
 	"github.com/kest-lab/kest-cli/internal/output"
+	"github.com/kest-lab/kest-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +42,31 @@ var grpcCmd = &cobra.Command{
 		}
 
 		// Logging
-		logger.LogRequest("gRPC", addr+"/"+method, nil, grpcData, 200, nil, string(resp.Data), resp.Duration)
+		logger.LogRequest("GRPC", addr+"/"+method, nil, grpcData, 200, nil, string(resp.Data), resp.Duration)
+
+		// Save to history database
+		conf, _ := config.LoadConfig()
+		store, storeErr := storage.NewStore()
+		if storeErr == nil {
+			projectID := ""
+			env := "default"
+			if conf != nil {
+				projectID = conf.ProjectID
+				env = conf.ActiveEnv
+			}
+
+			record := &storage.Record{
+				Method:         "GRPC",
+				URL:            addr + "/" + method,
+				RequestBody:    grpcData,
+				ResponseBody:   string(resp.Data),
+				ResponseStatus: 200,
+				DurationMs:     resp.Duration.Milliseconds(),
+				Project:        projectID,
+				Environment:    env,
+			}
+			_, _ = store.SaveRecord(record)
+		}
 
 		if grpcVerbose {
 			fmt.Printf("\n--- Debug Info ---\n")
