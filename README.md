@@ -28,15 +28,14 @@ It combines the simplicity of `curl` with the power of **variable capturing** an
 - 🌍 **Environment Aware**: Easily switch between `dev`, `staging`, and `prod` with inherited base URLs.
 
 ### 🚀 Advanced Features (NEW!)
-- ⚡ **Performance Testing**: Assert response time with `--max-duration 1000` (fail if slower than 1000ms)
-- 🔄 **Smart Retry**: Handle flaky APIs with `--retry 3 --retry-wait 1000` (retry 3 times, 1s interval)
-- 🏃 **Parallel Execution**: Run test suites blazing fast with `kest run --parallel --jobs 8` (8 concurrent workers)
+- 📝 **Markdown Flow**: Write and run complex test chains directly in Markdown files (`.flow.md`)
+- � **Variable Chaining**: Capture fields from JSON responses (`-c token=auth.key`) and use them in subsequent requests (`{{token}}`)
 - 📊 **Beautiful Test Reports**: Automatic summary with pass/fail stats, durations, and error details
-- 📝 **Markdown Support**: Write and run tests directly in Markdown files using ` ```kest ` blocks
 - 🌐 **gRPC Support**: Full gRPC testing with `kest grpc` command
 - 📡 **Streaming Support**: Handle LLM and server-sent events with `--stream` flag
-- 📝 **Detailed Logging**: Per-request log files in `.kest/logs/` for deep debugging
-
+- ⚡ **Performance Testing**: Assert response time with `--max-duration 1000`
+- 🔄 **Smart Retry**: Handle flaky APIs with `--retry 3 --retry-wait 1000`
+- 🏃 **Parallel Execution**: Run test suites blazing fast with `kest run --parallel`
 
 ---
 
@@ -96,44 +95,64 @@ kest get /api/fast-endpoint --max-duration 1000
 kest post /api/payment -d @payment.json --retry 3 --retry-wait 2000
 ```
 
-**Parallel Test Execution:**
+**Markdown Flow (Recommended!):**
+Kest Flow allows you to define a complete **test chain** in a `.flow.md` file. It's the most powerful way to test business logic involving multiple steps and variable passing.
+
+Example `user.flow.md`:
+~~~markdown
+# User Lifecycle Flow
+
+## 1. Register
+```kest
+POST /v1/register
+{
+  "username": "tester",
+  "email": "tester@example.com",
+  "password": "password123"
+}
+[Asserts]
+status == 201
+```
+
+## 2. Login & Capture Token
+```kest
+POST /v1/login
+{
+  "username": "tester",
+  "password": "password123"
+}
+[Captures]
+token: data.access_token
+[Asserts]
+status == 200
+```
+
+## 3. Use Token in Header
+```kest
+GET /v1/users/profile
+Authorization: Bearer {{token}}
+[Asserts]
+status == 200
+```
+~~~
+
+Run the entire flow:
+```bash
+kest run user.flow.md
+```
+
+**CLI Scenario (.kest):**
+Perfect for quick, one-liner test suites.
 ```bash
 # Create a test scenario file
 cat > api-tests.kest << EOF
 get /api/users/1 --max-duration 500
 get /api/users/2 --max-duration 500
 post /api/orders -d '{"item":"book"}' --retry 2
-get /api/health --max-duration 200
 EOF
 
 # Run with 8 parallel workers
 kest run api-tests.kest --parallel --jobs 8
-```
-
-**Markdown Testing (New!):**
-You can now write your test scenarios inside Markdown files. Kest will extract and run any code block marked with `kest`. We recommend using the `.flow.md` suffix for these files.
-
-Example `auth.flow.md`:
-~~~markdown
-# Authentication Flow
-
-To test the login flow:
-
-```kest
-post /api/login
-Content-Type: application/json
-
-{"username": "admin", "password": "password"}
-
-[Asserts]
-status=200
-body.token exists
-```
-~~~
-
-Run it directly:
-```bash
-kest run auth.flow.md
 ```
 
 **Test Summary Output:**
