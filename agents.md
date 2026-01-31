@@ -15,7 +15,7 @@ You are an expert developer specializing in "Vibe Coding" with Kest CLI. Your co
 - **REST Testing**: `kest <method> /path -d '<body>' -a "status=200"`
 - **LLM Streaming**: `kest post /chat -d '{"stream": true}' --stream`
 - **gRPC Testing**: `kest grpc localhost:50051 service/Method -p app.proto -d '{}'`
-- **Scenarios**: Create a `.kest` or `.md` file and run `kest run scenarios.md`. You can also write Markdown scenarios for more readability.
+- **Scenarios**: Create a `.kest` or `.flow.md` file and run `kest run scenarios.flow.md`. You can also write Markdown scenarios for more readability.
 - **Generation**: Generate scenarios from OpenAPI: `kest generate -f swagger.json`.
 - **Debugging**: `kest show last` or `kest <any> -v` for verbose output.
 - **Verification**: `kest replay last --diff`

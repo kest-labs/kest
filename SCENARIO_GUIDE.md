@@ -12,13 +12,54 @@
 
 ---
 
+---
+
 ## 🎯 Scenario 文件格式
 
-### 基础格式
+Kest 支持两种格式的测试场景文件：
+1. **`.kest` (CLI 风格)**：继承自 Shell 命令的极简单行格式。
+2. **`.md` (Markdown 风格)**：**[新功能]** 结合文档与测试的声明式格式，支持多行 JSON 和结构化断言。
+
+---
+
+### 1. Markdown 风格 (.md) - 文档即测试
+这是目前最推荐的方式，它允许你像写 API 文档一样编写测试用例。
+
+#### 语法规范
+在 Markdown 文件中，使用 ` ```kest ` 代码块定义一个测试步骤。
 
 ```kest
-# 这是注释
-# Scenario: 用户注册和登录流程
+# 1. 第一行永远是 METHOD URL
+POST /api/v1/projects
+X-User-ID: 100
+Content-Type: application/json
+
+# 2. 空行之后是 Request Body (支持多行/格式化 JSON)
+{
+  "name": "My Project",
+  "description": "Created from Markdown"
+}
+
+# 3. 变量捕获部分
+[Captures]
+project_id: data.id
+
+# 4. 断言部分
+[Asserts]
+status == 201
+body.name == "My Project"
+duration < 500ms
+```
+
+#### 运行方式
+```bash
+kest run my-api-doc.md
+```
+
+---
+
+### 2. CLI 风格 (.kest) - 极速单行
+适合：小型、快速、一次性的 API 调用。
 
 # 1. 注册新用户
 POST /api/register -d '{"email":"test@example.com","password":"123456"}' -a "status=201"

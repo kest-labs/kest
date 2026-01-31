@@ -82,12 +82,13 @@ kest run tests.kest --parallel --jobs 8
 ### 4. Markdown 支持（文档即测试）
 
 ```bash
-# 直接运行 Markdown 文件中的 kest 代码块
-kest run README.md
+# 直接运行 Markdown 流程文件中的 kest 代码块
+kest run auth.flow.md
 ```
 
 **特性**：
 - 支持 ` ```kest ` 代码块
+- 推荐使用 `.flow.md` 后缀名以区分常规文档
 - 声明式语法：支持多行 JSON、Headers、断言
 - 适合编写可执行的 API 文档
 - 完美支持变量捕获和链式调用

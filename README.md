@@ -111,11 +111,11 @@ kest run api-tests.kest --parallel --jobs 8
 ```
 
 **Markdown Testing (New!):**
-You can now write your test scenarios inside Markdown files. Kest will extract and run any code block marked with `kest`.
+You can now write your test scenarios inside Markdown files. Kest will extract and run any code block marked with `kest`. We recommend using the `.flow.md` suffix for these files.
 
-Example `README.md`:
+Example `auth.flow.md`:
 ~~~markdown
-# My API Documentation
+# Authentication Flow
 
 To test the login flow:
 
@@ -133,7 +133,7 @@ body.token exists
 
 Run it directly:
 ```bash
-kest run README.md
+kest run auth.flow.md
 ```
 
 **Test Summary Output:**
