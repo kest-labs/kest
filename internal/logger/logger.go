@@ -104,6 +104,42 @@ func LogToSession(format string, args ...interface{}) {
 }
 
 func LogRequest(method, url string, headers map[string]string, body string, status int, respHeaders map[string][]string, respBody string, duration time.Duration) error {
+	timestamp := time.Now().Format("15:04:05")
+	separator := "================================================================================\n"
+
+	logEntry := fmt.Sprintf("%s [%s] %s %s\n", separator, timestamp, method, url)
+	logEntry += fmt.Sprintf("Duration: %v | Status: %d\n", duration, status)
+
+	logEntry += "\n--- Request Headers ---\n"
+	for k, v := range headers {
+		logEntry += fmt.Sprintf("%s: %s\n", k, v)
+	}
+
+	if body != "" {
+		logEntry += "\n--- Request Body ---\n"
+		logEntry += body + "\n"
+	}
+
+	logEntry += "\n--- Response Headers ---\n"
+	for k, v := range respHeaders {
+		logEntry += fmt.Sprintf("%s: %v\n", k, v)
+	}
+
+	logEntry += "\n--- Response Body ---\n"
+	logEntry += respBody + "\n"
+	logEntry += "\n"
+
+	// Check if session is active
+	sessionMu.RLock()
+	hasSession := currentSession != nil
+	sessionMu.RUnlock()
+
+	if hasSession {
+		LogToSession("%s", logEntry)
+		return nil
+	}
+
+	// If no session, write to individual file
 	logDir, err := getLogDir()
 	if err != nil {
 		return nil
@@ -134,37 +170,7 @@ func LogRequest(method, url string, headers map[string]string, body string, stat
 	}
 	defer f.Close()
 
-	timestamp := time.Now().Format("15:04:05")
-	separator := "================================================================================\n"
-
-	logEntry := fmt.Sprintf("%s [%s] %s %s\n", separator, timestamp, method, url)
-	logEntry += fmt.Sprintf("Duration: %v | Status: %d\n", duration, status)
-
-	logEntry += "\n--- Request Headers ---\n"
-	for k, v := range headers {
-		logEntry += fmt.Sprintf("%s: %s\n", k, v)
-	}
-
-	if body != "" {
-		logEntry += "\n--- Request Body ---\n"
-		logEntry += body + "\n"
-	}
-
-	logEntry += "\n--- Response Headers ---\n"
-	for k, v := range respHeaders {
-		logEntry += fmt.Sprintf("%s: %v\n", k, v)
-	}
-
-	logEntry += "\n--- Response Body ---\n"
-	logEntry += respBody + "\n"
-	logEntry += "\n"
-
-	// Write to individual file
 	_, err = f.WriteString(logEntry)
-
-	// Write to session log
-	LogToSession("%s", logEntry)
-
 	return err
 }
 
