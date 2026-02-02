@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -117,7 +119,7 @@ func LogRequest(method, url string, headers map[string]string, body string, stat
 
 	if body != "" {
 		logEntry += "\n--- Request Body ---\n"
-		logEntry += body + "\n"
+		logEntry += prettyJSON(body) + "\n"
 	}
 
 	logEntry += "\n--- Response Headers ---\n"
@@ -126,7 +128,7 @@ func LogRequest(method, url string, headers map[string]string, body string, stat
 	}
 
 	logEntry += "\n--- Response Body ---\n"
-	logEntry += respBody + "\n"
+	logEntry += prettyJSON(respBody) + "\n"
 	logEntry += "\n"
 
 	// Check if session is active
@@ -184,4 +186,12 @@ func Error(format string, a ...interface{}) {
 	msg := fmt.Sprintf("❌ "+format, a...)
 	fmt.Fprintln(os.Stderr, msg)
 	LogToSession("%s", msg)
+}
+
+func prettyJSON(input string) string {
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(input), "", "  "); err != nil {
+		return input // Not valid JSON, return as is
+	}
+	return prettyJSON.String()
 }
