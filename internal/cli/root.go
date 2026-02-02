@@ -8,9 +8,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "kest",
-	Short: "Kest CLI - A fast API testing tool with automatic recording",
-	Long:  `Kest is a CLI-first API testing tool designed for Vibe Coding. It automatically records every request for tracing and replaying.`,
+	Use:     "kest",
+	Version: "v0.5.2",
+	Short:   "Kest CLI - A fast API testing tool with automatic recording",
+	Long:    `Kest is a CLI-first API testing tool designed for Vibe Coding. It automatically records every request for tracing and replaying.`,
 }
 
 func Execute() {
