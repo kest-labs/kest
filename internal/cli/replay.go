@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kest-lab/kest-cli/internal/client"
+	"github.com/kest-lab/kest-cli/internal/config"
 	"github.com/kest-lab/kest-cli/internal/output"
 	"github.com/kest-lab/kest-cli/internal/storage"
 	"github.com/kest-lab/kest-cli/internal/variable"
@@ -78,12 +79,19 @@ var replayCmd = &cobra.Command{
 			DurationMs:      resp.Duration.Milliseconds(),
 		})
 
+		// Load variables
+		var vars map[string]string
+		conf, _ := config.LoadConfig()
+		if conf != nil {
+			vars, _ = store.GetVariables(conf.ProjectID, conf.ActiveEnv)
+		}
+
 		// Handle assertions
 		if len(replayAsserts) > 0 {
 			fmt.Println("\nAssertions:")
 			allPassed := true
 			for _, assertion := range replayAsserts {
-				passed, msg := variable.Assert(resp.Status, resp.Body, assertion)
+				passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
 				if passed {
 					fmt.Printf("  ✅ %s\n", assertion)
 				} else {

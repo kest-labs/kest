@@ -8,13 +8,17 @@ import (
 )
 
 type Config struct {
-	Version      int                    `yaml:"version" mapstructure:"version"`
-	Defaults     Defaults               `yaml:"defaults" mapstructure:"defaults"`
-	Environments map[string]Environment `yaml:"environments" mapstructure:"environments"`
-	ActiveEnv    string                 `yaml:"active_env" mapstructure:"active_env"`
-	LogEnabled   bool                   `yaml:"log_enabled" mapstructure:"log_enabled"`
-	ProjectID    string                 // Relative or absolute path used as ID
-	ProjectPath  string                 // Absolute path to the project root
+	Version           int                    `yaml:"version" mapstructure:"version"`
+	Defaults          Defaults               `yaml:"defaults" mapstructure:"defaults"`
+	Environments      map[string]Environment `yaml:"environments" mapstructure:"environments"`
+	ActiveEnv         string                 `yaml:"active_env" mapstructure:"active_env"`
+	LogEnabled        bool                   `yaml:"log_enabled" mapstructure:"log_enabled"`
+	ProjectID         string                 // Relative or absolute path used as ID
+	ProjectPath       string                 // Absolute path to the project root
+	PlatformURL       string                 `yaml:"platform_url" mapstructure:"platform_url"`
+	PlatformToken     string                 `yaml:"platform_token" mapstructure:"platform_token"`
+	PlatformProjectID string                 `yaml:"platform_project_id" mapstructure:"platform_project_id"`
+	LastSyncTime      string                 `yaml:"last_sync_time" mapstructure:"last_sync_time"`
 }
 
 type Defaults struct {
@@ -59,6 +63,38 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &conf, nil
+}
+
+func SaveConfig(conf *Config) error {
+	projectRoot, _ := findProjectRoot()
+	if projectRoot != "" {
+		return SaveToPath(conf, filepath.Join(projectRoot, ".kest", "config.yaml"))
+	}
+
+	home, _ := os.UserHomeDir()
+	return SaveToPath(conf, filepath.Join(home, ".kest", "config.yaml"))
+}
+
+func SaveToPath(conf *Config, configPath string) error {
+	v := viper.New()
+
+	// Create directory if not exists
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		return err
+	}
+
+	// Set all fields to avoid data loss
+	v.Set("version", conf.Version)
+	v.Set("active_env", conf.ActiveEnv)
+	v.Set("log_enabled", conf.LogEnabled)
+	v.Set("defaults", conf.Defaults)
+	v.Set("environments", conf.Environments)
+	v.Set("platform_url", conf.PlatformURL)
+	v.Set("platform_token", conf.PlatformToken)
+	v.Set("platform_project_id", conf.PlatformProjectID)
+	v.Set("last_sync_time", conf.LastSyncTime)
+
+	return v.WriteConfigAs(configPath)
 }
 
 func findProjectRoot() (string, error) {

@@ -100,6 +100,41 @@ func (s *Store) Init() error {
 	return err
 }
 
+func (s *Store) Close() error {
+	return s.db.Close()
+}
+
+func (s *Store) GetAllRecords() ([]Record, error) {
+	query := `
+	SELECT id, method, url, base_url, path, query_params, request_headers, request_body,
+	       response_status, response_headers, response_body, duration_ms, environment, project, created_at
+	FROM records ORDER BY created_at DESC
+	`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []Record
+	for rows.Next() {
+		var r Record
+		var queryParams, requestHeaders, responseHeaders []byte
+		err := rows.Scan(
+			&r.ID, &r.Method, &r.URL, &r.BaseURL, &r.Path, &queryParams, &requestHeaders, &r.RequestBody,
+			&r.ResponseStatus, &responseHeaders, &r.ResponseBody, &r.DurationMs, &r.Environment, &r.Project, &r.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		r.QueryParams = json.RawMessage(queryParams)
+		r.RequestHeaders = json.RawMessage(requestHeaders)
+		r.ResponseHeaders = json.RawMessage(responseHeaders)
+		records = append(records, r)
+	}
+	return records, nil
+}
+
 func (s *Store) SaveRecord(r *Record) (int64, error) {
 	query := `
 	INSERT INTO records (

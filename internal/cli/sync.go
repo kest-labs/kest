@@ -172,10 +172,10 @@ func runSyncPush() error {
 		return previewSync(specs)
 	}
 
-	return pushToP latform(platformURL, platformToken, projectID, specs, conf)
+	return pushToPlatform(platformURL, platformToken, projectID, specs, conf)
 }
 
-func analyzeRecords(records []*storage.Record) []APISpecSync {
+func analyzeRecords(records []storage.Record) []APISpecSync {
 	// Group by method + path
 	apiMap := make(map[string]*APISpecSync)
 
@@ -210,7 +210,7 @@ func analyzeRecords(records []*storage.Record) []APISpecSync {
 		}
 
 		// Parse headers
-		if record.RequestHeaders != "" {
+		if len(record.RequestHeaders) > 0 && string(record.RequestHeaders) != "null" && string(record.RequestHeaders) != "" {
 			var headers map[string]string
 			if err := json.Unmarshal([]byte(record.RequestHeaders), &headers); err == nil {
 				example.RequestHeaders = headers

@@ -89,3 +89,10 @@ func LogRequest(method, url string, headers map[string]string, body string, stat
 	_, err = f.WriteString(logEntry)
 	return err
 }
+func Info(format string, a ...interface{}) {
+	fmt.Printf("ℹ️  "+format+"\n", a...)
+}
+
+func Error(format string, a ...interface{}) {
+	fmt.Fprintf(os.Stderr, "❌ "+format+"\n", a...)
+}

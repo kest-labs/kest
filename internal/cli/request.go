@@ -239,7 +239,12 @@ func ExecuteRequest(opts RequestOptions) error {
 	// Handle captures
 	if store != nil && len(opts.Captures) > 0 {
 		for _, capExpr := range opts.Captures {
-			parts := strings.SplitN(capExpr, "=", 2)
+			// Support both ":" and "="
+			sep := "="
+			if !strings.Contains(capExpr, "=") && strings.Contains(capExpr, ":") {
+				sep = ":"
+			}
+			parts := strings.SplitN(capExpr, sep, 2)
 			if len(parts) == 2 {
 				varName := strings.TrimSpace(parts[0])
 				query := strings.TrimSpace(parts[1])
@@ -263,17 +268,21 @@ func ExecuteRequest(opts RequestOptions) error {
 	if len(opts.Asserts) > 0 {
 		fmt.Println("\nAssertions:")
 		allPassed := true
+		var firstErr string
 		for _, assertion := range opts.Asserts {
-			passed, msg := variable.Assert(resp.Status, resp.Body, assertion)
+			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
 			if passed {
 				fmt.Printf("  ✅ %s\n", assertion)
 			} else {
 				fmt.Printf("  ❌ %s (%s)\n", assertion, msg)
+				if firstErr == "" {
+					firstErr = fmt.Sprintf("assertion failed: %s (%s)", assertion, msg)
+				}
 				allPassed = false
 			}
 		}
 		if !allPassed {
-			// We don't necessarily return error here, just print results
+			return fmt.Errorf("%s", firstErr)
 		}
 	}
 

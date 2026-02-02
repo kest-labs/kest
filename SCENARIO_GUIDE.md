@@ -18,12 +18,12 @@
 
 Kest 支持两种格式的测试场景文件：
 1. **`.kest` (CLI 风格)**：继承自 Shell 命令的极简单行格式。
-2. **`.md` (Markdown 风格)**：**[新功能]** 结合文档与测试的声明式格式，支持多行 JSON 和结构化断言。
+2. **`.flow.md` (Markdown 风格)**：**[新功能]** 结合文档与测试的声明式格式，支持多行 JSON 和结构化断言。
 
 ---
 
-### 1. Markdown 风格 (.md) - 文档即测试
-这是目前最推荐的方式，它允许你像写 API 文档一样编写测试用例。
+### 1. Markdown 风格 (.flow.md) - 文档即测试
+这是目前最推荐的方式，它允许你像写 API 文档一样编写测试用例。建议使用 `.flow.md` 后缀以便识别。
 
 #### 语法规范
 在 Markdown 文件中，使用 ` ```kest ` 代码块定义一个测试步骤。
@@ -53,7 +53,7 @@ duration < 500ms
 
 #### 运行方式
 ```bash
-kest run my-api-doc.md
+kest run my-api-doc.flow.md
 ```
 
 ---
