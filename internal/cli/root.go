@@ -9,7 +9,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:     "kest",
-	Version: "v0.5.4",
+	Version: "v0.5.5",
 	Short:   "Kest CLI - A fast API testing tool with automatic recording",
 	Long: `Kest is a high-performance, developer-first API testing tool designed for modern "Vibe Coding" workflows.
 It automatically records every request to a local SQLite database, allowing you to trace history,
