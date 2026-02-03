@@ -76,7 +76,7 @@ var grpcCmd = &cobra.Command{
 		}
 
 		// Use the same formatter as REST for now, or a specific one if needed
-		output.PrintResponse("gRPC", method, 200, resp.Duration.String(), resp.Data, 0)
+		output.PrintResponse("gRPC", method, 200, resp.Duration.String(), resp.Data, 0, time.Now())
 		return nil
 	},
 }

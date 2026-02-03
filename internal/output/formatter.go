@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -32,13 +33,18 @@ var (
 			Foreground(lipgloss.Color("#888888"))
 )
 
-func PrintResponse(method, url string, status int, duration string, body []byte, recordID int64) {
+func PrintResponse(method, url string, status int, duration string, body []byte, recordID int64, startTime time.Time) {
 	statusStr := fmt.Sprintf("%d", status)
 	var sStyle lipgloss.Style
 	if status >= 200 && status < 300 {
 		sStyle = statusOKStyle
 	} else {
 		sStyle = statusErrStyle
+	}
+
+	timestamp := ""
+	if !startTime.IsZero() {
+		timestamp = infoStyle.Render("[" + startTime.Format("15:04:05") + "] ")
 	}
 
 	headerText := fmt.Sprintf(" %s %s ", method, url)
@@ -73,7 +79,7 @@ func PrintResponse(method, url string, status int, duration string, body []byte,
 	content := fmt.Sprintf("Status: %s    Duration: %s\n\n%s", statusText, durationText, strings.TrimSpace(formattedBody))
 
 	doc := strings.Builder{}
-	doc.WriteString(titleStyle.Render(headerText) + "\n")
+	doc.WriteString(timestamp + titleStyle.Render(headerText) + "\n")
 
 	// Apply width constraint to the box and handle wrapping
 	styledContent := borderStyle.Width(maxWidth).Render(content)

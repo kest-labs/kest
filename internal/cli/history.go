@@ -19,6 +19,15 @@ var (
 var historyCmd = &cobra.Command{
 	Use:   "history",
 	Short: "List test history",
+	Long:  "Display a table of recently recorded API requests. You can filter by project or limit the number of results.",
+	Example: `  # Show last 20 records (default)
+  kest history
+
+  # Show last 50 records
+  kest history -n 50
+
+  # Show history from all projects
+  kest history --global`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		conf, _ := config.LoadConfig()
 

@@ -80,6 +80,18 @@ func ParseBlock(raw string) (RequestOptions, error) {
 		trimmed := strings.TrimSpace(line)
 
 		// Section headers
+		if trimmed == "[Queries]" {
+			section = "queries"
+			continue
+		}
+		if trimmed == "[Headers]" {
+			section = "headers"
+			continue
+		}
+		if trimmed == "[Body]" || trimmed == "[Data]" {
+			section = "body"
+			continue
+		}
 		if trimmed == "[Captures]" {
 			section = "captures"
 			continue
@@ -91,6 +103,11 @@ func ParseBlock(raw string) (RequestOptions, error) {
 
 		// Handle sections
 		switch section {
+		case "queries":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				val := strings.SplitN(trimmed, "#", 2)[0]
+				opts.Queries = append(opts.Queries, strings.TrimSpace(val))
+			}
 		case "headers":
 			if trimmed == "" {
 				section = "body"
@@ -101,7 +118,7 @@ func ParseBlock(raw string) (RequestOptions, error) {
 				bodyLines = append(bodyLines, line)
 				continue
 			}
-			if strings.Contains(trimmed, ":") {
+			if strings.Contains(trimmed, ":") && !strings.HasPrefix(trimmed, "{") {
 				opts.Headers = append(opts.Headers, trimmed)
 			} else {
 				// If it doesn't look like a header and isn't empty, assume body started

@@ -107,7 +107,7 @@ var replayCmd = &cobra.Command{
 		if replayDiff {
 			printDiff(oldRecord.ResponseBody, string(resp.Body))
 		} else {
-			output.PrintResponse(oldRecord.Method, oldRecord.URL, resp.Status, resp.Duration.String(), resp.Body, newID)
+			output.PrintResponse(oldRecord.Method, oldRecord.URL, resp.Status, resp.Duration.String(), resp.Body, newID, time.Now())
 		}
 
 		return nil

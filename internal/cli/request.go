@@ -13,6 +13,7 @@ import (
 	"github.com/kest-lab/kest-cli/internal/logger"
 	"github.com/kest-lab/kest-cli/internal/output"
 	"github.com/kest-lab/kest-cli/internal/storage"
+	"github.com/kest-lab/kest-cli/internal/summary"
 	"github.com/kest-lab/kest-cli/internal/variable"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
@@ -57,12 +58,22 @@ func init() {
 }
 
 func createRequestCmd(method string) *cobra.Command {
+	mUpper := strings.ToUpper(method)
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s [url]", method),
-		Short: fmt.Sprintf("Send a %s request", strings.ToUpper(method)),
-		Args:  cobra.ExactArgs(1),
+		Short: fmt.Sprintf("Send a %s request", mUpper),
+		Long:  fmt.Sprintf("Send an ad-hoc %s request to the specified URL. Every request is automatically recorded to the local history.", mUpper),
+		Example: fmt.Sprintf(`  # Simple %[1]s request
+  kest %[1]s /api/users
+
+  # %[1]s with headers and data
+  kest %[1]s /api/login -H "Content-Type: application/json" -d '{"user":"admin"}'
+
+  # %[1]s with query parameters and assertions
+  kest %[1]s /search -q "q=kest" -a "status=200" -a "body.results exists"`, method),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ExecuteRequest(RequestOptions{
+			_, err := ExecuteRequest(RequestOptions{
 				Method:      method,
 				URL:         args[0],
 				Data:        reqData,
@@ -77,6 +88,7 @@ func createRequestCmd(method string) *cobra.Command {
 				Retry:       reqRetry,
 				RetryWait:   reqRetryWait,
 			})
+			return err
 		},
 	}
 
@@ -95,7 +107,13 @@ func createRequestCmd(method string) *cobra.Command {
 	return cmd
 }
 
-func ExecuteRequest(opts RequestOptions) error {
+func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
+	startTime := time.Now()
+	result := summary.TestResult{
+		StartTime: startTime,
+		Method:    strings.ToUpper(opts.Method),
+		URL:       opts.URL,
+	}
 	method := opts.Method
 	targetURL := opts.URL
 
@@ -143,7 +161,9 @@ func ExecuteRequest(opts RequestOptions) error {
 	if len(opts.Queries) > 0 {
 		u, err := url.Parse(finalURL)
 		if err != nil {
-			return err
+			result.Error = err
+			result.Success = false
+			return result, err
 		}
 		q := u.Query()
 		for _, param := range opts.Queries {
@@ -183,7 +203,9 @@ func ExecuteRequest(opts RequestOptions) error {
 		if strings.HasPrefix(processedData, "@") {
 			content, err := os.ReadFile(processedData[1:])
 			if err != nil {
-				return err
+				result.Error = err
+				result.Success = false
+				return result, err
 			}
 			body = content
 		} else {
@@ -233,7 +255,9 @@ func ExecuteRequest(opts RequestOptions) error {
 		// If last attempt, show error
 		if attempt == maxRetries {
 			fmt.Printf("❌ Request Failed after %d attempts: %v\n", attempt+1, err)
-			return err
+			result.Error = err
+			result.Success = false
+			return result, err
 		}
 	}
 
@@ -307,8 +331,15 @@ func ExecuteRequest(opts RequestOptions) error {
 				allPassed = false
 			}
 		}
+
+		result.Success = allPassed
+		result.Status = resp.Status
+		result.Duration = resp.Duration
+		result.ResponseBody = string(resp.Body)
+
 		if !allPassed {
-			return fmt.Errorf("%s", firstErr)
+			result.Error = fmt.Errorf("%s", firstErr)
+			return result, result.Error
 		}
 	}
 
@@ -336,6 +367,11 @@ func ExecuteRequest(opts RequestOptions) error {
 		})
 	}
 
-	output.PrintResponse(strings.ToUpper(method), finalURL, resp.Status, resp.Duration.String(), resp.Body, recordID)
-	return nil
+	result.Status = resp.Status
+	result.Duration = resp.Duration
+	result.ResponseBody = string(resp.Body)
+	result.Success = true
+
+	output.PrintResponse(strings.ToUpper(method), finalURL, resp.Status, resp.Duration.String(), resp.Body, recordID, startTime)
+	return result, nil
 }

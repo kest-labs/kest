@@ -17,12 +17,23 @@ import (
 var (
 	runParallel bool
 	runJobs     int
+	runVerbose  bool
 )
 
 var runCmd = &cobra.Command{
 	Use:   "run [file]",
 	Short: "Run a Kest scenario file (.kest) or a Markdown flow file (.flow.md)",
-	Args:  cobra.ExactArgs(1),
+	Long: `Execute API test scenarios defined in .kest or .flow.md files.
+Kest Flow (.flow.md) allows you to use standard Markdown to document and test your APIs simultaneously.`,
+	Example: `  # Run a single flow
+  kest run login.flow.md
+
+  # Run with parallel workers for speed
+  kest run tests/ --parallel --jobs 8
+
+  # Run a legacy .kest scenario
+  kest run auth.kest`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runScenario(args[0])
 	},
@@ -31,6 +42,7 @@ var runCmd = &cobra.Command{
 func init() {
 	runCmd.Flags().BoolVarP(&runParallel, "parallel", "p", false, "Run requests in parallel")
 	runCmd.Flags().IntVarP(&runJobs, "jobs", "j", 4, "Number of parallel jobs (default: 4)")
+	runCmd.Flags().BoolVarP(&runVerbose, "verbose", "v", false, "Show detailed request/response info")
 	rootCmd.AddCommand(runCmd)
 }
 
@@ -86,7 +98,7 @@ func runScenario(filePath string) error {
 				semaphore <- struct{}{}        // Acquire
 				defer func() { <-semaphore }() // Release
 
-				result := executeKestBlock(kb, false)
+				result := executeKestBlock(kb, false, runVerbose)
 				resultChan <- result
 			}(block)
 		}
@@ -109,7 +121,7 @@ func runScenario(filePath string) error {
 			} else {
 				fmt.Printf("--- Step %d: %s ---\n", block.LineNum, block.Raw)
 			}
-			result := executeKestBlock(block, true)
+			result := executeKestBlock(block, true, runVerbose)
 			summ.AddResult(result)
 			if !result.Success {
 				fmt.Printf("❌ Failed at line %d\n\n", block.LineNum)
@@ -125,27 +137,28 @@ func runScenario(filePath string) error {
 	return nil
 }
 
-func executeKestBlock(kb KestBlock, showOutput bool) summary.TestResult {
+func executeKestBlock(kb KestBlock, showOutput bool, verbose bool) summary.TestResult {
 	if kb.IsBlock {
-		return executeMultiLineBlock(kb.Raw, kb.LineNum, showOutput)
+		return executeMultiLineBlock(kb.Raw, kb.LineNum, showOutput, verbose)
 	}
-	return executeTestLine(kb.Raw, kb.LineNum, showOutput)
+	return executeTestLine(kb.Raw, kb.LineNum, showOutput, verbose)
 }
 
-func executeMultiLineBlock(raw string, lineNum int, showOutput bool) summary.TestResult {
+func executeMultiLineBlock(raw string, lineNum int, showOutput bool, verbose bool) summary.TestResult {
 	result := summary.TestResult{
 		Name: fmt.Sprintf("Block at line %d", lineNum),
 	}
 
 	opts, err := ParseBlock(raw)
 	if err != nil {
-		result.Error = err
+		result.Error = fmt.Errorf("parse error at line %d: %v", lineNum, err)
 		result.Success = false
 		return result
 	}
 
 	result.Method = strings.ToUpper(opts.Method)
 	result.URL = opts.URL
+	opts.Verbose = verbose
 
 	// Capture output if parallel
 	oldStdout := os.Stdout
@@ -153,19 +166,22 @@ func executeMultiLineBlock(raw string, lineNum int, showOutput bool) summary.Tes
 		os.Stdout = nil // Suppress output in parallel mode
 	}
 
-	err = ExecuteRequest(opts)
-
+	res, err := ExecuteRequest(opts)
 	if !showOutput {
 		os.Stdout = oldStdout // Restore
 	}
 
+	result.Status = res.Status
+	result.Duration = res.Duration
+	result.ResponseBody = res.ResponseBody
+	result.StartTime = res.StartTime
 	result.Success = (err == nil)
 	result.Error = err
 
 	return result
 }
 
-func executeTestLine(line string, lineNum int, showOutput bool) summary.TestResult {
+func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) summary.TestResult {
 	result := summary.TestResult{
 		Name: fmt.Sprintf("Line %d", lineNum),
 	}
@@ -212,7 +228,7 @@ func executeTestLine(line string, lineNum int, showOutput bool) summary.TestResu
 		os.Stdout = nil // Suppress output in parallel mode
 	}
 
-	err = ExecuteRequest(RequestOptions{
+	res, err := ExecuteRequest(RequestOptions{
 		Method:      method,
 		URL:         url,
 		Data:        data,
@@ -220,11 +236,17 @@ func executeTestLine(line string, lineNum int, showOutput bool) summary.TestResu
 		Queries:     queries,
 		Captures:    captures,
 		Asserts:     asserts,
+		Verbose:     verbose,
 		NoRecord:    noRec,
 		MaxDuration: maxDuration,
 		Retry:       retry,
 		RetryWait:   retryWait,
 	})
+
+	result.Status = res.Status
+	result.Duration = res.Duration
+	result.ResponseBody = res.ResponseBody
+	result.StartTime = res.StartTime
 
 	if !showOutput {
 		os.Stdout = oldStdout // Restore

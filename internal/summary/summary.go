@@ -1,18 +1,23 @@
 package summary
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
 type TestResult struct {
-	Name     string
-	Method   string
-	URL      string
-	Status   int
-	Duration time.Duration
-	Error    error
-	Success  bool
+	Name         string
+	Method       string
+	URL          string
+	Status       int
+	Duration     time.Duration
+	StartTime    time.Time
+	ResponseBody string
+	Error        error
+	Success      bool
 }
 
 type Summary struct {
@@ -58,18 +63,33 @@ func (s *Summary) Print() {
 			statusColor = "\033[31m" // Red
 		}
 
-		fmt.Printf("│ %s%s\033[0m %-8s %-35s %6dms │\n",
-			statusColor, status, result.Method, truncate(result.URL, 35), result.Duration.Milliseconds())
+		fmt.Printf("│ %s %s [%s] %-30s %6dms │\n",
+			statusColor+status+"\033[0m",
+			result.StartTime.Format("15:04:05"),
+			result.Method,
+			truncate(result.URL, 30),
+			int(result.Duration.Milliseconds()))
 
 		if result.Error != nil {
 			fmt.Printf("│     Error: %-56s │\n", truncate(result.Error.Error(), 56))
+			if result.ResponseBody != "" {
+				lines := strings.Split(prettyJSON(result.ResponseBody), "\n")
+				maxLines := 5
+				if len(lines) > maxLines {
+					lines = append(lines[:maxLines], "...")
+				}
+				fmt.Printf("│     Response Body Sample:                                            │\n")
+				for _, line := range lines {
+					fmt.Printf("│       %-62s │\n", truncate(line, 62))
+				}
+			}
 		}
 	}
 
 	fmt.Println("├─────────────────────────────────────────────────────────────────────┤")
 	fmt.Printf("│ Total: %d  │  Passed: \033[32m%d\033[0m  │  Failed: \033[31m%d\033[0m  │  Time: %v │\n",
-		s.TotalTests, s.PassedTests, s.FailedTests, s.TotalTime)
-	fmt.Printf("│ Elapsed: %v                                                     │\n", elapsed.Round(time.Millisecond))
+		s.TotalTests, s.PassedTests, s.FailedTests, s.TotalTime.Round(time.Millisecond))
+	fmt.Printf("│ Elapsed: %-58v │\n", elapsed.Round(time.Millisecond))
 	fmt.Println("╰─────────────────────────────────────────────────────────────────────╯")
 
 	if s.FailedTests > 0 {
@@ -87,4 +107,12 @@ func truncate(s string, maxLen int) string {
 		return s[:maxLen]
 	}
 	return s[:maxLen-3] + "..."
+}
+
+func prettyJSON(input string) string {
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(input), "", "  "); err != nil {
+		return input // Not valid JSON, return as is
+	}
+	return prettyJSON.String()
 }
