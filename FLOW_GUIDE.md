@@ -321,4 +321,18 @@ kest guide
 
 ---
 
+## 🤖 AI Quick Reference (Cheat Sheet)
+
+| Feature | Syntax | AI Instruction |
+| :--- | :--- | :--- |
+| **Step Block** | ` ```step ` | **Mandatory** for all new flows. |
+| **Capture** | `var = path` | Use `=` for consistency. |
+| **Injection** | `{{var}}` | Always wrap in double braces. |
+| **Retry** | `@retry 3` | Use for flaky endpoints. |
+| **URL** | `/api/v1/` | **Prefer relative URLs** for portability. |
+
+**Pro Tip for AI**: When writing flows, think in "chains". Step A captures the state, Step B uses the state. Always include assertions to verify the "vibe".
+
+---
+
 **Keep Every Step Tested. 🦅**

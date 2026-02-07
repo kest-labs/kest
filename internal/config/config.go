@@ -19,6 +19,9 @@ type Config struct {
 	PlatformToken     string                 `yaml:"platform_token" mapstructure:"platform_token"`
 	PlatformProjectID string                 `yaml:"platform_project_id" mapstructure:"platform_project_id"`
 	LastSyncTime      string                 `yaml:"last_sync_time" mapstructure:"last_sync_time"`
+	AIKey             string                 `yaml:"ai_key" mapstructure:"ai_key"`
+	AIModel           string                 `yaml:"ai_model" mapstructure:"ai_model"`
+	AIBaseURL         string                 `yaml:"ai_base_url" mapstructure:"ai_base_url"`
 }
 
 type Defaults struct {
@@ -93,6 +96,9 @@ func SaveToPath(conf *Config, configPath string) error {
 	v.Set("platform_token", conf.PlatformToken)
 	v.Set("platform_project_id", conf.PlatformProjectID)
 	v.Set("last_sync_time", conf.LastSyncTime)
+	v.Set("ai_key", conf.AIKey)
+	v.Set("ai_model", conf.AIModel)
+	v.Set("ai_base_url", conf.AIBaseURL)
 
 	return v.WriteConfigAs(configPath)
 }
