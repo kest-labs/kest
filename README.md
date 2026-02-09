@@ -10,6 +10,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/kest-lab/kest-cli)](https://goreportcard.com/report/github.com/kest-lab/kest-cli)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
+**REST** · **gRPC** · **SSE Streaming** · **Variable Chaining** · **Assertions** · **Snapshots**
+**Replay & Diff** · **Parallel Execution** · **Markdown Flows** · **AI Diagnosis** · **Mock Server**
+
 [Quick Start](#-quick-start) | [AI Features](#-ai-superpowers) | [Flow Testing](#-markdown-flow) | [Why Kest?](#-why-kest)
 
 </div>
