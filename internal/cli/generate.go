@@ -23,12 +23,12 @@ var generateCmd = &cobra.Command{
 		if genFromOpenAPI != "" {
 			return generateFromOpenAPI(genFromOpenAPI, genOutFile)
 		}
-		return fmt.Errorf("please specify a source (e.g., --from-openapi)")
+		return fmt.Errorf("please specify a source file (e.g., -f swagger.json)")
 	},
 }
 
 func init() {
-	generateCmd.Flags().StringVarP(&genFromOpenAPI, "from-openapi", "f", "", "OpenAPI/Swagger spec file path")
+	generateCmd.Flags().StringVarP(&genFromOpenAPI, "file", "f", "", "OpenAPI/Swagger spec file path")
 	generateCmd.Flags().StringVarP(&genOutFile, "output", "o", "api.flow.md", "Output file path (.flow.md or .kest)")
 	rootCmd.AddCommand(generateCmd)
 }

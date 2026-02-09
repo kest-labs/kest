@@ -58,11 +58,11 @@ Kest Flow (.flow.md) allows you to use standard Markdown to document and test yo
 
 func init() {
 	runCmd.Flags().BoolVarP(&runParallel, "parallel", "p", false, "Run requests in parallel")
-	runCmd.Flags().IntVarP(&runJobs, "jobs", "j", 4, "Number of parallel jobs (default: 4)")
+	runCmd.Flags().IntVarP(&runJobs, "jobs", "j", 4, "Number of parallel jobs")
 	runCmd.Flags().BoolVarP(&runVerbose, "verbose", "v", false, "Show detailed request/response info")
 	runCmd.Flags().BoolVar(&runDebugVars, "debug-vars", false, "Show variable resolution details")
 	runCmd.Flags().StringArrayVar(&runVars, "var", []string{}, "Set variables (e.g. --var key=value)")
-	runCmd.Flags().IntVar(&execTimeout, "exec-timeout", 30, "Timeout in seconds for exec steps (default: 30)")
+	runCmd.Flags().IntVar(&execTimeout, "exec-timeout", 30, "Timeout in seconds for exec steps")
 	rootCmd.AddCommand(runCmd)
 }
 
@@ -253,9 +253,9 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 	fs.StringSliceVarP(&captures, "capture", "c", []string{}, "")
 	fs.StringSliceVarP(&asserts, "assert", "a", []string{}, "")
 	fs.BoolVar(&noRec, "no-record", false, "")
-	fs.IntVar(&maxDuration, "max-duration", 0, "")
+	fs.IntVar(&maxDuration, "max-time", 0, "")
 	fs.IntVar(&retry, "retry", 0, "")
-	fs.IntVar(&retryWait, "retry-wait", 1000, "")
+	fs.IntVar(&retryWait, "retry-delay", 1000, "")
 
 	err := fs.Parse(parts[2:])
 	if err != nil {

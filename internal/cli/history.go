@@ -67,7 +67,7 @@ var historyCmd = &cobra.Command{
 }
 
 func init() {
-	historyCmd.Flags().IntVarP(&historyLimit, "limit", "n", 20, "Number of records to show")
+	historyCmd.Flags().IntVarP(&historyLimit, "number", "n", 20, "Number of records to show")
 	historyCmd.Flags().BoolVarP(&globalHistory, "global", "g", false, "Show history across all projects")
 	rootCmd.AddCommand(historyCmd)
 }

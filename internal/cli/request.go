@@ -31,9 +31,9 @@ type RequestOptions struct {
 	DebugVars   bool
 	Stream      bool
 	NoRecord    bool
-	MaxDuration int // Max duration in milliseconds
+	MaxDuration int // Max response time in milliseconds (--max-time)
 	Retry       int // Number of retries (0 = no retry)
-	RetryWait   int // Wait time between retries in milliseconds
+	RetryWait   int // Delay between retries in milliseconds (--retry-delay)
 }
 
 var (
@@ -115,11 +115,11 @@ func createRequestCmd(method string) *cobra.Command {
 	cmd.Flags().StringSliceVarP(&reqCaptures, "capture", "c", []string{}, "Capture values from response (e.g. token=$.auth.token)")
 	cmd.Flags().StringSliceVarP(&reqAsserts, "assert", "a", []string{}, "Assert response (e.g. status=200, body.id=1)")
 	cmd.Flags().BoolVarP(&reqVerbose, "verbose", "v", false, "Show detailed request/response info")
-	cmd.Flags().BoolVarP(&reqStream, "stream", "S", false, "Handle streaming response")
+	cmd.Flags().BoolVar(&reqStream, "stream", false, "Handle streaming response")
 	cmd.Flags().BoolVar(&reqNoRec, "no-record", false, "Do not record this request")
-	cmd.Flags().IntVar(&reqMaxDuration, "max-duration", 0, "Max duration in milliseconds (0 = no limit)")
+	cmd.Flags().IntVar(&reqMaxDuration, "max-time", 0, "Max response time in milliseconds (0 = no limit)")
 	cmd.Flags().IntVar(&reqRetry, "retry", 0, "Number of retries on failure")
-	cmd.Flags().IntVar(&reqRetryWait, "retry-wait", 1000, "Wait time between retries in milliseconds")
+	cmd.Flags().IntVar(&reqRetryWait, "retry-delay", 1000, "Delay between retries in milliseconds")
 	cmd.Flags().StringArrayVar(&reqVars, "var", []string{}, "Set variables (e.g. --var key=value)")
 	cmd.Flags().BoolVar(&reqDebugVars, "debug-vars", false, "Show variable resolution details")
 
