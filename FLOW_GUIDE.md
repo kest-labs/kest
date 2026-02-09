@@ -91,11 +91,10 @@ Flow blocks are Markdown-native and map 1:1 to a flow graph.
 @env dev
 ```
 
-### 2) Step Block
+### 2) HTTP Step Block
 ```step
 @id login
 @name Login
-@type http
 @retry 2
 @max-duration 1000
 
@@ -117,7 +116,49 @@ body.data.access_token exists
 duration < 500
 ```
 
-### 3) Edge Block (Flow Graph)
+### 3) Exec Step Block
+
+Exec steps run shell commands and capture output as variables. This is essential for dynamic computations like HMAC signing, token generation, or any pre-processing that can't be expressed as a simple HTTP request.
+
+```step
+@id generate-signature
+@name Generate HMAC Signature
+@type exec
+
+echo -n "{{timestamp}}:{{api_key}}" | openssl dgst -sha256 -hmac "{{api_key}}" | awk '{print $NF}'
+
+[Captures]
+signature = $line.0
+```
+
+**Exec Capture Modes:**
+
+| Query | Description | Example |
+| :--- | :--- | :--- |
+| `$stdout` | Entire stdout output | `output = $stdout` |
+| `$line.N` | Nth line (0-indexed) | `first = $line.0` |
+| `<gjson path>` | Parse stdout as JSON | `token = data.token` |
+
+**JSON output example:**
+```step
+@id generate-vars
+@name Generate Dynamic Vars
+@type exec
+
+echo '{"ts":"'$(date +%s)'","nonce":"'$RANDOM'"}'
+
+[Captures]
+timestamp = ts
+nonce = nonce
+```
+
+**Notes:**
+- Exec steps use `sh -c` on Unix and `cmd /C` on Windows.
+- Default timeout is 30 seconds. Override with `--exec-timeout`.
+- The full variable chain is available for interpolation in the command.
+- Captured values are stored in the run context and available to all subsequent steps.
+
+### 4) Edge Block (Flow Graph)
 ```edge
 @from login
 @to profile
@@ -243,11 +284,12 @@ Content-Type: application/json
 
 ### Variable Priority
 
-When variables with the same name come from multiple sources, the priority is:
+When variables with the same name come from multiple sources, the priority is (highest wins):
 
-1. **Runtime Capture** - Variables captured via `[Captures]` in Flow (Highest Priority)
-2. **Config File** - Static variables defined in `.kest/config.yaml`
-3. **Built-in Variables** - `$randomInt`, `$timestamp`
+1. **Run Context** - `--var` flags and `@type exec` captures (Highest Priority)
+2. **Runtime Capture** - Variables captured via `[Captures]` in HTTP steps (stored in DB)
+3. **Config File** - Static variables defined in `.kest/config.yaml`
+4. **Built-in Variables** - `$randomInt`, `$timestamp` (evaluated at interpolation time)
 
 ### Variable Scope
 
@@ -272,8 +314,14 @@ You can execute the entire test flow with a simple command:
 # Execute a single flow
 kest run user_auth.flow.md
 
+# Inject variables from CLI
+kest run user_auth.flow.md --var api_key=secret --var env=prod
+
 # Parallel execution (if you have multiple flows)
 kest run tests/ --parallel --jobs 4
+
+# Set exec step timeout (default: 30s)
+kest run hmac.flow.md --exec-timeout 10
 ```
 
 ---
@@ -289,12 +337,15 @@ kest run user_auth.flow.md
 
 ### 2. Retry Mechanism
 Add retry logic for unstable endpoints:
-```kest
+```step
+@id flaky
+@retry 3
+@retry-wait 1000
+
 GET /api/v1/flaky-endpoint
 
 [Asserts]
 status == 200
-# Use command line parameters: kest run --retry 3 --retry-wait 1000
 ```
 
 ### 3. Parallel Execution
@@ -326,12 +377,16 @@ kest guide
 | Feature | Syntax | AI Instruction |
 | :--- | :--- | :--- |
 | **Step Block** | ` ```step ` | **Mandatory** for all new flows. |
+| **Exec Step** | `@type exec` | Use for HMAC, token gen, pre-processing. |
 | **Capture** | `var = path` | Use `=` for consistency. |
+| **Exec Capture** | `var = $line.0` | `$stdout`, `$line.N`, or gjson path. |
 | **Injection** | `{{var}}` | Always wrap in double braces. |
+| **CLI Vars** | `--var key=value` | Highest priority, overrides everything. |
 | **Retry** | `@retry 3` | Use for flaky endpoints. |
+| **Timeout** | `--exec-timeout 10` | Default 30s for exec steps. |
 | **URL** | `/api/v1/` | **Prefer relative URLs** for portability. |
 
-**Pro Tip for AI**: When writing flows, think in "chains". Step A captures the state, Step B uses the state. Always include assertions to verify the "vibe".
+**Pro Tip for AI**: When writing flows, think in "chains". Step A captures the state, Step B uses the state. For HMAC/signing flows, use `@type exec` to generate fresh credentials before each request. Always include assertions to verify the "vibe".
 
 ---
 
