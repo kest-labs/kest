@@ -118,9 +118,14 @@ $ kest explain 42             # AI explains what record #42 does
 ## 🚀 Quick Start
 
 ```bash
-# Install
-go install github.com/kest-lab/kest-cli/cmd/kest@latest
+# One-line install
+curl -fsSL https://kest.dev/install.sh | sh
 
+# Or via Go
+go install github.com/kest-lab/kest-cli/cmd/kest@latest
+```
+
+```bash
 # Initialize project
 kest init
 
