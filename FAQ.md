@@ -286,7 +286,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Kest
-        run: go install github.com/kest-lab/kest-cli/cmd/kest@latest
+        run: go install github.com/kest-labs/kest/cmd/kest@latest
 
       - name: Run API Tests
         run: |
@@ -307,4 +307,4 @@ jobs:
 
 ---
 
-Have a question not listed here? [Open an issue!](https://github.com/kest-lab/kest-cli/issues) 🚀
+Have a question not listed here? [Open an issue!](https://github.com/kest-labs/kest/issues) 🚀

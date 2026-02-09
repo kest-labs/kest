@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kest-lab/kest-cli/internal/ai"
-	"github.com/kest-lab/kest-cli/internal/storage"
+	"github.com/kest-labs/kest/internal/ai"
+	"github.com/kest-labs/kest/internal/storage"
 	"github.com/spf13/cobra"
 )
 

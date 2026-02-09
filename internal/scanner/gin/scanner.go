@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kest-lab/kest-cli/internal/scanner"
+	"github.com/kest-labs/kest/internal/scanner"
 )
 
 type GinScanner struct{}

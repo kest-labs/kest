@@ -8,7 +8,7 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-REPO="kest-lab/kest-cli"
+REPO="kest-labs/kest"
 GO_PACKAGE="github.com/$REPO/cmd/kest"
 
 printf "${BLUE}Installing Kest CLI...${NC}\n"

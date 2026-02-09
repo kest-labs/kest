@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kest-lab/kest-cli/internal/client"
-	"github.com/kest-lab/kest-cli/internal/logger"
-	"github.com/kest-lab/kest-cli/internal/output"
-	"github.com/kest-lab/kest-cli/internal/storage"
+	"github.com/kest-labs/kest/internal/client"
+	"github.com/kest-labs/kest/internal/logger"
+	"github.com/kest-labs/kest/internal/output"
+	"github.com/kest-labs/kest/internal/storage"
 	"github.com/spf13/cobra"
 )
 

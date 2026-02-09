@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/kest-lab/kest-cli/internal/config"
+	"github.com/kest-labs/kest/internal/config"
 	"github.com/spf13/cobra"
 )
 

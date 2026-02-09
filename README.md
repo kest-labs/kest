@@ -9,7 +9,7 @@
 *Built for developers who live in the terminal with AI copilots — Cursor, Windsurf, Copilot, Cline.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/github.com/kest-lab/kest-cli)](https://goreportcard.com/report/github.com/kest-lab/kest-cli)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kest-labs/kest)](https://goreportcard.com/report/github.com/kest-labs/kest)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 [Website](https://kest.dev) | [Quick Start](#-quick-start) | [Why Kest?](#-why-kest) | [Docs](https://kest.dev/docs)
@@ -24,7 +24,7 @@
 curl -fsSL https://kest.dev/install.sh | sh
 ```
 
-Or via Go: `go install github.com/kest-lab/kest-cli/cmd/kest@latest`
+Or via Go: `go install github.com/kest-labs/kest/cmd/kest@latest`
 
 ```bash
 kest init                                                    # Initialize project
@@ -312,7 +312,7 @@ Terminal                              Local Storage
 ## 🤝 Contributing
 
 ```bash
-git clone https://github.com/kest-lab/kest-cli.git
+git clone https://github.com/kest-labs/kest.git
 cd kest-cli
 go build ./cmd/kest
 go test ./...
@@ -326,7 +326,7 @@ See [docs/VISION.md](docs/VISION.md) for project philosophy. PRs welcome!
 
 **Keep Every Step Tested.** 🦅
 
-[Website](https://kest.dev) · [GitHub](https://github.com/kest-lab/kest-cli) · [Report Bug](https://github.com/kest-lab/kest-cli/issues)
+[Website](https://kest.dev) · [GitHub](https://github.com/kest-labs/kest) · [Report Bug](https://github.com/kest-labs/kest/issues)
 
 If Kest saves you time, consider giving it a ⭐
 

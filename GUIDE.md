@@ -9,7 +9,7 @@ Kest CLI is a **CLI-first** API testing tool designed for developers. Core philo
 Make sure you have Go installed, then run:
 
 ```bash
-go install github.com/kest-lab/kest-cli/cmd/kest@latest
+go install github.com/kest-labs/kest/cmd/kest@latest
 ```
 
 After installation, ensure `$(go env GOPATH)/bin` is in your system `PATH`.

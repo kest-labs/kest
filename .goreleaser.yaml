@@ -13,7 +13,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/kest-lab/kest-cli/internal/cli.Version={{.Version}}
+      - -s -w -X github.com/kest-labs/kest/internal/cli.Version={{.Version}}
     goos:
       - linux
       - darwin

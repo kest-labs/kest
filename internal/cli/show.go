@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kest-lab/kest-cli/internal/storage"
+	"github.com/kest-labs/kest/internal/storage"
 	"github.com/spf13/cobra"
 )
 
