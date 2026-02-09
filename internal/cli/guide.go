@@ -96,19 +96,38 @@ signature = $line.0
 
 Capture modes: $stdout (all output), $line.N (Nth line), or a gjson path for JSON output.
 
-## 🚀 Running the flow
+## 🚀 Running & Watching
 
   $ kest run login.flow.md
   $ kest run login.flow.md --var api_key=secret
   $ kest run login.flow.md --exec-timeout 10 -v
+  $ kest watch login.flow.md          # Auto-rerun on file change
 
-## 💡 Tips
+## 🧠 AI-Powered Commands
+
+  $ kest why                           # Diagnose last failed request
+  $ kest suggest                       # AI suggests next command
+  $ kest explain last                  # AI explains a recorded request
+  $ kest review login.flow.md          # AI audits flow for security/coverage
+  $ kest gen "test user registration"  # AI generates a flow file
+
+## � History & Comparison
+
+  $ kest diff 100 105                  # Compare two records
+  $ kest snap /api/users               # Save response snapshot
+  $ kest snap /api/users --verify      # Verify against snapshot
+  $ kest chain login.flow.md           # Visualize variable flow
+  $ kest mock --port 8787              # Mock server from history
+
+## �💡 Tips
 
 - Use "step" blocks for all new flows (recommended over legacy "kest" blocks).
 - Non-code content (text, images) is ignored by Kest, perfect for documentation.
 - Use "kest history" to see the results of previous runs.
 - Use "--debug-vars" to see how variables are resolved.
 - Exec steps default to 30s timeout. Override with --exec-timeout.
+- Use "--quiet --output json" for CI/CD pipelines.
+- Exit codes: 0=success, 1=assertion fail, 2=runtime error.
 
 Keep Every Step Tested. 🦅
 `
