@@ -18,22 +18,94 @@
 
 ## 30 Seconds to Understand Kest
 
+### 1️⃣ Test & Capture — like curl, but it remembers
+
 ```bash
-# Like curl, but every request is auto-recorded
 kest post /api/login -d '{"user":"admin","pass":"secret"}' -c "token=data.token"
-
-# Variables chain automatically — no manual copy-paste
 kest get /api/profile -H "Authorization: Bearer {{token}}" -a "status==200"
-
-# Something broke? Ask AI — it sees your full history
-kest why
-# 🧠 The token expired 15 minutes ago. Your login was at 14:03,
-#    but /api/profile was called at 14:18. The JWT has a 15min TTL.
-#    Suggested fix:
-#      kest post /api/login -d '{"user":"admin","pass":"secret"}' -c "token=data.token"
 ```
 
-**That's it.** No collections. No GUI. No cloud account. Just your terminal.
+> Variables chain automatically. No manual copy-paste. Every request is auto-recorded.
+
+### 2️⃣ Write Flows — your documentation IS your test suite
+
+> **`login.flow.md`** — a Markdown file that is both documentation and executable test:
+
+~~~markdown
+```step
+@id login
+POST /api/login
+Content-Type: application/json
+{"user": "admin", "pass": "secret"}
+
+[Captures]
+token = data.token
+
+[Asserts]
+status == 200
+```
+
+```step
+@id profile
+GET /api/profile
+Authorization: Bearer {{token}}
+
+[Asserts]
+status == 200
+body.user == "admin"
+```
+~~~
+
+<table><tr><td>
+
+**Run it:**
+
+```
+$ kest run login.flow.md
+
+  ▶ login POST /api/login (line 3)
+    ✅ POST /api/login → 200 (142ms)
+
+  ▶ profile GET /api/profile (line 14)
+    ✅ GET /api/profile → 200 (89ms)
+
+╭──────────────────────────────────────────────────╮
+│                 TEST SUMMARY                      │
+├──────────────────────────────────────────────────┤
+│ ✓ [POST] /api/login                  142ms │
+│ ✓ [GET]  /api/profile                  89ms │
+├──────────────────────────────────────────────────┤
+│ Total: 2  │  Passed: 2  │  Time: 231ms │
+╰──────────────────────────────────────────────────╯
+✓ All tests passed!
+```
+
+</td></tr></table>
+
+> `.flow.md` files are **Git-diffable**, **PR-reviewable**, and readable by humans AND AI agents. Postman collections are 5000-line JSON blobs.
+
+### 3️⃣ Debug with AI — it sees your full request history
+
+<table><tr><td>
+
+```
+$ kest why
+
+🧠 The token expired. Your login was at 14:03, but /api/profile
+   was called at 14:18. The JWT has a 15-minute TTL.
+
+   Fix: kest post /api/login -d '...' -c "token=data.token"
+```
+
+```
+$ kest replay last --diff     # Re-run & compare response changes
+$ kest suggest                # AI suggests next logical API call
+$ kest explain 42             # AI explains what record #42 does
+```
+
+</td></tr></table>
+
+> No collections. No GUI. No cloud account. **Just your terminal.**
 
 ---
 
