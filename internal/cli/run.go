@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,12 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kest-lab/kest-cli/internal/config"
 	"github.com/kest-lab/kest-cli/internal/logger"
+	"github.com/kest-lab/kest-cli/internal/storage"
 	"github.com/kest-lab/kest-cli/internal/summary"
 	"github.com/kest-lab/kest-cli/internal/variable"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/tidwall/gjson"
 )
 
 var (
@@ -25,10 +27,8 @@ var (
 	runVerbose   bool
 	runDebugVars bool
 	runVars      []string
+	execTimeout  int
 )
-
-// CLIVars holds variables passed via --var flags, accessible by ExecuteRequest
-var CLIVars = make(map[string]string)
 
 var runCmd = &cobra.Command{
 	Use:     "run [file]",
@@ -56,6 +56,7 @@ func init() {
 	runCmd.Flags().BoolVarP(&runVerbose, "verbose", "v", false, "Show detailed request/response info")
 	runCmd.Flags().BoolVar(&runDebugVars, "debug-vars", false, "Show variable resolution details")
 	runCmd.Flags().StringArrayVar(&runVars, "var", []string{}, "Set variables (e.g. --var key=value)")
+	runCmd.Flags().IntVar(&execTimeout, "exec-timeout", 30, "Timeout in seconds for exec steps (default: 30)")
 	rootCmd.AddCommand(runCmd)
 }
 
@@ -63,13 +64,16 @@ func runScenario(filePath string) error {
 	logger.StartSession(filepath.Base(filePath))
 	defer logger.EndSession()
 
-	// Parse --var flags into CLIVars
+	// Parse --var flags and create a scoped RunContext
+	cliVars := make(map[string]string, len(runVars))
 	for _, v := range runVars {
 		parts := strings.SplitN(v, "=", 2)
 		if len(parts) == 2 {
-			CLIVars[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+			cliVars[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 		}
 	}
+	ActiveRunCtx = NewRunContext(cliVars)
+	defer func() { ActiveRunCtx = nil }()
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -437,10 +441,9 @@ func orderFlowSteps(doc FlowDoc) []FlowStep {
 }
 
 // executeExecStep runs a shell command and captures output as variables.
-// Captures support two modes:
-//   - key=jsonpath  → parse stdout as JSON, extract via gjson
-//   - key=$stdout   → capture entire stdout as the variable value
-//   - key=$line.N   → capture Nth line (0-indexed) of stdout
+// The full variable chain (config → captured → CLI → exec) is available
+// for interpolation in the command. Captured values are stored in the
+// active RunContext so subsequent steps can reference them.
 func executeExecStep(step FlowStep) summary.TestResult {
 	startTime := time.Now()
 	result := summary.TestResult{
@@ -455,12 +458,19 @@ func executeExecStep(step FlowStep) summary.TestResult {
 		return result
 	}
 
-	// Interpolate variables in the command using CLIVars (which accumulates captured vars)
-	command := variable.Interpolate(step.Exec.Command, CLIVars)
+	// Build the full variable map: config → storage → run context
+	vars := buildVarChain()
+	command := variable.Interpolate(step.Exec.Command, vars)
 
 	fmt.Printf("  $ %s\n", command)
 
-	cmd := exec.Command("sh", "-c", command)
+	// Run with timeout and cross-platform shell
+	timeout := time.Duration(execTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	shell, flag := ShellCommand()
+	cmd := exec.CommandContext(ctx, shell, flag, command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -469,9 +479,15 @@ func executeExecStep(step FlowStep) summary.TestResult {
 	duration := time.Since(startTime)
 	result.Duration = duration
 
+	if ctx.Err() == context.DeadlineExceeded {
+		result.Success = false
+		result.Error = fmt.Errorf("exec timed out after %ds", execTimeout)
+		fmt.Printf("  ❌ %v\n", result.Error)
+		return result
+	}
 	if err != nil {
 		result.Success = false
-		result.Error = fmt.Errorf("exec failed: %v\nstderr: %s", err, stderr.String())
+		result.Error = fmt.Errorf("exec failed: %v\nstderr: %s", err, strings.TrimSpace(stderr.String()))
 		fmt.Printf("  ❌ %v\n", result.Error)
 		return result
 	}
@@ -481,66 +497,25 @@ func executeExecStep(step FlowStep) summary.TestResult {
 		fmt.Printf("  stdout: %s\n", output)
 	}
 	if runVerbose && stderr.Len() > 0 {
-		fmt.Printf("  stderr: %s\n", stderr.String())
+		fmt.Printf("  stderr: %s\n", strings.TrimSpace(stderr.String()))
 	}
 
-	// Process captures from exec output
-	if len(step.Exec.Captures) > 0 {
-		lines := strings.Split(output, "\n")
-		for _, capExpr := range step.Exec.Captures {
-			sep := "="
-			if !strings.Contains(capExpr, "=") && strings.Contains(capExpr, ":") {
-				sep = ":"
-			}
-			parts := strings.SplitN(capExpr, sep, 2)
-			if len(parts) != 2 {
-				continue
-			}
-			varName := strings.TrimSpace(parts[0])
-			query := strings.TrimSpace(parts[1])
+	// Process captures
+	for _, capExpr := range step.Exec.Captures {
+		varName, query, ok := ParseCaptureExpr(capExpr)
+		if !ok {
+			continue
+		}
 
-			var value string
-			switch {
-			case query == "$stdout":
-				value = output
-			case strings.HasPrefix(query, "$line."):
-				idxStr := strings.TrimPrefix(query, "$line.")
-				idx := 0
-				for _, r := range idxStr {
-					if r >= '0' && r <= '9' {
-						idx = idx*10 + int(r-'0')
-					} else {
-						break
-					}
-				}
-				if idx < len(lines) {
-					value = strings.TrimSpace(lines[idx])
-				}
-			default:
-				// Try gjson on stdout (if stdout is JSON)
-				r := gjson.Get(output, query)
-				if r.Exists() {
-					value = r.String()
-				} else {
-					// Fallback: treat as plain text key=value output
-					// Look for "key=value" lines in stdout
-					for _, line := range lines {
-						kv := strings.SplitN(line, "=", 2)
-						if len(kv) == 2 && strings.TrimSpace(kv[0]) == query {
-							value = strings.TrimSpace(kv[1])
-							break
-						}
-					}
-				}
+		value := ResolveExecCapture(output, query)
+		if value != "" {
+			if ActiveRunCtx != nil {
+				ActiveRunCtx.Set(varName, value)
 			}
-
-			if value != "" {
-				CLIVars[varName] = value
-				fmt.Printf("  Captured: %s = %s\n", varName, value)
-				logger.LogToSession("Exec Captured: %s = %s", varName, value)
-			} else {
-				fmt.Printf("  ⚠️  Capture '%s' produced empty value\n", varName)
-			}
+			fmt.Printf("  Captured: %s = %s\n", varName, value)
+			logger.LogToSession("Exec Captured: %s = %s", varName, value)
+		} else {
+			fmt.Printf("  ⚠️  Capture '%s' produced empty value\n", varName)
 		}
 	}
 
@@ -548,6 +523,38 @@ func executeExecStep(step FlowStep) summary.TestResult {
 	result.ResponseBody = output
 	fmt.Printf("  ✅ Exec completed in %s\n", duration.Round(time.Millisecond))
 	return result
+}
+
+// buildVarChain assembles the full variable map following the priority chain:
+// config env vars → storage captured vars → run context (CLI + exec captures).
+func buildVarChain() map[string]string {
+	vars := make(map[string]string)
+
+	conf, _ := config.LoadConfig()
+	if conf != nil {
+		env := conf.GetActiveEnv()
+		if env.Variables != nil {
+			for k, v := range env.Variables {
+				vars[k] = v
+			}
+		}
+	}
+
+	store, _ := storage.NewStore()
+	if store != nil && conf != nil {
+		capturedVars, _ := store.GetVariables(conf.ProjectID, conf.ActiveEnv)
+		for k, v := range capturedVars {
+			vars[k] = v
+		}
+	}
+
+	if ActiveRunCtx != nil {
+		for k, v := range ActiveRunCtx.All() {
+			vars[k] = v
+		}
+	}
+
+	return vars
 }
 
 func sortByIndex(ids []string, index map[string]int) []string {

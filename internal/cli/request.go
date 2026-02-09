@@ -140,9 +140,11 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		}
 	}
 
-	// Finally, apply CLI --var flags (highest priority, override everything)
-	for k, v := range CLIVars {
-		vars[k] = v
+	// Finally, apply run context vars (CLI --var + exec captures, highest priority)
+	if ActiveRunCtx != nil {
+		for k, v := range ActiveRunCtx.All() {
+			vars[k] = v
+		}
 	}
 
 	// Debug: Show variable resolution if requested
@@ -157,9 +159,12 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 
 		for k, v := range vars {
 			source := "config"
-			if _, exists := CLIVars[k]; exists {
-				source = "cli --var"
-			} else if capturedVars != nil {
+			if ActiveRunCtx != nil {
+				if _, exists := ActiveRunCtx.Get(k); exists {
+					source = "cli --var"
+				}
+			}
+			if source == "config" && capturedVars != nil {
 				if _, exists := capturedVars[k]; exists {
 					source = "runtime capture"
 				}
