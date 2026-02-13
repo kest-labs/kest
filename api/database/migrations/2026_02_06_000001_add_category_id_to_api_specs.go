@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	"github.com/zgiai/kest-api/internal/infra/migration"
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"gorm.io/gorm"
 )
 

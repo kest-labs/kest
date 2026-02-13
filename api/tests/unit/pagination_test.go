@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/zgiai/kest-api/pkg/pagination"
+	"github.com/kest-labs/kest/api/pkg/pagination"
 	"github.com/gin-gonic/gin"
 )
 

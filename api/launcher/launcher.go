@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/routes"
+	"github.com/kest-labs/kest/api/routes"
 	// 假设你还需要初始化 database 或者其他 handlers
 )
 

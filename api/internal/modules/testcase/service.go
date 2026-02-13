@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/zgiai/kest-api/internal/modules/apispec"
-	"github.com/zgiai/kest-api/internal/modules/environment"
+	"github.com/kest-labs/kest/api/internal/modules/apispec"
+	"github.com/kest-labs/kest/api/internal/modules/environment"
 )
 
 // Service defines the interface for test case business logic

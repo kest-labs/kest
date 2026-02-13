@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kest-labs/kest/internal/client"
-	"github.com/kest-labs/kest/internal/logger"
-	"github.com/kest-labs/kest/internal/output"
-	"github.com/kest-labs/kest/internal/storage"
-	"github.com/kest-labs/kest/internal/summary"
-	"github.com/kest-labs/kest/internal/variable"
+	"github.com/kest-labs/kest/cli/internal/client"
+	"github.com/kest-labs/kest/cli/internal/logger"
+	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/storage"
+	"github.com/kest-labs/kest/cli/internal/summary"
+	"github.com/kest-labs/kest/cli/internal/variable"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 )

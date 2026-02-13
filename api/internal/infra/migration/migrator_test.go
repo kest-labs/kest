@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zgiai/kest-api/internal/infra/events"
+	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/glebarez/sqlite"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"

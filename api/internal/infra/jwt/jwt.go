@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/golang-jwt/jwt/v5"
 )
 

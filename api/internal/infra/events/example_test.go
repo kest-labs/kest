@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/events"
+	"github.com/kest-labs/kest/api/internal/infra/events"
 )
 
 // ============================================

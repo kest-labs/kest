@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kest-labs/kest/internal/ai"
-	"github.com/kest-labs/kest/internal/config"
-	"github.com/kest-labs/kest/internal/scanner"
-	"github.com/kest-labs/kest/internal/scanner/gin"
-	"github.com/kest-labs/kest/internal/storage"
+	"github.com/kest-labs/kest/cli/internal/ai"
+	"github.com/kest-labs/kest/cli/internal/config"
+	"github.com/kest-labs/kest/cli/internal/scanner"
+	"github.com/kest-labs/kest/cli/internal/scanner/gin"
+	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 

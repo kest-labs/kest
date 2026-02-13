@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/zgiai/kest-api/database/migrations"
-	"github.com/zgiai/kest-api/internal/infra/events"
-	"github.com/zgiai/kest-api/internal/infra/migration"
+	"github.com/kest-labs/kest/api/database/migrations"
+	"github.com/kest-labs/kest/api/internal/infra/events"
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"gorm.io/gorm"
 )
 

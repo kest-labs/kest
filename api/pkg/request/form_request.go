@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/zgiai/kest-api/pkg/validation"
+	"github.com/kest-labs/kest/api/pkg/validation"
 	"github.com/gin-gonic/gin"
 )
 

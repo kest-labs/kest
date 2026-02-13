@@ -1,7 +1,7 @@
 package permission
 
 import (
-	"github.com/zgiai/kest-api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/infra/router"
 )
 
 // RegisterRoutes registers permission module routes

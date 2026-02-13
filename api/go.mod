@@ -1,4 +1,4 @@
-module github.com/zgiai/kest-api
+module github.com/kest-labs/kest/api
 
 go 1.24.0
 

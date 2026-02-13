@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/zgiai/kest-api/internal/infra/config"
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 var (

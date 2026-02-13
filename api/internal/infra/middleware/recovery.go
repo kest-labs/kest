@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/zgiai/kest-api/pkg/logger"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 

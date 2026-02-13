@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/modules/audit"
-	"github.com/zgiai/kest-api/pkg/handler"
+	"github.com/kest-labs/kest/api/internal/modules/audit"
+	"github.com/kest-labs/kest/api/pkg/handler"
 )
 
 var auditRepo audit.Repository

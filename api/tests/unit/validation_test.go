@@ -3,7 +3,7 @@ package unit
 import (
 	"testing"
 
-	"github.com/zgiai/kest-api/pkg/validation"
+	"github.com/kest-labs/kest/api/pkg/validation"
 	"github.com/go-playground/validator/v10"
 )
 

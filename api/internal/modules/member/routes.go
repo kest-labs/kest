@@ -2,7 +2,7 @@ package member
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/infra/middleware"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
 )
 
 // RegisterRoutes registers member routes

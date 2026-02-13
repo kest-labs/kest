@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	httpclient "github.com/zgiai/kest-api/internal/infra/http"
+	httpclient "github.com/kest-labs/kest/api/internal/infra/http"
 )
 
 func TestHTTPClient_Get(t *testing.T) {

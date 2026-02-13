@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 // InitLogger initializes the logger.

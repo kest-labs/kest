@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // PermissionProvider is an interface for checking project permissions

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/health"
+	"github.com/kest-labs/kest/api/internal/infra/health"
 	"github.com/gin-gonic/gin"
 )
 

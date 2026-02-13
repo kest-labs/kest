@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zgiai/kest-api/pkg/env"
+	"github.com/kest-labs/kest/api/pkg/env"
 )
 
 // Repository is the main configuration storage and management tool

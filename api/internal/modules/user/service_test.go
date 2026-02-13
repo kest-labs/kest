@@ -9,10 +9,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/zgiai/kest-api/internal/domain"
-	"github.com/zgiai/kest-api/internal/infra/jwt"
-	"github.com/zgiai/kest-api/pkg/utils"
-	"github.com/zgiai/kest-api/test/mocks"
+	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/internal/infra/jwt"
+	"github.com/kest-labs/kest/api/pkg/utils"
+	"github.com/kest-labs/kest/api/test/mocks"
 	"golang.org/x/crypto/bcrypt"
 )
 

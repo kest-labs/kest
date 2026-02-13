@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zgiai/kest-api/internal/infra/console"
-	"github.com/zgiai/kest-api/internal/infra/plugin"
+	"github.com/kest-labs/kest/api/internal/infra/console"
+	"github.com/kest-labs/kest/api/internal/infra/plugin"
 )
 
 // PluginListCommand lists all installed plugins
@@ -39,7 +39,7 @@ func (c *PluginListCommand) Run(args []string) error {
 		c.output.Info("No plugins installed")
 		c.output.Info("")
 		c.output.Info("Install plugins with:")
-		c.output.Info("  go install github.com/zgiai/kest-api-ai/cmd/zgo-ai@latest")
+		c.output.Info("  go install github.com/kest-labs/kest/api-ai/cmd/zgo-ai@latest")
 		return nil
 	}
 

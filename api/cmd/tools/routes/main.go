@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zgiai/kest-api/cmd/tools/apidoc/parser"
+	"github.com/kest-labs/kest/api/cmd/tools/apidoc/parser"
 )
 
 func main() {

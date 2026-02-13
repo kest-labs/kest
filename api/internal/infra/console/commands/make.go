@@ -8,8 +8,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/console"
-	"github.com/zgiai/kest-api/internal/infra/migration"
+	"github.com/kest-labs/kest/api/internal/infra/console"
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 )
 
 // MakeModelCommand creates a new model
@@ -381,8 +381,8 @@ func (c *MakeModuleCommand) Run(args []string) error {
 		"HandlerName":    pascal,
 		"RepositoryName": pascal,
 		"TableName":      snake + "s",
-		"ModulePath":     "github.com/zgiai/kest-api/internal/modules/" + snake,
-		"PlatformPath":   "github.com/zgiai/kest-api/internal/infra",
+		"ModulePath":     "github.com/kest-labs/kest/api/internal/modules/" + snake,
+		"PlatformPath":   "github.com/kest-labs/kest/api/internal/infra",
 	}
 
 	for _, f := range files {
@@ -423,7 +423,7 @@ func injectProvider(moduleName string) error {
 	code := string(content)
 
 	// 1. Add Import
-	importPath := fmt.Sprintf("\"github.com/zgiai/kest-api/internal/modules/%s\"", moduleName)
+	importPath := fmt.Sprintf("\"github.com/kest-labs/kest/api/internal/modules/%s\"", moduleName)
 	if !strings.Contains(code, importPath) {
 		importBlock := "import (\n"
 		if idx := strings.Index(code, importBlock); idx != -1 {
@@ -466,7 +466,7 @@ func injectRoute(moduleName string) error {
 	code := string(content)
 
 	// 1. Add Import
-	importPath := fmt.Sprintf("\"github.com/zgiai/kest-api/internal/modules/%s\"", moduleName)
+	importPath := fmt.Sprintf("\"github.com/kest-labs/kest/api/internal/modules/%s\"", moduleName)
 	if !strings.Contains(code, importPath) {
 		importBlock := "import (\n"
 		if idx := strings.Index(code, importBlock); idx != -1 {
@@ -609,7 +609,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles HTTP requests for {{.ModelName}}
@@ -869,7 +869,7 @@ func init() {
 const routesTemplate = `package {{.Package}}
 
 import (
-	"github.com/zgiai/kest-api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/infra/router"
 )
 
 // Register registers routes for this module.

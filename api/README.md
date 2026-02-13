@@ -22,8 +22,8 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/zgiai/trac-api.git
-cd trac-api
+git clone https://github.com/kest-labs/kest.git
+cd kest/api
 
 # 配置环境变量
 cp .env.example .env

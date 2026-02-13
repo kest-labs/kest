@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	infraRedis "github.com/zgiai/kest-api/internal/infra/redis"
-	"github.com/zgiai/kest-api/pkg/logger"
+	infraRedis "github.com/kest-labs/kest/api/internal/infra/redis"
+	"github.com/kest-labs/kest/api/pkg/logger"
 	goRedis "github.com/redis/go-redis/v9"
 	"golang.org/x/time/rate"
 )

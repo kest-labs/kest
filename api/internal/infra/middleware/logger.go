@@ -3,7 +3,7 @@ package middleware
 import (
 	"time"
 
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 

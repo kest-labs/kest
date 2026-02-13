@@ -4,10 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/zgiai/kest-api/internal/app"
-	"github.com/zgiai/kest-api/internal/infra/middleware"
-	"github.com/zgiai/kest-api/internal/infra/monitor"
-	"github.com/zgiai/kest-api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/app"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
+	"github.com/kest-labs/kest/api/internal/infra/monitor"
+	"github.com/kest-labs/kest/api/internal/infra/router"
 )
 
 // Setup configures all application routes using the fluent router API

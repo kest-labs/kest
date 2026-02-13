@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"github.com/zgiai/kest-api/internal/domain"
+	"github.com/kest-labs/kest/api/internal/domain"
 	"gorm.io/gorm"
 )
 

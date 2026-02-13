@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/zgiai/kest-api/pkg/env"
+	"github.com/kest-labs/kest/api/pkg/env"
 )
 
 func TestEnv_Get(t *testing.T) {

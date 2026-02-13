@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/pkg/response"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/zgiai/kest-api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/gin-gonic/gin"
 )
 

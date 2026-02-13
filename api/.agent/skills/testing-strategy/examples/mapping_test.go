@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zgiai/kest-api/internal/domain"
-	"github.com/zgiai/kest-api/internal/modules/user"
+	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/internal/modules/user"
 )
 
 func TestToResponse(t *testing.T) {

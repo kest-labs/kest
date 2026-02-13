@@ -2,8 +2,8 @@ package testcase
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/infra/middleware"
-	"github.com/zgiai/kest-api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 )
 
 // RegisterRoutes registers test case routes

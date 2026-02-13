@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/zgiai/kest-api/pkg/support"
+	"github.com/kest-labs/kest/api/pkg/support"
 )
 
 func TestBlank(t *testing.T) {

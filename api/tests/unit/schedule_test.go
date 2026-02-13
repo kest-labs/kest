@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/schedule"
+	"github.com/kest-labs/kest/api/internal/infra/schedule"
 )
 
 func TestEvent_EveryMinute(t *testing.T) {

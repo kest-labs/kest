@@ -2,10 +2,10 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/domain"
-	"github.com/zgiai/kest-api/pkg/handler"
-	"github.com/zgiai/kest-api/pkg/pagination"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/pkg/handler"
+	"github.com/kest-labs/kest/api/pkg/pagination"
+	"github.com/kest-labs/kest/api/pkg/response"
 	"gorm.io/gorm"
 )
 

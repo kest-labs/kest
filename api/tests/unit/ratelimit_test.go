@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/ratelimit"
+	"github.com/kest-labs/kest/api/internal/infra/ratelimit"
 	"github.com/gin-gonic/gin"
 )
 

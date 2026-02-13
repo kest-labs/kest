@@ -11,7 +11,7 @@ import (
 
 	"sync"
 
-	"github.com/kest-labs/kest/internal/config"
+	"github.com/kest-labs/kest/cli/internal/config"
 )
 
 var (

@@ -173,7 +173,7 @@ const serviceTemplate = `package {{.PackageName}}
 
 import (
 	"context"
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 // {{.ModelName}}Service defines the {{.ModelName}} service interface
@@ -228,8 +228,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/pkg/logger"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // {{.ModelName}}Handler handles {{.ModelName}} requests
@@ -335,7 +335,7 @@ const repositoryTemplate = `package {{.PackageName}}
 import (
 	"context"
 	"gorm.io/gorm"
-	"github.com/zgiai/kest-api/internal/infra/database"
+	"github.com/kest-labs/kest/api/internal/infra/database"
 )
 
 // {{.ModelName}}Repository defines the {{.ModelName}} repository interface

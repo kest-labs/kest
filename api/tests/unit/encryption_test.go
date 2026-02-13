@@ -3,7 +3,7 @@ package unit
 import (
 	"testing"
 
-	"github.com/zgiai/kest-api/pkg/encryption"
+	"github.com/kest-labs/kest/api/pkg/encryption"
 )
 
 func TestEncryption_EncryptDecrypt(t *testing.T) {

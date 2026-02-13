@@ -2,13 +2,13 @@ package infra
 
 import (
 	"github.com/google/wire"
-	"github.com/zgiai/kest-api/internal/infra/config"
-	"github.com/zgiai/kest-api/internal/infra/database"
-	"github.com/zgiai/kest-api/internal/infra/email"
-	"github.com/zgiai/kest-api/internal/infra/events"
-	"github.com/zgiai/kest-api/internal/infra/jwt"
-	"github.com/zgiai/kest-api/internal/infra/migration"
-	"github.com/zgiai/kest-api/internal/infra/storage"
+	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/database"
+	"github.com/kest-labs/kest/api/internal/infra/email"
+	"github.com/kest-labs/kest/api/internal/infra/events"
+	"github.com/kest-labs/kest/api/internal/infra/jwt"
+	"github.com/kest-labs/kest/api/internal/infra/migration"
+	"github.com/kest-labs/kest/api/internal/infra/storage"
 )
 
 // ProviderSet aggregates all infrastructure providers for Wire DI.

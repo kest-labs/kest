@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/zgiai/kest-api/internal/modules/envelope"
+	"github.com/kest-labs/kest/api/internal/modules/envelope"
 )
 
 // mockRepository is a mock implementation of the Repository interface

@@ -105,13 +105,13 @@ All API responses follow a consistent format:
 
 ## SDKs and Tools
 
-- [JavaScript SDK](https://github.com/kest-lab/kest-js)
-- [Go SDK](https://github.com/kest-lab/kest-go)
-- [Python SDK](https://github.com/kest-lab/kest-python)
-- [Kest CLI](https://github.com/kest-lab/kest-cli)
+- [JavaScript SDK](https://github.com/kest-labs/kest-js)
+- [Go SDK](https://github.com/kest-labs/kest-go)
+- [Python SDK](https://github.com/kest-labs/kest-python)
+- [Kest CLI](https://github.com/kest-labs/kest-cli)
 
 ## Support
 
 - Documentation: https://docs.kest.com
 - Support Email: support@kest.com
-- GitHub Issues: https://github.com/kest-lab/kest/issues
+- GitHub Issues: https://github.com/kest-labs/kest/issues

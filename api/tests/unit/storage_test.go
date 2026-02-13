@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zgiai/kest-api/internal/infra/storage"
+	"github.com/kest-labs/kest/api/internal/infra/storage"
 )
 
 func setupTestStorage(t *testing.T) (*storage.LocalDisk, string) {

@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/zgiai/kest-api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/gin-gonic/gin"
 )
 

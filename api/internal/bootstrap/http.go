@@ -13,15 +13,15 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/app"
-	"github.com/zgiai/kest-api/internal/infra/config"
-	"github.com/zgiai/kest-api/internal/infra/health"
-	"github.com/zgiai/kest-api/internal/infra/metrics"
-	"github.com/zgiai/kest-api/internal/infra/middleware"
-	"github.com/zgiai/kest-api/internal/infra/tracing"
-	"github.com/zgiai/kest-api/pkg/logger"
-	"github.com/zgiai/kest-api/pkg/support"
-	"github.com/zgiai/kest-api/routes"
+	"github.com/kest-labs/kest/api/internal/app"
+	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/health"
+	"github.com/kest-labs/kest/api/internal/infra/metrics"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
+	"github.com/kest-labs/kest/api/internal/infra/tracing"
+	"github.com/kest-labs/kest/api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/support"
+	"github.com/kest-labs/kest/api/routes"
 )
 
 // HttpKernel handles HTTP server lifecycle

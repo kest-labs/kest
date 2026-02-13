@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"github.com/zgiai/kest-api/internal/bootstrap"
-	"github.com/zgiai/kest-api/internal/infra/config"
-	"github.com/zgiai/kest-api/internal/infra/console"
-	"github.com/zgiai/kest-api/internal/infra/database"
+	"github.com/kest-labs/kest/api/internal/bootstrap"
+	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/console"
+	"github.com/kest-labs/kest/api/internal/infra/database"
 )
 
 // DBSeedCommand runs database seeders

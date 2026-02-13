@@ -1,9 +1,9 @@
 package contracts
 
 import (
-	"github.com/zgiai/kest-api/internal/infra/console"
-	"github.com/zgiai/kest-api/internal/infra/events"
-	"github.com/zgiai/kest-api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/infra/console"
+	"github.com/kest-labs/kest/api/internal/infra/events"
+	"github.com/kest-labs/kest/api/internal/infra/router"
 )
 
 // Module defines the contract for a ZGO business module.

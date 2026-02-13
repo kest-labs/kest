@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/zgiai/kest-api/internal/infra/notification"
+	"github.com/kest-labs/kest/api/internal/infra/notification"
 )
 
 // TestNotification implements Notification interface

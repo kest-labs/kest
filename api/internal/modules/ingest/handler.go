@@ -7,10 +7,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/contracts"
-	"github.com/zgiai/kest-api/internal/modules/envelope"
-	"github.com/zgiai/kest-api/internal/modules/project"
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/modules/envelope"
+	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 // EventProcessor defines the interface for processing events

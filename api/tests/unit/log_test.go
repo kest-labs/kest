@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 func TestLog_Levels(t *testing.T) {

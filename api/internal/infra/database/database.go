@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

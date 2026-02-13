@@ -3,7 +3,7 @@ package logger
 import (
 	"time"
 
-	"github.com/zgiai/kest-api/pkg/env"
+	"github.com/kest-labs/kest/api/pkg/env"
 )
 
 // Boot initializes the logger from environment configuration

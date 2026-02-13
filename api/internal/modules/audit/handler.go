@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/contracts"
-	"github.com/zgiai/kest-api/internal/infra/router"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/infra/router"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles HTTP requests for audit logs

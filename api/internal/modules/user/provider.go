@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/zgiai/kest-api/internal/domain"
+	"github.com/kest-labs/kest/api/internal/domain"
 	"github.com/google/wire"
 )
 

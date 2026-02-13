@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kest-labs/kest/internal/storage"
+	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 )

@@ -4,8 +4,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/config"
-	"github.com/zgiai/kest-api/internal/infra/container"
+	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/container"
 	"gorm.io/gorm"
 )
 

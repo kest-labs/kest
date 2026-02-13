@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/domain"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles HTTP requests for workspace operations

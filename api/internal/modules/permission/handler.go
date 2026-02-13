@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/contracts"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles permission-related HTTP requests and implements contracts.Module

@@ -818,7 +818,7 @@ func renderDebugHTML(data DebugPageData) string {
 	
 	<div class="footer">
 		<div class="logo">Eogo</div>
-		<div>Framework Debug Mode • <a href="https://github.com/zgiai/kest-api" target="_blank">Documentation</a></div>
+		<div>Framework Debug Mode • <a href="https://github.com/kest-labs/kest/api" target="_blank">Documentation</a></div>
 	</div>
 	
 	<div id="toast" class="toast">✓ Copied to clipboard!</div>

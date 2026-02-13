@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/zgiai/kest-api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 )
 
 // Common errors

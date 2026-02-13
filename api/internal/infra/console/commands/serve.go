@@ -7,12 +7,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/zgiai/kest-api/internal/bootstrap"
-	"github.com/zgiai/kest-api/internal/infra/config"
-	"github.com/zgiai/kest-api/internal/infra/console"
-	"github.com/zgiai/kest-api/internal/infra/middleware"
-	"github.com/zgiai/kest-api/internal/wiring"
-	"github.com/zgiai/kest-api/routes"
+	"github.com/kest-labs/kest/api/internal/bootstrap"
+	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/console"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
+	"github.com/kest-labs/kest/api/internal/wiring"
+	"github.com/kest-labs/kest/api/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )

@@ -3,10 +3,10 @@ package user
 import (
 	"context"
 
-	"github.com/zgiai/kest-api/internal/domain"
-	"github.com/zgiai/kest-api/internal/infra/email"
-	"github.com/zgiai/kest-api/internal/infra/events"
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/internal/infra/email"
+	"github.com/kest-labs/kest/api/internal/infra/events"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 // HandleUserCreated handles the welcome email when a user is created.

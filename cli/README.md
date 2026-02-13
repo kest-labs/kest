@@ -313,12 +313,12 @@ Terminal                              Local Storage
 
 ```bash
 git clone https://github.com/kest-labs/kest.git
-cd kest-cli
-go build ./cmd/kest
+cd kest/cli
+go build -o kest .
 go test ./...
 ```
 
-See [docs/VISION.md](docs/VISION.md) for project philosophy. PRs welcome!
+See [VISION.md](./docs/VISION.md) for project philosophy. PRs welcome!
 
 ---
 

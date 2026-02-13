@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/zgiai/kest-api/internal/modules/envelope"
+	"github.com/kest-labs/kest/api/internal/modules/envelope"
 )
 
 // Service defines the business logic for issue management

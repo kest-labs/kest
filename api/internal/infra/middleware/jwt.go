@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/zgiai/kest-api/internal/infra/jwt"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/internal/infra/jwt"
+	"github.com/kest-labs/kest/api/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 

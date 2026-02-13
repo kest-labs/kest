@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/zgiai/kest-api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/infra/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"

@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/zgiai/kest-api/internal/infra/migration/stubs"
+	"github.com/kest-labs/kest/api/internal/infra/migration/stubs"
 )
 
 // CreatorOptions configures the migration file creator.

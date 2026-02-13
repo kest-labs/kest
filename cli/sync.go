@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kest-labs/kest/internal/config"
-	"github.com/kest-labs/kest/internal/logger"
-	"github.com/kest-labs/kest/internal/storage"
+	"github.com/kest-labs/kest/cli/internal/config"
+	"github.com/kest-labs/kest/cli/internal/logger"
+	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 

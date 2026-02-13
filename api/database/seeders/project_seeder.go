@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/zgiai/kest-api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/project"
 	"gorm.io/gorm"
 )
 

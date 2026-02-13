@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zgiai/kest-api/internal/modules/envelope"
-	"github.com/zgiai/kest-api/pkg/logger"
+	"github.com/kest-labs/kest/api/internal/modules/envelope"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 // ConsoleProcessor is a simple event processor that logs to console

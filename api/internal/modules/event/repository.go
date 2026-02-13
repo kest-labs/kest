@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/zgiai/kest-api/internal/modules/envelope"
+	"github.com/kest-labs/kest/api/internal/modules/envelope"
 )
 
 // Repository defines the interface for event storage in ClickHouse

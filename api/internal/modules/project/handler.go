@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zgiai/kest-api/internal/contracts"
-	"github.com/zgiai/kest-api/pkg/handler"
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/pkg/handler"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles HTTP requests for project module

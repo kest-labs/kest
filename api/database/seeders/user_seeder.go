@@ -1,7 +1,7 @@
 package seeders
 
 import (
-	"github.com/zgiai/kest-api/internal/modules/user"
+	"github.com/kest-labs/kest/api/internal/modules/user"
 	"gorm.io/gorm"
 )
 

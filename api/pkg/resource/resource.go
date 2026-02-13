@@ -38,7 +38,7 @@
 package resource
 
 import (
-	"github.com/zgiai/kest-api/pkg/response"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Transformer is a function that transforms a model to API output.

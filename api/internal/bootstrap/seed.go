@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"log"
 
-	"github.com/zgiai/kest-api/database/seeders"
-	_ "github.com/zgiai/kest-api/database/seeders" // Import to trigger init()
+	"github.com/kest-labs/kest/api/database/seeders"
+	_ "github.com/kest-labs/kest/api/database/seeders" // Import to trigger init()
 	"gorm.io/gorm"
 )
 

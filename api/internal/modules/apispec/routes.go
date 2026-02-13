@@ -1,8 +1,8 @@
 package apispec
 
 import (
-	"github.com/zgiai/kest-api/internal/infra/router"
-	"github.com/zgiai/kest-api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 )
 
 // RegisterRoutes registers API specification routes

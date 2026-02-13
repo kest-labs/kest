@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/jmespath/go-jmespath"
-	kest_http "github.com/zgiai/kest-api/internal/infra/http"
-	"github.com/zgiai/kest-api/internal/modules/testcase"
+	kest_http "github.com/kest-labs/kest/api/internal/infra/http"
+	"github.com/kest-labs/kest/api/internal/modules/testcase"
 )
 
 // Executor handles the execution of a test case
