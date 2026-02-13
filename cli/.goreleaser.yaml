@@ -8,12 +8,12 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./cmd/kest
+  - main: .
     binary: kest
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     ldflags:
-      - -s -w -X github.com/kest-labs/kest/internal/cli.Version={{.Version}}
+      - -s -w -X main.Version={{.Version}}
     goos:
       - linux
       - darwin
