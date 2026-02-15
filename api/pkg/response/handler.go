@@ -32,6 +32,8 @@ var DefaultErrorMapper = &ErrorMapper{
 		ErrForbidden:                 http.StatusForbidden,
 		ErrConflict:                  http.StatusConflict,
 		ErrValidation:                http.StatusUnprocessableEntity,
+		domain.ErrConflict:           http.StatusConflict,
+		domain.ErrEmailAlreadyExists: http.StatusConflict,
 		domain.ErrInvalidCredentials: http.StatusUnauthorized,
 		domain.ErrAccountDisabled:    http.StatusForbidden,
 		gorm.ErrRecordNotFound:       http.StatusNotFound,

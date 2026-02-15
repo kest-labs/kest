@@ -58,6 +58,12 @@ func NewService(repo domain.UserRepository, jwtService *jwt.Service, eventBus *e
 
 // Register handles user registration
 func (s *service) Register(ctx context.Context, req *UserRegisterRequest) (*domain.User, error) {
+	// Check if username already exists
+	existingUser, err := s.repo.FindByUsername(ctx, req.Username)
+	if err == nil && existingUser != nil {
+		return nil, domain.ErrConflict
+	}
+
 	// Check if email already exists
 	exists, err := s.repo.FindByEmail(ctx, req.Email)
 	if err == nil && exists != nil {
