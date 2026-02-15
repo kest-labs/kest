@@ -46,10 +46,7 @@ export const authApi = {
 
     // Authentication
     login: async (credentials: LoginRequest) => {
-        const result = await request.post<{ access_token: string; user: User }>(ENDPOINTS.LOGIN, {
-            email: credentials.email,
-            password: credentials.password,
-        });
+        const result = await request.post<{ access_token: string; user: User }>(ENDPOINTS.LOGIN, credentials);
         return { user: result.user, token: result.access_token };
     },
 

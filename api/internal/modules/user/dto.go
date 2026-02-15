@@ -19,8 +19,7 @@ type UserRegisterRequest struct {
 
 // UserLoginRequest represents the login request
 type UserLoginRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
