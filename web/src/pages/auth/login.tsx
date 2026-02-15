@@ -11,7 +11,7 @@ import { useAuthStore, setAuthTokens } from '@/store/auth-store'
 import { authApi } from '@/services/auth'
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
@@ -34,7 +34,7 @@ export function LoginPage() {
     setIsLoading(true)
     try {
       const { user, token } = await authApi.login({
-        username: data.username,
+        email: data.email,
         password: data.password,
       })
       
@@ -73,16 +73,16 @@ export function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                autoComplete="username"
-                {...register('username')}
+                id="email"
+                type="email"
+                autoComplete="email"
+                {...register('email')}
                 className="mt-1"
               />
-              {errors.username && (
-                <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
             </div>
             <div>

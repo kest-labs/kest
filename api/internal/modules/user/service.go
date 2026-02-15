@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kest-labs/kest/api/internal/domain"
@@ -90,10 +91,18 @@ func (s *service) Register(ctx context.Context, req *UserRegisterRequest) (*doma
 
 // Login handles user login
 func (s *service) Login(ctx context.Context, req *UserLoginRequest) (*UserLoginResponse, error) {
+	identifier := strings.TrimSpace(req.Username)
+	if identifier == "" {
+		identifier = strings.TrimSpace(req.Email)
+	}
+	if identifier == "" {
+		return nil, domain.ErrInvalidCredentials
+	}
+
 	// Try username first, then email
-	user, err := s.repo.FindByUsername(ctx, req.Username)
+	user, err := s.repo.FindByUsername(ctx, identifier)
 	if err != nil {
-		user, err = s.repo.FindByEmail(ctx, req.Username)
+		user, err = s.repo.FindByEmail(ctx, identifier)
 		if err != nil {
 			return nil, domain.ErrInvalidCredentials
 		}

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kest-labs/kest/api/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -26,12 +27,14 @@ type ErrorMapper struct {
 // DefaultErrorMapper provides default error to status code mappings.
 var DefaultErrorMapper = &ErrorMapper{
 	mappings: map[error]int{
-		ErrNotFound:            http.StatusNotFound,
-		ErrUnauthorized:        http.StatusUnauthorized,
-		ErrForbidden:           http.StatusForbidden,
-		ErrConflict:            http.StatusConflict,
-		ErrValidation:          http.StatusUnprocessableEntity,
-		gorm.ErrRecordNotFound: http.StatusNotFound,
+		ErrNotFound:                  http.StatusNotFound,
+		ErrUnauthorized:              http.StatusUnauthorized,
+		ErrForbidden:                 http.StatusForbidden,
+		ErrConflict:                  http.StatusConflict,
+		ErrValidation:                http.StatusUnprocessableEntity,
+		domain.ErrInvalidCredentials: http.StatusUnauthorized,
+		domain.ErrAccountDisabled:    http.StatusForbidden,
+		gorm.ErrRecordNotFound:       http.StatusNotFound,
 	},
 }
 

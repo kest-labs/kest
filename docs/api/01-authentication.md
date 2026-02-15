@@ -88,10 +88,22 @@ Authenticate user and receive JWT token.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `username` | string | ✅ Yes | Username or email |
+| `email` | string | ❌ No | Email (frontend default field) |
+| `username` | string | ❌ No | Username (backward compatible) |
 | `password` | string | ✅ Yes | User password |
 
+At least one of `email` or `username` is required.
+
 #### Example Request
+
+```json
+{
+  "email": "john@example.com",
+  "password": "SecurePass123"
+}
+```
+
+#### Example Request (using username, backward compatible)
 
 ```json
 {
@@ -125,8 +137,8 @@ Authenticate user and receive JWT token.
 
 #### Error Responses
 
-- **400 Bad Request**: Invalid credentials
-- **401 Unauthorized**: Account inactive or suspended
+- **401 Unauthorized**: Invalid credentials
+- **403 Forbidden**: Account inactive or suspended
 
 ---
 
