@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "AI-native API testing platform backend service",
+        "description": "AI-native API testing platform backend service (Pure API mode)",
         "title": "Kest API",
         "termsOfService": "https://kest.dev/terms",
         "contact": {
@@ -15,7 +15,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8025",
+    "host": "localhost:5119",
     "basePath": "/v1",
     "paths": {
         "/api/v1/permissions": {
@@ -33,7 +33,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/permission.PermissionResponse"
+                                "$ref": "#/definitions/internal_modules_permission.PermissionResponse"
                             }
                         }
                     }
@@ -55,7 +55,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/permission.RoleResponse"
+                                "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                             }
                         }
                     }
@@ -79,7 +79,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.CreateRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.CreateRoleRequest"
                         }
                     }
                 ],
@@ -87,7 +87,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/permission.RoleResponse"
+                            "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                         }
                     }
                 }
@@ -109,7 +109,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.AssignRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.AssignRoleRequest"
                         }
                     }
                 ],
@@ -136,7 +136,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.AssignRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.AssignRoleRequest"
                         }
                     }
                 ],
@@ -169,7 +169,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/permission.RoleResponse"
+                            "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                         }
                     }
                 }
@@ -199,7 +199,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.UpdateRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.UpdateRoleRequest"
                         }
                     }
                 ],
@@ -207,7 +207,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/permission.RoleResponse"
+                            "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                         }
                     }
                 }
@@ -255,7 +255,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/permission.UserRolesResponse"
+                            "$ref": "#/definitions/internal_modules_permission.UserRolesResponse"
                         }
                     }
                 }
@@ -539,7 +539,7 @@
         }
     },
     "definitions": {
-        "permission.AssignRoleRequest": {
+        "internal_modules_permission.AssignRoleRequest": {
             "type": "object",
             "required": [
                 "role_id",
@@ -554,7 +554,7 @@
                 }
             }
         },
-        "permission.CreateRoleRequest": {
+        "internal_modules_permission.CreateRoleRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -574,7 +574,7 @@
                 }
             }
         },
-        "permission.PermissionResponse": {
+        "internal_modules_permission.PermissionResponse": {
             "type": "object",
             "properties": {
                 "description": {
@@ -594,7 +594,7 @@
                 }
             }
         },
-        "permission.RoleResponse": {
+        "internal_modules_permission.RoleResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -617,7 +617,7 @@
                 }
             }
         },
-        "permission.UpdateRoleRequest": {
+        "internal_modules_permission.UpdateRoleRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -631,13 +631,13 @@
                 }
             }
         },
-        "permission.UserRolesResponse": {
+        "internal_modules_permission.UserRolesResponse": {
             "type": "object",
             "properties": {
                 "roles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/permission.RoleResponse"
+                        "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                     }
                 },
                 "user_id": {

@@ -1,4 +1,4 @@
-active_env: local
+active_env: production
 defaults:
     timeout: 30
     headers:
@@ -12,7 +12,7 @@ environments:
         base_url: http://127.0.0.1:5119
         variables: {}
     production:
-        base_url: https://api.kest.dev/v1
+        base_url: https://api.kest.dev
         variables: {}
     staging:
         base_url: https://staging-api.kest.io

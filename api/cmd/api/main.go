@@ -16,6 +16,26 @@ import (
 	"github.com/kest-labs/kest/api/routes"
 )
 
+// @title Kest API
+// @version 1.0
+// @description AI-native API testing platform backend service (Pure API mode)
+// @termsOfService https://kest.dev/terms
+
+// @contact.name Kest API Support
+// @contact.url https://kest.dev/support
+// @contact.email support@kest.dev
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:5119
+// @BasePath /v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 func main() {
 	// Initialize logger
 	bootstrap.InitLogger()

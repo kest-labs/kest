@@ -1,6 +1,6 @@
 basePath: /v1
 definitions:
-  permission.AssignRoleRequest:
+  internal_modules_permission.AssignRoleRequest:
     properties:
       role_id:
         type: integer
@@ -10,7 +10,7 @@ definitions:
     - role_id
     - user_id
     type: object
-  permission.CreateRoleRequest:
+  internal_modules_permission.CreateRoleRequest:
     properties:
       description:
         type: string
@@ -23,7 +23,7 @@ definitions:
     required:
     - name
     type: object
-  permission.PermissionResponse:
+  internal_modules_permission.PermissionResponse:
     properties:
       description:
         type: string
@@ -36,7 +36,7 @@ definitions:
       name:
         type: string
     type: object
-  permission.RoleResponse:
+  internal_modules_permission.RoleResponse:
     properties:
       created_at:
         type: string
@@ -51,7 +51,7 @@ definitions:
       name:
         type: string
     type: object
-  permission.UpdateRoleRequest:
+  internal_modules_permission.UpdateRoleRequest:
     properties:
       description:
         type: string
@@ -60,11 +60,11 @@ definitions:
       name:
         type: string
     type: object
-  permission.UserRolesResponse:
+  internal_modules_permission.UserRolesResponse:
     properties:
       roles:
         items:
-          $ref: '#/definitions/permission.RoleResponse'
+          $ref: '#/definitions/internal_modules_permission.RoleResponse'
         type: array
       user_id:
         type: integer
@@ -184,13 +184,13 @@ definitions:
       visibility:
         type: string
     type: object
-host: localhost:8025
+host: localhost:5119
 info:
   contact:
     email: support@kest.dev
     name: Kest API Support
     url: https://kest.dev/support
-  description: AI-native API testing platform backend service
+  description: AI-native API testing platform backend service (Pure API mode)
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -207,7 +207,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/permission.PermissionResponse'
+              $ref: '#/definitions/internal_modules_permission.PermissionResponse'
             type: array
       summary: List all permissions
       tags:
@@ -221,7 +221,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/permission.RoleResponse'
+              $ref: '#/definitions/internal_modules_permission.RoleResponse'
             type: array
       summary: List all roles
       tags:
@@ -235,14 +235,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/permission.CreateRoleRequest'
+          $ref: '#/definitions/internal_modules_permission.CreateRoleRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/permission.RoleResponse'
+            $ref: '#/definitions/internal_modules_permission.RoleResponse'
       summary: Create a new role
       tags:
       - Roles
@@ -273,7 +273,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/permission.RoleResponse'
+            $ref: '#/definitions/internal_modules_permission.RoleResponse'
       summary: Get a role
       tags:
       - Roles
@@ -291,14 +291,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/permission.UpdateRoleRequest'
+          $ref: '#/definitions/internal_modules_permission.UpdateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/permission.RoleResponse'
+            $ref: '#/definitions/internal_modules_permission.RoleResponse'
       summary: Update a role
       tags:
       - Roles
@@ -312,7 +312,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/permission.AssignRoleRequest'
+          $ref: '#/definitions/internal_modules_permission.AssignRoleRequest'
       responses:
         "204":
           description: No Content
@@ -329,7 +329,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/permission.AssignRoleRequest'
+          $ref: '#/definitions/internal_modules_permission.AssignRoleRequest'
       responses:
         "204":
           description: No Content
@@ -350,7 +350,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/permission.UserRolesResponse'
+            $ref: '#/definitions/internal_modules_permission.UserRolesResponse'
       summary: Get user roles
       tags:
       - Roles

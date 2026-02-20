@@ -39,7 +39,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/permission.PermissionResponse"
+                                "$ref": "#/definitions/internal_modules_permission.PermissionResponse"
                             }
                         }
                     }
@@ -61,7 +61,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/permission.RoleResponse"
+                                "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                             }
                         }
                     }
@@ -85,7 +85,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.CreateRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.CreateRoleRequest"
                         }
                     }
                 ],
@@ -93,7 +93,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/permission.RoleResponse"
+                            "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                         }
                     }
                 }
@@ -115,7 +115,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.AssignRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.AssignRoleRequest"
                         }
                     }
                 ],
@@ -142,7 +142,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.AssignRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.AssignRoleRequest"
                         }
                     }
                 ],
@@ -175,7 +175,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/permission.RoleResponse"
+                            "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                         }
                     }
                 }
@@ -205,7 +205,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/permission.UpdateRoleRequest"
+                            "$ref": "#/definitions/internal_modules_permission.UpdateRoleRequest"
                         }
                     }
                 ],
@@ -213,7 +213,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/permission.RoleResponse"
+                            "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                         }
                     }
                 }
@@ -261,7 +261,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/permission.UserRolesResponse"
+                            "$ref": "#/definitions/internal_modules_permission.UserRolesResponse"
                         }
                     }
                 }
@@ -545,7 +545,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "permission.AssignRoleRequest": {
+        "internal_modules_permission.AssignRoleRequest": {
             "type": "object",
             "required": [
                 "role_id",
@@ -560,7 +560,7 @@ const docTemplate = `{
                 }
             }
         },
-        "permission.CreateRoleRequest": {
+        "internal_modules_permission.CreateRoleRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -580,7 +580,7 @@ const docTemplate = `{
                 }
             }
         },
-        "permission.PermissionResponse": {
+        "internal_modules_permission.PermissionResponse": {
             "type": "object",
             "properties": {
                 "description": {
@@ -600,7 +600,7 @@ const docTemplate = `{
                 }
             }
         },
-        "permission.RoleResponse": {
+        "internal_modules_permission.RoleResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -623,7 +623,7 @@ const docTemplate = `{
                 }
             }
         },
-        "permission.UpdateRoleRequest": {
+        "internal_modules_permission.UpdateRoleRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -637,13 +637,13 @@ const docTemplate = `{
                 }
             }
         },
-        "permission.UserRolesResponse": {
+        "internal_modules_permission.UserRolesResponse": {
             "type": "object",
             "properties": {
                 "roles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/permission.RoleResponse"
+                        "$ref": "#/definitions/internal_modules_permission.RoleResponse"
                     }
                 },
                 "user_id": {
@@ -829,11 +829,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8025",
+	Host:             "localhost:5119",
 	BasePath:         "/v1",
 	Schemes:          []string{},
 	Title:            "Kest API",
-	Description:      "AI-native API testing platform backend service",
+	Description:      "AI-native API testing platform backend service (Pure API mode)",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
