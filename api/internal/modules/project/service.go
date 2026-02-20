@@ -194,7 +194,7 @@ func generateSlug(name string) string {
 
 // generatePublicKey generates a random public key for the project
 func generatePublicKey() (string, error) {
-	bytes := make([]byte, 32) // 32 bytes = 64 hex characters
+	bytes := make([]byte, 16) // 16 bytes = 32 hex characters (fits in varchar(64))
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
