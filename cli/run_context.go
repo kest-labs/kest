@@ -9,23 +9,41 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// VariableSource tracks where a variable came from and its status
+type VariableSource struct {
+	Value      string
+	SourceStep string // which step captured this variable
+	StepStatus string // "success" or "failed"
+	SourceType string // "cli", "capture", "config", "builtin"
+}
+
 // RunContext holds all runtime state for a single kest run invocation.
 // It replaces the previous global CLIVars map with a properly scoped,
 // thread-safe variable store that supports the full resolution chain:
 //
 //	config env vars → runtime captured vars → CLI --var flags → exec captures
 type RunContext struct {
-	mu   sync.RWMutex
-	vars map[string]string // accumulated variables (CLI + exec captures)
+	mu      sync.RWMutex
+	vars    map[string]string          // accumulated variables (CLI + exec captures)
+	sources map[string]*VariableSource // track variable sources and status
 }
 
 // NewRunContext creates a RunContext seeded with CLI --var flags.
 func NewRunContext(cliVars map[string]string) *RunContext {
 	vars := make(map[string]string, len(cliVars))
+	sources := make(map[string]*VariableSource, len(cliVars))
 	for k, v := range cliVars {
 		vars[k] = v
+		sources[k] = &VariableSource{
+			Value:      v,
+			SourceType: "cli",
+			StepStatus: "success",
+		}
 	}
-	return &RunContext{vars: vars}
+	return &RunContext{
+		vars:    vars,
+		sources: sources,
+	}
 }
 
 // Get returns a variable value and whether it exists.
@@ -38,9 +56,39 @@ func (rc *RunContext) Get(key string) (string, bool) {
 
 // Set stores a variable (used by exec captures and request captures).
 func (rc *RunContext) Set(key, value string) {
+	rc.SetWithSource(key, value, "", "success", "capture")
+}
+
+// SetWithSource stores a variable with source tracking.
+func (rc *RunContext) SetWithSource(key, value, stepName, stepStatus, sourceType string) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	rc.vars[key] = value
+	rc.sources[key] = &VariableSource{
+		Value:      value,
+		SourceStep: stepName,
+		StepStatus: stepStatus,
+		SourceType: sourceType,
+	}
+}
+
+// GetSource returns the source information for a variable.
+func (rc *RunContext) GetSource(key string) (*VariableSource, bool) {
+	rc.mu.RLock()
+	defer rc.mu.RUnlock()
+	src, ok := rc.sources[key]
+	return src, ok
+}
+
+// MarkStepFailed marks all variables from a step as failed.
+func (rc *RunContext) MarkStepFailed(stepName string) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	for _, src := range rc.sources {
+		if src.SourceStep == stepName {
+			src.StepStatus = "failed"
+		}
+	}
 }
 
 // All returns a copy of all variables.

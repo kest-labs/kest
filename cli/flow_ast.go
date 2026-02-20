@@ -1,11 +1,12 @@
 package main
 
 type FlowMeta struct {
-	ID      string
-	Name    string
-	Version string
-	Env     string
-	Tags    []string
+	ID             string
+	Name           string
+	Version        string
+	Env            string
+	Tags           []string
+	DefaultHeaders map[string]string // Flow-level default headers
 }
 
 type FlowStep struct {
