@@ -1,6 +1,7 @@
 # ===========================================
 # Kest API - Production Dockerfile (API Only)
 # For cloud platforms: Render, Zeabur, Railway, etc.
+# Pure API mode without frontend
 # ===========================================
 
 # Stage 1: Download Go dependencies (cache layer)
@@ -10,10 +11,12 @@ WORKDIR /build
 COPY api/go.mod api/go.sum ./
 RUN go mod download
 
-# Stage 2: Build Go binary
+# Stage 2: Build Go binary (Pure API mode)
 FROM go-deps AS builder
 WORKDIR /build
 COPY api/ ./
+
+# Use cmd/api for pure API server (no frontend embed)
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w" \
     -o kest-api \
