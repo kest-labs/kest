@@ -14,8 +14,6 @@ import (
 type Handler struct {
 	contracts.BaseModule
 	service Service
-	host    string // Server host for DSN generation
-	secure  bool   // Whether to use https in DSN
 }
 
 // Name returns the module name
@@ -27,15 +25,7 @@ func (h *Handler) Name() string {
 func NewHandler(service Service) *Handler {
 	return &Handler{
 		service: service,
-		host:    "localhost:8025", // Default, should be configured
-		secure:  false,
 	}
-}
-
-// SetHost sets the host for DSN generation
-func (h *Handler) SetHost(host string, secure bool) {
-	h.host = host
-	h.secure = secure
 }
 
 // Create handles POST /projects
@@ -62,7 +52,7 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	response.Created(c, toResponse(project, h.host, h.secure))
+	response.Created(c, toResponse(project))
 }
 
 // Get handles GET /projects/:id
@@ -82,7 +72,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, toResponse(project, h.host, h.secure))
+	response.Success(c, toResponse(project))
 }
 
 // Update handles PUT /projects/:id
@@ -107,7 +97,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, toResponse(project, h.host, h.secure))
+	response.Success(c, toResponse(project))
 }
 
 // Delete handles DELETE /projects/:id
@@ -166,29 +156,4 @@ func (h *Handler) GetStats(c *gin.Context) {
 	}
 
 	response.Success(c, stats)
-}
-
-// GetDSN handles GET /projects/:id/dsn - returns DSN for a project
-func (h *Handler) GetDSN(c *gin.Context) {
-	id, ok := handler.ParseID(c, "id")
-	if !ok {
-		return
-	}
-
-	project, err := h.service.GetByID(c.Request.Context(), id)
-	if err != nil {
-		if errors.Is(err, ErrProjectNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalServerError(c, err.Error(), err)
-		return
-	}
-
-	dsn := GenerateDSN(project.PublicKey, h.host, project.ID, h.secure)
-	response.Success(c, gin.H{
-		"dsn":        dsn,
-		"public_key": project.PublicKey,
-		"project_id": project.ID,
-	})
 }

@@ -20,7 +20,6 @@ type ProjectStats struct {
 type Repository interface {
 	Create(ctx context.Context, project *Project) error
 	GetByID(ctx context.Context, id uint) (*Project, error)
-	GetByPublicKey(ctx context.Context, publicKey string) (*Project, error)
 	GetBySlug(ctx context.Context, slug string) (*Project, error)
 	Update(ctx context.Context, project *Project) error
 	Delete(ctx context.Context, id uint) error
@@ -53,17 +52,6 @@ func (r *repository) Create(ctx context.Context, project *Project) error {
 func (r *repository) GetByID(ctx context.Context, id uint) (*Project, error) {
 	var po ProjectPO
 	if err := r.db.WithContext(ctx).First(&po, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return po.toDomain(), nil
-}
-
-func (r *repository) GetByPublicKey(ctx context.Context, publicKey string) (*Project, error) {
-	var po ProjectPO
-	if err := r.db.WithContext(ctx).Where("public_key = ?", publicKey).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

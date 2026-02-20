@@ -1,0 +1,49 @@
+# Render.com deployment configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  # API Service
+  - type: web
+    name: kest-api
+    env: docker
+    dockerfilePath: ./Dockerfile.api
+    region: oregon
+    plan: starter
+    healthCheckPath: /v1/health
+    envVars:
+      - key: PORT
+        generateValue: true
+      - key: GIN_MODE
+        value: release
+      - key: DB_HOST
+        fromDatabase:
+          name: kest-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: kest-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: kest-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: kest-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: kest-postgres
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 24h
+      - key: ALLOWED_ORIGINS
+        value: https://kest.app,https://www.kest.app
+
+databases:
+  - name: kest-postgres
+    databaseName: kest
+    user: kest_user
+    plan: starter

@@ -1,0 +1,22 @@
+# Zeabur deployment configuration
+# https://zeabur.com/docs/deploy/config-edit
+
+name: kest
+
+services:
+  api:
+    build:
+      dockerfile: Dockerfile.api
+    ports:
+      - 8025
+    env:
+      GIN_MODE: release
+      JWT_EXPIRATION: 24h
+    # Environment variables to be set in Zeabur dashboard:
+    # - DB_HOST (from PostgreSQL service)
+    # - DB_PORT
+    # - DB_NAME
+    # - DB_USER
+    # - DB_PASSWORD
+    # - JWT_SECRET (generate a secure random string)
+    # - ALLOWED_ORIGINS

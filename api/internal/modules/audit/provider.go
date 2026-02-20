@@ -1,11 +1,11 @@
-package event
+package audit
 
 import (
 	"github.com/google/wire"
 )
 
-// ProviderSet is the provider set for event module
+// ProviderSet is the Wire provider set for audit module
 var ProviderSet = wire.NewSet(
 	NewRepository,
-	NewService,
+	NewHandler,
 )

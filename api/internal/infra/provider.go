@@ -8,7 +8,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/kest-labs/kest/api/internal/infra/jwt"
 	"github.com/kest-labs/kest/api/internal/infra/migration"
-	"github.com/kest-labs/kest/api/internal/infra/storage"
 )
 
 // ProviderSet aggregates all infrastructure providers for Wire DI.
@@ -16,9 +15,6 @@ import (
 var ProviderSet = wire.NewSet(
 	// Config - loaded from environment
 	config.Load,
-
-	// ClickHouse Client
-	storage.NewCHClient,
 
 	// Database - depends on Config
 	database.NewDB,

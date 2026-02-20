@@ -12,8 +12,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/category"
 	"github.com/kest-labs/kest/api/internal/modules/environment"
 	"github.com/kest-labs/kest/api/internal/modules/flow"
-	"github.com/kest-labs/kest/api/internal/modules/ingest"
-	"github.com/kest-labs/kest/api/internal/modules/issue"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
@@ -46,8 +44,6 @@ type Handlers struct {
 	Category    *category.Handler
 	Environment *environment.Handler
 	Flow        *flow.Handler
-	Ingest      *ingest.Handler
-	Issue       *issue.Handler
 	TestCase    *testcase.Handler
 	System      *system.Handler
 }
@@ -64,8 +60,6 @@ func (h *Handlers) Modules() []contracts.Module {
 		h.Category,
 		h.Environment,
 		h.Flow,
-		h.Ingest,
-		h.Issue,
 		h.TestCase,
 		h.System,
 	}

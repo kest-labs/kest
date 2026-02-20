@@ -19,12 +19,10 @@ func (s *projectSeeder) Run(db *gorm.DB) error {
 
 	// Create a test project
 	p := &project.Project{
-		Name:      "Test Project",
-		Slug:      "test-project",
-		PublicKey: "test_public_key",
-		SecretKey: "test_secret_key",
-		Platform:  "go",
-		Status:    1,
+		Name:     "Test Project",
+		Slug:     "test-project",
+		Platform: "go",
+		Status:   1,
 	}
 
 	existing, err := repo.GetBySlug(context.Background(), p.Slug)
@@ -37,7 +35,7 @@ func (s *projectSeeder) Run(db *gorm.DB) error {
 		return err
 	}
 
-	log.Printf("Created test project: %s (DSN: http://%s@localhost:8025/%d)\n", p.Name, p.PublicKey, p.ID)
+	log.Printf("Created test project: %s (ID: %d)\n", p.Name, p.ID)
 	return nil
 }
 

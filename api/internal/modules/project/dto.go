@@ -9,23 +9,19 @@ type CreateProjectRequest struct {
 
 // UpdateProjectRequest is the request body for updating a project
 type UpdateProjectRequest struct {
-	Name               string `json:"name" binding:"omitempty,min=1,max=100"`
-	Platform           string `json:"platform" binding:"omitempty,oneof=go javascript python java ruby php csharp"`
-	Status             *int   `json:"status" binding:"omitempty,oneof=0 1"`
-	RateLimitPerMinute *int   `json:"rate_limit_per_minute" binding:"omitempty,min=0,max=100000"`
+	Name     string `json:"name" binding:"omitempty,min=1,max=100"`
+	Platform string `json:"platform" binding:"omitempty,oneof=go javascript python java ruby php csharp"`
+	Status   *int   `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
 // ProjectResponse is the response for project endpoints
 type ProjectResponse struct {
-	ID                 uint   `json:"id"`
-	Name               string `json:"name"`
-	Slug               string `json:"slug"`
-	PublicKey          string `json:"public_key"`
-	DSN                string `json:"dsn"`
-	Platform           string `json:"platform"`
-	Status             int    `json:"status"`
-	RateLimitPerMinute int    `json:"rate_limit_per_minute"`
-	CreatedAt          string `json:"created_at"`
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Platform  string `json:"platform"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"created_at"`
 }
 
 // ProjectListResponse is the response for listing projects
@@ -38,20 +34,17 @@ type ProjectListResponse struct {
 }
 
 // toResponse converts Project to ProjectResponse
-func toResponse(p *Project, host string, secure bool) *ProjectResponse {
+func toResponse(p *Project) *ProjectResponse {
 	if p == nil {
 		return nil
 	}
 	return &ProjectResponse{
-		ID:                 p.ID,
-		Name:               p.Name,
-		Slug:               p.Slug,
-		PublicKey:          p.PublicKey,
-		DSN:                GenerateDSN(p.PublicKey, host, p.ID, secure),
-		Platform:           p.Platform,
-		Status:             p.Status,
-		RateLimitPerMinute: p.RateLimitPerMinute,
-		CreatedAt:          p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:        p.ID,
+		Name:      p.Name,
+		Slug:      p.Slug,
+		Platform:  p.Platform,
+		Status:    p.Status,
+		CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 

@@ -13,17 +13,12 @@ import (
 	"github.com/kest-labs/kest/api/internal/infra/email"
 	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/kest-labs/kest/api/internal/infra/jwt"
-	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/migration"
-	"github.com/kest-labs/kest/api/internal/infra/storage"
 	"github.com/kest-labs/kest/api/internal/modules/apispec"
 	"github.com/kest-labs/kest/api/internal/modules/audit"
 	"github.com/kest-labs/kest/api/internal/modules/category"
 	"github.com/kest-labs/kest/api/internal/modules/environment"
-	"github.com/kest-labs/kest/api/internal/modules/event"
 	"github.com/kest-labs/kest/api/internal/modules/flow"
-	"github.com/kest-labs/kest/api/internal/modules/ingest"
-	"github.com/kest-labs/kest/api/internal/modules/issue"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
@@ -60,6 +55,8 @@ func InitApplication() (*app.Application, error) {
 	permissionRepository := permission.NewRepository(db)
 	permissionService := permission.NewService(permissionRepository)
 	permissionHandler := permission.NewHandler(permissionService)
+	auditRepository := audit.NewRepository(db)
+	auditHandler := audit.NewHandler(auditRepository)
 	projectRepository := project.NewRepository(db)
 	projectService := project.NewService(projectRepository, memberService)
 	projectHandler := project.NewHandler(projectService)
@@ -69,35 +66,16 @@ func InitApplication() (*app.Application, error) {
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
 	categoryHandler := category.NewHandler(categoryService, memberService)
-	flowRepository := flow.NewRepository(db)
-	flowService := flow.NewService(flowRepository)
-	flowHandler := flow.NewHandler(flowService, memberService)
-	conn, err := storage.NewCHClient(configConfig)
-	if err != nil {
-		return nil, err
-	}
-	eventRepository, err := event.NewRepository(conn)
-	if err != nil {
-		return nil, err
-	}
-	eventService := event.NewService(eventRepository)
-	ingestHandler := ingest.NewHandler(projectService, eventService)
-	issueRepository, err := issue.NewRepository(conn)
-	if err != nil {
-		return nil, err
-	}
-	issueService := issue.NewService(issueRepository)
-	issueHandler := issue.NewHandler(issueService)
 	environmentRepository := environment.NewRepository(db)
 	environmentService := environment.NewService(environmentRepository)
 	environmentHandler := environment.NewHandler(environmentService, memberService)
+	flowRepository := flow.NewRepository(db)
+	flowService := flow.NewService(flowRepository)
+	flowHandler := flow.NewHandler(flowService, memberService)
 	testcaseRepository := testcase.NewRepository(db)
 	executor := testrunner.NewExecutor()
 	testcaseService := testcase.NewService(testcaseRepository, apispecRepository, environmentRepository, executor)
 	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
-	auditRepository := audit.NewRepository(db)
-	middleware.SetAuditRepository(auditRepository)
-	auditHandler := audit.NewHandler(auditRepository, middleware.RequireProjectRole(memberService, member.RoleRead))
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
 		User:        handler,
@@ -109,8 +87,6 @@ func InitApplication() (*app.Application, error) {
 		Category:    categoryHandler,
 		Environment: environmentHandler,
 		Flow:        flowHandler,
-		Ingest:      ingestHandler,
-		Issue:       issueHandler,
 		TestCase:    testcaseHandler,
 		System:      systemHandler,
 	}

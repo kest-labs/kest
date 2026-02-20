@@ -1,0 +1,543 @@
+basePath: /v1
+definitions:
+  permission.AssignRoleRequest:
+    properties:
+      role_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - role_id
+    - user_id
+    type: object
+  permission.CreateRoleRequest:
+    properties:
+      description:
+        type: string
+      display_name:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  permission.PermissionResponse:
+    properties:
+      description:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      module:
+        type: string
+      name:
+        type: string
+    type: object
+  permission.RoleResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      is_default:
+        type: boolean
+      name:
+        type: string
+    type: object
+  permission.UpdateRoleRequest:
+    properties:
+      description:
+        type: string
+      display_name:
+        type: string
+      name:
+        type: string
+    type: object
+  permission.UserRolesResponse:
+    properties:
+      roles:
+        items:
+          $ref: '#/definitions/permission.RoleResponse'
+        type: array
+      user_id:
+        type: integer
+    type: object
+  workspace.AddMemberRequest:
+    properties:
+      role:
+        enum:
+        - owner
+        - admin
+        - editor
+        - viewer
+        type: string
+      user_id:
+        type: integer
+    required:
+    - role
+    - user_id
+    type: object
+  workspace.CreateWorkspaceRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      slug:
+        maxLength: 50
+        type: string
+      type:
+        enum:
+        - personal
+        - team
+        - public
+        type: string
+      visibility:
+        enum:
+        - private
+        - team
+        - public
+        type: string
+    required:
+    - name
+    - slug
+    - type
+    type: object
+  workspace.UpdateMemberRoleRequest:
+    properties:
+      role:
+        enum:
+        - owner
+        - admin
+        - editor
+        - viewer
+        type: string
+    required:
+    - role
+    type: object
+  workspace.UpdateWorkspaceRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      visibility:
+        enum:
+        - private
+        - team
+        - public
+        type: string
+    type: object
+  workspace.WorkspaceMemberResponse:
+    properties:
+      email:
+        description: Joined from users table
+        type: string
+      id:
+        type: integer
+      invited_by:
+        type: integer
+      joined_at:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: integer
+      username:
+        description: Joined from users table
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  workspace.WorkspaceResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      owner_id:
+        type: integer
+      settings:
+        additionalProperties: true
+        type: object
+      slug:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      visibility:
+        type: string
+    type: object
+host: localhost:8025
+info:
+  contact:
+    email: support@kest.dev
+    name: Kest API Support
+    url: https://kest.dev/support
+  description: AI-native API testing platform backend service
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://kest.dev/terms
+  title: Kest API
+  version: "1.0"
+paths:
+  /api/v1/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/permission.PermissionResponse'
+            type: array
+      summary: List all permissions
+      tags:
+      - Permissions
+  /api/v1/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/permission.RoleResponse'
+            type: array
+      summary: List all roles
+      tags:
+      - Roles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/permission.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/permission.RoleResponse'
+      summary: Create a new role
+      tags:
+      - Roles
+  /api/v1/roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete a role
+      tags:
+      - Roles
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/permission.RoleResponse'
+      summary: Get a role
+      tags:
+      - Roles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/permission.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/permission.RoleResponse'
+      summary: Update a role
+      tags:
+      - Roles
+  /api/v1/roles/assign:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Assignment details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/permission.AssignRoleRequest'
+      responses:
+        "204":
+          description: No Content
+      summary: Assign role to user
+      tags:
+      - Roles
+  /api/v1/roles/remove:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Assignment details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/permission.AssignRoleRequest'
+      responses:
+        "204":
+          description: No Content
+      summary: Remove role from user
+      tags:
+      - Roles
+  /api/v1/users/{id}/roles:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/permission.UserRolesResponse'
+      summary: Get user roles
+      tags:
+      - Roles
+  /workspaces:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/workspace.WorkspaceResponse'
+            type: array
+      summary: List workspaces
+      tags:
+      - Workspace
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workspace.CreateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceResponse'
+      summary: Create a new workspace
+      tags:
+      - Workspace
+  /workspaces/{id}:
+    delete:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: Delete workspace
+      tags:
+      - Workspace
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceResponse'
+      summary: Get workspace details
+      tags:
+      - Workspace
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workspace.UpdateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceResponse'
+      summary: Update workspace
+      tags:
+      - Workspace
+  /workspaces/{id}/members:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/workspace.WorkspaceMemberResponse'
+            type: array
+      summary: List workspace members
+      tags:
+      - Workspace
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Member details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workspace.AddMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Member added
+      summary: Add workspace member
+      tags:
+      - Workspace
+  /workspaces/{id}/members/{uid}:
+    delete:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Member removed
+      summary: Remove workspace member
+      tags:
+      - Workspace
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      - description: Role update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workspace.UpdateMemberRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role updated
+      summary: Update member role
+      tags:
+      - Workspace
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

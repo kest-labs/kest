@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kest-labs/kest/api/internal/modules/member"
 )
@@ -15,16 +15,12 @@ import (
 var (
 	ErrProjectNotFound   = errors.New("project not found")
 	ErrSlugAlreadyExists = errors.New("project slug already exists")
-	ErrInvalidPublicKey  = errors.New("invalid public key")
-	ErrProjectDisabled   = errors.New("project is disabled")
 )
 
 // Service defines the interface for project business logic
 type Service interface {
 	Create(ctx context.Context, userID uint, req *CreateProjectRequest) (*Project, error)
 	GetByID(ctx context.Context, id uint) (*Project, error)
-	GetByPublicKey(ctx context.Context, publicKey string) (*Project, error)
-	ValidateKey(ctx context.Context, projectID string, publicKey string) (*Project, error)
 	Update(ctx context.Context, id uint, req *UpdateProjectRequest) (*Project, error)
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context, page, perPage int) ([]*Project, int64, error)
@@ -61,15 +57,12 @@ func (s *service) Create(ctx context.Context, userID uint, req *CreateProjectReq
 		return nil, ErrSlugAlreadyExists
 	}
 
-	// Create project with generated keys
+	// Create project
 	project := &Project{
-		Name:               req.Name,
-		Slug:               slug,
-		PublicKey:          GenerateKey(),
-		SecretKey:          GenerateKey(),
-		Platform:           req.Platform,
-		Status:             1, // Active by default
-		RateLimitPerMinute: 1000,
+		Name:     req.Name,
+		Slug:     slug,
+		Platform: req.Platform,
+		Status:   1, // Active by default
 	}
 
 	if err := s.repo.Create(ctx, project); err != nil {
@@ -100,47 +93,6 @@ func (s *service) GetByID(ctx context.Context, id uint) (*Project, error) {
 	return project, nil
 }
 
-func (s *service) GetByPublicKey(ctx context.Context, publicKey string) (*Project, error) {
-	project, err := s.repo.GetByPublicKey(ctx, publicKey)
-	if err != nil {
-		return nil, err
-	}
-	if project == nil {
-		return nil, ErrProjectNotFound
-	}
-	return project, nil
-}
-
-// ValidateKey validates that the project ID and public key match
-// This is the core authentication method for SDK requests
-func (s *service) ValidateKey(ctx context.Context, projectID string, publicKey string) (*Project, error) {
-	if publicKey == "" {
-		return nil, ErrInvalidPublicKey
-	}
-
-	// Get project by public key
-	project, err := s.repo.GetByPublicKey(ctx, publicKey)
-	if err != nil {
-		return nil, err
-	}
-	if project == nil {
-		return nil, ErrProjectNotFound
-	}
-
-	// Verify project ID matches
-	id, err := strconv.ParseUint(projectID, 10, 32)
-	if err != nil || uint(id) != project.ID {
-		return nil, ErrProjectNotFound
-	}
-
-	// Check if project is active
-	if project.Status != 1 {
-		return nil, ErrProjectDisabled
-	}
-
-	return project, nil
-}
-
 func (s *service) Update(ctx context.Context, id uint, req *UpdateProjectRequest) (*Project, error) {
 	project, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -159,9 +111,6 @@ func (s *service) Update(ctx context.Context, id uint, req *UpdateProjectRequest
 	}
 	if req.Status != nil {
 		project.Status = *req.Status
-	}
-	if req.RateLimitPerMinute != nil {
-		project.RateLimitPerMinute = *req.RateLimitPerMinute
 	}
 
 	if err := s.repo.Update(ctx, project); err != nil {
@@ -228,7 +177,7 @@ func generateSlug(name string) string {
 
 	// Add random suffix if empty
 	if slug == "" {
-		slug = fmt.Sprintf("project-%s", GenerateKey()[:8])
+		slug = fmt.Sprintf("project-%d", time.Now().UnixNano()%100000000)
 	}
 
 	return slug

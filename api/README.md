@@ -1,204 +1,173 @@
-# Trac - 轻量化错误追踪系统
+# Kest API
 
-> Sentry 轻量替代方案 | 完全兼容 Sentry SDK | Go + ClickHouse
+> Backend service for Kest - AI-Native API Testing Platform
 
-## 📦 功能特性
+## 📦 Overview
 
-- ✅ **Sentry SDK 兼容** - 直接使用官方 Go/JS/Python SDK
-- ✅ **高性能存储** - ClickHouse 列式存储，支持海量事件
-- ✅ **智能聚合** - 按 fingerprint 自动去重，生成 Issue
-- ✅ **实时监控** - 错误实时采集，毫秒级入库
+Kest API is the backend service that powers the Kest platform, providing:
 
-## 🚀 快速开始
+- **Project Management** - Organize API tests by projects
+- **Team Collaboration** - Multi-user support with role-based access control
+- **Test Flow Execution** - Run `.flow.md` test flows from the CLI
+- **API Specifications** - Manage and version API documentation
+- **Environment Management** - Configure multiple testing environments
+- **Test Case Management** - Store and organize test cases
+- **Audit Logging** - Track all system activities
 
-### 1. 环境要求
+## 🚀 Quick Start
 
-- Go 1.21+
-- PostgreSQL 12+
-- ClickHouse 21+
-- Redis 6+ (可选)
+### Prerequisites
 
-### 2. 启动服务
+- Go 1.24+
+- PostgreSQL 14+
+- Docker & Docker Compose (optional)
+
+### Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/kest-labs/kest.git
+   cd kest/api
+   ```
+
+2. **Install dependencies**
+   ```bash
+   go mod download
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp ../.env.example ../.env
+   # Edit .env with your configuration
+   ```
+
+4. **Run database migrations**
+   ```bash
+   go run cmd/server/main.go migrate
+   ```
+
+5. **Start the server**
+   ```bash
+   go run cmd/server/main.go
+   ```
+
+   The API will be available at `http://localhost:8025`
+
+### Docker Deployment
 
 ```bash
-# 克隆项目
-git clone https://github.com/kest-labs/kest.git
-cd kest/api
-
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 配置数据库连接
-
-# 启动 ClickHouse (Docker)
-docker run -d --name zgo-clickhouse \
-  -p 9000:9000 \
-  -e CLICKHOUSE_DB=trac \
-  -e CLICKHOUSE_USER=trac_user \
-  -e CLICKHOUSE_PASSWORD=trac_pass \
-  clickhouse/clickhouse-server:latest
-
-# 启动服务
-go run cmd/server/main.go
+# From project root
+docker-compose up -d
 ```
 
-### 3. 创建项目
+## 📚 API Documentation
 
-```bash
-# 创建项目
-curl -X POST http://localhost:8025/v1/projects \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{"name": "My App", "platform": "go"}'
+Once the server is running, visit:
 
-# 获取 DSN
-curl http://localhost:8025/v1/projects/1/dsn \
-  -H "Authorization: Bearer YOUR_TOKEN"
+- **Swagger UI**: `http://localhost:8025/swagger/index.html`
+- **Health Check**: `http://localhost:8025/v1/health`
 
-# 响应: {"dsn": "http://abc123@localhost:8025/1"}
-```
-
-### 4. 集成 Sentry SDK
-
-#### Go 应用
-
-```go
-import (
-    "github.com/getsentry/sentry-go"
-    sentrygin "github.com/getsentry/sentry-go/gin"
-)
-
-func main() {
-    // 初始化 Sentry，DSN 指向 Trac 服务器
-    sentry.Init(sentry.ClientOptions{
-        Dsn: "http://abc123@localhost:8025/1",
-        Environment: "production",
-        Release: "myapp@1.0.0",
-    })
-    defer sentry.Flush(2 * time.Second)
-
-    // Gin 中间件
-    r := gin.Default()
-    r.Use(sentrygin.New(sentrygin.Options{
-        Repanic: true,
-    }))
-
-    // 手动上报错误
-    sentry.CaptureException(errors.New("something went wrong"))
-}
-```
-
-#### JavaScript 应用
-
-```javascript
-import * as Sentry from "@sentry/browser";
-
-Sentry.init({
-  dsn: "http://abc123@localhost:8025/1",
-  environment: "production",
-});
-
-// 自动捕获未处理异常
-// 或手动上报
-Sentry.captureException(new Error("Something went wrong"));
-```
-
-#### Python 应用
-
-```python
-import sentry_sdk
-
-sentry_sdk.init(
-    dsn="http://abc123@localhost:8025/1",
-    environment="production",
-)
-
-# 手动上报
-sentry_sdk.capture_exception(Exception("Something went wrong"))
-```
-
-## 📊 API 端点
-
-### SDK 上报端点（公开）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/{project_id}/envelope/` | Sentry Envelope 上报 |
-| POST | `/api/{project_id}/store/` | 传统事件上报（已废弃） |
-
-### 管理端点（需认证）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/v1/projects` | 创建项目 |
-| GET | `/v1/projects/:id/dsn` | 获取 DSN |
-| GET | `/v1/projects/:id/issues/` | 获取 Issue 列表 |
-| POST | `/v1/projects/:id/issues/:fingerprint/resolve` | 标记已解决 |
-
-详细 API 文档见: [docs/api.md](docs/api.md)
-
-## 🏗️ 项目结构
+## 🏗️ Architecture
 
 ```
-trac-api/
+api/
 ├── cmd/
-│   └── server/           # 主程序入口
+│   ├── server/          # Main server entry point
+│   └── api/             # API-only entry point (for cloud deployment)
 ├── internal/
-│   ├── infra/           # 基础设施
-│   │   └── storage/     # ClickHouse 客户端
-│   └── modules/
-│       ├── project/     # 项目管理
-│       ├── ingest/      # SDK 数据接收
-│       ├── envelope/    # Sentry 信封解析
-│       ├── event/       # 事件存储
-│       └── issue/       # Issue 聚合
-├── docs/                # 文档
-└── examples/
-    └── gin-app/         # Gin 集成示例
+│   ├── app/             # Application container
+│   ├── bootstrap/       # Application bootstrap
+│   ├── contracts/       # Interfaces and contracts
+│   ├── infra/           # Infrastructure layer
+│   │   ├── config/      # Configuration management
+│   │   ├── database/    # Database connection
+│   │   ├── jwt/         # JWT authentication
+│   │   ├── middleware/  # HTTP middleware
+│   │   └── router/      # Routing utilities
+│   ├── modules/         # Business modules (DDD)
+│   │   ├── user/        # User management
+│   │   ├── project/     # Project management
+│   │   ├── member/      # Team member management
+│   │   ├── flow/        # Test flow execution
+│   │   ├── testcase/    # Test case management
+│   │   ├── apispec/     # API specification
+│   │   ├── environment/ # Environment management
+│   │   ├── category/    # Category management
+│   │   ├── permission/  # Permission & roles
+│   │   └── audit/       # Audit logging
+│   └── wiring/          # Dependency injection (Wire)
+├── database/
+│   ├── migrations/      # Database migrations
+│   └── seeders/         # Database seeders
+└── routes/              # Route registration
+
 ```
 
-## ⚙️ 环境变量
+## 🔧 Configuration
+
+Key environment variables:
 
 ```bash
-# 服务配置
-SERVER_PORT=8025
+# Server
+PORT=8025
+GIN_MODE=release
 
-# PostgreSQL
+# Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=trac
-DB_USERNAME=postgres
-DB_PASSWORD=password
+DB_NAME=kest
+DB_USER=kest_user
+DB_PASSWORD=kest_password_123
 
-# ClickHouse
-LOG_CH_ENABLED=true
-LOG_CH_ENDPOINT=localhost:9000
-LOG_CH_DATABASE=trac
-LOG_CH_USERNAME=trac_user
-LOG_CH_PASSWORD=trac_pass
+# JWT
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRATION=24h
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:8025
 ```
 
-## 🔍 查看数据
-
-### 查看事件
+## 🧪 Testing
 
 ```bash
-docker exec zgo-clickhouse clickhouse-client \
-  -u trac_user --password trac_pass -d trac \
-  -q "SELECT event_id, level, message FROM events ORDER BY timestamp DESC LIMIT 10"
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run specific module tests
+go test ./internal/modules/project/...
 ```
 
-### 查看 Issues
+## 📦 Building
 
 ```bash
-curl http://localhost:8025/v1/projects/1/issues/
+# Build for production
+make build-prod
+
+# Build API-only (for cloud deployment)
+go build -o kest-api ./cmd/api
 ```
 
-## 📚 文档
+## 🚢 Deployment
 
-- [API 接口文档](docs/api.md)
-- [Sentry Go/Gin 集成指南](docs/sentry-go-gin-integration.md)
-- [部署指南](docs/usage_and_config.md)
+See [CLOUD_DEPLOYMENT.md](../CLOUD_DEPLOYMENT.md) for cloud deployment instructions.
+
+## 🤝 Contributing
+
+1. Follow Go best practices and project conventions
+2. Write tests for new features
+3. Update documentation as needed
+4. Use conventional commits
 
 ## 📄 License
 
-MIT License
+MIT License - see [LICENSE](../LICENSE) for details
+
+## 🔗 Links
+
+- [Main Repository](https://github.com/kest-labs/kest)
+- [CLI Documentation](../cli/README.md)
+- [Web Dashboard](../web/README.md)
+- [Flow Guide](../cli/FLOW_GUIDE.md)

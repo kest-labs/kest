@@ -13,8 +13,7 @@ import (
 // Handler handles HTTP requests for audit logs
 type Handler struct {
 	contracts.BaseModule
-	repo            Repository
-	projectReadAuth gin.HandlerFunc
+	repo Repository
 }
 
 // Name returns the module name
@@ -23,8 +22,8 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new audit handler
-func NewHandler(repo Repository, projectReadAuth gin.HandlerFunc) *Handler {
-	return &Handler{repo: repo, projectReadAuth: projectReadAuth}
+func NewHandler(repo Repository) *Handler {
+	return &Handler{repo: repo}
 }
 
 // RegisterRoutes registers audit log routes on the fluent router
@@ -32,8 +31,7 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 	r.Group("/projects/:id/audit-logs", func(auditRoutes *router.Router) {
 		auditRoutes.WithMiddleware("auth")
 
-		auditRoutes.GET("", h.ListByProject).
-			Middleware(h.projectReadAuth)
+		auditRoutes.GET("", h.ListByProject)
 	})
 }
 

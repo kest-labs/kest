@@ -9,33 +9,71 @@ services:
   # API Backend (Go + Gin + embedded frontend)
   # ===========================================
   api:
-    image: ghcr.io/kest-lab/kest:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kest:latest
     container_name: kest-api
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       # Server
-      PORT: 8080
+      PORT: 8025
       GIN_MODE: ${GIN_MODE:-release}
       
-      # Database (existing PostgreSQL)
-      DB_HOST: ${DB_HOST:-host.docker.internal}
-      DB_PORT: ${DB_PORT:-5432}
+      # Database (PostgreSQL)
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: ${DB_NAME:-kest}
-      DB_USER: ${DB_USER:-kest_user}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:-kest_user}
+      DB_PASSWORD: ${DB_PASSWORD:-kest_password_123}
       
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: 24h
       
       # CORS
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8025}
     ports:
-      - "8080:8080"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "8025:8025"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8025/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+    networks:
+      - kest-network
+
+  # ===========================================
+  # PostgreSQL Database
+  # ===========================================
+  postgres:
+    image: postgres:14-alpine
+    container_name: kest-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-kest}
+      POSTGRES_USER: ${DB_USER:-kest_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-kest_password_123}
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kest_user -d kest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kest-network
+
+networks:
+  kest-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

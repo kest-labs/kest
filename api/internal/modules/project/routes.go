@@ -20,8 +20,5 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 
 		// Stats endpoint
 		auth.GET("/projects/:id/stats", h.GetStats).Name("projects.stats").WhereNumber("id")
-
-		// DSN endpoint
-		auth.GET("/projects/:id/dsn", h.GetDSN).Name("projects.dsn").WhereNumber("id")
 	})
 }
