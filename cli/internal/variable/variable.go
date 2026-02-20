@@ -1,16 +1,30 @@
 package variable
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
+// Thread-safe random number generator
+var (
+	rngMu   sync.Mutex
+	rngSeed uint64
+)
+
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	// Initialize with crypto/rand for better randomness
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err == nil {
+		rngSeed = binary.LittleEndian.Uint64(b[:])
+	} else {
+		rngSeed = uint64(time.Now().UnixNano())
+	}
 }
 
 // Regular expressions for variable parsing
@@ -18,14 +32,23 @@ var (
 	// Matches {{var}} or {{var | default: "value"}}
 	varRegex = regexp.MustCompile(`\{\{([^}]+)\}\}`)
 	// Matches default value syntax: {{var | default: "value"}}
-	defaultRegex = regexp.MustCompile(`^([^|]+)\s*\|\s*default:\s*"([^"]+)"$`)
+	// Allows empty default values
+	defaultRegex = regexp.MustCompile(`^([^|]+)\s*\|\s*default:\s*"([^"]*)"$`)
 )
 
 // Interpolate replaces {{var}} with values from the map
 // Supports default value syntax: {{var | default: "value"}}
 func Interpolate(text string, vars map[string]string) string {
 	return varRegex.ReplaceAllStringFunc(text, func(match string) string {
+		// Boundary check
+		if len(match) < 4 {
+			return match
+		}
+
 		content := strings.TrimSpace(match[2 : len(match)-2])
+		if content == "" {
+			return match
+		}
 
 		// Check for default value syntax
 		varName, defaultValue := parseVarWithDefault(content)
@@ -54,7 +77,15 @@ func Interpolate(text string, vars map[string]string) string {
 func InterpolateWithWarning(text string, vars map[string]string, verbose bool) (string, []string) {
 	var warnings []string
 	result := varRegex.ReplaceAllStringFunc(text, func(match string) string {
+		// Boundary check
+		if len(match) < 4 {
+			return match
+		}
+
 		content := strings.TrimSpace(match[2 : len(match)-2])
+		if content == "" {
+			return match
+		}
 
 		// Check for default value syntax
 		varName, defaultValue := parseVarWithDefault(content)
@@ -87,7 +118,15 @@ func InterpolateWithWarning(text string, vars map[string]string, verbose bool) (
 func InterpolateStrict(text string, vars map[string]string) (string, error) {
 	var missing []string
 	result := varRegex.ReplaceAllStringFunc(text, func(match string) string {
+		// Boundary check
+		if len(match) < 4 {
+			return match
+		}
+
 		content := strings.TrimSpace(match[2 : len(match)-2])
+		if content == "" {
+			return match
+		}
 
 		// Check for default value syntax
 		varName, defaultValue := parseVarWithDefault(content)
@@ -139,13 +178,28 @@ func isBuiltinVar(name string) bool {
 }
 
 // resolveBuiltin resolves built-in variable values
+// Thread-safe implementation using crypto/rand
 func resolveBuiltin(name string) string {
 	switch name {
 	case "$randomInt":
-		return strconv.Itoa(rand.Intn(10000))
+		return strconv.Itoa(secureRandomInt(10000))
 	case "$timestamp":
 		return strconv.FormatInt(time.Now().Unix(), 10)
 	default:
 		return ""
 	}
+}
+
+// secureRandomInt generates a thread-safe random integer in [0, max)
+func secureRandomInt(max int) int {
+	if max <= 0 {
+		return 0
+	}
+
+	rngMu.Lock()
+	defer rngMu.Unlock()
+
+	// Simple LCG (Linear Congruential Generator)
+	rngSeed = (rngSeed*1103515245 + 12345) & 0x7fffffff
+	return int(rngSeed % uint64(max))
 }
