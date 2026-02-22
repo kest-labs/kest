@@ -81,19 +81,19 @@ export const environmentApi = {
     /**
      * Create environment
      */
-    create: (data: CreateEnvironmentRequest) =>
-        request.post<Environment>('/v1/environments', data),
+    create: (projectId: number, data: CreateEnvironmentRequest) =>
+        request.post<Environment>(`/v1/projects/${projectId}/environments`, data),
 
     /**
      * Update environment
      */
-    update: (id: number, data: Partial<CreateEnvironmentRequest>) =>
-        request.patch<Environment>(`/v1/environments/${id}`, data),
+    update: (projectId: number, id: number, data: Partial<CreateEnvironmentRequest>) =>
+        request.patch<Environment>(`/v1/projects/${projectId}/environments/${id}`, data),
 
     /**
      * Delete environment
      */
-    delete: (id: number) => request.delete(`/v1/environments/${id}`),
+    delete: (projectId: number, id: number) => request.delete(`/v1/projects/${projectId}/environments/${id}`),
 }
 
 // ========== API Spec APIs ==========
