@@ -27,6 +27,7 @@ type Service interface {
 
 	// API Example operations
 	CreateExample(ctx context.Context, req *CreateAPIExampleRequest) (*APIExampleResponse, error)
+	GetExamplesBySpecID(ctx context.Context, specID uint) ([]*APIExampleResponse, error)
 	DeleteExample(ctx context.Context, id uint) error
 
 	// Batch operations
@@ -181,6 +182,19 @@ func (s *service) CreateExample(ctx context.Context, req *CreateAPIExampleReques
 	}
 
 	return FromAPIExamplePO(po), nil
+}
+
+func (s *service) GetExamplesBySpecID(ctx context.Context, specID uint) ([]*APIExampleResponse, error) {
+	examples, err := s.repo.GetExamplesBySpecID(ctx, specID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*APIExampleResponse, len(examples))
+	for i, ex := range examples {
+		result[i] = FromAPIExamplePO(ex)
+	}
+	return result, nil
 }
 
 func (s *service) DeleteExample(ctx context.Context, id uint) error {

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ func RegisterAPI(r *router.Router, handlers *app.Handlers) {
 
 	// 2. Register Module Routes
 	for _, m := range handlers.Modules() {
+		log.Printf("[ROUTER] Registering module: %s", m.Name())
 		m.RegisterRoutes(r)
 	}
 }

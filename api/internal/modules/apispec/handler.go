@@ -181,6 +181,23 @@ func (h *Handler) CreateExample(c *gin.Context) {
 	response.Created(c, example)
 }
 
+// ListExamples lists all examples for an API specification
+func (h *Handler) ListExamples(c *gin.Context) {
+	sid, err := strconv.ParseUint(c.Param("sid"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "Invalid specification ID")
+		return
+	}
+
+	examples, err := h.service.GetExamplesBySpecID(c.Request.Context(), uint(sid))
+	if err != nil {
+		response.HandleError(c, "Failed to list examples", err)
+		return
+	}
+
+	response.Success(c, gin.H{"items": examples, "total": len(examples)})
+}
+
 // ImportSpecs imports multiple API specifications
 func (h *Handler) ImportSpecs(c *gin.Context) {
 	projectIDStr := c.Param("id")

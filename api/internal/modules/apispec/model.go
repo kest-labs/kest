@@ -34,17 +34,21 @@ func (APISpecPO) TableName() string {
 
 // APIExamplePO is the persistent object for API request/response examples
 type APIExamplePO struct {
-	ID             uint   `gorm:"primaryKey"`
-	APISpecID      uint   `gorm:"index;not null"`    // Foreign key to api_specs
-	Name           string `gorm:"size:255;not null"` // Example name
-	RequestHeaders string `gorm:"type:text"`         // JSON map
-	RequestBody    string `gorm:"type:text"`         // JSON
-	ResponseStatus int    `gorm:"not null"`          // HTTP status code
-	ResponseBody   string `gorm:"type:text"`         // JSON
-	DurationMs     int64  `gorm:"default:0"`         // Response time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      gorm.DeletedAt `gorm:"index"`
+	ID              uint   `gorm:"primaryKey"`
+	APISpecID       uint   `gorm:"index;not null"`    // Foreign key to api_specs
+	Name            string `gorm:"size:255;not null"` // Example name
+	Description     string `gorm:"type:text"`         // Example description
+	Path            string `gorm:"size:500"`          // Request path
+	Method          string `gorm:"size:10"`           // HTTP method
+	RequestHeaders  string `gorm:"type:text"`         // JSON map
+	RequestBody     string `gorm:"type:text"`         // JSON
+	ResponseStatus  int    `gorm:"not null"`          // HTTP status code
+	ResponseBody    string `gorm:"type:text"`         // JSON
+	ResponseHeaders string `gorm:"type:text"`         // JSON map
+	DurationMs      int64  `gorm:"default:0"`         // Response time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
 // TableName overrides the default table name

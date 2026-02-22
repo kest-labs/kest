@@ -1,0 +1,12 @@
+[build]
+  command = "cd api && go build -o server ./cmd/server"
+  publish = "api"
+  directory = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/server"
+  status = 200
+
+[build.environment]
+  GO_VERSION = "1.21"

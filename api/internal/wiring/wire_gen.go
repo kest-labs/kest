@@ -7,6 +7,7 @@
 package wiring
 
 import (
+	"github.com/kest-labs/kest/api/database/migrations"
 	"github.com/kest-labs/kest/api/internal/app"
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/database"
@@ -17,11 +18,19 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/apispec"
 	"github.com/kest-labs/kest/api/internal/modules/audit"
 	"github.com/kest-labs/kest/api/internal/modules/category"
+	"github.com/kest-labs/kest/api/internal/modules/collection"
 	"github.com/kest-labs/kest/api/internal/modules/environment"
+	"github.com/kest-labs/kest/api/internal/modules/example"
+	"github.com/kest-labs/kest/api/internal/modules/export"
 	"github.com/kest-labs/kest/api/internal/modules/flow"
+	"github.com/kest-labs/kest/api/internal/modules/history"
+	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/request"
+	"github.com/kest-labs/kest/api/internal/modules/run"
+	"github.com/kest-labs/kest/api/internal/modules/runner"
 	"github.com/kest-labs/kest/api/internal/modules/system"
 	"github.com/kest-labs/kest/api/internal/modules/testcase"
 	"github.com/kest-labs/kest/api/internal/modules/testrunner"
@@ -46,6 +55,12 @@ func InitApplication() (*app.Application, error) {
 	eventBus := events.NewEventBus()
 	repository := migration.NewDatabaseRepositoryProvider(db)
 	migrator := migration.NewMigratorProvider(repository, db, eventBus)
+	// Register all migrations
+	migrator.RegisterMany(migrations.All())
+	// Run migrations on startup
+	if _, err := migrator.Run(migration.NewMigratorOptions()); err != nil {
+		return nil, err
+	}
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository, service, eventBus)
 	handler := user.NewHandler(userService)
@@ -60,6 +75,24 @@ func InitApplication() (*app.Application, error) {
 	projectRepository := project.NewRepository(db)
 	projectService := project.NewService(projectRepository, memberService)
 	projectHandler := project.NewHandler(projectService)
+	collectionRepository := collection.NewRepository(db)
+	collectionService := collection.NewService(collectionRepository)
+	collectionHandler := collection.NewHandler(collectionService)
+	requestRepository := request.NewRepository(db)
+	requestService := request.NewService(requestRepository)
+	requestHandler := request.NewHandler(requestService)
+	exampleRepository := example.NewRepository(db)
+	exampleService := example.NewService(exampleRepository)
+	exampleHandler := example.NewHandler(exampleService)
+	runnerInstance := runner.New()
+	runHandler := run.NewHandler(requestService, runnerInstance)
+	historyRepository := history.NewRepository(db)
+	historyService := history.NewService(historyRepository)
+	historyHandler := history.NewHandler(historyService)
+	exportService := export.NewService(collectionService, requestService)
+	exportHandler := export.NewHandler(exportService)
+	importerService := importer.NewService(collectionService, requestService)
+	importerHandler := importer.NewHandler(importerService)
 	apispecRepository := apispec.NewRepository(db)
 	apispecService := apispec.NewService(apispecRepository)
 	apispecHandler := apispec.NewHandler(apispecService, memberService)
@@ -83,6 +116,13 @@ func InitApplication() (*app.Application, error) {
 		Permission:  permissionHandler,
 		Audit:       auditHandler,
 		Project:     projectHandler,
+		Collection:  collectionHandler,
+		Request:     requestHandler,
+		Example:     exampleHandler,
+		Run:         runHandler,
+		History:     historyHandler,
+		Export:      exportHandler,
+		Importer:    importerHandler,
 		APISpec:     apispecHandler,
 		Category:    categoryHandler,
 		Environment: environmentHandler,

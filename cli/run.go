@@ -18,6 +18,7 @@ import (
 	"github.com/kest-labs/kest/cli/internal/variable"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -387,6 +388,47 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 			Error:        err,
 		}
 		summ.AddResult(result)
+
+		// Process captures after successful request
+		if err == nil && len(step.Request.Captures) > 0 {
+			store, _ := storage.NewStore()
+			conf := loadConfigWarn()
+			for _, capExpr := range step.Request.Captures {
+				sep := "="
+				if !strings.Contains(capExpr, "=") && strings.Contains(capExpr, ":") {
+					sep = ":"
+				}
+				parts := strings.SplitN(capExpr, sep, 2)
+				if len(parts) == 2 {
+					varName := strings.TrimSpace(parts[0])
+					query := strings.TrimSpace(parts[1])
+
+					captureResult := gjson.Get(string(res.ResponseBody), query)
+					if captureResult.Exists() {
+						value := captureResult.String()
+						// Save to ActiveRunCtx
+						if ActiveRunCtx != nil {
+							ActiveRunCtx.Set(varName, value)
+						}
+						// Also save to storage for persistence
+						if store != nil && conf != nil {
+							store.SaveVariable(&storage.Variable{
+								Name:        varName,
+								Value:       value,
+								Environment: conf.ActiveEnv,
+								Project:     conf.ProjectID,
+							})
+						}
+						fmt.Printf("    Captured: %s = %s\n", varName, value)
+						logger.LogToSession("Captured: %s = %s", varName, value)
+					}
+				}
+			}
+			if store != nil {
+				store.Close()
+			}
+		}
+
 		if err != nil {
 			fmt.Printf("    ❌ Failed at step %s\n", stepName(step))
 			if runFailFast {

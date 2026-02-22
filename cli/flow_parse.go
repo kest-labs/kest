@@ -107,6 +107,7 @@ func parseFlowStep(b FlowBlock) FlowStep {
 	lines := strings.Split(b.Raw, "\n")
 	var requestLines []string
 	directivePhase := true
+	section := "request"
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -135,7 +136,29 @@ func parseFlowStep(b FlowBlock) FlowStep {
 			continue
 		}
 		directivePhase = false
-		requestLines = append(requestLines, line)
+
+		// Track sections
+		if trimmed == "[Captures]" {
+			section = "captures"
+			continue
+		}
+		if trimmed == "[Asserts]" {
+			section = "asserts"
+			continue
+		}
+
+		switch section {
+		case "request":
+			requestLines = append(requestLines, line)
+		case "captures":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				step.Request.Captures = append(step.Request.Captures, strings.TrimSpace(trimmed))
+			}
+		case "asserts":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				step.Request.Asserts = append(step.Request.Asserts, strings.TrimSpace(trimmed))
+			}
+		}
 	}
 
 	// Validate @type
