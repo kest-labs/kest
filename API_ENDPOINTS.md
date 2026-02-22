@@ -1,6 +1,6 @@
 # 🚀 Kest API 接口清单
 
-**更新时间**: 2026-02-19  
+**更新时间**: 2026-02-22  
 **API 版本**: v1  
 **Base URL**: `http://localhost:8025/v1`
 
@@ -15,7 +15,7 @@
 | 工作空间 (Workspace) | 9 | ✅ 完整 |
 | 权限管理 (Permission) | 9 | ✅ 完整 |
 | **Flow 测试流程** | **14** | ✅ **完整** |
-| API 规范 (APISpec) | 9 | ✅ 完整 |
+| API 规范 (APISpec) | 10 | ✅ 完整 |
 | 测试用例 (TestCase) | 8 | ✅ 完整 |
 | 环境管理 (Environment) | 6 | ✅ 完整 |
 | 分类管理 (Category) | 6 | ✅ 完整 |
@@ -164,6 +164,7 @@
 | GET | `/projects/:id/api-specs/:sid/full` | 获取规范（含示例） |
 | PATCH | `/projects/:id/api-specs/:sid` | 更新规范 |
 | DELETE | `/projects/:id/api-specs/:sid` | 删除规范 |
+| GET | `/projects/:id/api-specs/:sid/examples` | 获取示例列表 |
 | POST | `/projects/:id/api-specs/:sid/examples` | 创建示例 |
 
 ---
