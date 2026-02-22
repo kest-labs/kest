@@ -19,7 +19,7 @@ type CreateEnvironmentRequest struct {
 type UpdateEnvironmentRequest struct {
 	Name        *string                 `json:"name,omitempty" binding:"omitempty,max=50"`
 	DisplayName *string                 `json:"display_name,omitempty" binding:"omitempty,max=100"`
-	BaseURL     *string                 `json:"base_url,omitempty" binding:"omitempty,max=500,url"`
+	BaseURL     *string                 `json:"base_url,omitempty" binding:"omitempty,max=500"`
 	Variables   *map[string]interface{} `json:"variables,omitempty"`
 	Headers     *map[string]string      `json:"headers,omitempty"`
 }
