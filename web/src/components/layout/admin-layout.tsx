@@ -3,7 +3,6 @@ import {
   Home,
   Folder,
   Settings,
-  Users,
   LogOut,
 } from 'lucide-react'
 import {
@@ -18,7 +17,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarHeader,
-  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -101,48 +99,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               ))}
             </SidebarContent>
 
-            <SidebarFooter className="border-t p-4">
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="w-full">
-                    <div className="flex items-center gap-3 hover:bg-accent rounded-md p-2 cursor-pointer">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                        {user.username?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium truncate">{user.username}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                      </div>
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings">
-                        <Settings className="w-4 h-4 mr-2" />
-                        Settings
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex items-center gap-3 p-2">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Guest</p>
-                    <p className="text-xs text-muted-foreground">Not logged in</p>
-                  </div>
-                </div>
-              )}
-            </SidebarFooter>
           </Sidebar>
 
           <div className="flex-1 min-w-0 flex flex-col">
