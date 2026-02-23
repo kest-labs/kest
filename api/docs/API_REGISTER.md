@@ -7,7 +7,7 @@ Register a new user account in the Kest platform. This endpoint creates a new us
 ## Endpoint
 
 ```
-POST /api/v1/register
+POST /v1/register
 ```
 
 **Authentication**: Not required (Public endpoint)
