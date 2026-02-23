@@ -16,7 +16,8 @@ func main() {
 	// Command line flags
 	outputDir := flag.String("output", "docs/api", "Output directory for generated docs")
 	routesFile := flag.String("routes", "routes/v1/register.go", "Routes file to parse")
-	appDir := flag.String("app", "app", "Application modules directory")
+	modulesDir := flag.String("modules", "internal/modules", "Modules directory containing routes.go files")
+	appDir := flag.String("app", "internal/modules", "Application modules directory")
 	format := flag.String("format", "markdown", "Output format: markdown or json")
 
 	module := flag.String("module", "", "Generate docs for specific module only (e.g., user, apikey)")
@@ -27,11 +28,15 @@ func main() {
 	fmt.Println("====================================")
 
 	// Parse routes
-	fmt.Printf("📂 Parsing routes from: %s\n", *routesFile)
-	routes, err := parser.ParseRoutes(*routesFile)
-	if err != nil {
-		fmt.Printf("❌ Error parsing routes: %v\n", err)
-		os.Exit(1)
+	fmt.Printf("📂 Parsing module routes from: %s\n", *modulesDir)
+	routes, err := parser.ParseModuleRoutes(*modulesDir, "/v1")
+	if err != nil || len(routes) == 0 {
+		fmt.Printf("⚠️ Module route parsing fallback to file: %s\n", *routesFile)
+		routes, err = parser.ParseRoutes(*routesFile)
+		if err != nil {
+			fmt.Printf("❌ Error parsing routes: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// Filter by module if specified

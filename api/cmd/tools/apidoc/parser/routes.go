@@ -8,6 +8,130 @@ import (
 	"strings"
 )
 
+// ParseModuleRoutes parses route definitions from internal/modules/**/routes.go files.
+// It supports both fluent router style and gin RouterGroup style used in this repository.
+func ParseModuleRoutes(modulesDir string, prefix string) ([]Route, error) {
+	var allRoutes []Route
+
+	err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || info.Name() != "routes.go" {
+			return nil
+		}
+
+		routes, parseErr := parseModuleRoutesFile(path, prefix)
+		if parseErr != nil {
+			return parseErr
+		}
+		allRoutes = append(allRoutes, routes...)
+		return nil
+	})
+
+	return allRoutes, err
+}
+
+func parseModuleRoutesFile(filename string, apiPrefix string) ([]Route, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	module := filepath.Base(filepath.Dir(filename))
+	var routes []Route
+
+	// Maintain inferred prefix for route variables.
+	varPrefix := map[string]string{
+		"r":      "",
+		"router": "",
+		"rg":     "",
+	}
+
+	groupWithFuncPattern := regexp.MustCompile(`(\w+)\.Group\s*\(\s*"([^"]*)"\s*,\s*func\s*\(\s*(\w+)`)
+	groupAssignPattern := regexp.MustCompile(`(\w+)\s*:=\s*(\w+)\.Group\s*\(\s*"([^"]*)"\s*\)`)
+	routePattern := regexp.MustCompile(`(\w+)\.(GET|POST|PUT|DELETE|PATCH)\s*\(\s*"([^"]*)"`)
+	handlerPattern := regexp.MustCompile(`,\s*([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)`)
+	namePattern := regexp.MustCompile(`\.Name\s*\(\s*"([^"]+)"\s*\)`)
+	withMiddlewarePattern := regexp.MustCompile(`WithMiddleware\s*\(\s*"([^"]+)"\s*\)`)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// projects := r.Group("/projects/:id")
+		if matches := groupAssignPattern.FindStringSubmatch(line); len(matches) == 4 {
+			child := matches[1]
+			parent := matches[2]
+			segment := matches[3]
+			varPrefix[child] = normalizePath(varPrefix[parent] + segment)
+		}
+
+		// r.Group("/projects/:id", func(projects *router.Router) {
+		if matches := groupWithFuncPattern.FindStringSubmatch(line); len(matches) == 4 {
+			parent := matches[1]
+			segment := matches[2]
+			child := matches[3]
+			varPrefix[child] = normalizePath(varPrefix[parent] + segment)
+		}
+
+		// projects.GET("/:sid", handler.GetSpec)
+		if matches := routePattern.FindStringSubmatch(line); len(matches) == 4 {
+			groupVar := matches[1]
+			method := matches[2]
+			routePath := matches[3]
+
+			fullPath := normalizePath(apiPrefix + varPrefix[groupVar] + routePath)
+			r := Route{
+				Method: method,
+				Path:   fullPath,
+				Module: module,
+			}
+
+			if name := namePattern.FindStringSubmatch(line); len(name) == 2 {
+				r.Name = name[1]
+			}
+
+			if handler := handlerPattern.FindStringSubmatch(line); len(handler) == 3 {
+				r.Handler = handler[1] + "." + handler[2]
+			}
+
+			if strings.Contains(line, "WithMiddleware(\"auth\")") {
+				r.IsPublic = false
+				r.Middlewares = append(r.Middlewares, "auth")
+			} else {
+				r.IsPublic = true
+			}
+
+			if middleware := withMiddlewarePattern.FindStringSubmatch(line); len(middleware) == 2 {
+				if middleware[1] == "auth" {
+					r.IsPublic = false
+				}
+				r.Middlewares = append(r.Middlewares, middleware[1])
+			}
+
+			routes = append(routes, r)
+		}
+	}
+
+	return routes, scanner.Err()
+}
+
+func normalizePath(path string) string {
+	if path == "" {
+		return "/"
+	}
+	path = strings.ReplaceAll(path, "//", "/")
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	if len(path) > 1 && strings.HasSuffix(path, "/") {
+		path = strings.TrimSuffix(path, "/")
+	}
+	return path
+}
+
 // RouteGroup represents a route group with its prefix
 type RouteGroup struct {
 	Prefix     string
