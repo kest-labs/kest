@@ -17,7 +17,6 @@ import type {
     APICategory,
     CreateCategoryRequest,
     UpdateCategoryRequest,
-    CategoryTree,
     TestCase,
     CreateTestCaseRequest,
     TestCollection,
@@ -299,17 +298,33 @@ export const categoryApi = {
     /**
      * Get all categories for a project
      */
-    list: (projectId: number) =>
+    list: (
+        projectId: number,
+        params?: {
+            page?: number
+            per_page?: number
+            search?: string
+            include_count?: boolean
+        }
+    ) =>
         request.get<PaginatedResponse<APICategory>>(
-            `/v1/projects/${projectId}/categories`
+            `/v1/projects/${projectId}/categories`,
+            { params }
         ),
 
     /**
      * Get category tree for a project
+     * Derived from documented list API to avoid non-documented endpoints.
      */
     tree: (projectId: number) =>
-        request.get<{ items: CategoryTree[]; total: number }>(
-            `/v1/projects/${projectId}/categories?tree=true`
+        request.get<PaginatedResponse<APICategory>>(
+            `/v1/projects/${projectId}/categories`,
+            {
+                params: {
+                    per_page: 1000,
+                    include_count: true,
+                },
+            }
         ),
 
     /**
@@ -341,8 +356,10 @@ export const categoryApi = {
     /**
      * Delete category
      */
-    delete: (projectId: number, categoryId: number) =>
-        request.delete(`/v1/projects/${projectId}/categories/${categoryId}`),
+    delete: (projectId: number, categoryId: number, moveTo?: number) =>
+        request.delete(`/v1/projects/${projectId}/categories/${categoryId}`, {
+            params: moveTo ? { move_to: moveTo } : undefined,
+        }),
 
     /**
      * Sort categories

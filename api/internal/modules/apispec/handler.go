@@ -1,6 +1,7 @@
 package apispec
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -53,6 +54,10 @@ func (h *Handler) CreateSpec(c *gin.Context) {
 	req.ProjectID = uint(projectID)
 	spec, err := h.service.CreateSpec(c.Request.Context(), &req)
 	if err != nil {
+		if errors.Is(err, ErrSpecAlreadyExists) {
+			response.Conflict(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "Failed to create API spec", err)
 		return
 	}

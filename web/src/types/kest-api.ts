@@ -66,6 +66,10 @@ export interface APICategory {
     parent_id?: number
     sort_order: number
     description?: string
+    color?: string
+    icon?: string
+    test_cases_count?: number
+    parent_name?: string | null
     created_at: string
     updated_at: string
 }
@@ -74,6 +78,8 @@ export interface CreateCategoryRequest {
     name: string
     parent_id?: number
     description?: string
+    color?: string
+    icon?: string
 }
 
 export interface UpdateCategoryRequest {
@@ -81,6 +87,8 @@ export interface UpdateCategoryRequest {
     parent_id?: number
     description?: string
     sort_order?: number
+    color?: string
+    icon?: string
 }
 
 export interface CategoryTree extends APICategory {

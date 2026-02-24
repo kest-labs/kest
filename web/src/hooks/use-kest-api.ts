@@ -280,18 +280,48 @@ export function useTestCollectionRuns(collectionId: number) {
 
 // ========== Category Hooks ==========
 
-export function useCategories(projectId: number) {
+export function useCategories(projectId: number, params?: {
+    page?: number
+    per_page?: number
+    search?: string
+    include_count?: boolean
+}) {
     return useQuery({
-        queryKey: queryKeys.categories(projectId),
-        queryFn: () => kestApi.category.list(projectId),
+        queryKey: [...queryKeys.categories(projectId), params],
+        queryFn: () => kestApi.category.list(projectId, params),
         enabled: !!projectId,
     })
 }
 
 export function useCategoryTree(projectId: number) {
+    const buildTree = (list: APICategory[]): CategoryTree[] => {
+        const nodeMap = new Map<number, CategoryTree>()
+        const roots: CategoryTree[] = []
+
+        list.forEach((item) => {
+            nodeMap.set(item.id, { ...item, children: [] })
+        })
+
+        nodeMap.forEach((node) => {
+            if (node.parent_id && nodeMap.has(node.parent_id)) {
+                nodeMap.get(node.parent_id)!.children!.push(node)
+                return
+            }
+            roots.push(node)
+        })
+
+        return roots
+    }
+
     return useQuery({
         queryKey: queryKeys.categoryTree(projectId),
-        queryFn: () => kestApi.category.tree(projectId),
+        queryFn: async () => {
+            const res = await kestApi.category.tree(projectId)
+            const items = Array.isArray((res as any)?.items)
+                ? (res as any).items
+                : (Array.isArray(res) ? res : [])
+            return buildTree(items)
+        },
         enabled: !!projectId,
     })
 }
@@ -341,8 +371,15 @@ export function useUpdateCategory() {
 export function useDeleteCategory() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ projectId, categoryId }: { projectId: number; categoryId: number }) =>
-            kestApi.category.delete(projectId, categoryId),
+        mutationFn: ({
+            projectId,
+            categoryId,
+            moveTo,
+        }: {
+            projectId: number
+            categoryId: number
+            moveTo?: number
+        }) => kestApi.category.delete(projectId, categoryId, moveTo),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.categories(variables.projectId) })
             queryClient.invalidateQueries({ queryKey: queryKeys.categoryTree(variables.projectId) })

@@ -41,7 +41,12 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
     const [isEditOpen, setIsEditOpen] = useState(false)
     const [selectedParentId, setSelectedParentId] = useState<number | null>(null)
     const [editingCategory, setEditingCategory] = useState<CategoryTree | null>(null)
-    const [formData, setFormData] = useState({ name: '', description: '' })
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        color: '#3B82F6',
+        icon: 'folder',
+    })
 
     const categories: CategoryTree[] = (() => {
         if (!treeData) return []
@@ -59,12 +64,14 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                 data: {
                     name: formData.name,
                     description: formData.description,
+                    color: formData.color || undefined,
+                    icon: formData.icon || undefined,
                     parent_id: selectedParentId || undefined,
                 }
             })
             toast.success('Category created')
             setIsCreateOpen(false)
-            setFormData({ name: '', description: '' })
+            setFormData({ name: '', description: '', color: '#3B82F6', icon: 'folder' })
             setSelectedParentId(null)
         } catch (err: any) {
             toast.error(err.message || 'Failed to create category')
@@ -80,12 +87,14 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                 data: {
                     name: formData.name,
                     description: formData.description,
+                    color: formData.color || undefined,
+                    icon: formData.icon || undefined,
                 }
             })
             toast.success('Category updated')
             setIsEditOpen(false)
             setEditingCategory(null)
-            setFormData({ name: '', description: '' })
+            setFormData({ name: '', description: '', color: '#3B82F6', icon: 'folder' })
         } catch (err: any) {
             toast.error(err.message || 'Failed to update category')
         }
@@ -94,7 +103,15 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
     const handleDelete = async (categoryId: number) => {
         if (!confirm('Are you sure you want to delete this category? Sub-categories might also be affected.')) return
         try {
-            await deleteMutation.mutateAsync({ projectId, categoryId })
+            const moveToInput = window.prompt('Optional: move test cases to category ID before delete (leave blank to unassociate).', '')
+            const moveTo = moveToInput && moveToInput.trim()
+                ? Number.parseInt(moveToInput.trim(), 10)
+                : undefined
+            await deleteMutation.mutateAsync({
+                projectId,
+                categoryId,
+                moveTo: Number.isInteger(moveTo) ? moveTo : undefined,
+            })
             toast.success('Category deleted')
         } catch (err: any) {
             toast.error(err.message || 'Failed to delete category')
@@ -103,13 +120,18 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
 
     const openCreateDialog = (parentId: number | null = null) => {
         setSelectedParentId(parentId)
-        setFormData({ name: '', description: '' })
+        setFormData({ name: '', description: '', color: '#3B82F6', icon: 'folder' })
         setIsCreateOpen(true)
     }
 
     const openEditDialog = (category: CategoryTree) => {
         setEditingCategory(category)
-        setFormData({ name: category.name, description: category.description || '' })
+        setFormData({
+            name: category.name,
+            description: category.description || '',
+            color: category.color || '#3B82F6',
+            icon: category.icon || 'folder',
+        })
         setIsEditOpen(true)
     }
 
@@ -121,7 +143,7 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                     style={{ marginLeft: `${level * 24}px` }}
                 >
                     <div className="flex items-center gap-2">
-                        <Folder className="w-4 h-4 text-blue-500" />
+                        <Folder className="w-4 h-4" style={{ color: category.color || '#3B82F6' }} />
                         <span className="font-medium text-sm">{category.name}</span>
                         {category.description && (
                             <span className="text-xs text-muted-foreground truncate max-w-[200px]">
@@ -238,6 +260,26 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                                 placeholder="Categorize user-related APIs"
                             />
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="color">Color</Label>
+                                <Input
+                                    id="color"
+                                    type="color"
+                                    value={formData.color}
+                                    onChange={e => setFormData({ ...formData, color: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="icon">Icon</Label>
+                                <Input
+                                    id="icon"
+                                    value={formData.icon}
+                                    onChange={e => setFormData({ ...formData, icon: e.target.value })}
+                                    placeholder="folder"
+                                />
+                            </div>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
@@ -273,6 +315,25 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                                 value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                             />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-color">Color</Label>
+                                <Input
+                                    id="edit-color"
+                                    type="color"
+                                    value={formData.color}
+                                    onChange={e => setFormData({ ...formData, color: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-icon">Icon</Label>
+                                <Input
+                                    id="edit-icon"
+                                    value={formData.icon}
+                                    onChange={e => setFormData({ ...formData, icon: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
