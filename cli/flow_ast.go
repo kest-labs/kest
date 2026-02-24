@@ -10,17 +10,20 @@ type FlowMeta struct {
 }
 
 type FlowStep struct {
-	ID          string
-	Name        string
-	Type        string
-	Retry       int
-	RetryWait   int
-	MaxDuration int
-	OnFail      string
-	LineNum     int
-	Raw         string
-	Request     RequestOptions
-	Exec        ExecOptions
+	ID             string
+	Name           string
+	Type           string
+	Retry          int
+	RetryWait      int
+	MaxDuration    int
+	WaitMs         int
+	PollTimeoutMs  int
+	PollIntervalMs int
+	OnFail         string
+	LineNum        int
+	Raw            string
+	Request        RequestOptions
+	Exec           ExecOptions
 }
 
 type ExecOptions struct {
@@ -36,7 +39,9 @@ type FlowEdge struct {
 }
 
 type FlowDoc struct {
-	Meta  FlowMeta
-	Steps []FlowStep
-	Edges []FlowEdge
+	Meta     FlowMeta
+	Setup    []FlowStep
+	Steps    []FlowStep
+	Teardown []FlowStep
+	Edges    []FlowEdge
 }

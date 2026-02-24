@@ -14,6 +14,8 @@ type CreateAPISpecRequest struct {
 	Path        string                  `json:"path" binding:"required,max=500"`
 	Summary     string                  `json:"summary" binding:"omitempty,max=500"`
 	Description string                  `json:"description"`
+	DocMarkdown string                  `json:"doc_markdown"`
+	DocSource   string                  `json:"doc_source" binding:"omitempty,oneof=manual ai"`
 	Tags        []string                `json:"tags"`
 	RequestBody *RequestBodySpec        `json:"request_body"`
 	Parameters  []ParameterSpec         `json:"parameters"`
@@ -26,6 +28,8 @@ type UpdateAPISpecRequest struct {
 	CategoryID  *uint                    `json:"category_id"`
 	Summary     *string                  `json:"summary" binding:"omitempty,max=500"`
 	Description *string                  `json:"description"`
+	DocMarkdown *string                  `json:"doc_markdown"`
+	DocSource   *string                  `json:"doc_source" binding:"omitempty,oneof=manual ai"`
 	Tags        *[]string                `json:"tags"`
 	RequestBody *RequestBodySpec         `json:"request_body"`
 	Parameters  *[]ParameterSpec         `json:"parameters"`
@@ -46,22 +50,25 @@ type CreateAPIExampleRequest struct {
 // ========== Response DTOs ==========
 
 type APISpecResponse struct {
-	ID          uint                    `json:"id"`
-	ProjectID   uint                    `json:"project_id"`
-	CategoryID  *uint                   `json:"category_id,omitempty"`
-	Method      string                  `json:"method"`
-	Path        string                  `json:"path"`
-	Summary     string                  `json:"summary"`
-	Description string                  `json:"description"`
-	Tags        []string                `json:"tags"`
-	RequestBody *RequestBodySpec        `json:"request_body,omitempty"`
-	Parameters  []ParameterSpec         `json:"parameters,omitempty"`
-	Responses   map[string]ResponseSpec `json:"responses,omitempty"`
-	Examples    []APIExampleResponse    `json:"examples,omitempty"`
-	Version     string                  `json:"version"`
-	IsPublic    bool                    `json:"is_public"`
-	CreatedAt   time.Time               `json:"created_at"`
-	UpdatedAt   time.Time               `json:"updated_at"`
+	ID           uint                    `json:"id"`
+	ProjectID    uint                    `json:"project_id"`
+	CategoryID   *uint                   `json:"category_id,omitempty"`
+	Method       string                  `json:"method"`
+	Path         string                  `json:"path"`
+	Summary      string                  `json:"summary"`
+	Description  string                  `json:"description"`
+	DocMarkdown  string                  `json:"doc_markdown,omitempty"`
+	DocSource    string                  `json:"doc_source,omitempty"`
+	DocUpdatedAt *time.Time              `json:"doc_updated_at,omitempty"`
+	Tags         []string                `json:"tags"`
+	RequestBody  *RequestBodySpec        `json:"request_body,omitempty"`
+	Parameters   []ParameterSpec         `json:"parameters,omitempty"`
+	Responses    map[string]ResponseSpec `json:"responses,omitempty"`
+	Examples     []APIExampleResponse    `json:"examples,omitempty"`
+	Version      string                  `json:"version"`
+	IsPublic     bool                    `json:"is_public"`
+	CreatedAt    time.Time               `json:"created_at"`
+	UpdatedAt    time.Time               `json:"updated_at"`
 }
 
 type APIExampleResponse struct {
@@ -110,8 +117,18 @@ func ToAPISpecPO(req *CreateAPISpecRequest) *APISpecPO {
 		Path:        req.Path,
 		Summary:     req.Summary,
 		Description: req.Description,
+		DocMarkdown: req.DocMarkdown,
+		DocSource:   "manual",
 		Version:     req.Version,
 		CategoryID:  req.CategoryID,
+	}
+
+	if req.DocSource != "" {
+		po.DocSource = req.DocSource
+	}
+	if req.DocMarkdown != "" {
+		now := time.Now()
+		po.DocUpdatedAt = &now
 	}
 
 	// Convert tags
@@ -155,17 +172,20 @@ func FromAPISpecPO(po *APISpecPO) *APISpecResponse {
 	}
 
 	resp := &APISpecResponse{
-		ID:          po.ID,
-		ProjectID:   po.ProjectID,
-		Method:      po.Method,
-		Path:        po.Path,
-		Summary:     po.Summary,
-		Description: po.Description,
-		Version:     po.Version,
-		IsPublic:    po.IsPublic,
-		CreatedAt:   po.CreatedAt,
-		UpdatedAt:   po.UpdatedAt,
-		CategoryID:  po.CategoryID,
+		ID:           po.ID,
+		ProjectID:    po.ProjectID,
+		Method:       po.Method,
+		Path:         po.Path,
+		Summary:      po.Summary,
+		Description:  po.Description,
+		DocMarkdown:  po.DocMarkdown,
+		DocSource:    po.DocSource,
+		DocUpdatedAt: po.DocUpdatedAt,
+		Version:      po.Version,
+		IsPublic:     po.IsPublic,
+		CreatedAt:    po.CreatedAt,
+		UpdatedAt:    po.UpdatedAt,
+		CategoryID:   po.CategoryID,
 	}
 
 	// Parse tags

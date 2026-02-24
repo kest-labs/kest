@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -122,6 +123,16 @@ func ParseCaptureExpr(expr string) (varName, query string, ok bool) {
 	return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), true
 }
 
+var arrayIndexPattern = regexp.MustCompile(`\[(\d+)\]`)
+
+// NormalizeJSONPath converts bracket index syntax to dot syntax so both
+// data[0].id and data.0.id are supported consistently.
+func NormalizeJSONPath(path string) string {
+	normalized := arrayIndexPattern.ReplaceAllString(path, `.$1`)
+	normalized = strings.ReplaceAll(normalized, "..", ".")
+	return strings.TrimPrefix(normalized, ".")
+}
+
 // ResolveExecCapture extracts a value from exec stdout based on the query.
 //
 // Supported query formats:
@@ -145,7 +156,7 @@ func ResolveExecCapture(output string, query string) string {
 
 	default:
 		// Try gjson on stdout (if stdout is JSON)
-		r := gjson.Get(output, query)
+		r := gjson.Get(output, NormalizeJSONPath(query))
 		if r.Exists() {
 			return r.String()
 		}

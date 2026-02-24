@@ -21,6 +21,7 @@ func Assert(status int, body []byte, durationMs int64, vars map[string]string, a
 			// Treat bare path (e.g. "data.choices[0]") as body query directly
 			query = key
 		}
+		query = normalizeJSONPath(query)
 		result := gjson.Get(string(body), query)
 		if result.Exists() {
 			return true, ""
@@ -78,7 +79,7 @@ func Assert(status int, body []byte, durationMs int64, vars map[string]string, a
 		expected = strings.TrimSuffix(expected, "ms")
 		actual = fmt.Sprintf("%d", durationMs)
 	} else if strings.HasPrefix(key, "body.") {
-		query := key[5:]
+		query := normalizeJSONPath(key[5:])
 		result := gjson.Get(string(body), query)
 		if !result.Exists() {
 			return false, fmt.Sprintf("body path not found: %s", query)
@@ -86,11 +87,16 @@ func Assert(status int, body []byte, durationMs int64, vars map[string]string, a
 		actual = result.String()
 	} else {
 		// Treat any other key as a direct gjson path into the response body
+		key = normalizeJSONPath(key)
 		result := gjson.Get(string(body), key)
 		if !result.Exists() {
 			return false, fmt.Sprintf("body path not found: %s", key)
 		}
 		actual = result.String()
+	}
+
+	if exprValue, ok := evalNumericExpr(expected); ok {
+		expected = strconv.FormatFloat(exprValue, 'f', -1, 64)
 	}
 
 	switch op {
@@ -144,4 +150,73 @@ func Assert(status int, body []byte, durationMs int64, vars map[string]string, a
 		key, op, expected, actual,
 	)
 	return false, errorMsg
+}
+
+var indexSyntaxPattern = regexp.MustCompile(`\[(\d+)\]`)
+var numberPattern = regexp.MustCompile(`^[+-]?(\d+(\.\d+)?|\.\d+)$`)
+
+func normalizeJSONPath(path string) string {
+	path = indexSyntaxPattern.ReplaceAllString(path, `.$1`)
+	path = strings.ReplaceAll(path, "..", ".")
+	return strings.TrimPrefix(path, ".")
+}
+
+func evalNumericExpr(expr string) (float64, bool) {
+	expr = strings.TrimSpace(expr)
+	if expr == "" {
+		return 0, false
+	}
+	expr = strings.ReplaceAll(expr, "\"", "")
+	expr = strings.ReplaceAll(expr, "'", "")
+	parts := strings.Fields(expr)
+	if len(parts) == 0 {
+		return 0, false
+	}
+	if len(parts) == 1 {
+		if !numberPattern.MatchString(parts[0]) {
+			return 0, false
+		}
+		v, err := strconv.ParseFloat(parts[0], 64)
+		return v, err == nil
+	}
+	if len(parts)%2 == 0 {
+		return 0, false
+	}
+
+	if !numberPattern.MatchString(parts[0]) {
+		return 0, false
+	}
+	result, err := strconv.ParseFloat(parts[0], 64)
+	if err != nil {
+		return 0, false
+	}
+
+	for i := 1; i < len(parts); i += 2 {
+		op := parts[i]
+		next := parts[i+1]
+		if !numberPattern.MatchString(next) {
+			return 0, false
+		}
+		value, err := strconv.ParseFloat(next, 64)
+		if err != nil {
+			return 0, false
+		}
+		switch op {
+		case "+":
+			result += value
+		case "-":
+			result -= value
+		case "*":
+			result *= value
+		case "/":
+			if value == 0 {
+				return 0, false
+			}
+			result /= value
+		default:
+			return 0, false
+		}
+	}
+
+	return result, true
 }

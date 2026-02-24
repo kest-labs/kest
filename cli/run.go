@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -309,8 +310,11 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 
 func runFlowDocument(doc FlowDoc, filePath string) error {
 	steps := orderFlowSteps(doc)
+	setupSteps := doc.Setup
+	teardownSteps := doc.Teardown
 
-	fmt.Printf("\n🚀 Running %d step(s) from %s\n", len(steps), filePath)
+	totalSteps := len(setupSteps) + len(steps) + len(teardownSteps)
+	fmt.Printf("\n🚀 Running %d step(s) from %s\n", totalSteps, filePath)
 	if runParallel {
 		fmt.Printf("⚠️  Parallel mode is ignored for flow steps; running sequentially.\n\n")
 	}
@@ -322,24 +326,67 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 	}
 
 	summ := summary.NewSummary()
-	for i, step := range steps {
+	captureOrigins := make(map[string]string)
+	failedSteps := make(map[string]bool)
+
+	registerCaptureOrigins := func(step FlowStep) {
+		for _, capExpr := range step.Request.Captures {
+			varName, _, ok := ParseCaptureExpr(capExpr)
+			if ok && varName != "" {
+				captureOrigins[varName] = stepName(step)
+			}
+		}
+		for _, capExpr := range step.Exec.Captures {
+			varName, _, ok := ParseCaptureExpr(capExpr)
+			if ok && varName != "" {
+				captureOrigins[varName] = stepName(step)
+			}
+		}
+	}
+
+	for _, step := range append(append([]FlowStep{}, setupSteps...), append(steps, teardownSteps...)...) {
+		registerCaptureOrigins(step)
+	}
+
+	runStep := func(step FlowStep, i int, total int) bool {
+		if step.WaitMs > 0 {
+			fmt.Printf("\n  ⏳ %s waiting %dms before execution\n", stepName(step), step.WaitMs)
+			time.Sleep(time.Duration(step.WaitMs) * time.Millisecond)
+		}
+
+		if err := validateFlowStepVariables(step, captureOrigins, failedSteps); err != nil {
+			result := summary.TestResult{
+				Name:    stepName(step),
+				Method:  strings.ToUpper(step.Request.Method),
+				URL:     step.Request.URL,
+				Success: false,
+				Error:   err,
+			}
+			summ.AddResult(result)
+			failedSteps[stepName(step)] = true
+			fmt.Printf("\n  ▶ %s (line %d)\n", stepName(step), step.LineNum)
+			fmt.Printf("    ❌ %v\n", err)
+			return !runFailFast
+		}
+
 		// Handle @type exec steps
 		if step.Type == "exec" {
 			fmt.Printf("\n  ▶ %s (exec, line %d)\n", stepName(step), step.LineNum)
 			result := executeExecStep(step)
 			summ.AddResult(result)
 			if !result.Success {
+				failedSteps[stepName(step)] = true
 				fmt.Printf("❌ Failed at exec step %s\n\n", stepName(step))
 				if runFailFast {
 					fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
 					fmt.Printf("   Failed step: %s\n", stepName(step))
-					if i+1 < len(steps) {
-						fmt.Printf("   Skipped %d remaining step(s)\n", len(steps)-i-1)
+					if i+1 < total {
+						fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
 					}
-					break
+					return false
 				}
 			}
-			continue
+			return true
 		}
 
 		if step.Request.Method == "" || step.Request.URL == "" {
@@ -349,21 +396,23 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 				Error:   fmt.Errorf("invalid step (missing METHOD/URL) at line %d", step.LineNum),
 			}
 			summ.AddResult(result)
+			failedSteps[stepName(step)] = true
 			if runFailFast {
 				fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
 				fmt.Printf("   Failed step: %s (invalid step)\n", stepName(step))
-				if i+1 < len(steps) {
-					fmt.Printf("   Skipped %d remaining step(s)\n", len(steps)-i-1)
+				if i+1 < total {
+					fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
 				}
-				break
+				return false
 			}
-			continue
+			return true
 		}
 		fmt.Printf("\n  ▶ %s %s %s (line %d)\n", stepName(step), step.Request.Method, step.Request.URL, step.LineNum)
 
 		opts := step.Request
 		opts.Verbose = runVerbose
 		opts.DebugVars = runDebugVars
+		opts.StrictVars = true
 		opts.SilentOutput = true
 		if step.Retry > 0 {
 			opts.Retry = step.Retry
@@ -375,7 +424,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 			opts.MaxDuration = step.MaxDuration
 		}
 
-		res, err := ExecuteRequest(opts)
+		res, err := executeFlowStepWithPoll(step, opts)
 		result := summary.TestResult{
 			Name:         stepName(step),
 			Method:       strings.ToUpper(opts.Method),
@@ -430,18 +479,27 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		}
 
 		if err != nil {
+			failedSteps[stepName(step)] = true
 			fmt.Printf("    ❌ Failed at step %s\n", stepName(step))
 			if runFailFast {
 				fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
 				fmt.Printf("   Failed step: %s\n", stepName(step))
 				fmt.Printf("   Reason: %v\n", err)
-				if i+1 < len(steps) {
-					fmt.Printf("   Skipped %d remaining step(s)\n", len(steps)-i-1)
+				if i+1 < total {
+					fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
 				}
-				break
+				return false
 			}
 		} else {
 			fmt.Printf("    ✅ %s %s → %d (%s)\n", res.Method, step.Request.URL, res.Status, res.Duration.Round(time.Millisecond))
+		}
+		return true
+	}
+
+	combined := append(append([]FlowStep{}, setupSteps...), append(steps, teardownSteps...)...)
+	for i, step := range combined {
+		if !runStep(step, i, len(combined)) {
+			break
 		}
 	}
 
@@ -603,6 +661,119 @@ func executeExecStep(step FlowStep) summary.TestResult {
 	result.ResponseBody = output
 	fmt.Printf("  ✅ Exec completed in %s\n", duration.Round(time.Millisecond))
 	return result
+}
+
+func validateFlowStepVariables(step FlowStep, captureOrigins map[string]string, failedSteps map[string]bool) error {
+	vars := buildVarChain()
+	missing := make(map[string]struct{})
+
+	collect := func(text string) {
+		for _, name := range variable.ExtractPlaceholders(text) {
+			if _, ok := vars[name]; !ok {
+				missing[name] = struct{}{}
+			}
+		}
+	}
+
+	collect(step.Request.URL)
+	collect(step.Request.Data)
+	for _, h := range step.Request.Headers {
+		collect(h)
+	}
+	for _, q := range step.Request.Queries {
+		collect(q)
+	}
+	for _, a := range step.Request.Asserts {
+		collect(a)
+	}
+	for _, a := range step.Request.SoftAsserts {
+		collect(a)
+	}
+	collect(step.Exec.Command)
+
+	if len(missing) == 0 {
+		return nil
+	}
+
+	names := make([]string, 0, len(missing))
+	for name := range missing {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	name := names[0]
+	origin, hasOrigin := captureOrigins[name]
+	if hasOrigin {
+		if failedSteps[origin] {
+			return fmt.Errorf("variable '%s' was not captured (%s failed)", name, origin)
+		}
+		return fmt.Errorf("variable '%s' was not captured (expected from %s)", name, origin)
+	}
+	return fmt.Errorf("required variable '%s' not provided", name)
+}
+
+func executeFlowStepWithPoll(step FlowStep, opts RequestOptions) (summary.TestResult, error) {
+	hardAsserts := append([]string{}, opts.Asserts...)
+	pollOpts := opts
+	pollOpts.Asserts = nil
+
+	if step.PollTimeoutMs <= 0 {
+		res, err := ExecuteRequest(pollOpts)
+		if err != nil {
+			return res, err
+		}
+		if len(hardAsserts) == 0 {
+			return res, nil
+		}
+		vars := buildVarChain()
+		if ok, failMsg := evaluateAssertionSet(res, vars, hardAsserts); !ok {
+			return res, fmt.Errorf("assertion failed: %s", failMsg)
+		}
+		return res, nil
+	}
+
+	intervalMs := step.PollIntervalMs
+	if intervalMs <= 0 {
+		intervalMs = 500
+	}
+	deadline := time.Now().Add(time.Duration(step.PollTimeoutMs) * time.Millisecond)
+
+	var lastRes summary.TestResult
+	var lastErr error
+	for {
+		res, err := ExecuteRequest(pollOpts)
+		lastRes = res
+		if err == nil {
+			vars := buildVarChain()
+			if ok, failMsg := evaluateAssertionSet(res, vars, hardAsserts); ok {
+				return res, nil
+			} else {
+				lastErr = fmt.Errorf("poll assertions pending: %s", failMsg)
+			}
+		} else {
+			lastErr = err
+		}
+
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(time.Duration(intervalMs) * time.Millisecond)
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("poll timed out after %dms", step.PollTimeoutMs)
+	}
+	return lastRes, lastErr
+}
+
+func evaluateAssertionSet(res summary.TestResult, vars map[string]string, assertions []string) (bool, string) {
+	for _, assertion := range assertions {
+		passed, msg := variable.Assert(res.Status, []byte(res.ResponseBody), res.Duration.Milliseconds(), vars, assertion)
+		if !passed {
+			return false, fmt.Sprintf("%s (%s)", assertion, msg)
+		}
+	}
+	return true, ""
 }
 
 // buildVarChain assembles the full variable map following the priority chain:

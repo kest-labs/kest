@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -18,6 +19,29 @@ type TestResult struct {
 	ResponseBody string
 	Error        error
 	Success      bool
+}
+
+func latencyStats(results []TestResult) (time.Duration, time.Duration) {
+	if len(results) == 0 {
+		return 0, 0
+	}
+	values := make([]time.Duration, 0, len(results))
+	var slowest time.Duration
+	for _, r := range results {
+		values = append(values, r.Duration)
+		if r.Duration > slowest {
+			slowest = r.Duration
+		}
+	}
+	sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
+	idx := int(float64(len(values)-1) * 0.95)
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(values) {
+		idx = len(values) - 1
+	}
+	return slowest, values[idx]
 }
 
 type Summary struct {
@@ -90,6 +114,14 @@ func (s *Summary) Print() {
 	fmt.Printf("│ Total: %d  │  Passed: \033[32m%d\033[0m  │  Failed: \033[31m%d\033[0m  │  Time: %v │\n",
 		s.TotalTests, s.PassedTests, s.FailedTests, s.TotalTime.Round(time.Millisecond))
 	fmt.Printf("│ Elapsed: %-58v │\n", elapsed.Round(time.Millisecond))
+	if len(s.Results) > 0 {
+		slowest, p95 := latencyStats(s.Results)
+		fmt.Printf("│ Slowest: %-8v │ P95: %-8v │ Total: %-24v │\n",
+			slowest.Round(time.Millisecond),
+			p95.Round(time.Millisecond),
+			s.TotalTime.Round(time.Millisecond),
+		)
+	}
 	fmt.Println("╰─────────────────────────────────────────────────────────────────────╯")
 
 	if s.FailedTests > 0 {

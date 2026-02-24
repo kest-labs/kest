@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // ParseFlowDocument parses Markdown content into FlowDoc and legacy Kest blocks.
@@ -19,9 +21,15 @@ func ParseFlowDocument(content string) (FlowDoc, []KestBlock) {
 			} else {
 				legacy = append(legacy, KestBlock{LineNum: b.LineNum, Raw: b.Raw, IsBlock: true})
 			}
+		case "setup":
+			step := parseFlowStep(b)
+			doc.Setup = append(doc.Setup, step)
 		case "step":
 			step := parseFlowStep(b)
 			doc.Steps = append(doc.Steps, step)
+		case "teardown":
+			step := parseFlowStep(b)
+			doc.Teardown = append(doc.Teardown, step)
 		case "edge":
 			edge := parseFlowEdge(b)
 			if edge.From != "" && edge.To != "" {
@@ -34,7 +42,9 @@ func ParseFlowDocument(content string) (FlowDoc, []KestBlock) {
 		}
 	}
 
+	doc.Setup = ensureStepIDs(doc.Setup)
 	doc.Steps = ensureStepIDs(doc.Steps)
+	doc.Teardown = ensureStepIDs(doc.Teardown)
 	return doc, legacy
 }
 
@@ -129,6 +139,12 @@ func parseFlowStep(b FlowBlock) FlowStep {
 				step.RetryWait = parseInt(val)
 			case "max-duration":
 				step.MaxDuration = parseInt(val)
+			case "wait":
+				step.WaitMs = parseDurationToMS(val)
+			case "poll-timeout":
+				step.PollTimeoutMs = parseDurationToMS(val)
+			case "poll-interval":
+				step.PollIntervalMs = parseDurationToMS(val)
 			case "on-fail":
 				fmt.Printf("⚠️  Warning: @on-fail is not yet implemented (line %d), ignoring.\n", b.LineNum)
 				step.OnFail = val
@@ -146,6 +162,18 @@ func parseFlowStep(b FlowBlock) FlowStep {
 			section = "asserts"
 			continue
 		}
+		if trimmed == "[Soft Asserts]" {
+			section = "soft_asserts"
+			continue
+		}
+		if trimmed == "[Wait]" {
+			section = "wait"
+			continue
+		}
+		if trimmed == "[Poll]" {
+			section = "poll"
+			continue
+		}
 
 		switch section {
 		case "request":
@@ -157,6 +185,18 @@ func parseFlowStep(b FlowBlock) FlowStep {
 		case "asserts":
 			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
 				step.Request.Asserts = append(step.Request.Asserts, strings.TrimSpace(trimmed))
+			}
+		case "soft_asserts":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				step.Request.SoftAsserts = append(step.Request.SoftAsserts, strings.TrimSpace(trimmed))
+			}
+		case "wait":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				step.WaitMs = parseDurationToMS(trimmed)
+			}
+		case "poll":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				parsePollOption(trimmed, &step)
 			}
 		}
 	}
@@ -288,4 +328,36 @@ func parseInlineKV(value string, key string) string {
 		}
 	}
 	return ""
+}
+
+func parseDurationToMS(value string) int {
+	trimmed := strings.TrimSpace(strings.TrimSuffix(strings.ToLower(value), ","))
+	if trimmed == "" {
+		return 0
+	}
+	if d, err := time.ParseDuration(trimmed); err == nil {
+		return int(d.Milliseconds())
+	}
+	if n, err := strconv.Atoi(trimmed); err == nil {
+		return n
+	}
+	return parseInt(trimmed)
+}
+
+func parsePollOption(line string, step *FlowStep) {
+	parts := strings.Fields(strings.ReplaceAll(line, ",", " "))
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		key := strings.ToLower(strings.TrimSpace(kv[0]))
+		val := strings.TrimSpace(kv[1])
+		switch key {
+		case "timeout":
+			step.PollTimeoutMs = parseDurationToMS(val)
+		case "interval":
+			step.PollIntervalMs = parseDurationToMS(val)
+		}
+	}
 }

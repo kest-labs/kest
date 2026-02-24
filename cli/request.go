@@ -27,6 +27,7 @@ type RequestOptions struct {
 	Queries      []string
 	Captures     []string
 	Asserts      []string
+	SoftAsserts  []string
 	Verbose      bool
 	DebugVars    bool
 	Stream       bool
@@ -34,6 +35,7 @@ type RequestOptions struct {
 	MaxDuration  int  // Max response time in milliseconds (--max-time)
 	Retry        int  // Number of retries (0 = no retry)
 	RetryWait    int  // Delay between retries in milliseconds (--retry-delay)
+	StrictVars   bool // Fail early when required variables are missing
 	SilentOutput bool // Suppress PrintResponse box (used by flow runner)
 }
 
@@ -224,6 +226,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	} else {
 		finalURL = variable.Interpolate(processedURL, vars)
 	}
+	if opts.StrictVars {
+		strictURL, err := variable.InterpolateStrict(processedURL, vars)
+		if err != nil {
+			result.Error = err
+			result.Success = false
+			return result, &ExitError{Code: ExitRuntimeError, Err: err}
+		}
+		finalURL = strictURL
+	}
 
 	// Handle query params
 	if len(opts.Queries) > 0 {
@@ -236,6 +247,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		q := u.Query()
 		for _, param := range opts.Queries {
 			processedParam := variable.Interpolate(param, vars)
+			if opts.StrictVars {
+				strictParam, err := variable.InterpolateStrict(param, vars)
+				if err != nil {
+					result.Error = err
+					result.Success = false
+					return result, &ExitError{Code: ExitRuntimeError, Err: err}
+				}
+				processedParam = strictParam
+			}
 			parts := strings.SplitN(processedParam, "=", 2)
 			if len(parts) == 2 {
 				q.Add(parts[0], parts[1])
@@ -257,6 +277,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	// Command line headers (override config headers if same key)
 	for _, h := range opts.Headers {
 		processedHeader := variable.Interpolate(h, vars)
+		if opts.StrictVars {
+			strictHeader, err := variable.InterpolateStrict(h, vars)
+			if err != nil {
+				result.Error = err
+				result.Success = false
+				return result, &ExitError{Code: ExitRuntimeError, Err: err}
+			}
+			processedHeader = strictHeader
+		}
 		parts := strings.SplitN(processedHeader, ":", 2)
 		if len(parts) == 2 {
 			canonicalKey := http.CanonicalHeaderKey(strings.TrimSpace(parts[0]))
@@ -268,6 +297,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	var body []byte
 	if opts.Data != "" {
 		processedData := variable.Interpolate(opts.Data, vars)
+		if opts.StrictVars {
+			strictData, err := variable.InterpolateStrict(opts.Data, vars)
+			if err != nil {
+				result.Error = err
+				result.Success = false
+				return result, &ExitError{Code: ExitRuntimeError, Err: err}
+			}
+			processedData = strictData
+		}
 		if strings.HasPrefix(processedData, "@") {
 			content, err := os.ReadFile(processedData[1:])
 			if err != nil {
@@ -338,6 +376,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 
 	if opts.Verbose || resp.Status >= 400 {
 		fmt.Printf("\n--- Debug Info ---\n")
+		fmt.Printf("Note: Headers are canonicalized per HTTP spec (e.g. X-Tenant-ID => X-Tenant-Id).\n")
 		fmt.Printf("Request: %s %s\n", method, finalURL)
 		fmt.Printf("Request Headers:\n")
 		for k, v := range headers {
@@ -366,7 +405,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			parts := strings.SplitN(capExpr, sep, 2)
 			if len(parts) == 2 {
 				varName := strings.TrimSpace(parts[0])
-				query := strings.TrimSpace(parts[1])
+				query := NormalizeJSONPath(strings.TrimSpace(parts[1]))
 
 				// Currently only supporting JSON body capture via gjson
 				result := gjson.Get(string(resp.Body), query)
@@ -423,6 +462,20 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		if !allPassed {
 			result.Error = fmt.Errorf("%s", firstErr)
 			return result, &ExitError{Code: ExitAssertionFailed, Err: result.Error}
+		}
+	}
+
+	if len(opts.SoftAsserts) > 0 {
+		fmt.Println("\nSoft Assertions:")
+		for _, assertion := range opts.SoftAsserts {
+			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
+			if passed {
+				fmt.Printf("  ✅ %s\n", assertion)
+				continue
+			}
+			fmt.Printf("  ⚠️  Soft assertion failed: %s\n", assertion)
+			fmt.Printf("     %s\n", strings.ReplaceAll(msg, "\n", "\n     "))
+			logger.LogToSession("Soft Assertion Failed: %s (%s)", assertion, msg)
 		}
 	}
 

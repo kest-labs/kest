@@ -46,7 +46,7 @@ var (
 	// Group 1: variable name
 	// Group 2: default value (optional, captured only if | default: syntax present)
 	// Uses [^}]+ to match everything until the closing }}
-	combinedRegex = regexp.MustCompile(`\{\{([^|{}]+?)(?:\s*\|\s*default:\s*\\?"([^}]+?)\\?")?\}\}`)
+	combinedRegex = regexp.MustCompile(`\{\{([^|{}]+?)(?:\s*\|\s*default:\s*\\?"([^}]*)\\?")?\}\}`)
 )
 
 // interpolateWithMode is the unified implementation for all interpolation modes
@@ -70,10 +70,12 @@ func interpolateWithMode(text string, vars map[string]string, mode Interpolation
 		// Default value is in group 2 (may be empty string)
 		defaultValue := ""
 		hasDefault := false
-		if len(matches) >= 3 && matches[2] != "" {
+		if strings.Contains(match, "| default:") {
 			// Check if default syntax was present
 			hasDefault = true
-			defaultValue = matches[2]
+			if len(matches) >= 3 {
+				defaultValue = matches[2]
+			}
 
 			// Clean up the default value:
 			// 1. Remove leading/trailing quotes (both \" and ")
@@ -141,6 +143,33 @@ func InterpolateWithWarning(text string, vars map[string]string, verbose bool) (
 func InterpolateStrict(text string, vars map[string]string) (string, error) {
 	result, _, err := interpolateWithMode(text, vars, ModeStrict)
 	return result, err
+}
+
+// ExtractPlaceholders returns all variable names found in {{var}} placeholders.
+// Duplicates are removed while preserving first-seen order.
+func ExtractPlaceholders(text string) []string {
+	matches := combinedRegex.FindAllStringSubmatch(text, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(matches))
+	vars := make([]string, 0, len(matches))
+	for _, m := range matches {
+		if len(m) < 2 {
+			continue
+		}
+		name := strings.TrimSpace(m[1])
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		vars = append(vars, name)
+	}
+	return vars
 }
 
 // parseVarWithDefault is deprecated - kept for backward compatibility

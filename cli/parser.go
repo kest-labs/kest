@@ -103,6 +103,10 @@ func ParseBlock(raw string) (RequestOptions, error) {
 			section = "asserts"
 			continue
 		}
+		if trimmed == "[Soft Asserts]" {
+			section = "soft_asserts"
+			continue
+		}
 
 		// Handle sections
 		switch section {
@@ -141,6 +145,11 @@ func ParseBlock(raw string) (RequestOptions, error) {
 				// Strip trailing comments
 				val := strings.SplitN(trimmed, "#", 2)[0]
 				opts.Asserts = append(opts.Asserts, strings.TrimSpace(val))
+			}
+		case "soft_asserts":
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				val := strings.SplitN(trimmed, "#", 2)[0]
+				opts.SoftAsserts = append(opts.SoftAsserts, strings.TrimSpace(val))
 			}
 		}
 	}

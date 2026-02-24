@@ -8,23 +8,26 @@ import (
 
 // APISpecPO is the persistent object for API specifications
 type APISpecPO struct {
-	ID          uint   `gorm:"primaryKey"`
-	ProjectID   uint   `gorm:"index;not null"`          // Foreign key to projects table
-	CategoryID  *uint  `gorm:"index"`                   // Optional category
-	Method      string `gorm:"size:10;not null;index"`  // GET, POST, etc.
-	Path        string `gorm:"size:500;not null;index"` // /api/users/:id
-	Summary     string `gorm:"size:500"`                // Short description
-	Description string `gorm:"type:text"`               // Detailed description
-	Tags        string `gorm:"size:500"`                // Comma-separated tags
-	RequestBody string `gorm:"type:text"`               // JSON schema
-	Parameters  string `gorm:"type:text"`               // JSON array of parameters
-	Responses   string `gorm:"type:text"`               // JSON map of responses
-	Examples    string `gorm:"type:text"`               // JSON array of examples
-	Version     string `gorm:"size:50;index"`           // API version
-	IsPublic    bool   `gorm:"default:true"`            // Public or private
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	ID           uint   `gorm:"primaryKey"`
+	ProjectID    uint   `gorm:"index;not null"`          // Foreign key to projects table
+	CategoryID   *uint  `gorm:"index"`                   // Optional category
+	Method       string `gorm:"size:10;not null;index"`  // GET, POST, etc.
+	Path         string `gorm:"size:500;not null;index"` // /api/users/:id
+	Summary      string `gorm:"size:500"`                // Short description
+	Description  string `gorm:"type:text"`               // Detailed description
+	DocMarkdown  string `gorm:"type:text"`               // Frontend-facing API doc content (Markdown)
+	DocSource    string `gorm:"size:20;default:manual"`  // manual | ai
+	DocUpdatedAt *time.Time
+	Tags         string `gorm:"size:500"`      // Comma-separated tags
+	RequestBody  string `gorm:"type:text"`     // JSON schema
+	Parameters   string `gorm:"type:text"`     // JSON array of parameters
+	Responses    string `gorm:"type:text"`     // JSON map of responses
+	Examples     string `gorm:"type:text"`     // JSON array of examples
+	Version      string `gorm:"size:50;index"` // API version
+	IsPublic     bool   `gorm:"default:true"`  // Public or private
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
 // TableName overrides the default table name

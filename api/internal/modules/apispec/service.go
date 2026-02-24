@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 var (
@@ -84,6 +85,17 @@ func (s *service) UpdateSpec(ctx context.Context, id uint, req *UpdateAPISpecReq
 	}
 	if req.Description != nil {
 		po.Description = *req.Description
+	}
+	if req.DocMarkdown != nil {
+		po.DocMarkdown = *req.DocMarkdown
+		now := time.Now()
+		po.DocUpdatedAt = &now
+		if req.DocSource == nil {
+			po.DocSource = "manual"
+		}
+	}
+	if req.DocSource != nil {
+		po.DocSource = *req.DocSource
 	}
 	if req.Tags != nil {
 		// Convert tags to JSON
