@@ -44,8 +44,6 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        color: '#3B82F6',
-        icon: 'folder',
     })
 
     const categories: CategoryTree[] = (() => {
@@ -64,14 +62,12 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                 data: {
                     name: formData.name,
                     description: formData.description,
-                    color: formData.color || undefined,
-                    icon: formData.icon || undefined,
                     parent_id: selectedParentId || undefined,
                 }
             })
             toast.success('Category created')
             setIsCreateOpen(false)
-            setFormData({ name: '', description: '', color: '#3B82F6', icon: 'folder' })
+            setFormData({ name: '', description: '' })
             setSelectedParentId(null)
         } catch (err: any) {
             toast.error(err.message || 'Failed to create category')
@@ -87,14 +83,12 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                 data: {
                     name: formData.name,
                     description: formData.description,
-                    color: formData.color || undefined,
-                    icon: formData.icon || undefined,
                 }
             })
             toast.success('Category updated')
             setIsEditOpen(false)
             setEditingCategory(null)
-            setFormData({ name: '', description: '', color: '#3B82F6', icon: 'folder' })
+            setFormData({ name: '', description: '' })
         } catch (err: any) {
             toast.error(err.message || 'Failed to update category')
         }
@@ -120,7 +114,7 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
 
     const openCreateDialog = (parentId: number | null = null) => {
         setSelectedParentId(parentId)
-        setFormData({ name: '', description: '', color: '#3B82F6', icon: 'folder' })
+        setFormData({ name: '', description: '' })
         setIsCreateOpen(true)
     }
 
@@ -129,8 +123,6 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
         setFormData({
             name: category.name,
             description: category.description || '',
-            color: category.color || '#3B82F6',
-            icon: category.icon || 'folder',
         })
         setIsEditOpen(true)
     }
@@ -143,7 +135,7 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                     style={{ marginLeft: `${level * 24}px` }}
                 >
                     <div className="flex items-center gap-2">
-                        <Folder className="w-4 h-4" style={{ color: category.color || '#3B82F6' }} />
+                        <Folder className="w-4 h-4 text-blue-500" />
                         <span className="font-medium text-sm">{category.name}</span>
                         {category.description && (
                             <span className="text-xs text-muted-foreground truncate max-w-[200px]">
@@ -260,26 +252,6 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                                 placeholder="Categorize user-related APIs"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                                <Label htmlFor="color">Color</Label>
-                                <Input
-                                    id="color"
-                                    type="color"
-                                    value={formData.color}
-                                    onChange={e => setFormData({ ...formData, color: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="icon">Icon</Label>
-                                <Input
-                                    id="icon"
-                                    value={formData.icon}
-                                    onChange={e => setFormData({ ...formData, icon: e.target.value })}
-                                    placeholder="folder"
-                                />
-                            </div>
-                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
@@ -315,25 +287,6 @@ export function CategoryManager({ projectId }: CategoryManagerProps) {
                                 value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                             />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-color">Color</Label>
-                                <Input
-                                    id="edit-color"
-                                    type="color"
-                                    value={formData.color}
-                                    onChange={e => setFormData({ ...formData, color: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-icon">Icon</Label>
-                                <Input
-                                    id="edit-icon"
-                                    value={formData.icon}
-                                    onChange={e => setFormData({ ...formData, icon: e.target.value })}
-                                />
-                            </div>
                         </div>
                     </div>
                     <DialogFooter>
