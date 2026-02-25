@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -47,6 +48,16 @@ func main() {
 	}
 
 	cfg := application.Config
+
+	// Keep DB schema in sync on boot unless explicitly disabled.
+	autoMigrate := strings.ToLower(strings.TrimSpace(os.Getenv("DB_AUTO_MIGRATE")))
+	if autoMigrate == "" || autoMigrate == "1" || autoMigrate == "true" || autoMigrate == "yes" {
+		if err := bootstrap.RunMigrations(application.DB); err != nil {
+			log.Fatalf("Failed to run database migrations: %v", err)
+		}
+	} else {
+		log.Printf("Skipping database migrations (DB_AUTO_MIGRATE=%s)", autoMigrate)
+	}
 
 	// Set JWT service for middleware
 	middleware.SetJWTService(application.JWTService)
