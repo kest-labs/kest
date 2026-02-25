@@ -243,6 +243,29 @@ func (h *Handler) ExportSpecs(c *gin.Context) {
 	response.Success(c, data)
 }
 
+// GenTest generates an AI-powered Kest flow test file for an API specification
+func (h *Handler) GenTest(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "Invalid ID")
+		return
+	}
+
+	flowContent, err := h.service.GenTest(c.Request.Context(), uint(id))
+	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to generate test", err)
+		return
+	}
+
+	response.Success(c, map[string]string{
+		"flow_content": flowContent,
+	})
+}
+
 // GenDoc generates AI-powered documentation for an API specification
 func (h *Handler) GenDoc(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)

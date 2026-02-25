@@ -128,6 +128,56 @@ func buildDocPrompt(spec *APISpecPO) string {
 	return sb.String()
 }
 
+// buildTestPrompt builds the user prompt for generating a Kest flow test file.
+func buildTestPrompt(spec *APISpecPO) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Method: %s\n", spec.Method))
+	sb.WriteString(fmt.Sprintf("Path: %s\n", spec.Path))
+	if spec.Summary != "" {
+		sb.WriteString(fmt.Sprintf("Summary: %s\n", spec.Summary))
+	}
+	if spec.Parameters != "" && spec.Parameters != "null" {
+		sb.WriteString(fmt.Sprintf("Parameters (JSON): %s\n", spec.Parameters))
+	}
+	if spec.RequestBody != "" && spec.RequestBody != "null" {
+		sb.WriteString(fmt.Sprintf("Request Body Schema (JSON): %s\n", spec.RequestBody))
+	}
+	if spec.Responses != "" && spec.Responses != "null" {
+		sb.WriteString(fmt.Sprintf("Responses (JSON): %s\n", spec.Responses))
+	}
+	auth := "JWT Bearer token required (use {{token}} variable)"
+	if spec.IsPublic {
+		auth = "No authentication required"
+	}
+	sb.WriteString(fmt.Sprintf("Authentication: %s\n", auth))
+	return sb.String()
+}
+
+const testSystemPrompt = `You are an expert QA engineer generating Kest flow test files (.flow.md format).
+
+Kest flow format rules:
+- File starts with a markdown H1 title
+- Each test scenario is an H2 section
+- Each step inside a scenario starts with "### Step: <name>"
+- Request line: METHOD URL (e.g. POST https://{{base_url}}/v1/users)
+- Headers: one per line as "Key: Value"
+- Request body in a fenced ` + "```json" + ` block
+- [Asserts] section with "- <assertion>" lines
+  - status == 200
+  - body.json_path == "value"
+  - body.field exists
+- [Captures] section with "- var_name = json.path" lines
+- Use {{base_url}} for base URL, {{token}} for auth token
+- Use {{$randomInt}} for random integers, {{$timestamp}} for current time
+- Steps are separated by ---
+
+Generate test scenarios covering:
+1. Happy path (successful request with valid data)
+2. Validation error (missing required fields or invalid data)
+3. Unauthorized (if auth required, test without token)
+
+Output ONLY the .flow.md content, no extra explanation.`
+
 const docSystemPrompt = `You are an expert technical writer generating API documentation in Markdown.
 
 Given the API endpoint details, produce clear, developer-friendly Markdown documentation that includes:

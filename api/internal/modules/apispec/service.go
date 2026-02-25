@@ -28,6 +28,7 @@ type Service interface {
 	ListSpecs(ctx context.Context, projectID uint, version string, page, pageSize int) ([]*APISpecResponse, int64, error)
 	GetSpecWithExamples(ctx context.Context, id uint) (*APISpecResponse, error)
 	GenDoc(ctx context.Context, id uint) (*APISpecResponse, error)
+	GenTest(ctx context.Context, id uint) (string, error)
 
 	// API Example operations
 	CreateExample(ctx context.Context, req *CreateAPIExampleRequest) (*APIExampleResponse, error)
@@ -85,6 +86,35 @@ func (s *service) GenDoc(ctx context.Context, id uint) (*APISpecResponse, error)
 	}
 
 	return FromAPISpecPO(po), nil
+}
+
+func (s *service) GenTest(ctx context.Context, id uint) (string, error) {
+	po, err := s.repo.GetSpecByID(ctx, id)
+	if err != nil {
+		return "", ErrSpecNotFound
+	}
+
+	cfg := config.GlobalConfig
+	if cfg == nil || cfg.OpenAI.APIKey == "" {
+		return "", fmt.Errorf("AI test generation is not configured (OPENAI_API_KEY missing)")
+	}
+
+	client := &llmClient{
+		apiKey:  cfg.OpenAI.APIKey,
+		baseURL: cfg.OpenAI.BaseURL,
+		model:   cfg.OpenAI.Model,
+	}
+
+	llmCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	userPrompt := buildTestPrompt(po)
+	flowContent, err := client.complete(llmCtx, testSystemPrompt, userPrompt)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate test: %w", err)
+	}
+
+	return flowContent, nil
 }
 
 // ========== API Spec Operations ==========
