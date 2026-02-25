@@ -66,8 +66,11 @@ func (s *service) GenDoc(ctx context.Context, id uint) (*APISpecResponse, error)
 		model:   cfg.OpenAI.Model,
 	}
 
+	llmCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
 	userPrompt := buildDocPrompt(po)
-	markdown, err := client.complete(ctx, docSystemPrompt, userPrompt)
+	markdown, err := client.complete(llmCtx, docSystemPrompt, userPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate documentation: %w", err)
 	}
