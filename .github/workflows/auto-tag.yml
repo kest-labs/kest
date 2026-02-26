@@ -3,7 +3,7 @@ name: Auto Tag on Version Change
 on:
   push:
     branches: [main]
-    paths: [VERSION]
+    paths: [cli/VERSION]
 
 permissions:
   contents: write
@@ -20,7 +20,7 @@ jobs:
       - name: Read version
         id: version
         run: |
-          VERSION=$(cat VERSION | tr -d '[:space:]')
+          VERSION=$(cat cli/VERSION | tr -d '[:space:]')
           echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Version: v${VERSION}"
 
