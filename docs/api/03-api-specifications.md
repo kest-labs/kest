@@ -33,15 +33,16 @@ List all API specifications for a project.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `page` | integer | ❌ No | 1 | Page number |
-| `per_page` | integer | ❌ No | 20 | Items per page (max 100) |
-| `search` | string | ❌ No | - | Search by name or version |
+| `page_size` | integer | ❌ No | 20 | Items per page (max 100) |
 | `version` | string | ❌ No | - | Filter by version |
-| `status` | string | ❌ No | - | Filter by status (draft, published, deprecated) |
+| `method` | string | ❌ No | - | Filter by HTTP method (GET, POST, PUT, DELETE, PATCH...) |
+| `tag` | string | ❌ No | - | Filter by tag (partial match) |
+| `keyword` | string | ❌ No | - | Search in path, summary, and description |
 
 #### Example Request
 
 ```
-GET /projects/1/api-specs?page=1&per_page=10&status=published
+GET /projects/1/api-specs?method=POST&tag=auth&keyword=login&page=1&page_size=10
 ```
 
 #### Response (200 OK)
@@ -609,9 +610,76 @@ The AI generates test cases covering:
 2. **Validation Error** - Missing required fields or invalid data
 3. **Unauthorized** - Test without token (if auth required)
 
+> **Note**: After generation, the flow content is automatically saved as a new record in the `test_cases` table (name: `[AI Generated]`), making it immediately available in the test management workflow.
+
 ---
 
-## 11. Create Example
+## 11. Batch Generate Documentation (AI)
+
+### POST /projects/:id/api-specs/batch-gen-doc
+
+Trigger AI documentation generation for multiple API specs at once. Returns immediately; generation runs in the background using a goroutine pool (concurrency = 3).
+
+**Authentication**: Required
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|--------------|
+| `id` | integer | ✅ Yes | Project ID |
+
+#### Request Body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `category_id` | integer | ❌ No | - | Scope to a specific category. Omit to process the entire project |
+| `lang` | string | ❌ No | `en` | Language for generated doc (`en` or `zh`) |
+| `force` | boolean | ❌ No | `false` | `false` = skip specs that already have a doc; `true` = regenerate all |
+
+#### Example Request
+
+```json
+{
+  "category_id": 5,
+  "lang": "zh",
+  "force": false
+}
+```
+
+#### Response (200 OK)
+
+Returns immediately. Generation continues in the background.
+
+```json
+{
+  "code": 0,
+  "data": {
+    "total": 12,
+    "queued": 10,
+    "skipped": 2
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `total` | Total specs in scope |
+| `queued` | Specs queued for generation |
+| `skipped` | Specs already have a doc (only when `force=false`) |
+
+#### Configuration
+
+Requires LLM configuration via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | API key for LLM service |
+| `OPENAI_BASE_URL` | Base URL for OpenAI-compatible API |
+| `OPENAI_MODEL` | Model name (e.g., `qwen-plus`) |
+
+---
+
+## 12. Create Example
 
 ### POST /projects/:id/api-specs/:sid/examples
 

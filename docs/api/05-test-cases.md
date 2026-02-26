@@ -587,6 +587,118 @@ Execute a single test case.
 
 ---
 
+## 9. List Test Run History
+
+### GET /projects/:id/test-cases/:tcid/runs
+
+List execution history for a specific test case.
+
+**Authentication**: Required (Project Read access)
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | ✅ Yes | Project ID |
+| `tcid` | integer | ✅ Yes | Test case ID |
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `page` | integer | ❌ No | 1 | Page number |
+| `page_size` | integer | ❌ No | 20 | Items per page |
+| `status` | string | ❌ No | - | Filter by result: `passed` or `failed` |
+
+#### Example Request
+
+```
+GET /projects/1/test-cases/5/runs?page=1&page_size=10&status=failed
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "id": 42,
+        "test_case_id": 5,
+        "status": "failed",
+        "duration_ms": 312,
+        "error": "assertion failed: status expected 200, got 401",
+        "created_at": "2026-02-26T10:00:00Z"
+      },
+      {
+        "id": 41,
+        "test_case_id": 5,
+        "status": "passed",
+        "duration_ms": 287,
+        "error": "",
+        "created_at": "2026-02-26T09:45:00Z"
+      }
+    ],
+    "total": 15,
+    "page": 1,
+    "page_size": 10
+  }
+}
+```
+
+---
+
+## 10. Get Single Test Run
+
+### GET /projects/:id/test-cases/:tcid/runs/:rid
+
+Get the full detail of a single test run, including request, response, and assertion results.
+
+**Authentication**: Required (Project Read access)
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | ✅ Yes | Project ID |
+| `tcid` | integer | ✅ Yes | Test case ID |
+| `rid` | integer | ✅ Yes | Run ID |
+
+#### Response (200 OK)
+
+```json
+{
+  "code": 0,
+  "data": {
+    "id": 42,
+    "test_case_id": 5,
+    "status": "passed",
+    "duration_ms": 287,
+    "error": "",
+    "request": {
+      "method": "POST",
+      "url": "https://api.example.com/users",
+      "headers": { "Content-Type": "application/json" },
+      "body": { "username": "alice" }
+    },
+    "response": {
+      "status": 201,
+      "headers": { "Content-Type": "application/json" },
+      "body": { "id": 1, "username": "alice" },
+      "duration_ms": 287
+    },
+    "assertions": [
+      { "expr": "status == 201", "passed": true, "actual": "201" }
+    ],
+    "variables": { "user_id": "1" },
+    "created_at": "2026-02-26T09:45:00Z"
+  }
+}
+```
+
+---
+
 ## Assertion Types
 
 ### Status Assertion
