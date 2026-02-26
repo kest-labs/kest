@@ -9,6 +9,9 @@ import type {
     Project,
     CreateProjectRequest,
     UpdateProjectRequest,
+    ProjectMember,
+    AddMemberRequest,
+    UpdateMemberRequest,
     Environment,
     CreateEnvironmentRequest,
     APISpec,
@@ -40,6 +43,9 @@ import type {
 export const queryKeys = {
     projects: ['projects'] as const,
     project: (id: number) => ['projects', id] as const,
+
+    members: (projectId: number) => ['members', projectId] as const,
+    myMemberRole: (projectId: number) => ['members', projectId, 'me'] as const,
 
     environments: (projectId: number) => ['environments', projectId] as const,
 
@@ -123,6 +129,62 @@ export function useEnvironments(projectId: number) {
         queryKey: queryKeys.environments(projectId),
         queryFn: () => kestApi.environment.list(projectId),
         enabled: !!projectId,
+    })
+}
+
+// ========== Member Hooks ==========
+
+export function useMembers(projectId: number, options?: UseQueryOptions<ProjectMember[]>) {
+    return useQuery({
+        queryKey: queryKeys.members(projectId),
+        queryFn: () => kestApi.member.list(projectId),
+        enabled: !!projectId,
+        ...options,
+    })
+}
+
+export function useMyProjectRole(projectId: number, options?: UseQueryOptions<ProjectMember>) {
+    return useQuery({
+        queryKey: queryKeys.myMemberRole(projectId),
+        queryFn: () => kestApi.member.getMyRole(projectId),
+        enabled: !!projectId,
+        ...options,
+    })
+}
+
+export function useAddMember(projectId: number) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (data: AddMemberRequest) => kestApi.member.create(projectId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.members(projectId) })
+        },
+    })
+}
+
+export function useUpdateMemberRole(projectId: number) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({ userId, data }: { userId: number; data: UpdateMemberRequest }) =>
+            kestApi.member.update(projectId, userId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.members(projectId) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.myMemberRole(projectId) })
+        },
+    })
+}
+
+export function useRemoveMember(projectId: number) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (userId: number) => kestApi.member.delete(projectId, userId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.members(projectId) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.myMemberRole(projectId) })
+        },
     })
 }
 
@@ -475,6 +537,13 @@ export const useKestApi = {
     useCreateProject,
     useUpdateProject,
     useDeleteProject,
+
+    // Members
+    useMembers,
+    useMyProjectRole,
+    useAddMember,
+    useUpdateMemberRole,
+    useRemoveMember,
 
     // Environments
     useEnvironments,

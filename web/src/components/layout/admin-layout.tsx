@@ -4,6 +4,7 @@ import {
   Folder,
   TestTube2,
   Database,
+  Users,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -58,6 +59,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           ? [
               { title: 'Use Cases', icon: TestTube2, url: `${projectBase}?view=test-cases` },
               { title: 'Environments', icon: Database, url: `${projectBase}?view=environments` },
+              { title: 'Members', icon: Users, url: `${projectBase}?view=members` },
             ]
           : []),
       ],
