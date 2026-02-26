@@ -251,7 +251,9 @@ func (h *Handler) GenTest(c *gin.Context) {
 		return
 	}
 
-	flowContent, err := h.service.GenTest(c.Request.Context(), uint(id))
+	lang := c.DefaultQuery("lang", "en")
+
+	flowContent, err := h.service.GenTest(c.Request.Context(), uint(id), lang)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -274,7 +276,9 @@ func (h *Handler) GenDoc(c *gin.Context) {
 		return
 	}
 
-	spec, err := h.service.GenDoc(c.Request.Context(), uint(id))
+	lang := c.DefaultQuery("lang", "en")
+
+	spec, err := h.service.GenDoc(c.Request.Context(), uint(id), lang)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)

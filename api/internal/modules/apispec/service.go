@@ -27,8 +27,8 @@ type Service interface {
 	DeleteSpec(ctx context.Context, id uint) error
 	ListSpecs(ctx context.Context, projectID uint, version string, page, pageSize int) ([]*APISpecResponse, int64, error)
 	GetSpecWithExamples(ctx context.Context, id uint) (*APISpecResponse, error)
-	GenDoc(ctx context.Context, id uint) (*APISpecResponse, error)
-	GenTest(ctx context.Context, id uint) (string, error)
+	GenDoc(ctx context.Context, id uint, lang string) (*APISpecResponse, error)
+	GenTest(ctx context.Context, id uint, lang string) (string, error)
 
 	// API Example operations
 	CreateExample(ctx context.Context, req *CreateAPIExampleRequest) (*APIExampleResponse, error)
@@ -50,7 +50,7 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) GenDoc(ctx context.Context, id uint) (*APISpecResponse, error) {
+func (s *service) GenDoc(ctx context.Context, id uint, lang string) (*APISpecResponse, error) {
 	po, err := s.repo.GetSpecByID(ctx, id)
 	if err != nil {
 		return nil, ErrSpecNotFound
@@ -70,8 +70,9 @@ func (s *service) GenDoc(ctx context.Context, id uint) (*APISpecResponse, error)
 	llmCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
+	systemPrompt := getDocSystemPrompt(lang)
 	userPrompt := buildDocPrompt(po)
-	markdown, err := client.complete(llmCtx, docSystemPrompt, userPrompt)
+	markdown, err := client.complete(llmCtx, systemPrompt, userPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate documentation: %w", err)
 	}
@@ -88,7 +89,7 @@ func (s *service) GenDoc(ctx context.Context, id uint) (*APISpecResponse, error)
 	return FromAPISpecPO(po), nil
 }
 
-func (s *service) GenTest(ctx context.Context, id uint) (string, error) {
+func (s *service) GenTest(ctx context.Context, id uint, lang string) (string, error) {
 	po, err := s.repo.GetSpecByID(ctx, id)
 	if err != nil {
 		return "", ErrSpecNotFound
@@ -108,8 +109,9 @@ func (s *service) GenTest(ctx context.Context, id uint) (string, error) {
 	llmCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
+	systemPrompt := getTestSystemPrompt(lang)
 	userPrompt := buildTestPrompt(po)
-	flowContent, err := client.complete(llmCtx, testSystemPrompt, userPrompt)
+	flowContent, err := client.complete(llmCtx, systemPrompt, userPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate test: %w", err)
 	}
