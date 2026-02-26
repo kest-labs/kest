@@ -23,6 +23,7 @@ jobs:
           go-version: '1.23'
 
       - name: Run tests
+        working-directory: cli
         run: go test ./...
 
       - name: Run GoReleaser
@@ -31,5 +32,6 @@ jobs:
           distribution: goreleaser
           version: '~> v2'
           args: release --clean
+          workdir: cli
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
