@@ -31,6 +31,7 @@ var (
 	execTimeout  int
 	runFailFast  bool
 	runStrict    bool
+	runEnv       string
 )
 
 var runCmd = &cobra.Command{
@@ -69,6 +70,7 @@ func init() {
 	runCmd.Flags().IntVar(&execTimeout, "exec-timeout", 30, "Timeout in seconds for exec steps")
 	runCmd.Flags().BoolVar(&runFailFast, "fail-fast", false, "Stop execution on first failed step")
 	runCmd.Flags().BoolVar(&runStrict, "strict", false, "Enable strict variable validation (error on undefined variables)")
+	runCmd.Flags().StringVarP(&runEnv, "env", "e", "", "Override active environment for this run (e.g. staging, production)")
 	rootCmd.AddCommand(runCmd)
 }
 

@@ -71,6 +71,9 @@ func loadConfigWarn() *config.Config {
 		fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to load config: %v\n", err)
 		return &config.Config{}
 	}
+	if runEnv != "" {
+		conf.ActiveEnv = runEnv
+	}
 	return conf
 }
 

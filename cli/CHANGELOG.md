@@ -1,5 +1,17 @@
 # Kest CLI Changelog
 
+## v0.7.2 (2026-02-26)
+
+### New Features
+
+- **`--env` / `-e` flag for `kest run`** — Override the active environment for a single run without modifying `config.yaml`. Useful for regression testing against specific environments in CI/CD pipelines:
+  ```bash
+  kest run tests.flow.md -e staging
+  kest run tests/ -e production --parallel --jobs 8
+  ```
+
+---
+
 ## v0.7.1 (2026-02-26)
 
 ### Bug Fixes
