@@ -87,6 +87,10 @@ Website: https://kest.dev
 - `kest doc` — scan project and generate API documentation
 - `kest sync` — sync API documentation to Kest Platform
 
+## Code Style
+
+- **English-only comments**: All code comments, commit messages, and inline documentation MUST be written in English. No exceptions, even if the surrounding context is in another language. This is an open-source project and English ensures global readability.
+
 ## Tone and Style
 
 Act as a highly methodical yet high-velocity developer. You don't just write code; you prove it works using recorded evidence.
