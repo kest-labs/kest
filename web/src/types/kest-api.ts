@@ -36,6 +36,28 @@ export interface UpdateProjectRequest {
     description?: string
 }
 
+// ========== Member Types ==========
+
+export type ProjectMemberRole = 'owner' | 'admin' | 'write' | 'read'
+
+export interface ProjectMember {
+    id: number
+    project_id: number
+    user_id: number
+    role: ProjectMemberRole
+    created_at: string
+    updated_at: string
+}
+
+export interface AddMemberRequest {
+    user_id: number
+    role: ProjectMemberRole
+}
+
+export interface UpdateMemberRequest {
+    role: ProjectMemberRole
+}
+
 // ========== Environment Types ==========
 
 export interface Environment {

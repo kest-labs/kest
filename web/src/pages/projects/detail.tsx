@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Settings, ChevronRight, FolderTree, FileText, Search, Plus, Workflow, ChevronDown, MoreHorizontal, Trash2, Share2, ListPlus, Download, FileUp, FileDown } from 'lucide-react'
-import { useProject, useAPISpecs, useCategoryTree, useAPISpecWithExamples, useDeleteAPISpec } from '@/hooks/use-kest-api'
+import { useProject, useAPISpecs, useCategoryTree, useAPISpecWithExamples, useDeleteAPISpec, useMembers, useAddMember, useUpdateMemberRole, useRemoveMember } from '@/hooks/use-kest-api'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
@@ -20,7 +20,7 @@ import { EnvironmentManager } from './environment-manager'
 import { CreateAPISpecDialog } from './create-api-spec-dialog'
 import { ImportAPISpecDialog } from './import-api-spec-dialog'
 import { TestCasesPanel } from './test-cases'
-import type { APISpec, CategoryTree } from '@/types/kest-api'
+import type { APISpec, CategoryTree, ProjectMember, ProjectMemberRole } from '@/types/kest-api'
 
 const METHOD_COLORS: Record<string, string> = {
   GET: 'text-blue-600',
@@ -32,7 +32,7 @@ const METHOD_COLORS: Record<string, string> = {
   OPTIONS: 'text-gray-600',
 }
 
-type ViewMode = 'apis' | 'flows' | 'test-cases' | 'categories' | 'environments' | 'settings'
+type ViewMode = 'apis' | 'flows' | 'test-cases' | 'categories' | 'environments' | 'settings' | 'members'
 
 export function ProjectDetailPage() {
   const { id, sid } = useParams<{ id: string; sid: string }>()
@@ -46,7 +46,13 @@ export function ProjectDetailPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<APISpec | null>(null)
+  const [newMemberUserId, setNewMemberUserId] = useState('')
+  const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>('write')
+  const [memberRoleDraft, setMemberRoleDraft] = useState<Record<number, ProjectMemberRole>>({})
   const deleteAPISpec = useDeleteAPISpec()
+  const addMember = useAddMember(projectId)
+  const updateMemberRole = useUpdateMemberRole(projectId)
+  const removeMember = useRemoveMember(projectId)
 
   // Sync viewMode with URL: if sid is present, always show apis
   useEffect(() => {
@@ -56,7 +62,7 @@ export function ProjectDetailPage() {
   useEffect(() => {
     if (sid) return
     const view = searchParams.get('view')
-    if (view === 'test-cases' || view === 'flows' || view === 'categories' || view === 'environments' || view === 'settings' || view === 'apis') {
+    if (view === 'test-cases' || view === 'flows' || view === 'categories' || view === 'environments' || view === 'settings' || view === 'members' || view === 'apis') {
       setViewMode(view)
     }
   }, [searchParams, sid])
@@ -73,6 +79,7 @@ export function ProjectDetailPage() {
   const { data: project, isLoading: projectLoading } = useProject(projectId)
   const { data: apiSpecsData, isLoading: apisLoading } = useAPISpecs(projectId)
   const { data: categoryData } = useCategoryTree(projectId)
+  const { data: membersData, isLoading: membersLoading } = useMembers(projectId)
 
   // Handle multiple possible response shapes from the API
   const apiSpecs: APISpec[] = (() => {
@@ -87,6 +94,13 @@ export function ProjectDetailPage() {
     if (Array.isArray(categoryData)) return categoryData
     if (Array.isArray((categoryData as any)?.items)) return (categoryData as any).items
     if (Array.isArray((categoryData as any)?.data)) return (categoryData as any).data
+    return []
+  })()
+  const members: ProjectMember[] = (() => {
+    if (!membersData) return []
+    if (Array.isArray(membersData)) return membersData
+    if (Array.isArray((membersData as any)?.items)) return (membersData as any).items
+    if (Array.isArray((membersData as any)?.data)) return (membersData as any).data
     return []
   })()
 
@@ -187,6 +201,48 @@ export function ProjectDetailPage() {
         },
       }
     )
+  }
+
+  const handleAddMember = async () => {
+    const userId = Number(newMemberUserId)
+    if (!Number.isInteger(userId) || userId <= 0) {
+      toast.error('Please enter a valid user ID')
+      return
+    }
+    try {
+      await addMember.mutateAsync({ user_id: userId, role: newMemberRole })
+      setNewMemberUserId('')
+      setNewMemberRole('write')
+      toast.success('Member added')
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to add member')
+    }
+  }
+
+  const handleUpdateMemberRole = async (member: ProjectMember) => {
+    const role = memberRoleDraft[member.user_id] ?? member.role
+    if (!role || role === member.role) {
+      toast.info('No role changes')
+      return
+    }
+    try {
+      await updateMemberRole.mutateAsync({
+        userId: member.user_id,
+        data: { role },
+      })
+      toast.success('Member role updated')
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update member role')
+    }
+  }
+
+  const handleRemoveMember = async (member: ProjectMember) => {
+    try {
+      await removeMember.mutateAsync(member.user_id)
+      toast.success('Member removed')
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to remove member')
+    }
   }
 
   const renderSpecItem = (spec: APISpec) => (
@@ -454,6 +510,107 @@ export function ProjectDetailPage() {
         {viewMode === 'settings' && (
           <div className="p-6 overflow-auto h-full">
             <ProjectSettings project={project} />
+          </div>
+        )}
+
+        {viewMode === 'members' && (
+          <div className="p-6 overflow-auto h-full">
+            <div className="max-w-4xl">
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold">Project Members</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage roles and access for this project.
+                </p>
+              </div>
+              <div className="border rounded-md p-4 bg-card mb-4">
+                <h3 className="text-sm font-medium mb-3">Add Member</h3>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    placeholder="User ID"
+                    value={newMemberUserId}
+                    onChange={(e) => setNewMemberUserId(e.target.value)}
+                    className="sm:w-48"
+                  />
+                  <Select
+                    value={newMemberRole}
+                    onValueChange={(value: ProjectMemberRole) => setNewMemberRole(value)}
+                  >
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owner">owner</SelectItem>
+                      <SelectItem value="admin">admin</SelectItem>
+                      <SelectItem value="write">write</SelectItem>
+                      <SelectItem value="read">read</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleAddMember}
+                    disabled={addMember.isPending}
+                    className="sm:w-auto"
+                  >
+                    {addMember.isPending ? 'Adding...' : 'Add Member'}
+                  </Button>
+                </div>
+              </div>
+              {membersLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : members.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-8 text-center border rounded-md">
+                  No members found
+                </div>
+              ) : (
+                <div className="border rounded-md divide-y bg-card">
+                  {members.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">User #{member.user_id}</p>
+                        <p className="text-xs text-muted-foreground">Member ID: {member.id}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={memberRoleDraft[member.user_id] ?? member.role}
+                          onValueChange={(value: ProjectMemberRole) =>
+                            setMemberRoleDraft((prev) => ({ ...prev, [member.user_id]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">owner</SelectItem>
+                            <SelectItem value="admin">admin</SelectItem>
+                            <SelectItem value="write">write</SelectItem>
+                            <SelectItem value="read">read</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateMemberRole(member)}
+                          disabled={updateMemberRole.isPending}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member)}
+                          disabled={removeMember.isPending || member.role === 'owner'}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
