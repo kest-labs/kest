@@ -145,6 +145,8 @@ func parseFlowStep(b FlowBlock) FlowStep {
 				step.PollTimeoutMs = parseDurationToMS(val)
 			case "poll-interval":
 				step.PollIntervalMs = parseDurationToMS(val)
+			case "timeout":
+				step.ExecTimeoutMs = parseDurationToMS(val)
 			case "on-fail":
 				fmt.Printf("⚠️  Warning: @on-fail is not yet implemented (line %d), ignoring.\n", b.LineNum)
 				step.OnFail = val
@@ -215,7 +217,15 @@ func parseFlowStep(b FlowBlock) FlowStep {
 		if step.Type == "exec" {
 			step.Exec = parseExecBlock(requestRaw)
 		} else if opts, err := ParseBlock(requestRaw); err == nil {
+			// Preserve Captures/Asserts/SoftAsserts collected in the loop above,
+			// then merge any additional ones that ParseBlock may find inside the body.
+			savedCaptures := step.Request.Captures
+			savedAsserts := step.Request.Asserts
+			savedSoftAsserts := step.Request.SoftAsserts
 			step.Request = opts
+			step.Request.Captures = append(step.Request.Captures, savedCaptures...)
+			step.Request.Asserts = append(step.Request.Asserts, savedAsserts...)
+			step.Request.SoftAsserts = append(step.Request.SoftAsserts, savedSoftAsserts...)
 		}
 	}
 

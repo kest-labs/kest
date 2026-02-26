@@ -235,6 +235,8 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		}
 		finalURL = strictURL
 	}
+	// Update result.URL to the interpolated value so logs always show the real URL
+	result.URL = finalURL
 
 	// Handle query params
 	if len(opts.Queries) > 0 {

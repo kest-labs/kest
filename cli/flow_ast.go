@@ -19,6 +19,7 @@ type FlowStep struct {
 	WaitMs         int
 	PollTimeoutMs  int
 	PollIntervalMs int
+	ExecTimeoutMs  int // per-step exec timeout (overrides global --exec-timeout)
 	OnFail         string
 	LineNum        int
 	Raw            string

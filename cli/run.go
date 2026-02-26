@@ -602,8 +602,15 @@ func executeExecStep(step FlowStep) summary.TestResult {
 
 	fmt.Printf("  $ %s\n", command)
 
-	// Run with timeout and cross-platform shell
-	timeout := time.Duration(execTimeout) * time.Second
+	// Use per-step timeout if set (@timeout directive), otherwise fall back to global --exec-timeout
+	timeoutSec := execTimeout
+	if step.ExecTimeoutMs > 0 {
+		timeoutSec = step.ExecTimeoutMs / 1000
+		if step.ExecTimeoutMs%1000 != 0 {
+			timeoutSec++ // round up to nearest second
+		}
+	}
+	timeout := time.Duration(timeoutSec) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 

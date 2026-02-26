@@ -168,6 +168,67 @@ func TestOrderFlowStepsCycleFallsBack(t *testing.T) {
 	}
 }
 
+// TestParseFlowStepCapturesAndAssertsSurviveParseBlock is a regression test for
+// the bug where ParseBlock overwrote step.Request entirely, wiping out [Captures]
+// and [Asserts] that were collected during the section-parsing loop.
+func TestParseFlowStepCapturesAndAssertsSurviveParseBlock(t *testing.T) {
+	content := "```step\n" +
+		"@id get-token\n" +
+		"POST /v1/auth/login\n" +
+		"Content-Type: application/json\n" +
+		"\n" +
+		`{"email":"user@example.com","password":"secret"}` + "\n" +
+		"[Captures]\n" +
+		"token = data.token\n" +
+		"user_id = data.user.id\n" +
+		"[Asserts]\n" +
+		"status == 200\n" +
+		"body.data.token exists\n" +
+		"```"
+
+	doc, _ := ParseFlowDocument(content)
+	if len(doc.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(doc.Steps))
+	}
+	step := doc.Steps[0]
+
+	if len(step.Request.Captures) != 2 {
+		t.Fatalf("expected 2 captures, got %d: %v", len(step.Request.Captures), step.Request.Captures)
+	}
+	if step.Request.Captures[0] != "token = data.token" {
+		t.Fatalf("unexpected capture[0]: %q", step.Request.Captures[0])
+	}
+
+	if len(step.Request.Asserts) != 2 {
+		t.Fatalf("expected 2 asserts, got %d: %v", len(step.Request.Asserts), step.Request.Asserts)
+	}
+	if step.Request.Asserts[0] != "status == 200" {
+		t.Fatalf("unexpected assert[0]: %q", step.Request.Asserts[0])
+	}
+
+	if step.Request.Method != "post" || step.Request.URL != "/v1/auth/login" {
+		t.Fatalf("unexpected method/url: %q %q", step.Request.Method, step.Request.URL)
+	}
+}
+
+func TestParseFlowStepExecTimeout(t *testing.T) {
+	content := "```step\n" +
+		"@id seed\n" +
+		"@type exec\n" +
+		"@timeout 60s\n" +
+		"echo OK\n" +
+		"```"
+
+	doc, _ := ParseFlowDocument(content)
+	if len(doc.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(doc.Steps))
+	}
+	step := doc.Steps[0]
+	if step.ExecTimeoutMs != 60000 {
+		t.Fatalf("expected ExecTimeoutMs=60000, got %d", step.ExecTimeoutMs)
+	}
+}
+
 func TestParseFlowStepRetryWaitAndOnFail(t *testing.T) {
 	content := `
 ` + "```step" + `
