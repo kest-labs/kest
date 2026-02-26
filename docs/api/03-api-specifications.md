@@ -508,7 +508,110 @@ GET /projects/1/api-specs/export?format=yaml&include_examples=true
 
 ---
 
-## 9. Create Example
+## 9. Generate API Documentation (AI)
+
+### POST /projects/:id/api-specs/:sid/gen-doc
+
+Generate API documentation using AI (LLM). The documentation is stored in the `doc_markdown` field of the API specification.
+
+**Authentication**: Required
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | ✅ Yes | Project ID |
+| `sid` | integer | ✅ Yes | Specification ID |
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `lang` | string | ❌ No | `en` | Language for generated doc (`en` or `zh`) |
+
+#### Example Request
+
+```
+POST /projects/1/api-specs/1/gen-doc?lang=zh
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "code": 0,
+  "data": {
+    "id": 1,
+    "method": "POST",
+    "path": "/api/v1/auth/register",
+    "doc_markdown": "## `POST /api/v1/auth/register`\n\n### 概述\n...",
+    "doc_source": "ai",
+    "doc_updated_at": "2026-02-26T14:27:15Z"
+  }
+}
+```
+
+#### Configuration
+
+Requires LLM configuration via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | API key for LLM service |
+| `OPENAI_BASE_URL` | Base URL for OpenAI-compatible API |
+| `OPENAI_MODEL` | Model name (e.g., `qwen-plus`) |
+
+---
+
+## 10. Generate Test Cases (AI)
+
+### POST /projects/:id/api-specs/:sid/gen-test
+
+Generate Kest flow test file (`.flow.md`) using AI (LLM). Returns the generated test content directly.
+
+**Authentication**: Required
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | ✅ Yes | Project ID |
+| `sid` | integer | ✅ Yes | Specification ID |
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `lang` | string | ❌ No | `en` | Language for generated test (`en` or `zh`) |
+
+#### Example Request
+
+```
+POST /projects/1/api-specs/1/gen-test?lang=zh
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "code": 0,
+  "data": {
+    "flow_content": "# 用户注册接口测试\n\n## 成功注册\n\n### Step: 发送注册请求\nPOST {{base_url}}/api/v1/auth/register\n...\n[Asserts]\n- status == 201\n\n[Captures]\n- user_email = json.email"
+  }
+}
+```
+
+#### Generated Test Scenarios
+
+The AI generates test cases covering:
+
+1. **Happy Path** - Successful request with valid data
+2. **Validation Error** - Missing required fields or invalid data
+3. **Unauthorized** - Test without token (if auth required)
+
+---
+
+## 11. Create Example
 
 ### POST /projects/:id/api-specs/:sid/examples
 
