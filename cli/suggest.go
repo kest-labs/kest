@@ -89,7 +89,7 @@ func buildSuggestPrompt(history []storage.Record, vars map[string]string, lastRe
 	}
 
 	if lastRecord != nil {
-		prompt += fmt.Sprintf("\n## Last Request Detail:\n")
+		prompt += "\n## Last Request Detail:\n"
 		prompt += fmt.Sprintf("- %s %s → %d\n", lastRecord.Method, lastRecord.URL, lastRecord.ResponseStatus)
 		if lastRecord.ResponseBody != "" {
 			body := lastRecord.ResponseBody

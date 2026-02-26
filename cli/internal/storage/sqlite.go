@@ -105,13 +105,18 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-func (s *Store) GetAllRecords() ([]Record, error) {
+// GetAllRecords returns all records up to the given limit (0 = 5000 safety cap).
+func (s *Store) GetAllRecords(limit ...int) ([]Record, error) {
+	cap := 5000
+	if len(limit) > 0 && limit[0] > 0 {
+		cap = limit[0]
+	}
 	query := `
 	SELECT id, method, url, base_url, path, query_params, request_headers, request_body,
 	       response_status, response_headers, response_body, duration_ms, environment, project, created_at
-	FROM records ORDER BY created_at DESC
+	FROM records ORDER BY created_at DESC LIMIT ?
 	`
-	rows, err := s.db.Query(query)
+	rows, err := s.db.Query(query, cap)
 	if err != nil {
 		return nil, err
 	}

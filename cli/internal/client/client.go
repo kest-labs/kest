@@ -32,9 +32,18 @@ type Response struct {
 	Duration time.Duration
 }
 
+// sharedTransport is a reusable transport that maintains a connection pool
+// across all requests, significantly improving performance in parallel/sequential flows.
+var sharedTransport = &http.Transport{
+	MaxIdleConns:        100,
+	MaxIdleConnsPerHost: 10,
+	IdleConnTimeout:     90 * time.Second,
+}
+
 func Execute(opt RequestOptions) (*Response, error) {
 	client := &http.Client{
-		Timeout: opt.Timeout,
+		Timeout:   opt.Timeout,
+		Transport: sharedTransport,
 	}
 
 	req, err := http.NewRequest(opt.Method, opt.URL, bytes.NewBuffer(opt.Body))

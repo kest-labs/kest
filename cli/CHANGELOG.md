@@ -1,5 +1,35 @@
 # Kest CLI Changelog
 
+## v0.7.3 (2026-02-26)
+
+### Bug Fixes
+
+- **Fix: parallel mode race condition on `os.Stdout`** — `os.Stdout = nil` caused undefined behavior and potential panics when multiple goroutines ran concurrently. Replaced with `os.Open(os.DevNull)` scoped per-goroutine via `defer`.
+- **Fix: `buildVarChain` opened a new DB connection on every call** — In polling loops and multi-step flows this caused hundreds of redundant SQLite connections. `buildVarChain` now accepts an optional pre-opened `*storage.Store` to reuse across calls.
+- **Fix: `kest replay` did not preserve `Environment` and `Project` on new record** — Replayed records were saved with empty metadata, making them invisible to project-scoped history. Now copies `BaseURL`, `Path`, `Environment`, and `Project` from the original record.
+- **Fix: `GetAllRecords` had no row limit** — On large histories this loaded everything into memory. Now defaults to a 5000-row safety cap; callers can pass an explicit limit.
+- **Fix: `kest sync push` always reported `cli_version: "1.0.0"`** — Now uses the actual `Version` build variable.
+- **Fix: bubble sort in `sortByIndex`** — Replaced O(n²) bubble sort with `sort.Slice`.
+- **Fix: unnecessary `fmt.Sprintf` in `suggest.go`** — Replaced with a plain string literal.
+
+### New Features
+
+- **`@env` directive in flow files now takes effect** — Flow files with `@env staging` in their metadata block will automatically switch the active environment for that run (unless overridden by `--env`).
+- **`$env.VAR_NAME` built-in variable** — Read OS environment variables directly in flow files: `{{$env.DATABASE_URL}}`, `{{$env.API_KEY}}`. Essential for CI/CD secret injection.
+- **New built-in variables**: `$uuid` (UUIDv4), `$randomEmail`, `$randomString` (12-char hex), `$isoDate` (RFC3339 UTC), `$unixMs` (Unix milliseconds).
+- **New assert operators**: `contains`, `startsWith`, `endsWith`, `not exists`, `length`.
+  ```
+  body.message contains "success"
+  body.email startsWith "user"
+  body.error not exists
+  body.items length == 3
+  ```
+- **`kest watch` now supports `--env`, `--var`, `--verbose` flags** — Watch mode was previously unable to override environment or inject variables.
+- **`kest history` filter flags** — `--status 4xx`, `--method POST`, `--url /api/users`, `--since 1h`.
+- **HTTP connection pool reuse** — `internal/client` now uses a shared `http.Transport` with idle connection pooling, improving throughput in parallel and sequential flow runs.
+
+---
+
 ## v0.7.2 (2026-02-26)
 
 ### New Features

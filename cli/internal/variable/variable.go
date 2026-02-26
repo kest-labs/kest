@@ -3,7 +3,9 @@ package variable
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,10 +45,11 @@ const (
 var (
 	// Optimized: single regex matches both {{var}} and {{var | default: "value"}}
 	// Supports both escaped quotes (\" in JSON) and normal quotes
-	// Group 1: variable name
+	// Group 1: variable name (allows dots for $env.VAR syntax)
 	// Group 2: default value (optional, captured only if | default: syntax present)
-	// Uses [^}]+ to match everything until the closing }}
 	combinedRegex = regexp.MustCompile(`\{\{([^|{}]+?)(?:\s*\|\s*default:\s*\\?"([^}]*)\\?")?\}\}`)
+	// envVarPrefix is the prefix for reading OS environment variables
+	envVarPrefix = "$env."
 )
 
 // interpolateWithMode is the unified implementation for all interpolation modes
@@ -193,11 +196,14 @@ func parseVarWithDefault(content string) (string, string) {
 // isBuiltinVar checks if a variable is a built-in variable
 func isBuiltinVar(name string) bool {
 	switch name {
-	case "$randomInt", "$timestamp":
+	case "$randomInt", "$timestamp", "$uuid", "$randomEmail", "$randomString", "$isoDate", "$unixMs":
 		return true
-	default:
-		return false
 	}
+	// $env.VAR_NAME reads OS environment variables
+	if strings.HasPrefix(name, envVarPrefix) {
+		return true
+	}
+	return false
 }
 
 // resolveBuiltin resolves built-in variable values
@@ -208,9 +214,44 @@ func resolveBuiltin(name string) string {
 		return strconv.Itoa(secureRandomInt(10000))
 	case "$timestamp":
 		return strconv.FormatInt(time.Now().Unix(), 10)
-	default:
-		return ""
+	case "$unixMs":
+		return strconv.FormatInt(time.Now().UnixMilli(), 10)
+	case "$isoDate":
+		return time.Now().UTC().Format(time.RFC3339)
+	case "$uuid":
+		return generateUUID()
+	case "$randomEmail":
+		return fmt.Sprintf("user%d@example.com", secureRandomInt(999999))
+	case "$randomString":
+		return generateRandomString(12)
 	}
+	// $env.VAR_NAME → read from OS environment
+	if strings.HasPrefix(name, envVarPrefix) {
+		return os.Getenv(strings.TrimPrefix(name, envVarPrefix))
+	}
+	return ""
+}
+
+// generateUUID produces a random UUID v4 string.
+func generateUUID() string {
+	var b [16]byte
+	rand.Read(b[:])             //nolint: errcheck — crypto/rand rarely fails
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // variant RFC4122
+	return fmt.Sprintf("%s-%s-%s-%s-%s",
+		hex.EncodeToString(b[0:4]),
+		hex.EncodeToString(b[4:6]),
+		hex.EncodeToString(b[6:8]),
+		hex.EncodeToString(b[8:10]),
+		hex.EncodeToString(b[10:16]),
+	)
+}
+
+// generateRandomString returns a random hex string of the given length.
+func generateRandomString(n int) string {
+	raw := make([]byte, (n+1)/2)
+	rand.Read(raw[:]) //nolint: errcheck
+	return hex.EncodeToString(raw)[:n]
 }
 
 // secureRandomInt generates a thread-safe random integer in [0, max)

@@ -210,16 +210,19 @@ func executeMultiLineBlock(raw string, lineNum int, showOutput bool, verbose boo
 	opts.Verbose = verbose
 	opts.DebugVars = runDebugVars
 
-	// Capture output if parallel
-	oldStdout := os.Stdout
+	// Capture output if parallel — use devnull to avoid race on os.Stdout
+	var devNull *os.File
 	if !showOutput {
-		os.Stdout = nil // Suppress output in parallel mode
+		devNull, _ = os.Open(os.DevNull)
+		oldStdout := os.Stdout
+		os.Stdout = devNull
+		defer func() {
+			os.Stdout = oldStdout
+			devNull.Close()
+		}()
 	}
 
 	res, err := ExecuteRequest(opts)
-	if !showOutput {
-		os.Stdout = oldStdout // Restore
-	}
 
 	result.Status = res.Status
 	result.Duration = res.Duration
@@ -272,10 +275,15 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 		return result
 	}
 
-	// Capture output if parallel
-	oldStdout := os.Stdout
+	// Capture output if parallel — use devnull to avoid race on os.Stdout
 	if !showOutput {
-		os.Stdout = nil // Suppress output in parallel mode
+		devNull, _ := os.Open(os.DevNull)
+		oldStdout := os.Stdout
+		os.Stdout = devNull
+		defer func() {
+			os.Stdout = oldStdout
+			devNull.Close()
+		}()
 	}
 
 	res, err := ExecuteRequest(RequestOptions{
@@ -298,19 +306,19 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 	result.ResponseBody = res.ResponseBody
 	result.StartTime = res.StartTime
 
-	if !showOutput {
-		os.Stdout = oldStdout // Restore
-	}
-
 	result.Success = (err == nil)
 	result.Error = err
 
-	// Note: Duration would need to be captured from ExecuteRequest
-	// For now using a placeholder
 	return result
 }
 
 func runFlowDocument(doc FlowDoc, filePath string) error {
+	// Apply @env from flow metadata if not already overridden by --env flag
+	if doc.Meta.Env != "" && runEnv == "" {
+		runEnv = doc.Meta.Env
+		defer func() { runEnv = "" }()
+	}
+
 	steps := orderFlowSteps(doc)
 	setupSteps := doc.Setup
 	teardownSteps := doc.Teardown
@@ -442,7 +450,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 
 		// Process captures after successful request
 		if err == nil && len(step.Request.Captures) > 0 {
-			store, _ := storage.NewStore()
+			store, _ := storage.NewStore() //nolint: we need a fresh store per capture block
 			conf := loadConfigWarn()
 			for _, capExpr := range step.Request.Captures {
 				sep := "="
@@ -787,7 +795,8 @@ func evaluateAssertionSet(res summary.TestResult, vars map[string]string, assert
 
 // buildVarChain assembles the full variable map following the priority chain:
 // config env vars → storage captured vars → run context (CLI + exec captures).
-func buildVarChain() map[string]string {
+// Accepts an optional pre-opened store to avoid repeated DB connections in hot paths.
+func buildVarChain(stores ...*storage.Store) map[string]string {
 	vars := make(map[string]string)
 
 	conf := loadConfigWarn()
@@ -800,9 +809,19 @@ func buildVarChain() map[string]string {
 		}
 	}
 
-	store, _ := storage.NewStore()
+	// Use provided store if available, otherwise open a transient one
+	var store *storage.Store
+	var ownStore bool
+	if len(stores) > 0 && stores[0] != nil {
+		store = stores[0]
+	} else {
+		store, _ = storage.NewStore()
+		ownStore = true
+	}
 	if store != nil {
-		defer store.Close()
+		if ownStore {
+			defer store.Close()
+		}
 		if conf != nil {
 			capturedVars, _ := store.GetVariables(conf.ProjectID, conf.ActiveEnv)
 			for k, v := range capturedVars {
@@ -821,13 +840,9 @@ func buildVarChain() map[string]string {
 }
 
 func sortByIndex(ids []string, index map[string]int) []string {
-	for i := 0; i < len(ids); i++ {
-		for j := i + 1; j < len(ids); j++ {
-			if index[ids[j]] < index[ids[i]] {
-				ids[i], ids[j] = ids[j], ids[i]
-			}
-		}
-	}
+	sort.Slice(ids, func(i, j int) bool {
+		return index[ids[i]] < index[ids[j]]
+	})
 	return ids
 }
 

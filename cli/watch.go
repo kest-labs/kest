@@ -18,8 +18,11 @@ re-execute it whenever the file is saved. Like 'jest --watch' for APIs.`,
 	Example: `  # Watch a single flow file
   kest watch login.flow.md
 
-  # Watch with verbose output
-  kest watch login.flow.md -v`,
+  # Watch with verbose output and override environment
+  kest watch login.flow.md -v --env staging
+
+  # Watch with inline variable injection
+  kest watch login.flow.md --var api_key=secret`,
 	Args:         cobra.ExactArgs(1),
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -79,6 +82,9 @@ re-execute it whenever the file is saved. Like 'jest --watch' for APIs.`,
 }
 
 func init() {
+	watchCmd.Flags().StringVarP(&runEnv, "env", "e", "", "Override active environment for this watch session")
+	watchCmd.Flags().StringArrayVar(&runVars, "var", []string{}, "Set variables (e.g. --var key=value)")
+	watchCmd.Flags().BoolVarP(&runVerbose, "verbose", "v", false, "Show detailed request/response info")
 	rootCmd.AddCommand(watchCmd)
 }
 

@@ -65,18 +65,22 @@ var replayCmd = &cobra.Command{
 			return err
 		}
 
-		// Save new record
+		// Save new record, preserving origin metadata from the original record
 		headerJSON, _ := json.Marshal(headers)
 		respHeaderJSON, _ := json.Marshal(resp.Headers)
 		newID, _ := store.SaveRecord(&storage.Record{
 			Method:          oldRecord.Method,
 			URL:             oldRecord.URL,
+			BaseURL:         oldRecord.BaseURL,
+			Path:            oldRecord.Path,
 			RequestHeaders:  headerJSON,
 			RequestBody:     oldRecord.RequestBody,
 			ResponseStatus:  resp.Status,
 			ResponseHeaders: respHeaderJSON,
 			ResponseBody:    string(resp.Body),
 			DurationMs:      resp.Duration.Milliseconds(),
+			Environment:     oldRecord.Environment,
+			Project:         oldRecord.Project,
 		})
 
 		// Load variables

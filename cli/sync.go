@@ -300,7 +300,7 @@ func previewSync(specs []APISpecSync) error {
 func pushToPlatform(apiURL, token, projectID string, specs []APISpecSync, conf *config.Config) error {
 	// Build sync request
 	metadata := map[string]interface{}{
-		"cli_version": "1.0.0", // TODO: Get actual version
+		"cli_version": Version,
 		"sync_time":   time.Now().Format(time.RFC3339),
 		"source":      "cli_history",
 	}
