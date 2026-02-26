@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { queryKeys, useUpdateAPISpec } from '@/hooks/use-kest-api'
+import { queryKeys, useGenAPISpecDoc, useUpdateAPISpec } from '@/hooks/use-kest-api'
 import { kestApi } from '@/services/kest-api.service'
 import type { APISpec } from '@/types/kest-api'
 
@@ -24,7 +24,7 @@ const METHOD_COLORS: Record<string, string> = {
 interface APIDetailPanelProps {
   spec: APISpec
   projectId: number
-  initialTab?: 'params' | 'body' | 'headers' | 'responses' | 'examples'
+  initialTab?: 'params' | 'body' | 'headers' | 'responses' | 'examples' | 'doc'
   autoOpenExampleForm?: boolean
 }
 
@@ -170,9 +170,13 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
   const [exampleRequestBody, setExampleRequestBody] = useState(initialExample.requestBody)
   const [exampleResponseHeaders, setExampleResponseHeaders] = useState(initialExample.responseHeaders)
   const [exampleResponseBody, setExampleResponseBody] = useState(initialExample.responseBody)
+  const [docLang, setDocLang] = useState<'zh' | 'en'>('zh')
+  const [docDraft, setDocDraft] = useState(spec.doc_markdown || '')
+  const [docEditing, setDocEditing] = useState(false)
 
   const queryClient = useQueryClient()
   const updateMutation = useUpdateAPISpec()
+  const genDocMutation = useGenAPISpecDoc()
   const resetExampleForm = () => {
     const defaults = getInitialExampleValues(spec)
     setExamplePath(defaults.path)
@@ -210,6 +214,8 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
     setEditSummary(spec.summary || '')
     setEditDescription(spec.description || '')
     setEditTags(spec.tags?.join(', ') || '')
+    setDocDraft(spec.doc_markdown || '')
+    setDocEditing(false)
     resetExampleForm()
     setEditing(false)
   }, [spec.id])
@@ -258,6 +264,52 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
     setEditDescription(spec.description || '')
     setEditTags(spec.tags?.join(', ') || '')
     setEditing(false)
+  }
+
+  const handleGenerateDoc = () => {
+    genDocMutation.mutate(
+      { projectId, id: spec.id, lang: docLang },
+      {
+        onSuccess: (result) => {
+          setDocDraft(result.doc_markdown || '')
+          setDocEditing(false)
+          setActiveTab('doc')
+          toast.success('Documentation generated')
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || 'Failed to generate documentation')
+        },
+      }
+    )
+  }
+
+  const handleSaveDoc = () => {
+    updateMutation.mutate(
+      {
+        projectId,
+        id: spec.id,
+        data: {
+          doc_markdown: docDraft,
+          doc_source: 'manual',
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success('Documentation saved')
+          setDocEditing(false)
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || 'Failed to save documentation')
+        },
+      }
+    )
+  }
+
+  const formatDocUpdateTime = (value?: string) => {
+    if (!value) return 'Not generated yet'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    return date.toLocaleString()
   }
 
   const pathParams = spec.parameters?.filter(p => p.in === 'path') || []
@@ -382,6 +434,14 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
                 ))}
               </div>
             )}
+            <div className="flex items-center justify-between mt-3 gap-2">
+              <div className="text-[11px] text-muted-foreground">
+                Doc source: <span className="font-medium">{spec.doc_source || 'manual'}</span> · Updated: {formatDocUpdateTime(spec.doc_updated_at)}
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setActiveTab('doc')}>
+                Open Doc
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -404,6 +464,9 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
             </TabsTrigger>
             <TabsTrigger value="examples" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs py-2">
               Examples {examples.length > 0 && <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">{examples.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="doc" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs py-2">
+              Doc {spec.doc_markdown && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />}
             </TabsTrigger>
           </TabsList>
 
@@ -639,6 +702,73 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="doc" className="mt-0 space-y-4">
+              <div className="border rounded-md p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant={docLang === 'zh' ? 'default' : 'outline'}
+                      onClick={() => setDocLang('zh')}
+                    >
+                      zh
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={docLang === 'en' ? 'default' : 'outline'}
+                      onClick={() => setDocLang('en')}
+                    >
+                      en
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={handleGenerateDoc} disabled={genDocMutation.isPending}>
+                      {genDocMutation.isPending ? 'Generating...' : 'AI Generate Doc'}
+                    </Button>
+                    {!docEditing && (
+                      <Button size="sm" variant="outline" onClick={() => setDocEditing(true)}>
+                        Edit
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(docDraft || '')} disabled={!docDraft}>
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Source: {spec.doc_source || 'manual'} · Updated: {formatDocUpdateTime(spec.doc_updated_at)}
+                </p>
+
+                {docEditing ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={docDraft}
+                      onChange={(e) => setDocDraft(e.target.value)}
+                      placeholder="Write markdown documentation..."
+                      rows={20}
+                      className="font-mono text-xs"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setDocDraft(spec.doc_markdown || ''); setDocEditing(false) }}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleSaveDoc} disabled={updateMutation.isPending}>
+                        {updateMutation.isPending ? 'Saving...' : 'Save Doc'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : docDraft ? (
+                  <pre className="bg-muted p-3 rounded-md text-xs font-mono whitespace-pre-wrap break-words">
+                    {docDraft}
+                  </pre>
+                ) : (
+                  <div className="text-center py-8 text-sm text-muted-foreground border rounded-md">
+                    No documentation yet. Click AI Generate Doc to create one.
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </div>
         </Tabs>

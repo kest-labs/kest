@@ -131,6 +131,9 @@ export interface APISpec {
     tags: string[]
     version: string
     is_public: boolean
+    doc_markdown?: string
+    doc_source?: 'manual' | 'ai'
+    doc_updated_at?: string
 
     // Request definition (single array, use 'in' field to distinguish: path, query, header, cookie)
     parameters?: Parameter[]
@@ -219,6 +222,8 @@ export interface UpdateAPISpecRequest {
     request_body?: RequestBodySpec
     responses?: Record<string, ResponseSpec>
     is_public?: boolean
+    doc_markdown?: string
+    doc_source?: 'manual' | 'ai'
 }
 
 // ========== Test Types ==========

@@ -260,6 +260,20 @@ export function useDeleteAPISpec() {
     })
 }
 
+export function useGenAPISpecDoc() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({ projectId, id, lang }: { projectId: number; id: number; lang?: 'zh' | 'en' }) =>
+            kestApi.apiSpec.genDoc(projectId, id, { lang }),
+        onSuccess: (result) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.apiSpec(result.id) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.apiSpecWithExamples(result.id) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.apiSpecs(result.project_id) })
+        },
+    })
+}
+
 // ========== Test Case Hooks ==========
 
 export function useTestCases(projectId: number, params?: ListTestCasesParams) {

@@ -227,6 +227,14 @@ export const apiSpecApi = {
         response_body?: any
         duration_ms?: number
     }) => request.post<APIExample>(`/v1/projects/${projectId}/api-specs/${apiSpecId}/examples`, data),
+
+    /**
+     * Generate API documentation with AI
+     */
+    genDoc: (projectId: number, id: number, params?: { lang?: 'zh' | 'en' }) =>
+        request.post<APISpec>(`/v1/projects/${projectId}/api-specs/${id}/gen-doc`, undefined, {
+            params,
+        }),
 }
 
 // ========== Test Case APIs ==========
