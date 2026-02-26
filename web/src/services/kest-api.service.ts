@@ -102,6 +102,56 @@ export const environmentApi = {
     delete: (projectId: number, id: number) => request.delete(`/v1/projects/${projectId}/environments/${id}`),
 }
 
+// ========== Member APIs ==========
+
+type ProjectMemberRole = 'owner' | 'admin' | 'write' | 'read'
+
+type ProjectMember = {
+    id: number
+    project_id: number
+    user_id: number
+    role: ProjectMemberRole
+    created_at: string
+    updated_at: string
+}
+
+export const memberApi = {
+    /**
+     * List members for a project
+     */
+    list: (projectId: number) =>
+        request.get<ProjectMember[]>(`/v1/projects/${projectId}/members`),
+
+    /**
+     * Get current user's member role in a project
+     */
+    getMyRole: (projectId: number) =>
+        request.get<ProjectMember>(`/v1/projects/${projectId}/members/me`),
+
+    /**
+     * Add member to project
+     */
+    create: (
+        projectId: number,
+        data: { user_id: number; role: ProjectMemberRole }
+    ) => request.post<ProjectMember>(`/v1/projects/${projectId}/members`, data),
+
+    /**
+     * Update member role by user id
+     */
+    update: (
+        projectId: number,
+        userId: number,
+        data: { role: ProjectMemberRole }
+    ) => request.patch<ProjectMember>(`/v1/projects/${projectId}/members/${userId}`, data),
+
+    /**
+     * Remove member by user id
+     */
+    delete: (projectId: number, userId: number) =>
+        request.delete(`/v1/projects/${projectId}/members/${userId}`),
+}
+
 // ========== API Spec APIs ==========
 
 export const apiSpecApi = {
@@ -412,6 +462,7 @@ export const auditApi = {
 export const kestApi = {
     project: projectApi,
     environment: environmentApi,
+    member: memberApi,
     apiSpec: apiSpecApi,
     category: categoryApi,
     testCase: testCaseApi,
