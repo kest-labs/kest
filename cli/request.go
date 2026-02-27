@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,11 +36,12 @@ type RequestOptions struct {
 	DebugVars    bool
 	Stream       bool
 	NoRecord     bool
-	MaxDuration  int  // Max response time in milliseconds (--max-time)
-	Retry        int  // Number of retries (0 = no retry)
-	RetryWait    int  // Delay between retries in milliseconds (--retry-delay)
-	StrictVars   bool // Fail early when required variables are missing
-	SilentOutput bool // Suppress PrintResponse box (used by flow runner)
+	MaxDuration  int      // Max response time in milliseconds (--max-time)
+	Retry        int      // Number of retries (0 = no retry)
+	RetryWait    int      // Delay between retries in milliseconds (--retry-delay)
+	StrictVars   bool     // Fail early when required variables are missing
+	SilentOutput bool     // Suppress PrintResponse box (used by flow runner)
+	Forms        []string // -F/--form fields: "fieldname=value" or "fieldname=@filepath"
 }
 
 var (
@@ -53,6 +58,7 @@ var (
 	reqRetryWait   int
 	reqVars        []string
 	reqDebugVars   bool
+	reqForms       []string // -F/--form fields: "fieldname=value" or "fieldname=@filepath"
 )
 
 func init() {
@@ -108,6 +114,7 @@ func createRequestCmd(method string) *cobra.Command {
 				MaxDuration: reqMaxDuration,
 				Retry:       reqRetry,
 				RetryWait:   reqRetryWait,
+				Forms:       reqForms,
 			})
 			return err
 		},
@@ -126,6 +133,7 @@ func createRequestCmd(method string) *cobra.Command {
 	cmd.Flags().IntVar(&reqRetryWait, "retry-delay", 1000, "Delay between retries in milliseconds")
 	cmd.Flags().StringArrayVar(&reqVars, "var", []string{}, "Set variables (e.g. --var key=value)")
 	cmd.Flags().BoolVar(&reqDebugVars, "debug-vars", false, "Show variable resolution details")
+	cmd.Flags().StringArrayVarP(&reqForms, "form", "F", []string{}, "Multipart form field (e.g. -F file=@/path/to/file -F name=test)")
 
 	return cmd
 }
@@ -319,6 +327,49 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		} else {
 			body = []byte(processedData)
 		}
+	}
+
+	// Handle multipart form data (-F flag)
+	if len(opts.Forms) > 0 {
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+
+		for _, form := range opts.Forms {
+			processedForm := variable.Interpolate(form, vars)
+			parts := strings.SplitN(processedForm, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			fieldName := strings.TrimSpace(parts[0])
+			fieldValue := parts[1]
+
+			if strings.HasPrefix(fieldValue, "@") {
+				// File upload
+				filePath := fieldValue[1:]
+				file, err := os.Open(filePath)
+				if err != nil {
+					result.Error = err
+					result.Success = false
+					return result, err
+				}
+				defer file.Close()
+				part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
+				if err != nil {
+					result.Error = err
+					result.Success = false
+					return result, err
+				}
+				io.Copy(part, file) //nolint: errcheck
+			} else {
+				// Regular text field
+				writer.WriteField(fieldName, fieldValue)
+			}
+		}
+		writer.Close()
+
+		// Set Content-Type to multipart/form-data with boundary
+		headers["Content-Type"] = writer.FormDataContentType()
+		body = buf.Bytes()
 	}
 
 	// Execute request with retry logic
