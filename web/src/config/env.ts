@@ -7,7 +7,8 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
     // Only the API entry point
-    VITE_API_URL: z.string().default('/api'),
+    // Dev defaults to local API service, prod defaults to same-origin API.
+    VITE_API_URL: z.string().default(import.meta.env.MODE === 'development' ? 'http://localhost:8025' : ''),
 
     // Optional but sometimes required
     VITE_GA_MEASUREMENT_ID: z.string().optional(),

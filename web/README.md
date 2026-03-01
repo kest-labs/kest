@@ -152,5 +152,6 @@ func main() {
 ### Configuration
 
 - API URL: `VITE_API_URL` in `.env`
-- Proxy in dev: `vite.config.ts`
+- Production example: copy `.env.production.example` and set `VITE_API_URL` to your backend domain (e.g. `https://api.kest.dev`)
+- Dev default API: `http://localhost:8025` (set `VITE_API_URL` if different)
 - Path aliases: `vite.config.ts` + `tsconfig.json`

@@ -35,13 +35,5 @@ export default defineConfig({
 
   server: {
     port: 3000,
-    proxy: {
-      '/api': {
-        // Dev fallback proxy to remote backend.
-        target: 'https://api.kest.dev',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
   },
 });
