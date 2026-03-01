@@ -79,9 +79,19 @@ func (s *service) GenDoc(ctx context.Context, id uint, lang string) (*APISpecRes
 	}
 
 	po.DocMarkdown = markdown
+	if lang == "zh" {
+		po.DocMarkdownZh = markdown
+	} else {
+		po.DocMarkdownEn = markdown
+	}
 	po.DocSource = "ai"
 	now := time.Now()
 	po.DocUpdatedAt = &now
+	if lang == "zh" {
+		po.DocUpdatedAtZh = &now
+	} else {
+		po.DocUpdatedAtEn = &now
+	}
 
 	if err := s.repo.UpdateSpec(ctx, po); err != nil {
 		return nil, err
@@ -173,6 +183,22 @@ func (s *service) UpdateSpec(ctx context.Context, id uint, req *UpdateAPISpecReq
 		po.DocMarkdown = *req.DocMarkdown
 		now := time.Now()
 		po.DocUpdatedAt = &now
+		if req.DocSource == nil {
+			po.DocSource = "manual"
+		}
+	}
+	if req.DocMarkdownZh != nil {
+		po.DocMarkdownZh = *req.DocMarkdownZh
+		now := time.Now()
+		po.DocUpdatedAtZh = &now
+		if req.DocSource == nil {
+			po.DocSource = "manual"
+		}
+	}
+	if req.DocMarkdownEn != nil {
+		po.DocMarkdownEn = *req.DocMarkdownEn
+		now := time.Now()
+		po.DocUpdatedAtEn = &now
 		if req.DocSource == nil {
 			po.DocSource = "manual"
 		}
@@ -465,9 +491,19 @@ func (s *service) BatchGenDoc(ctx context.Context, projectID uint, req *BatchGen
 				}
 
 				po.DocMarkdown = markdown
+				if lang == "zh" {
+					po.DocMarkdownZh = markdown
+				} else {
+					po.DocMarkdownEn = markdown
+				}
 				po.DocSource = "ai"
 				now := time.Now()
 				po.DocUpdatedAt = &now
+				if lang == "zh" {
+					po.DocUpdatedAtZh = &now
+				} else {
+					po.DocUpdatedAtEn = &now
+				}
 				_ = s.repo.UpdateSpec(context.Background(), po)
 			}()
 		}

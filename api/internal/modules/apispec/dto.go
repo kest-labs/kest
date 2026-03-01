@@ -8,33 +8,37 @@ import (
 // ========== Request DTOs ==========
 
 type CreateAPISpecRequest struct {
-	ProjectID   uint                    `json:"project_id"`
-	CategoryID  *uint                   `json:"category_id"`
-	Method      string                  `json:"method" binding:"required,oneof=GET POST PUT DELETE PATCH HEAD OPTIONS"`
-	Path        string                  `json:"path" binding:"required,max=500"`
-	Summary     string                  `json:"summary" binding:"omitempty,max=500"`
-	Description string                  `json:"description"`
-	DocMarkdown string                  `json:"doc_markdown"`
-	DocSource   string                  `json:"doc_source" binding:"omitempty,oneof=manual ai"`
-	Tags        []string                `json:"tags"`
-	RequestBody *RequestBodySpec        `json:"request_body"`
-	Parameters  []ParameterSpec         `json:"parameters"`
-	Responses   map[string]ResponseSpec `json:"responses"`
-	Version     string                  `json:"version" binding:"required,max=50"`
-	IsPublic    *bool                   `json:"is_public"`
+	ProjectID     uint                    `json:"project_id"`
+	CategoryID    *uint                   `json:"category_id"`
+	Method        string                  `json:"method" binding:"required,oneof=GET POST PUT DELETE PATCH HEAD OPTIONS"`
+	Path          string                  `json:"path" binding:"required,max=500"`
+	Summary       string                  `json:"summary" binding:"omitempty,max=500"`
+	Description   string                  `json:"description"`
+	DocMarkdown   string                  `json:"doc_markdown"`
+	DocMarkdownZh string                  `json:"doc_markdown_zh"`
+	DocMarkdownEn string                  `json:"doc_markdown_en"`
+	DocSource     string                  `json:"doc_source" binding:"omitempty,oneof=manual ai"`
+	Tags          []string                `json:"tags"`
+	RequestBody   *RequestBodySpec        `json:"request_body"`
+	Parameters    []ParameterSpec         `json:"parameters"`
+	Responses     map[string]ResponseSpec `json:"responses"`
+	Version       string                  `json:"version" binding:"required,max=50"`
+	IsPublic      *bool                   `json:"is_public"`
 }
 
 type UpdateAPISpecRequest struct {
-	CategoryID  *uint                    `json:"category_id"`
-	Summary     *string                  `json:"summary" binding:"omitempty,max=500"`
-	Description *string                  `json:"description"`
-	DocMarkdown *string                  `json:"doc_markdown"`
-	DocSource   *string                  `json:"doc_source" binding:"omitempty,oneof=manual ai"`
-	Tags        *[]string                `json:"tags"`
-	RequestBody *RequestBodySpec         `json:"request_body"`
-	Parameters  *[]ParameterSpec         `json:"parameters"`
-	Responses   *map[string]ResponseSpec `json:"responses"`
-	IsPublic    *bool                    `json:"is_public"`
+	CategoryID    *uint                    `json:"category_id"`
+	Summary       *string                  `json:"summary" binding:"omitempty,max=500"`
+	Description   *string                  `json:"description"`
+	DocMarkdown   *string                  `json:"doc_markdown"`
+	DocMarkdownZh *string                  `json:"doc_markdown_zh"`
+	DocMarkdownEn *string                  `json:"doc_markdown_en"`
+	DocSource     *string                  `json:"doc_source" binding:"omitempty,oneof=manual ai"`
+	Tags          *[]string                `json:"tags"`
+	RequestBody   *RequestBodySpec         `json:"request_body"`
+	Parameters    *[]ParameterSpec         `json:"parameters"`
+	Responses     *map[string]ResponseSpec `json:"responses"`
+	IsPublic      *bool                    `json:"is_public"`
 }
 
 type BatchGenDocRequest struct {
@@ -62,28 +66,32 @@ type CreateAPIExampleRequest struct {
 // ========== Response DTOs ==========
 
 type APISpecResponse struct {
-	ID            uint                    `json:"id"`
-	ProjectID     uint                    `json:"project_id"`
-	CategoryID    *uint                   `json:"category_id,omitempty"`
-	Method        string                  `json:"method"`
-	Path          string                  `json:"path"`
-	Summary       string                  `json:"summary"`
-	Description   string                  `json:"description"`
-	DocMarkdown   string                  `json:"doc_markdown,omitempty"`
-	DocSource     string                  `json:"doc_source,omitempty"`
-	DocUpdatedAt  *time.Time              `json:"doc_updated_at,omitempty"`
-	TestContent   string                  `json:"test_content,omitempty"`
-	TestSource    string                  `json:"test_source,omitempty"`
-	TestUpdatedAt *time.Time              `json:"test_updated_at,omitempty"`
-	Tags          []string                `json:"tags"`
-	RequestBody   *RequestBodySpec        `json:"request_body,omitempty"`
-	Parameters    []ParameterSpec         `json:"parameters,omitempty"`
-	Responses     map[string]ResponseSpec `json:"responses,omitempty"`
-	Examples      []APIExampleResponse    `json:"examples,omitempty"`
-	Version       string                  `json:"version"`
-	IsPublic      bool                    `json:"is_public"`
-	CreatedAt     time.Time               `json:"created_at"`
-	UpdatedAt     time.Time               `json:"updated_at"`
+	ID             uint                    `json:"id"`
+	ProjectID      uint                    `json:"project_id"`
+	CategoryID     *uint                   `json:"category_id,omitempty"`
+	Method         string                  `json:"method"`
+	Path           string                  `json:"path"`
+	Summary        string                  `json:"summary"`
+	Description    string                  `json:"description"`
+	DocMarkdown    string                  `json:"doc_markdown,omitempty"`
+	DocMarkdownZh  string                  `json:"doc_markdown_zh,omitempty"`
+	DocMarkdownEn  string                  `json:"doc_markdown_en,omitempty"`
+	DocSource      string                  `json:"doc_source,omitempty"`
+	DocUpdatedAt   *time.Time              `json:"doc_updated_at,omitempty"`
+	DocUpdatedAtZh *time.Time              `json:"doc_updated_at_zh,omitempty"`
+	DocUpdatedAtEn *time.Time              `json:"doc_updated_at_en,omitempty"`
+	TestContent    string                  `json:"test_content,omitempty"`
+	TestSource     string                  `json:"test_source,omitempty"`
+	TestUpdatedAt  *time.Time              `json:"test_updated_at,omitempty"`
+	Tags           []string                `json:"tags"`
+	RequestBody    *RequestBodySpec        `json:"request_body,omitempty"`
+	Parameters     []ParameterSpec         `json:"parameters,omitempty"`
+	Responses      map[string]ResponseSpec `json:"responses,omitempty"`
+	Examples       []APIExampleResponse    `json:"examples,omitempty"`
+	Version        string                  `json:"version"`
+	IsPublic       bool                    `json:"is_public"`
+	CreatedAt      time.Time               `json:"created_at"`
+	UpdatedAt      time.Time               `json:"updated_at"`
 }
 
 type APIExampleResponse struct {
@@ -127,15 +135,17 @@ type ResponseSpec struct {
 // ToAPISpecPO converts domain request to persistent object
 func ToAPISpecPO(req *CreateAPISpecRequest) *APISpecPO {
 	po := &APISpecPO{
-		ProjectID:   req.ProjectID,
-		Method:      req.Method,
-		Path:        req.Path,
-		Summary:     req.Summary,
-		Description: req.Description,
-		DocMarkdown: req.DocMarkdown,
-		DocSource:   "manual",
-		Version:     req.Version,
-		CategoryID:  req.CategoryID,
+		ProjectID:     req.ProjectID,
+		Method:        req.Method,
+		Path:          req.Path,
+		Summary:       req.Summary,
+		Description:   req.Description,
+		DocMarkdown:   req.DocMarkdown,
+		DocMarkdownZh: req.DocMarkdownZh,
+		DocMarkdownEn: req.DocMarkdownEn,
+		DocSource:     "manual",
+		Version:       req.Version,
+		CategoryID:    req.CategoryID,
 	}
 
 	if req.DocSource != "" {
@@ -144,6 +154,14 @@ func ToAPISpecPO(req *CreateAPISpecRequest) *APISpecPO {
 	if req.DocMarkdown != "" {
 		now := time.Now()
 		po.DocUpdatedAt = &now
+	}
+	if req.DocMarkdownZh != "" {
+		now := time.Now()
+		po.DocUpdatedAtZh = &now
+	}
+	if req.DocMarkdownEn != "" {
+		now := time.Now()
+		po.DocUpdatedAtEn = &now
 	}
 
 	// Convert tags
@@ -187,23 +205,27 @@ func FromAPISpecPO(po *APISpecPO) *APISpecResponse {
 	}
 
 	resp := &APISpecResponse{
-		ID:            po.ID,
-		ProjectID:     po.ProjectID,
-		Method:        po.Method,
-		Path:          po.Path,
-		Summary:       po.Summary,
-		Description:   po.Description,
-		DocMarkdown:   po.DocMarkdown,
-		DocSource:     po.DocSource,
-		DocUpdatedAt:  po.DocUpdatedAt,
-		TestContent:   po.TestContent,
-		TestSource:    po.TestSource,
-		TestUpdatedAt: po.TestUpdatedAt,
-		Version:       po.Version,
-		IsPublic:      po.IsPublic,
-		CreatedAt:     po.CreatedAt,
-		UpdatedAt:     po.UpdatedAt,
-		CategoryID:    po.CategoryID,
+		ID:             po.ID,
+		ProjectID:      po.ProjectID,
+		Method:         po.Method,
+		Path:           po.Path,
+		Summary:        po.Summary,
+		Description:    po.Description,
+		DocMarkdown:    po.DocMarkdown,
+		DocMarkdownZh:  po.DocMarkdownZh,
+		DocMarkdownEn:  po.DocMarkdownEn,
+		DocSource:      po.DocSource,
+		DocUpdatedAt:   po.DocUpdatedAt,
+		DocUpdatedAtZh: po.DocUpdatedAtZh,
+		DocUpdatedAtEn: po.DocUpdatedAtEn,
+		TestContent:    po.TestContent,
+		TestSource:     po.TestSource,
+		TestUpdatedAt:  po.TestUpdatedAt,
+		Version:        po.Version,
+		IsPublic:       po.IsPublic,
+		CreatedAt:      po.CreatedAt,
+		UpdatedAt:      po.UpdatedAt,
+		CategoryID:     po.CategoryID,
 	}
 
 	// Parse tags

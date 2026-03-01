@@ -173,7 +173,15 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
   const [exampleResponseHeaders, setExampleResponseHeaders] = useState(initialExample.responseHeaders)
   const [exampleResponseBody, setExampleResponseBody] = useState(initialExample.responseBody)
   const [docLang, setDocLang] = useState<'zh' | 'en'>('zh')
-  const [docDraft, setDocDraft] = useState(spec.doc_markdown || '')
+  const getDocForLang = (s: APISpec, lang: 'zh' | 'en') => {
+    if (lang === 'zh') return s.doc_markdown_zh || s.doc_markdown || ''
+    return s.doc_markdown_en || s.doc_markdown || ''
+  }
+  const getDocUpdatedAtForLang = (s: APISpec, lang: 'zh' | 'en') => {
+    if (lang === 'zh') return s.doc_updated_at_zh || s.doc_updated_at
+    return s.doc_updated_at_en || s.doc_updated_at
+  }
+  const [docDraft, setDocDraft] = useState(getDocForLang(spec, 'zh'))
   const [docEditing, setDocEditing] = useState(false)
 
   const queryClient = useQueryClient()
@@ -216,11 +224,17 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
     setEditSummary(spec.summary || '')
     setEditDescription(spec.description || '')
     setEditTags(spec.tags?.join(', ') || '')
-    setDocDraft(spec.doc_markdown || '')
+    setDocDraft(getDocForLang(spec, docLang))
     setDocEditing(false)
     resetExampleForm()
     setEditing(false)
   }, [spec.id])
+
+  useEffect(() => {
+    if (!docEditing) {
+      setDocDraft(getDocForLang(spec, docLang))
+    }
+  }, [docLang, spec.doc_markdown, spec.doc_markdown_zh, spec.doc_markdown_en])
 
   useEffect(() => {
     setActiveTab(initialTab)
@@ -273,7 +287,7 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
       { projectId, id: spec.id, lang: docLang },
       {
         onSuccess: (result) => {
-          setDocDraft(result.doc_markdown || '')
+          setDocDraft(getDocForLang(result, docLang))
           setDocEditing(false)
           setActiveTab('doc')
           toast.success('Documentation generated')
@@ -286,14 +300,15 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
   }
 
   const handleSaveDoc = () => {
+    const data = docLang === 'zh'
+      ? { doc_markdown_zh: docDraft, doc_markdown: docDraft, doc_source: 'manual' as const }
+      : { doc_markdown_en: docDraft, doc_markdown: docDraft, doc_source: 'manual' as const }
+
     updateMutation.mutate(
       {
         projectId,
         id: spec.id,
-        data: {
-          doc_markdown: docDraft,
-          doc_source: 'manual',
-        },
+        data,
       },
       {
         onSuccess: () => {
@@ -438,7 +453,7 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
             )}
             <div className="flex items-center justify-between mt-3 gap-2">
               <div className="text-[11px] text-muted-foreground">
-                Doc source: <span className="font-medium">{spec.doc_source || 'manual'}</span> · Updated: {formatDocUpdateTime(spec.doc_updated_at)}
+                Doc source: <span className="font-medium">{spec.doc_source || 'manual'}</span> · Updated: {formatDocUpdateTime(getDocUpdatedAtForLang(spec, docLang))}
               </div>
               <Button size="sm" variant="outline" onClick={() => setActiveTab('doc')}>
                 Open Doc
@@ -453,7 +468,7 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 h-auto py-0">
             <TabsTrigger value="doc" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs py-2">
-              Doc {spec.doc_markdown && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />}
+              Doc {(spec.doc_markdown || spec.doc_markdown_zh || spec.doc_markdown_en) && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />}
             </TabsTrigger>
             <TabsTrigger value="params" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs py-2">
               Params {hasParams && <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">{pathParams.length + queryParams.length}</Badge>}
@@ -507,7 +522,7 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Source: {spec.doc_source || 'manual'} · Updated: {formatDocUpdateTime(spec.doc_updated_at)}
+                  Source: {spec.doc_source || 'manual'} · Updated: {formatDocUpdateTime(getDocUpdatedAtForLang(spec, docLang))}
                 </p>
 
                 {docEditing ? (
@@ -520,7 +535,7 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
                       className="font-mono text-xs"
                     />
                     <div className="flex items-center justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setDocDraft(spec.doc_markdown || ''); setDocEditing(false) }}>
+                      <Button size="sm" variant="outline" onClick={() => { setDocDraft(getDocForLang(spec, docLang)); setDocEditing(false) }}>
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveDoc} disabled={updateMutation.isPending}>

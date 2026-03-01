@@ -132,8 +132,12 @@ export interface APISpec {
     version: string
     is_public: boolean
     doc_markdown?: string
+    doc_markdown_zh?: string
+    doc_markdown_en?: string
     doc_source?: 'manual' | 'ai'
     doc_updated_at?: string
+    doc_updated_at_zh?: string
+    doc_updated_at_en?: string
 
     // Request definition (single array, use 'in' field to distinguish: path, query, header, cookie)
     parameters?: Parameter[]
@@ -223,6 +227,8 @@ export interface UpdateAPISpecRequest {
     responses?: Record<string, ResponseSpec>
     is_public?: boolean
     doc_markdown?: string
+    doc_markdown_zh?: string
+    doc_markdown_en?: string
     doc_source?: 'manual' | 'ai'
 }
 
