@@ -19,6 +19,8 @@ type MemberResponse struct {
 	ID        uint      `json:"id"`
 	ProjectID uint      `json:"project_id"`
 	UserID    uint      `json:"user_id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -34,6 +36,8 @@ func FromMemberPO(po *ProjectMemberPO) *MemberResponse {
 		ID:        po.ID,
 		ProjectID: po.ProjectID,
 		UserID:    po.UserID,
+		Username:  po.Username,
+		Email:     po.Email,
 		Role:      po.Role,
 		CreatedAt: po.CreatedAt,
 		UpdatedAt: po.UpdatedAt,

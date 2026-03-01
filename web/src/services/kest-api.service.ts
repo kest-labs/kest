@@ -110,6 +110,8 @@ type ProjectMember = {
     id: number
     project_id: number
     user_id: number
+    username: string
+    email: string
     role: ProjectMemberRole
     created_at: string
     updated_at: string

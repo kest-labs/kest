@@ -569,8 +569,8 @@ export function ProjectDetailPage() {
                   {members.map((member) => (
                     <div key={member.id} className="flex items-center justify-between px-4 py-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium">User #{member.user_id}</p>
-                        <p className="text-xs text-muted-foreground">Member ID: {member.id}</p>
+                        <p className="text-sm font-medium truncate">{member.username || 'Unknown user'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{member.email || '-'}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Select
