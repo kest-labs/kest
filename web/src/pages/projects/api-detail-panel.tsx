@@ -174,12 +174,12 @@ export function APIDetailPanel({ spec, projectId, initialTab = 'params', autoOpe
   const [exampleResponseBody, setExampleResponseBody] = useState(initialExample.responseBody)
   const [docLang, setDocLang] = useState<'zh' | 'en'>('zh')
   const getDocForLang = (s: APISpec, lang: 'zh' | 'en') => {
-    if (lang === 'zh') return s.doc_markdown_zh || s.doc_markdown || ''
-    return s.doc_markdown_en || s.doc_markdown || ''
+    if (lang === 'zh') return s.doc_markdown_zh || ''
+    return s.doc_markdown_en || ''
   }
   const getDocUpdatedAtForLang = (s: APISpec, lang: 'zh' | 'en') => {
-    if (lang === 'zh') return s.doc_updated_at_zh || s.doc_updated_at
-    return s.doc_updated_at_en || s.doc_updated_at
+    if (lang === 'zh') return s.doc_updated_at_zh
+    return s.doc_updated_at_en
   }
   const [docDraft, setDocDraft] = useState(getDocForLang(spec, 'zh'))
   const [docEditing, setDocEditing] = useState(false)
