@@ -26,8 +26,8 @@ type ProjectMemberPO struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	ProjectID uint           `gorm:"index;uniqueIndex:idx_project_user;not null" json:"project_id"`
 	UserID    uint           `gorm:"index;uniqueIndex:idx_project_user;not null" json:"user_id"`
-	Username  string         `gorm:"-" json:"username,omitempty"`
-	Email     string         `gorm:"-" json:"email,omitempty"`
+	Username  string         `gorm:"column:username;->;-:migration" json:"username,omitempty"`
+	Email     string         `gorm:"column:email;->;-:migration" json:"email,omitempty"`
 	Role      string         `gorm:"size:20;not null" json:"role"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
