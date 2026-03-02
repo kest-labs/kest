@@ -57,7 +57,7 @@ export interface ProjectMember {
 }
 
 export interface AddMemberRequest {
-    user_id: number
+    email: string
     role: ProjectAssignableRole
 }
 

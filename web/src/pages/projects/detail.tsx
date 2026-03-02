@@ -49,7 +49,7 @@ export function ProjectDetailPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<APISpec | null>(null)
-  const [newMemberUserId, setNewMemberUserId] = useState('')
+  const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState<ProjectAssignableRole>('write')
   const [memberRoleDraft, setMemberRoleDraft] = useState<Record<number, ProjectAssignableRole>>({})
   const deleteAPISpec = useDeleteAPISpec()
@@ -207,14 +207,15 @@ export function ProjectDetailPage() {
   }
 
   const handleAddMember = async () => {
-    const userId = Number(newMemberUserId)
-    if (!Number.isInteger(userId) || userId <= 0) {
-      toast.error('Please enter a valid user ID')
+    const email = newMemberEmail.trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      toast.error('Please enter a valid email address')
       return
     }
     try {
-      await addMember.mutateAsync({ user_id: userId, role: newMemberRole })
-      setNewMemberUserId('')
+      await addMember.mutateAsync({ email, role: newMemberRole })
+      setNewMemberEmail('')
       setNewMemberRole('write')
       toast.success('Member added')
     } catch (error: any) {
@@ -529,9 +530,9 @@ export function ProjectDetailPage() {
                 <h3 className="text-sm font-medium mb-3">Add Member</h3>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Input
-                    placeholder="User ID"
-                    value={newMemberUserId}
-                    onChange={(e) => setNewMemberUserId(e.target.value)}
+                    placeholder="Email"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
                     className="sm:w-48"
                   />
                   <Select

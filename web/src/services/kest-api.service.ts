@@ -140,7 +140,7 @@ export const memberApi = {
      */
     create: (
         projectId: number,
-        data: { user_id: number; role: ProjectAssignableRole }
+        data: { email: string; role: ProjectAssignableRole }
     ) => request.post<ProjectMember>(`/v1/projects/${projectId}/members`, data),
 
     /**
