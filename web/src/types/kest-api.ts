@@ -48,6 +48,10 @@ export interface ProjectMember {
     username: string
     email: string
     role: ProjectMemberRole
+    status?: 'active' | 'pending'
+    invited_at?: string
+    joined_at?: string
+    last_active_at?: string
     created_at: string
     updated_at: string
 }

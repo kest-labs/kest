@@ -114,6 +114,10 @@ type ProjectMember = {
     username: string
     email: string
     role: ProjectMemberRole
+    status?: 'active' | 'pending'
+    invited_at?: string
+    joined_at?: string
+    last_active_at?: string
     created_at: string
     updated_at: string
 }
@@ -153,6 +157,21 @@ export const memberApi = {
      */
     delete: (projectId: number, userId: number) =>
         request.delete(`/v1/projects/${projectId}/members/${userId}`),
+
+    /**
+     * Accept invitation by token
+     */
+    acceptInvitation: (projectId: number, data: { token: string }) =>
+        request.post<{ member_id: number; project_id: number; role: ProjectMemberRole; joined_at: string }>(
+            `/v1/projects/${projectId}/members/accept`,
+            data
+        ),
+
+    /**
+     * Decline invitation by token
+     */
+    declineInvitation: (projectId: number, data: { token: string; reason?: string }) =>
+        request.post(`/v1/projects/${projectId}/members/decline`, data),
 }
 
 // ========== API Spec APIs ==========

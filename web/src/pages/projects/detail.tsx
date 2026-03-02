@@ -570,7 +570,19 @@ export function ProjectDetailPage() {
                   {members.map((member) => (
                     <div key={member.id} className="flex items-center justify-between px-4 py-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{member.username || 'Unknown user'}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="text-sm font-medium truncate">{member.username || 'Unknown user'}</p>
+                          <span
+                            className={cn(
+                              'text-[10px] px-1.5 py-0.5 rounded border shrink-0',
+                              member.status === 'pending'
+                                ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                            )}
+                          >
+                            {member.status || 'active'}
+                          </span>
+                        </div>
                         <p className="text-xs text-muted-foreground truncate">{member.email || '-'}</p>
                       </div>
                       <div className="flex items-center gap-2">
