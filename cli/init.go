@@ -36,10 +36,10 @@ environments:
     base_url: http://localhost:3000
     variables:
       api_key: dev_key_123
-  
+
   staging:
     base_url: https://staging-api.example.com
-  
+
   prod:
     base_url: https://api.example.com
 
@@ -50,7 +50,34 @@ log_enabled: true
 			return err
 		}
 
+		// Create flow directory for .flow.md test files
+		flowDir := filepath.Join(dir, "flow")
+		if err := os.MkdirAll(flowDir, 0755); err != nil {
+			return err
+		}
+
+		// Create logs directory
+		logsDir := filepath.Join(dir, "logs")
+		if err := os.MkdirAll(logsDir, 0755); err != nil {
+			return err
+		}
+
+		// Create .gitignore
+		gitignoreContent := `# Kest
+*.log
+*.db
+.env
+`
+		gitignoreFile := filepath.Join(dir, ".gitignore")
+		if err := os.WriteFile(gitignoreFile, []byte(gitignoreContent), 0644); err != nil {
+			return err
+		}
+
 		fmt.Println("✓ Initialized Kest project in .kest/")
+		fmt.Println("  - config.yaml")
+		fmt.Println("  - flow/")
+		fmt.Println("  - logs/")
+		fmt.Println("  - .gitignore")
 		return nil
 	},
 }
