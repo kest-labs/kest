@@ -1,301 +1,240 @@
 # Apispec API
 
-> Generated: 2026-02-26 14:24:48
+> Updated to match `api/internal/modules/apispec` on 2026-03-10
 
 ## Base URL
 
-See [API Documentation](./api.md) for environment-specific base URLs.
+Use the API base URL plus:
+
+```text
+/v1/projects/:id/api-specs
+```
+
+All endpoints in this module require authentication and project membership.
 
 ## Endpoints
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/api-specs` | List Specs apispec | 🔓 |
-| `POST` | `/v1/projects/:id/api-specs` | Create Spec apispec | 🔓 |
-| `POST` | `/v1/projects/:id/api-specs/import` | Import Specs apispec | 🔓 |
-| `GET` | `/v1/projects/:id/api-specs/export` | Export Specs apispec | 🔓 |
-| `GET` | `/v1/projects/:id/api-specs/:sid` | Get Spec apispec | 🔓 |
-| `GET` | `/v1/projects/:id/api-specs/:sid/full` | Get Spec With Examples apispec | 🔓 |
-| `PATCH` | `/v1/projects/:id/api-specs/:sid` | Update Spec apispec | 🔓 |
-| `DELETE` | `/v1/projects/:id/api-specs/:sid` | Delete Spec apispec | 🔓 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/gen-doc` | Gen Doc apispec | 🔓 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/gen-test` | Gen Test apispec | 🔓 |
-| `GET` | `/v1/projects/:id/api-specs/:sid/examples` | List Examples apispec | 🔓 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/examples` | Create Example apispec | 🔓 |
+| `GET` | `/v1/projects/:id/api-specs` | List API specs | Required |
+| `POST` | `/v1/projects/:id/api-specs` | Create API spec | Required |
+| `POST` | `/v1/projects/:id/api-specs/import` | Batch import API specs | Required |
+| `GET` | `/v1/projects/:id/api-specs/export` | Export API specs | Required |
+| `POST` | `/v1/projects/:id/api-specs/batch-gen-doc` | Batch generate docs | Required |
+| `GET` | `/v1/projects/:id/api-specs/:sid` | Get API spec | Required |
+| `GET` | `/v1/projects/:id/api-specs/:sid/full` | Get API spec with examples | Required |
+| `PATCH` | `/v1/projects/:id/api-specs/:sid` | Update API spec | Required |
+| `DELETE` | `/v1/projects/:id/api-specs/:sid` | Delete API spec | Required |
+| `POST` | `/v1/projects/:id/api-specs/:sid/gen-doc` | Generate AI documentation | Required |
+| `POST` | `/v1/projects/:id/api-specs/:sid/gen-test` | Generate AI test flow | Required |
+| `GET` | `/v1/projects/:id/api-specs/:sid/examples` | List examples | Required |
+| `POST` | `/v1/projects/:id/api-specs/:sid/examples` | Create example | Required |
 
 ---
 
-## Details
+## Data Model
 
-### GET `/v1/projects/:id/api-specs`
+### API Spec fields
 
-**List Specs apispec**
+- `method`: HTTP method
+- `path`: endpoint path
+- `summary`: short summary
+- `description`: detailed description
+- `version`: version label
+- `tags`: string array
+- `parameters`: parameter array
+- `request_body`: request body schema
+- `responses`: response schema map
+- `is_public`: public/private flag
 
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
+### Parameter shape
 
-#### Path Parameters
+```json
+{
+  "name": "Authorization",
+  "in": "header",
+  "required": true,
+  "schema": {
+    "type": "string"
+  }
+}
+```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
+Use `parameters[].in` to distinguish `query`, `header`, `path`, and `cookie`. There is no separate top-level `headers` field on the API spec resource.
 
-#### Example
+### Example shape
 
-```bash
-curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/api-specs'
+```json
+{
+  "name": "Successful login",
+  "request_headers": {
+    "Content-Type": "application/json"
+  },
+  "request_body": {
+    "username": "john@example.com",
+    "password": "secret"
+  },
+  "response_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "access_token": "jwt-token"
+    }
+  },
+  "duration_ms": 84
+}
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs`
+## Request Bodies
 
-**Create Spec apispec**
+### Create API spec
 
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
+```json
+{
+  "method": "POST",
+  "path": "/api/v1/auth/login",
+  "summary": "User login",
+  "description": "Authenticate user and return an access token.",
+  "version": "1.0.0",
+  "tags": ["auth"],
+  "parameters": [
+    {
+      "name": "X-Request-ID",
+      "in": "header",
+      "required": false,
+      "schema": {
+        "type": "string"
+      }
+    }
+  ],
+  "request_body": {
+    "required": true,
+    "content_type": "application/json",
+    "schema": {
+      "type": "object"
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Login succeeded",
+      "content_type": "application/json",
+      "schema": {
+        "type": "object"
+      }
+    }
+  },
+  "is_public": true
+}
+```
 
-#### Path Parameters
+### Update API spec
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
+Any subset of these fields may be sent:
 
-#### Example
+- `category_id`
+- `path`
+- `summary`
+- `description`
+- `doc_markdown`
+- `doc_markdown_zh`
+- `doc_markdown_en`
+- `doc_source`
+- `tags`
+- `parameters`
+- `request_body`
+- `responses`
+- `is_public`
 
-```bash
-curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/api-specs'
+### Import API specs
+
+```json
+{
+  "specs": [
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "summary": "User login",
+      "version": "1.0.0"
+    }
+  ]
+}
+```
+
+### Batch generate docs
+
+```json
+{
+  "category_id": 5,
+  "lang": "zh",
+  "force": false
+}
+```
+
+### Create example
+
+```json
+{
+  "name": "Successful login",
+  "request_headers": {
+    "Content-Type": "application/json"
+  },
+  "request_body": {
+    "username": "john@example.com",
+    "password": "secret"
+  },
+  "response_status": 200,
+  "response_body": {
+    "code": 0
+  },
+  "duration_ms": 84
+}
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/import`
+## Query Parameters
 
-**Import Specs apispec**
+### List API specs
 
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
+- `page`
+- `page_size`
+- `version`
+- `method`
+- `tag`
+- `keyword`
 
-#### Path Parameters
+### Export API specs
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
+- `format`: `json`, `openapi`, `swagger`, or `markdown`
 
-#### Example
+### Generate doc / test
 
-```bash
-curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/api-specs/import'
-```
-
----
-
-### GET `/v1/projects/:id/api-specs/export`
-
-**Export Specs apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/api-specs/export'
-```
+- `lang`: `en` or `zh`
 
 ---
 
-### GET `/v1/projects/:id/api-specs/:sid`
-
-**Get Spec apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
+## Example cURL
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid'
+curl -X POST 'http://localhost:8025/v1/projects/1/api-specs' \
+  -H 'Authorization: Bearer TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "method": "GET",
+    "path": "/api/v1/users/me",
+    "summary": "Get current user",
+    "version": "1.0.0"
+  }'
 ```
-
----
-
-### GET `/v1/projects/:id/api-specs/:sid/full`
-
-**Get Spec With Examples apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid/full'
+curl -X POST 'http://localhost:8025/v1/projects/1/api-specs/1/examples' \
+  -H 'Authorization: Bearer TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Successful login",
+    "response_status": 200
+  }'
 ```
-
----
-
-### PATCH `/v1/projects/:id/api-specs/:sid`
-
-**Update Spec apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X PATCH 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid'
-```
-
----
-
-### DELETE `/v1/projects/:id/api-specs/:sid`
-
-**Delete Spec apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X DELETE 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid'
-```
-
----
-
-### POST `/v1/projects/:id/api-specs/:sid/gen-doc`
-
-**Gen Doc apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid/gen-doc'
-```
-
----
-
-### POST `/v1/projects/:id/api-specs/:sid/gen-test`
-
-**Gen Test apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid/gen-test'
-```
-
----
-
-### GET `/v1/projects/:id/api-specs/:sid/examples`
-
-**List Examples apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid/examples'
-```
-
----
-
-### POST `/v1/projects/:id/api-specs/:sid/examples`
-
-**Create Example apispec**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔓 Not required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `sid` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/api-specs/:sid/examples'
-```
-
----
-

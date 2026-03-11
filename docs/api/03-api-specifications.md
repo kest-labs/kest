@@ -2,7 +2,7 @@
 
 ## Overview
 
-The API Specifications module manages OpenAPI/Swagger specifications for projects, including CRUD operations, import/export, and example management.
+The API Specifications module manages structured API definitions for projects, including CRUD operations, batch import/export, AI-generated documentation/tests, and request/response examples.
 
 ## Base Path
 
@@ -55,32 +55,41 @@ GET /projects/1/api-specs?method=POST&tag=auth&keyword=login&page=1&page_size=10
     "items": [
       {
         "id": 1,
-        "name": "User API",
+        "project_id": 1,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "summary": "User login",
         "version": "1.0.0",
-        "description": "User management endpoints",
-        "status": "published",
-        "spec_type": "openapi",
-        "created_at": "2024-02-05T01:00:00Z",
-        "updated_at": "2024-02-05T01:00:00Z"
+        "description": "Authenticate user and return an access token.",
+        "tags": [
+          "auth",
+          "public"
+        ],
+        "is_public": true,
+        "created_at": "2026-02-05T01:00:00Z",
+        "updated_at": "2026-02-05T01:00:00Z"
       },
       {
         "id": 2,
-        "name": "Product API",
+        "project_id": 1,
+        "method": "GET",
+        "path": "/api/v1/users/me",
+        "summary": "Get current user",
         "version": "1.1.0",
-        "description": "Product catalog endpoints",
-        "status": "draft",
-        "spec_type": "openapi",
-        "created_at": "2024-02-05T01:30:00Z",
-        "updated_at": "2024-02-05T01:30:00Z"
+        "description": "Fetch the current authenticated user profile.",
+        "tags": [
+          "user"
+        ],
+        "is_public": false,
+        "created_at": "2026-02-05T01:30:00Z",
+        "updated_at": "2026-02-05T01:30:00Z"
       }
     ],
-    "pagination": {
-      "page": 1,
-      "per_page": 10,
+    "meta": {
       "total": 2,
-      "total_pages": 1,
-      "has_next": false,
-      "has_prev": false
+      "page": 1,
+      "page_size": 10,
+      "total_pages": 1
     }
   }
 }
@@ -106,68 +115,129 @@ Create a new API specification.
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ✅ Yes | min: 1, max: 100 | Specification name |
-| `version` | string | ✅ Yes | semver format | Version (e.g., 1.0.0) |
-| `description` | string | ❌ No | max: 500 | Description |
-| `spec_type` | string | ❌ No | enum: openapi, swagger, postman | Specification type |
-| `content` | object | ✅ Yes | - | OpenAPI/Swagger specification JSON |
-| `status` | string | ❌ No | enum: draft, published, deprecated | Status (default: draft) |
+| `category_id` | integer | ❌ No | - | Optional category ID |
+| `method` | string | ✅ Yes | oneof: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS | HTTP method |
+| `path` | string | ✅ Yes | max: 500 | API path |
+| `summary` | string | ❌ No | max: 500 | Short summary |
+| `description` | string | ❌ No | - | Detailed description |
+| `doc_markdown` | string | ❌ No | - | Default generated/manual markdown |
+| `doc_markdown_zh` | string | ❌ No | - | Chinese markdown |
+| `doc_markdown_en` | string | ❌ No | - | English markdown |
+| `doc_source` | string | ❌ No | oneof: manual, ai | Documentation source |
+| `tags` | string[] | ❌ No | - | Tags |
+| `parameters` | object[] | ❌ No | - | Parameter definitions. Use `in: "header"` for request headers |
+| `request_body` | object | ❌ No | - | Request body schema |
+| `responses` | object | ❌ No | - | Response schema map keyed by status code |
+| `version` | string | ✅ Yes | max: 50 | Version label |
+| `is_public` | boolean | ❌ No | - | Whether the spec is public. Defaults to `true` |
 
 #### Example Request
 
 ```json
 {
-  "name": "User API",
+  "method": "POST",
+  "path": "/api/v1/auth/login",
+  "summary": "User login",
+  "description": "Authenticate user and return an access token.",
   "version": "1.0.0",
-  "description": "User management endpoints",
-  "spec_type": "openapi",
-  "content": {
-    "openapi": "3.0.0",
-    "info": {
-      "title": "User API",
-      "version": "1.0.0",
-      "description": "User management endpoints"
-    },
-    "paths": {
-      "/users": {
-        "get": {
-          "summary": "List users",
-          "responses": {
-            "200": {
-              "description": "Success"
-            }
-          }
+  "tags": ["auth", "public"],
+  "parameters": [
+    {
+      "name": "X-Request-ID",
+      "in": "header",
+      "description": "Optional trace identifier",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "req_123456"
+    }
+  ],
+  "request_body": {
+    "description": "Login credentials",
+    "required": true,
+    "content_type": "application/json",
+    "schema": {
+      "type": "object",
+      "required": ["username", "password"],
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
         }
       }
     }
   },
-  "status": "draft"
+  "responses": {
+    "200": {
+      "description": "Login succeeded",
+      "content_type": "application/json",
+      "schema": {
+        "type": "object"
+      }
+    },
+    "401": {
+      "description": "Invalid credentials",
+      "content_type": "application/json",
+      "schema": {
+        "type": "object"
+      }
+    }
+  },
+  "is_public": true
 }
 ```
+
+> Header definitions are stored in `parameters` with `in: "header"`. There is no separate top-level `headers` field on the API spec itself.
 
 #### Response (201 Created)
 
 ```json
 {
   "code": 0,
-  "message": "success",
+  "message": "created",
   "data": {
     "id": 1,
-    "name": "User API",
+    "project_id": 1,
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "summary": "User login",
     "version": "1.0.0",
-    "description": "User management endpoints",
-    "status": "draft",
-    "spec_type": "openapi",
-    "content": {
-      "openapi": "3.0.0",
-      "info": {
-        "title": "User API",
-        "version": "1.0.0"
-      },
-      "paths": { ... }
+    "description": "Authenticate user and return an access token.",
+    "tags": ["auth", "public"],
+    "parameters": [
+      {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "req_123456"
+      }
+    ],
+    "request_body": {
+      "description": "Login credentials",
+      "required": true,
+      "content_type": "application/json",
+      "schema": {
+        "type": "object"
+      }
     },
-    "created_at": "2024-02-05T01:00:00Z",
-    "updated_at": "2024-02-05T01:00:00Z"
+    "responses": {
+      "200": {
+        "description": "Login succeeded",
+        "content_type": "application/json",
+        "schema": {
+          "type": "object"
+        }
+      }
+    },
+    "is_public": true,
+    "created_at": "2026-02-05T01:00:00Z",
+    "updated_at": "2026-02-05T01:00:00Z"
   }
 }
 ```
@@ -197,24 +267,46 @@ Get a specific API specification.
   "message": "success",
   "data": {
     "id": 1,
-    "name": "User API",
+    "project_id": 1,
+    "category_id": 5,
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "summary": "User login",
     "version": "1.0.0",
-    "description": "User management endpoints",
-    "status": "published",
-    "spec_type": "openapi",
-    "content": {
-      "openapi": "3.0.0",
-      "info": {
-        "title": "User API",
-        "version": "1.0.0",
-        "description": "User management endpoints"
-      },
-      "paths": { ... },
-      "components": { ... }
+    "description": "Authenticate user and return an access token.",
+    "tags": ["auth", "public"],
+    "request_body": {
+      "description": "Login credentials",
+      "required": true,
+      "content_type": "application/json",
+      "schema": {
+        "type": "object"
+      }
     },
-    "created_at": "2024-02-05T01:00:00Z",
-    "updated_at": "2024-02-05T01:00:00Z",
-    "examples_count": 5
+    "parameters": [
+      {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Login succeeded",
+        "content_type": "application/json",
+        "schema": {
+          "type": "object"
+        }
+      }
+    },
+    "doc_markdown": "## POST /api/v1/auth/login",
+    "doc_source": "manual",
+    "is_public": true,
+    "created_at": "2026-02-05T01:00:00Z",
+    "updated_at": "2026-02-05T01:00:00Z"
   }
 }
 ```
@@ -244,42 +336,29 @@ Get API specification including all request/response examples.
   "message": "success",
   "data": {
     "id": 1,
-    "name": "User API",
+    "project_id": 1,
+    "method": "POST",
+    "path": "/api/v1/auth/login",
     "version": "1.0.0",
-    "content": {
-      "openapi": "3.0.0",
-      "info": { ... },
-      "paths": { ... }
-    },
+    "summary": "User login",
     "examples": [
       {
         "id": 1,
-        "path": "/users",
-        "method": "GET",
-        "status_code": 200,
+        "api_spec_id": 1,
+        "name": "Success case",
+        "response_status": 200,
         "request_headers": {
-          "Authorization": "Bearer token"
+          "Content-Type": "application/json"
         },
-        "response_body": {
-          "users": [...]
-        },
-        "description": "Successful user list response"
-      },
-      {
-        "id": 2,
-        "path": "/users",
-        "method": "POST",
-        "status_code": 201,
         "request_body": {
-          "username": "john",
-          "email": "john@example.com"
+          "username": "john@example.com",
+          "password": "secret"
         },
         "response_body": {
-          "id": 1,
-          "username": "john",
-          "email": "john@example.com"
+          "token": "jwt-token"
         },
-        "description": "Create user example"
+        "duration_ms": 84,
+        "created_at": "2026-02-05T03:00:00Z"
       }
     ]
   }
@@ -307,31 +386,36 @@ Update an existing API specification.
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ❌ No | min: 1, max: 100 | Specification name |
-| `version` | string | ❌ No | semver format | Version |
-| `description` | string | ❌ No | max: 500 | Description |
-| `content` | object | ❌ No | - | OpenAPI/Swagger specification |
-| `status` | string | ❌ No | enum: draft, published, deprecated | Status |
+| `category_id` | integer | ❌ No | - | Optional category ID |
+| `path` | string | ❌ No | max: 500 | API path |
+| `summary` | string | ❌ No | max: 500 | Short summary |
+| `description` | string | ❌ No | - | Detailed description |
+| `doc_markdown` | string | ❌ No | - | Default markdown |
+| `doc_markdown_zh` | string | ❌ No | - | Chinese markdown |
+| `doc_markdown_en` | string | ❌ No | - | English markdown |
+| `doc_source` | string | ❌ No | oneof: manual, ai | Documentation source |
+| `tags` | string[] | ❌ No | - | Tags |
+| `parameters` | object[] | ❌ No | - | Parameter definitions |
+| `request_body` | object | ❌ No | - | Request body schema |
+| `responses` | object | ❌ No | - | Response schema map |
+| `is_public` | boolean | ❌ No | - | Public visibility |
 
 #### Example Request
 
 ```json
 {
-  "version": "1.1.0",
-  "content": {
-    "openapi": "3.0.0",
-    "info": {
-      "title": "User API",
-      "version": "1.1.0"
-    },
-    "paths": {
-      "/users": {
-        "get": { ... },
-        "post": { ... }
-      }
+  "summary": "User login (v2)",
+  "description": "Authenticate user and return access and refresh tokens.",
+  "tags": ["auth", "token"],
+  "request_body": {
+    "description": "Updated login payload",
+    "required": true,
+    "content_type": "application/json",
+    "schema": {
+      "type": "object"
     }
   },
-  "status": "published"
+  "is_public": false
 }
 ```
 
@@ -340,13 +424,18 @@ Update an existing API specification.
 ```json
 {
   "code": 0,
-  "message": "Specification updated successfully",
+  "message": "success",
   "data": {
     "id": 1,
-    "name": "User API",
-    "version": "1.1.0",
-    "status": "published",
-    "updated_at": "2024-02-05T02:00:00Z"
+    "project_id": 1,
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "summary": "User login (v2)",
+    "version": "1.0.0",
+    "description": "Authenticate user and return access and refresh tokens.",
+    "tags": ["auth", "token"],
+    "is_public": false,
+    "updated_at": "2026-02-05T02:00:00Z"
   }
 }
 ```
@@ -370,15 +459,9 @@ Delete an API specification and all associated examples.
 | `id` | integer | ✅ Yes | Project ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
-#### Response (200 OK)
+#### Response (204 No Content)
 
-```json
-{
-  "code": 0,
-  "message": "Specification deleted successfully",
-  "data": null
-}
-```
+This endpoint returns an empty response body on success.
 
 ---
 
@@ -386,7 +469,7 @@ Delete an API specification and all associated examples.
 
 ### POST /projects/:id/api-specs/import
 
-Import API specifications from various sources.
+Import multiple API specifications using the same payload shape as `Create API Specification`.
 
 **Authentication**: Required
 
@@ -400,37 +483,33 @@ Import API specifications from various sources.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `source` | string | ✅ Yes | Import source: url, file, postman, swagger |
-| `data` | object/string | ✅ Yes | Import data based on source |
-| `options` | object | ❌ No | Import options |
+| `specs` | object[] | ✅ Yes | Array of API specs to create or upsert by `method + path` |
 
 #### Example Requests
 
-**From URL:**
-
 ```json
 {
-  "source": "url",
-  "data": "https://api.example.com/openapi.json",
-  "options": {
-    "auto_publish": false,
-    "prefix": "Imported - "
-  }
-}
-```
-
-**From Postman Collection:**
-
-```json
-{
-  "source": "postman",
-  "data": {
-    "info": {
-      "name": "My API",
-      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  "specs": [
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "summary": "User login",
+      "version": "1.0.0",
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema": {
+          "type": "object"
+        }
+      }
     },
-    "item": [...]
-  }
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "summary": "Get current user",
+      "version": "1.0.0"
+    }
+  ]
 }
 ```
 
@@ -439,19 +518,9 @@ Import API specifications from various sources.
 ```json
 {
   "code": 0,
-  "message": "Import completed",
+  "message": "success",
   "data": {
-    "imported": 3,
-    "updated": 1,
-    "errors": [],
-    "specs": [
-      {
-        "id": 1,
-        "name": "User API",
-        "version": "1.0.0",
-        "status": "draft"
-      }
-    ]
+    "message": "Specs imported successfully"
   }
 }
 ```
@@ -476,33 +545,47 @@ Export API specifications in various formats.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `format` | string | ❌ No | json | Export format: json, yaml, postman |
-| `ids` | string | ❌ No | - | Comma-separated spec IDs (all if not provided) |
-| `include_examples` | boolean | ❌ No | false | Include request/response examples |
+| `format` | string | ❌ No | json | Export format: `json`, `openapi`, `swagger`, or `markdown` |
 
 #### Example Request
 
 ```
-GET /projects/1/api-specs/export?format=yaml&include_examples=true
+GET /projects/1/api-specs/export?format=openapi
 ```
 
 #### Response (200 OK)
 
-**Content-Type**: application/json or application/x-yaml
+The response payload depends on `format`:
+
+- `json`: array of API spec objects
+- `openapi` / `swagger`: generated OpenAPI-like document
+- `markdown`: markdown string
+
+Example for `format=openapi`:
 
 ```json
 {
-  "project": {
-    "id": 1,
-    "name": "My Project",
-    "specs": [
-      {
-        "name": "User API",
-        "version": "1.0.0",
-        "content": { ... },
-        "examples": [ ... ]
+  "code": 0,
+  "message": "success",
+  "data": {
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Generated API Documentation",
+      "version": "1.0.0"
+    },
+    "paths": {
+      "/api/v1/auth/login": {
+        "post": {
+          "summary": "User login",
+          "description": "Authenticate user and return an access token.",
+          "responses": {
+            "200": {
+              "description": "Successful response"
+            }
+          }
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -698,40 +781,34 @@ Create a request/response example for an API specification.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `path` | string | ✅ Yes | API path (e.g., /users) |
-| `method` | string | ✅ Yes | HTTP method (GET, POST, etc.) |
-| `status_code` | integer | ✅ Yes | Response status code |
+| `name` | string | ✅ Yes | Example name |
 | `request_headers` | object | ❌ No | Request headers |
 | `request_body` | any | ❌ No | Request body |
-| `response_headers` | object | ❌ No | Response headers |
+| `response_status` | integer | ✅ Yes | Response status code |
 | `response_body` | any | ❌ No | Response body |
-| `description` | string | ❌ No | Example description |
+| `duration_ms` | integer | ❌ No | Request duration in milliseconds |
 
 #### Example Request
 
 ```json
 {
-  "path": "/users",
-  "method": "POST",
-  "status_code": 201,
+  "name": "Successful login",
   "request_headers": {
     "Content-Type": "application/json",
     "Authorization": "Bearer token"
   },
   "request_body": {
     "username": "john_doe",
-    "email": "john@example.com"
+    "password": "SecurePass123!"
   },
-  "response_headers": {
-    "Content-Type": "application/json"
-  },
+  "response_status": 200,
   "response_body": {
-    "id": 1,
-    "username": "john_doe",
-    "email": "john@example.com",
-    "created_at": "2024-02-05T01:00:00Z"
+    "code": 0,
+    "data": {
+      "access_token": "jwt-token"
+    }
   },
-  "description": "Create a new user"
+  "duration_ms": 84
 }
 ```
 
@@ -740,14 +817,28 @@ Create a request/response example for an API specification.
 ```json
 {
   "code": 0,
-  "message": "Example created successfully",
+  "message": "created",
   "data": {
     "id": 1,
-    "path": "/users",
-    "method": "POST",
-    "status_code": 201,
-    "description": "Create a new user",
-    "created_at": "2024-02-05T01:00:00Z"
+    "api_spec_id": 1,
+    "name": "Successful login",
+    "request_headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer token"
+    },
+    "request_body": {
+      "username": "john_doe",
+      "password": "SecurePass123!"
+    },
+    "response_status": 200,
+    "response_body": {
+      "code": 0,
+      "data": {
+        "access_token": "jwt-token"
+      }
+    },
+    "duration_ms": 84,
+    "created_at": "2026-02-05T01:00:00Z"
   }
 }
 ```
@@ -764,31 +855,30 @@ const projectId = 1;
 
 // Create a new API specification
 const createSpec = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/api-specs`, {
+  const response = await fetch(`http://localhost:8025/v1/projects/${projectId}/api-specs`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
-      name: 'Product API',
+      method: 'GET',
+      path: '/api/v1/products',
+      summary: 'List products',
       version: '1.0.0',
-      spec_type: 'openapi',
-      content: {
-        openapi: '3.0.0',
-        info: {
-          title: 'Product API',
-          version: '1.0.0'
-        },
-        paths: {
-          '/products': {
-            get: {
-              summary: 'List products',
-              responses: {
-                '200': { description: 'Success' }
-              }
-            }
-          }
+      parameters: [
+        {
+          name: 'Authorization',
+          in: 'header',
+          required: false,
+          schema: { type: 'string' }
+        }
+      ],
+      responses: {
+        '200': {
+          description: 'Success',
+          content_type: 'application/json',
+          schema: { type: 'object' }
         }
       }
     })
@@ -797,20 +887,28 @@ const createSpec = async () => {
   return await response.json();
 };
 
-// Import from URL
-const importSpec = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/api-specs/import`, {
+// Batch import specs
+const importSpecs = async () => {
+  const response = await fetch(`http://localhost:8025/v1/projects/${projectId}/api-specs/import`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
-      source: 'url',
-      data: 'https://petstore.swagger.io/v2/swagger.json',
-      options: {
-        auto_publish: false
-      }
+      specs: [
+        {
+          method: 'POST',
+          path: '/api/v1/auth/login',
+          summary: 'User login',
+          version: '1.0.0',
+          request_body: {
+            required: true,
+            content_type: 'application/json',
+            schema: { type: 'object' }
+          }
+        }
+      ]
     })
   });
   
@@ -819,14 +917,14 @@ const importSpec = async () => {
 
 // Export specifications
 const exportSpecs = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/api-specs/export?format=yaml&include_examples=true`, {
+  const response = await fetch(`http://localhost:8025/v1/projects/${projectId}/api-specs/export?format=openapi`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
   
-  const yaml = await response.text();
-  console.log('Exported YAML:', yaml);
+  const result = await response.json();
+  console.log('Exported document:', result.data);
 };
 ```
 
@@ -834,104 +932,99 @@ const exportSpecs = async () => {
 
 ```bash
 # Create API spec
-curl -X POST http://localhost:8025/projects/1/api-specs \
+curl -X POST http://localhost:8025/v1/projects/1/api-specs \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
-    "name": "User API",
+    "method": "GET",
+    "path": "/api/v1/users/me",
+    "summary": "Get current user",
     "version": "1.0.0",
-    "spec_type": "openapi",
-    "content": {
-      "openapi": "3.0.0",
-      "info": {
-        "title": "User API",
-        "version": "1.0.0"
-      },
-      "paths": {
-        "/users": {
-          "get": {
-            "summary": "List users"
-          }
+    "parameters": [
+      {
+        "name": "Authorization",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string"
         }
       }
-    }
+    ]
   }'
 
 # List API specs
-curl -X GET "http://localhost:8025/projects/1/api-specs?page=1&per_page=10" \
+curl -X GET "http://localhost:8025/v1/projects/1/api-specs?page=1&page_size=10" \
   -H "Authorization: Bearer TOKEN"
 
-# Import from URL
-curl -X POST http://localhost:8025/projects/1/api-specs/import \
+# Batch import
+curl -X POST http://localhost:8025/v1/projects/1/api-specs/import \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
-    "source": "url",
-    "data": "https://api.example.com/openapi.json"
+    "specs": [
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "summary": "User login",
+        "version": "1.0.0"
+      }
+    ]
   }'
 
-# Export as YAML
-curl -X GET "http://localhost:8025/projects/1/api-specs/export?format=yaml" \
+# Export as OpenAPI
+curl -X GET "http://localhost:8025/v1/projects/1/api-specs/export?format=openapi" \
   -H "Authorization: Bearer TOKEN" \
-  -o exported-specs.yaml
+  -o exported-specs.json
 ```
 
 ---
 
-## Supported Specification Formats
+## Supported Export Formats
 
-### OpenAPI 3.0.x
+### JSON
+
+Returns an array of API spec objects in the internal Kest schema.
+
+### OpenAPI / Swagger
 
 ```json
 {
   "openapi": "3.0.0",
   "info": { ... },
-  "paths": { ... },
-  "components": { ... }
+  "paths": { ... }
 }
 ```
 
-### Swagger 2.0
+### Markdown
 
-```json
-{
-  "swagger": "2.0",
-  "info": { ... },
-  "paths": { ... },
-  "definitions": { ... }
-}
-```
+```md
+# API Documentation
 
-### Postman Collection
+## GET /api/v1/users/me
 
-```json
-{
-  "info": { ... },
-  "item": [ ... ],
-  "variable": [ ... ]
-}
+**Summary**: Get current user
 ```
 
 ---
 
 ## Best Practices
 
-1. **Version Management**: Use semantic versioning (semver)
-2. **Status Workflow**: draft → published → deprecated
-3. **Documentation**: Always provide clear descriptions
-4. **Examples**: Include comprehensive request/response examples
-5. **Validation**: Validate OpenAPI specs before importing
+1. **Version Management**: Keep `version` meaningful and consistent across related endpoints
+2. **Headers as Parameters**: Store request headers in `parameters` with `in: "header"`
+3. **Schema Clarity**: Define request and response schemas explicitly, even for simple payloads
+4. **Examples**: Add example records for common success and failure cases
+5. **AI Docs/Test Generation**: Treat generated docs/tests as drafts and review them before publishing
 
 ---
 
 ## Testing
 
-Run the API specification tests:
+Run the API module test suite from the `api/` directory:
 
 ```bash
 # Unit tests
 go test ./internal/modules/apispec/...
 
-# Integration tests
-go test ./tests/feature/apispec_test.go
+# Full backend suite
+go test ./...
 ```
