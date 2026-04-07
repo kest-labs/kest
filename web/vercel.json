@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "https://api.kest.dev/:path*" },
-    { "source": "/(.*)", "destination": "/" }
-  ]
-}
