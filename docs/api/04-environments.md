@@ -2,15 +2,51 @@
 
 ## Overview
 
-The Environments module manages environment configurations for projects, including variables, secrets, and deployment settings.
+The Environments module manages project-scoped runtime configurations such as `base_url`,
+`variables`, and `headers`.
 
 ## Base Path
 
-```
+```text
 /v1/projects/:id/environments
 ```
 
-All environment endpoints require authentication and are scoped to a specific project.
+All endpoints require authentication and are scoped to a specific project.
+
+## Actual API Shape
+
+This document is aligned with the current backend implementation in
+`api/internal/modules/environment`.
+
+Current implementation notes:
+
+- There are 6 endpoints: `list`, `create`, `get`, `update`, `delete`, `duplicate`
+- The resource fields are `name`, `display_name`, `base_url`, `variables`, `headers`
+- The list endpoint returns `{ items, total }` and does not support pagination or search
+- There is no `slug`, `type`, `description`, `secrets`, `is_default`, or `last_deployed_at`
+
+---
+
+## Environment Object
+
+```json
+{
+  "id": 1,
+  "project_id": 12,
+  "name": "production",
+  "display_name": "Production",
+  "base_url": "https://api.example.com",
+  "variables": {
+    "APP_ENV": "prod",
+    "LOG_LEVEL": "info"
+  },
+  "headers": {
+    "X-API-Key": "demo-key"
+  },
+  "created_at": "2024-02-05T01:00:00Z",
+  "updated_at": "2024-02-05T01:00:00Z"
+}
+```
 
 ---
 
@@ -18,29 +54,24 @@ All environment endpoints require authentication and are scoped to a specific pr
 
 ### GET /projects/:id/environments
 
-List all environments for a project.
+List all environments under a project.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (`Project Read` access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | Yes | Project ID |
 
 #### Query Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `page` | integer | ❌ No | 1 | Page number |
-| `per_page` | integer | ❌ No | 20 | Items per page (max 100) |
-| `search` | string | ❌ No | - | Search by name |
-| `type` | string | ❌ No | - | Filter by type (development, staging, production) |
+None.
 
 #### Example Request
 
-```
-GET /projects/1/environments?page=1&per_page=10
+```text
+GET /projects/12/environments
 ```
 
 #### Response (200 OK)
@@ -53,47 +84,21 @@ GET /projects/1/environments?page=1&per_page=10
     "items": [
       {
         "id": 1,
-        "name": "Development",
-        "slug": "dev",
-        "type": "development",
-        "description": "Development environment",
+        "project_id": 12,
+        "name": "production",
+        "display_name": "Production",
+        "base_url": "https://api.example.com",
         "variables": {
-          "API_URL": "https://dev-api.example.com",
-          "DEBUG": "true"
+          "APP_ENV": "prod"
         },
-        "secrets": {
-          "API_KEY": "********"
+        "headers": {
+          "X-API-Key": "demo-key"
         },
-        "is_default": true,
-        "created_at": "2024-02-05T01:00:00Z",
-        "updated_at": "2024-02-05T01:00:00Z"
-      },
-      {
-        "id": 2,
-        "name": "Production",
-        "slug": "prod",
-        "type": "production",
-        "description": "Production environment",
-        "variables": {
-          "API_URL": "https://api.example.com",
-          "DEBUG": "false"
-        },
-        "secrets": {
-          "API_KEY": "********"
-        },
-        "is_default": false,
         "created_at": "2024-02-05T01:00:00Z",
         "updated_at": "2024-02-05T01:00:00Z"
       }
     ],
-    "pagination": {
-      "page": 1,
-      "per_page": 10,
-      "total": 2,
-      "total_pages": 1,
-      "has_next": false,
-      "has_prev": false
-    }
+    "total": 1
   }
 }
 ```
@@ -104,46 +109,40 @@ GET /projects/1/environments?page=1&per_page=10
 
 ### POST /projects/:id/environments
 
-Create a new environment for a project.
+Create a new environment under a project.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (`Project Write` access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | Yes | Project ID |
 
 #### Request Body
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ✅ Yes | min: 1, max: 100 | Environment name |
-| `slug` | string | ❌ No | min: 1, max: 50 | URL-friendly slug (auto-generated) |
-| `type` | string | ✅ Yes | enum: development, staging, production | Environment type |
-| `description` | string | ❌ No | max: 500 | Description |
-| `variables` | object | ❌ No | - | Environment variables (key-value pairs) |
-| `secrets` | object | ❌ No | - | Secret variables (encrypted) |
-| `is_default` | boolean | ❌ No | - | Set as default environment |
+| `name` | string | Yes | max: 50 | Internal environment name |
+| `display_name` | string | No | max: 100 | Human-readable display name |
+| `base_url` | string | No | max: 500 | Base URL used by the environment |
+| `variables` | object | No | - | Arbitrary JSON object stored as variables |
+| `headers` | object | No | - | String key/value headers |
 
 #### Example Request
 
 ```json
 {
-  "name": "Staging",
-  "slug": "staging",
-  "type": "staging",
-  "description": "Staging environment for testing",
+  "name": "staging",
+  "display_name": "Staging",
+  "base_url": "https://staging-api.example.com",
   "variables": {
-    "API_URL": "https://staging-api.example.com",
-    "DEBUG": "false",
-    "LOG_LEVEL": "info"
+    "APP_ENV": "staging",
+    "DEBUG": false
   },
-  "secrets": {
-    "API_KEY": "sk_test_123456789",
-    "DATABASE_PASSWORD": "staging_pass_123"
-  },
-  "is_default": false
+  "headers": {
+    "X-Trace-Env": "staging"
+  }
 }
 ```
 
@@ -152,23 +151,20 @@ Create a new environment for a project.
 ```json
 {
   "code": 0,
-  "message": "success",
+  "message": "created",
   "data": {
-    "id": 3,
-    "name": "Staging",
-    "slug": "staging",
-    "type": "staging",
-    "description": "Staging environment for testing",
+    "id": 2,
+    "project_id": 12,
+    "name": "staging",
+    "display_name": "Staging",
+    "base_url": "https://staging-api.example.com",
     "variables": {
-      "API_URL": "https://staging-api.example.com",
-      "DEBUG": "false",
-      "LOG_LEVEL": "info"
+      "APP_ENV": "staging",
+      "DEBUG": false
     },
-    "secrets": {
-      "API_KEY": "********",
-      "DATABASE_PASSWORD": "********"
+    "headers": {
+      "X-Trace-Env": "staging"
     },
-    "is_default": false,
     "created_at": "2024-02-05T01:30:00Z",
     "updated_at": "2024-02-05T01:30:00Z"
   }
@@ -181,16 +177,16 @@ Create a new environment for a project.
 
 ### GET /projects/:id/environments/:eid
 
-Get a specific environment details.
+Get a single environment by ID.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (`Project Read` access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
-| `eid` | integer | ✅ Yes | Environment ID |
+| `id` | integer | Yes | Project ID |
+| `eid` | integer | Yes | Environment ID |
 
 #### Response (200 OK)
 
@@ -200,23 +196,19 @@ Get a specific environment details.
   "message": "success",
   "data": {
     "id": 1,
-    "name": "Development",
-    "slug": "dev",
-    "type": "development",
-    "description": "Development environment",
+    "project_id": 12,
+    "name": "production",
+    "display_name": "Production",
+    "base_url": "https://api.example.com",
     "variables": {
-      "API_URL": "https://dev-api.example.com",
-      "DEBUG": "true",
-      "LOG_LEVEL": "debug"
+      "APP_ENV": "prod",
+      "TIMEOUT_MS": 5000
     },
-    "secrets": {
-      "API_KEY": "sk_dev_123456789",
-      "DATABASE_URL": "postgres://user:pass@localhost:5432/dev"
+    "headers": {
+      "X-API-Key": "demo-key"
     },
-    "is_default": true,
     "created_at": "2024-02-05T01:00:00Z",
-    "updated_at": "2024-02-05T01:00:00Z",
-    "last_deployed_at": "2024-02-05T02:00:00Z"
+    "updated_at": "2024-02-05T01:00:00Z"
   }
 }
 ```
@@ -229,37 +221,39 @@ Get a specific environment details.
 
 Update an existing environment.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (`Project Write` access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
-| `eid` | integer | ✅ Yes | Environment ID |
+| `id` | integer | Yes | Project ID |
+| `eid` | integer | Yes | Environment ID |
 
 #### Request Body
 
+All fields are optional. Only send the fields you want to update.
+
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ❌ No | min: 1, max: 100 | Environment name |
-| `type` | string | ❌ No | enum: development, staging, production | Environment type |
-| `description` | string | ❌ No | max: 500 | Description |
-| `variables` | object | ❌ No | - | Environment variables (merge with existing) |
-| `secrets` | object | ❌ No | - | Secret variables (merge with existing) |
-| `is_default` | boolean | ❌ No | - | Set as default environment |
+| `name` | string | No | max: 50 | Internal environment name |
+| `display_name` | string | No | max: 100 | Human-readable display name |
+| `base_url` | string | No | max: 500 | Base URL used by the environment |
+| `variables` | object | No | - | Replaces the stored variables object |
+| `headers` | object | No | - | Replaces the stored headers object |
 
 #### Example Request
 
 ```json
 {
-  "description": "Updated development environment",
+  "display_name": "Production CN",
+  "base_url": "https://api-cn.example.com",
   "variables": {
-    "API_URL": "https://new-dev-api.example.com",
-    "NEW_FEATURE": "enabled"
+    "APP_ENV": "prod",
+    "REGION": "cn"
   },
-  "secrets": {
-    "NEW_SECRET": "secret_value_123"
+  "headers": {
+    "X-Region": "cn"
   }
 }
 ```
@@ -269,22 +263,21 @@ Update an existing environment.
 ```json
 {
   "code": 0,
-  "message": "Environment updated successfully",
+  "message": "success",
   "data": {
     "id": 1,
-    "name": "Development",
-    "description": "Updated development environment",
+    "project_id": 12,
+    "name": "production",
+    "display_name": "Production CN",
+    "base_url": "https://api-cn.example.com",
     "variables": {
-      "API_URL": "https://new-dev-api.example.com",
-      "DEBUG": "true",
-      "LOG_LEVEL": "debug",
-      "NEW_FEATURE": "enabled"
+      "APP_ENV": "prod",
+      "REGION": "cn"
     },
-    "secrets": {
-      "API_KEY": "sk_dev_123456789",
-      "DATABASE_URL": "postgres://user:pass@localhost:5432/dev",
-      "NEW_SECRET": "********"
+    "headers": {
+      "X-Region": "cn"
     },
+    "created_at": "2024-02-05T01:00:00Z",
     "updated_at": "2024-02-05T02:00:00Z"
   }
 }
@@ -298,26 +291,18 @@ Update an existing environment.
 
 Delete an environment.
 
-**⚠️ Warning**: This action is irreversible and will affect all tests using this environment.
-
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (`Project Write` access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
-| `eid` | integer | ✅ Yes | Environment ID |
+| `id` | integer | Yes | Project ID |
+| `eid` | integer | Yes | Environment ID |
 
-#### Response (200 OK)
+#### Response (204 No Content)
 
-```json
-{
-  "code": 0,
-  "message": "Environment deleted successfully",
-  "data": null
-}
-```
+This endpoint returns no response body on success.
 
 ---
 
@@ -325,32 +310,33 @@ Delete an environment.
 
 ### POST /projects/:id/environments/:eid/duplicate
 
-Duplicate an environment with a new name.
+Create a new environment by copying an existing one.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (`Project Write` access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
-| `eid` | integer | ✅ Yes | Source Environment ID |
+| `id` | integer | Yes | Project ID |
+| `eid` | integer | Yes | Source environment ID |
 
 #### Request Body
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ✅ Yes | min: 1, max: 100 | New environment name |
-| `slug` | string | ❌ No | min: 1, max: 50 | URL-friendly slug |
-| `include_secrets` | boolean | ❌ No | default: false | Include secrets in duplicate |
+| `name` | string | Yes | max: 50 | New environment name |
+| `override_vars` | object | No | - | Variables to override on top of the copied source |
 
 #### Example Request
 
 ```json
 {
-  "name": "Development Copy",
-  "slug": "dev-copy",
-  "include_secrets": true
+  "name": "production-copy",
+  "override_vars": {
+    "REGION": "us",
+    "DEBUG": false
+  }
 }
 ```
 
@@ -359,211 +345,23 @@ Duplicate an environment with a new name.
 ```json
 {
   "code": 0,
-  "message": "Environment duplicated successfully",
+  "message": "created",
   "data": {
-    "id": 4,
-    "name": "Development Copy",
-    "slug": "dev-copy",
-    "type": "development",
-    "description": "Duplicated from Development",
+    "id": 3,
+    "project_id": 12,
+    "name": "production-copy",
+    "display_name": "Production",
+    "base_url": "https://api.example.com",
     "variables": {
-      "API_URL": "https://dev-api.example.com",
-      "DEBUG": "true"
+      "APP_ENV": "prod",
+      "REGION": "us",
+      "DEBUG": false
     },
-    "secrets": {
-      "API_KEY": "********"
+    "headers": {
+      "X-API-Key": "demo-key"
     },
-    "is_default": false,
-    "created_at": "2024-02-05T02:30:00Z"
+    "created_at": "2024-02-05T03:00:00Z",
+    "updated_at": "2024-02-05T03:00:00Z"
   }
 }
-```
-
----
-
-## Environment Types
-
-### Development
-
-- Used for local development
-- Debug mode enabled
-- Verbose logging
-- No rate limiting
-
-### Staging
-
-- Pre-production testing
-- Production-like configuration
-- Basic rate limiting
-- Error tracking enabled
-
-### Production
-
-- Live environment
-- Strict rate limiting
-- Minimal logging
-- Full monitoring
-
----
-
-## Variable Types
-
-### Variables
-
-- Plain text key-value pairs
-- Visible to all project members
-- Used for non-sensitive configuration
-
-### Secrets
-
-- Encrypted key-value pairs
-- Masked in responses (shown as ********)
-- Only visible to users with write access
-- Used for sensitive data (API keys, passwords)
-
----
-
-## Usage Examples
-
-### JavaScript (Fetch API)
-
-```javascript
-const token = 'your-jwt-token';
-const projectId = 1;
-
-// Create environment
-const createEnvironment = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/environments`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      name: 'Testing',
-      type: 'staging',
-      variables: {
-        API_URL: 'https://test-api.example.com',
-        DEBUG: 'true'
-      },
-      secrets: {
-        API_KEY: 'sk_test_123456789'
-      }
-    })
-  });
-  
-  return await response.json();
-};
-
-// Update environment
-const updateEnvironment = async (envId) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/environments/${envId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      variables: {
-        NEW_VAR: 'new_value'
-      }
-    })
-  });
-  
-  return await response.json();
-};
-
-// Duplicate environment
-const duplicateEnvironment = async (envId) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/environments/${envId}/duplicate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      name: 'Environment Copy',
-      include_secrets: false
-    })
-  });
-  
-  return await response.json();
-};
-```
-
-### cURL
-
-```bash
-# Create environment
-curl -X POST http://localhost:8025/projects/1/environments \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{
-    "name": "Production",
-    "type": "production",
-    "variables": {
-      "API_URL": "https://api.example.com",
-      "DEBUG": "false"
-    },
-    "secrets": {
-      "API_KEY": "sk_prod_123456789"
-    }
-  }'
-
-# List environments
-curl -X GET "http://localhost:8025/projects/1/environments?page=1&per_page=10" \
-  -H "Authorization: Bearer TOKEN"
-
-# Update environment
-curl -X PATCH http://localhost:8025/projects/1/environments/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{
-    "variables": {
-      "NEW_SETTING": "enabled"
-    }
-  }'
-
-# Duplicate environment
-curl -X POST http://localhost:8025/projects/1/environments/1/duplicate \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{
-    "name": "Environment Copy",
-    "include_secrets": true
-  }'
-```
-
----
-
-## Security Considerations
-
-1. **Secret Encryption**: All secrets are encrypted at rest
-2. **Access Control**: Only users with write access can view secrets
-3. **Audit Log**: All environment changes are logged
-4. **Default Environment**: Only one environment can be marked as default
-5. **Production Protection**: Additional verification required for production changes
-
----
-
-## Best Practices
-
-1. **Naming Convention**: Use clear, descriptive names
-2. **Variable Grouping**: Group related variables with prefixes
-3. **Secret Rotation**: Regularly rotate sensitive secrets
-4. **Environment Promotion**: Use duplication to promote environments
-5. **Documentation**: Document all variables and their purposes
-
----
-
-## Testing
-
-Run the environment tests:
-
-```bash
-# Unit tests
-go test ./internal/modules/environment/...
-
-# Integration tests
-go test ./tests/feature/environment_test.go
 ```
