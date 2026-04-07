@@ -12,6 +12,11 @@ The API Specifications module manages structured API definitions for projects, i
 
 All API spec endpoints require authentication and are scoped to a specific project.
 
+## Permissions
+
+- Read operations require at least the project `read` role.
+- Write operations require at least the project `write` role.
+
 ---
 
 ## 1. List API Specifications
@@ -762,7 +767,59 @@ Requires LLM configuration via environment variables:
 
 ---
 
-## 12. Create Example
+## 12. List Examples
+
+### GET /projects/:id/api-specs/:sid/examples
+
+List all request/response examples for an API specification.
+
+**Authentication**: Required
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | ✅ Yes | Project ID |
+| `sid` | integer | ✅ Yes | Specification ID |
+
+#### Response (200 OK)
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "api_spec_id": 1,
+        "name": "Successful login",
+        "request_headers": {
+          "Content-Type": "application/json"
+        },
+        "request_body": {
+          "username": "john_doe",
+          "password": "SecurePass123!"
+        },
+        "response_status": 200,
+        "response_body": {
+          "code": 0,
+          "data": {
+            "access_token": "jwt-token"
+          }
+        },
+        "duration_ms": 84,
+        "created_at": "2026-02-05T01:00:00Z"
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+---
+
+## 13. Create Example
 
 ### POST /projects/:id/api-specs/:sid/examples
 
