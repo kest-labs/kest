@@ -1,6 +1,7 @@
 'use client';
 
-import { startTransition, useDeferredValue, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   Search,
   SendHorizonal,
   Trash2,
+  X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,9 +45,23 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { useDeleteCollection, useUpdateCollection } from '@/hooks/use-collections';
-import { useCreateRequest } from '@/hooks/use-requests';
-import type { ProjectRequest, RequestAuthConfig, RequestKeyValue } from '@/types/request';
+import {
+  useCreateCollection,
+  useDeleteCollection,
+  useUpdateCollection,
+} from '@/hooks/use-collections';
+import { collectionService } from '@/services/collection';
+import { useCreateRequest, useDeleteRequest, useUpdateRequest } from '@/hooks/use-requests';
+import { requestService } from '@/services/request';
+import type { ProjectCollection, ProjectCollectionTreeNode } from '@/types/collection';
+import type {
+  CreateRequestRequest,
+  ProjectRequest,
+  RequestAuthConfig,
+  RequestKeyValue,
+  RunRequestResponse,
+  UpdateRequestRequest,
+} from '@/types/request';
 import { cn } from '@/utils';
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -66,6 +82,7 @@ interface ResponseDraft {
   statusLabel: string;
   durationMs: number | null;
   sizeBytes: number | null;
+  headers: Record<string, string>;
   body: string;
   error: string | null;
 }
@@ -107,7 +124,8 @@ interface CollectionNode {
 interface InitialWorkbenchState {
   tabs: RequestPageTab[];
   collections: CollectionNode[];
-  activeTabId: string;
+  activeTabId: string | null;
+  openTabIds: string[];
   activeCollectionId: string | null;
   expandedCollectionIds: string[];
   nextTabIndex: number;
@@ -149,23 +167,74 @@ const createEmptyResponse = (): ResponseDraft => ({
   statusLabel: '',
   durationMs: null,
   sizeBytes: null,
+  headers: {},
   body: '',
   error: null,
 });
 
+const resolveNextActiveTabId = (
+  currentOpenTabIds: string[],
+  nextOpenTabIds: string[],
+  currentActiveTabId: string | null
+) => {
+  if (currentActiveTabId && nextOpenTabIds.includes(currentActiveTabId)) {
+    return currentActiveTabId;
+  }
+
+  if (!currentActiveTabId) {
+    return nextOpenTabIds[0] ?? null;
+  }
+
+  const currentIndex = currentOpenTabIds.indexOf(currentActiveTabId);
+  if (currentIndex === -1) {
+    return nextOpenTabIds[0] ?? null;
+  }
+
+  return (
+    nextOpenTabIds[currentIndex] ??
+    nextOpenTabIds[currentIndex - 1] ??
+    nextOpenTabIds[0] ??
+    null
+  );
+};
+
 const DEFAULT_NEW_REQUEST_TITLE = 'New Request';
-const DEFAULT_NEW_REQUEST_URL = 'https://localhost:3000/health';
+const DEFAULT_NEW_REQUEST_URL = '';
+// The API requires a non-empty URL for persisted requests, but the workbench allows blank
+// draft URLs before a request is runnable. We store an `.invalid` placeholder and map it
+// back to an empty field in the UI.
+const PERSISTED_DRAFT_URL_PLACEHOLDER = 'https://placeholder.invalid';
+const WORKBENCH_PAGE_SIZE = 100;
 
 const isPersistedCollectionId = (value: string) => {
   const numericValue = Number(value);
   return Number.isInteger(numericValue) && numericValue > 0;
 };
 
+const getPersistedRequestId = (value: string) => {
+  if (!value.startsWith('request-')) {
+    return null;
+  }
+
+  const numericValue = Number(value.slice('request-'.length));
+  return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : null;
+};
+
 const toRequestMethod = (method: string): RequestMethod =>
   METHOD_OPTIONS.includes(method as RequestMethod) ? (method as RequestMethod) : 'GET';
 
-const toBodyMode = (bodyType: string): BodyMode =>
-  BODY_MODE_OPTIONS.includes(bodyType as BodyMode) ? (bodyType as BodyMode) : 'json';
+const toBodyMode = (bodyType: string): BodyMode => {
+  switch (bodyType) {
+    case 'form-data':
+      return 'form-data';
+    case 'text':
+      return 'raw';
+    case 'json':
+      return 'json';
+    default:
+      return 'json';
+  }
+};
 
 const toAuthorizationMode = (auth?: RequestAuthConfig | null): AuthorizationMode => {
   if (!auth?.type) {
@@ -208,7 +277,8 @@ const toRequestPageTab = (request: ProjectRequest): RequestPageTab => {
     title: request.name,
     collectionId: String(request.collection_id),
     method,
-    url: request.url || DEFAULT_NEW_REQUEST_URL,
+    url:
+      request.url === PERSISTED_DRAFT_URL_PLACEHOLDER ? DEFAULT_NEW_REQUEST_URL : request.url || '',
     activeSection:
       method === 'POST' || method === 'PUT' || method === 'PATCH' ? 'body' : 'params',
     paramsRows,
@@ -231,7 +301,7 @@ const createRequestPageTab = (
   title: overrides.title ?? (index === 1 ? 'New Request' : `New Request ${index}`),
   collectionId: overrides.collectionId ?? null,
   method: overrides.method ?? 'GET',
-  url: overrides.url ?? 'https://localhost:3000/health',
+  url: overrides.url ?? DEFAULT_NEW_REQUEST_URL,
   activeSection: overrides.activeSection ?? 'params',
   paramsMode: overrides.paramsMode ?? 'table',
   paramsRows: overrides.paramsRows ?? [createKeyValueRow()],
@@ -240,13 +310,13 @@ const createRequestPageTab = (
   authorizationValue: overrides.authorizationValue ?? '',
   headersMode: overrides.headersMode ?? 'table',
   headersRows:
-    overrides.headersRows ?? [createKeyValueRow('Accept', 'application/json', 'Default mock header')],
+    overrides.headersRows ?? [createKeyValueRow('Accept', 'application/json', 'Default header')],
   headersBulk: overrides.headersBulk ?? 'Accept: application/json',
   bodyMode: overrides.bodyMode ?? 'json',
   bodyContent: overrides.bodyContent ?? '{\n  "ping": "hello"\n}',
   scripts:
     overrides.scripts ??
-    "// Inspect the mock response here\npm.test('status should be 200', () => true);",
+    "// Inspect the response here\npm.test('status should be 200', () => true);",
   settings:
     overrides.settings ?? {
       followRedirects: true,
@@ -294,150 +364,252 @@ const getTabSaveLabel = (tab: RequestPageTab) => {
   }
 };
 
-const getRowsRecord = (rows: KeyValueRow[]) =>
-  rows.reduce<Record<string, string>>((accumulator, row) => {
-    if (row.key.trim()) {
-      accumulator[row.key.trim()] = row.value.trim();
-    }
-
-    return accumulator;
-  }, {});
-
 const byteLength = (value: string) =>
   typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(value).length : value.length;
 
-const buildMockResponse = (
-  tab: RequestPageTab,
-  environment: (typeof ENVIRONMENT_OPTIONS)[number]
-): ResponseDraft => {
-  if (!tab.url.trim()) {
+const requestBodyTypeFromMode = (mode: BodyMode, value: string) => {
+  if (!value.trim()) {
+    return 'none';
+  }
+
+  switch (mode) {
+    case 'form-data':
+      return 'form-data';
+    case 'raw':
+      return 'text';
+    case 'json':
+    default:
+      return 'json';
+  }
+};
+
+const toRequestKeyValues = (mode: BulkMode, rows: KeyValueRow[], bulkValue: string): RequestKeyValue[] =>
+  (mode === 'bulk' ? bulkTextToRows(bulkValue) : rows)
+    .filter((row) => row.key.trim())
+    .map((row) => ({
+      key: row.key.trim(),
+      value: row.value,
+      enabled: true,
+      description: row.description.trim() || undefined,
+    }));
+
+const toRequestAuthConfig = (
+  mode: AuthorizationMode,
+  value: string
+): RequestAuthConfig | null => {
+  if (mode === 'none') {
+    return null;
+  }
+
+  if (mode === 'bearer') {
     return {
-      ...createEmptyResponse(),
-      error: 'Enter a request URL before sending.',
+      type: 'bearer',
+      bearer: {
+        token: value.trim(),
+      },
     };
   }
 
-  let parsedUrl: URL;
+  if (mode === 'basic') {
+    const separatorIndex = value.indexOf(':');
+    const username = separatorIndex >= 0 ? value.slice(0, separatorIndex).trim() : value.trim();
+    const password = separatorIndex >= 0 ? value.slice(separatorIndex + 1).trim() : '';
 
-  try {
-    parsedUrl = new URL(tab.url);
-  } catch {
     return {
-      ...createEmptyResponse(),
-      error: 'The URL is not valid. Try a value like https://localhost:3000/health.',
+      type: 'basic',
+      basic: {
+        username,
+        password,
+      },
     };
   }
 
-  const durationMs = 180 + Math.floor(Math.random() * 620);
-  const status =
-    parsedUrl.pathname.includes('error') ? 500 : tab.method === 'POST' ? 201 : 200;
-  const statusLabel = status >= 400 ? 'Server Error' : status === 201 ? 'Created' : 'OK';
-
-  const responseBody = JSON.stringify(
-    {
-      ok: status < 400,
-      environment,
-      request: {
-        method: tab.method,
-        url: tab.url,
-        params: getRowsRecord(tab.paramsRows),
-        headers: getRowsRecord(tab.headersRows),
-        authorization: tab.authorizationMode === 'none' ? null : tab.authorizationMode,
-        body_mode: tab.bodyMode,
-      },
-      data:
-        parsedUrl.pathname === '/health'
-          ? {
-              service: 'mock-gateway',
-              status: 'healthy',
-              timestamp: new Date().toISOString(),
-            }
-          : {
-              message: 'Mock response generated by the front-end workbench.',
-              echoed_body: tab.bodyContent || null,
-            },
-      meta: {
-        request_tab: tab.title,
-        sent_at: new Date().toISOString(),
-        follow_redirects: tab.settings.followRedirects,
-        strict_tls: tab.settings.strictTls,
-      },
-    },
-    null,
-    2
-  );
+  const separatorIndex = value.indexOf(':');
+  const key = separatorIndex >= 0 ? value.slice(0, separatorIndex).trim() : 'X-API-Key';
+  const apiValue = separatorIndex >= 0 ? value.slice(separatorIndex + 1).trim() : value.trim();
 
   return {
-    status,
-    statusLabel,
-    durationMs,
-    sizeBytes: byteLength(responseBody),
-    body: responseBody,
-    error: null,
+    type: 'api-key',
+    api_key: {
+      key,
+      value: apiValue,
+      in: 'header',
+    },
   };
 };
 
-const getInitialWorkbenchState = (): InitialWorkbenchState => {
-  const healthRequest = createRequestPageTab(1, {
-    id: 'request-health',
-    title: 'Health Check',
-    collectionId: 'collection-core',
-    method: 'GET',
-    url: 'https://localhost:3000/health',
-    paramsRows: [createKeyValueRow('verbose', 'true', 'Return dependency detail')],
-    paramsBulk: 'verbose: true # Return dependency detail',
+const toRequestScripts = (value: string) => ({
+  pre_request: '',
+  test: value,
+});
+
+const formatResponseBody = (value: string) => {
+  if (!value.trim()) {
+    return '';
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+};
+
+const toResponseDraft = (response: RunRequestResponse): ResponseDraft => ({
+  status: response.status,
+  statusLabel: response.status_text.replace(/^\d+\s*/, '').trim(),
+  durationMs: response.time,
+  sizeBytes: response.size || byteLength(response.body),
+  headers: response.headers ?? {},
+  body: formatResponseBody(response.body),
+  error: null,
+});
+
+const flattenCollectionTree = (nodes: ProjectCollectionTreeNode[]): ProjectCollectionTreeNode[] =>
+  nodes.flatMap((node) => [node, ...flattenCollectionTree(node.children ?? [])]);
+
+const sortCollectionTreeNodes = (nodes: ProjectCollectionTreeNode[]) => {
+  nodes.sort((left, right) => {
+    if (left.sort_order !== right.sort_order) {
+      return left.sort_order - right.sort_order;
+    }
+
+    return left.id - right.id;
   });
 
-  const createUserRequest = createRequestPageTab(2, {
-    id: 'request-create-user',
-    title: 'Create User',
-    collectionId: 'collection-core',
-    method: 'POST',
-    url: 'https://localhost:3000/api/users',
-    activeSection: 'body',
-    bodyContent: '{\n  "name": "Ming",\n  "email": "ming@example.com"\n}',
+  nodes.forEach((node) => {
+    if (node.children?.length) {
+      sortCollectionTreeNodes(node.children);
+    }
+  });
+};
+
+const buildCollectionTreeFromList = (
+  collections: ProjectCollection[]
+): ProjectCollectionTreeNode[] => {
+  const nodeMap = new Map<number, ProjectCollectionTreeNode>();
+  const rootNodes: ProjectCollectionTreeNode[] = [];
+
+  collections.forEach((collection) => {
+    nodeMap.set(collection.id, {
+      id: collection.id,
+      name: collection.name,
+      description: collection.description,
+      project_id: collection.project_id,
+      parent_id: collection.parent_id,
+      is_folder: collection.is_folder,
+      sort_order: collection.sort_order,
+      children: [],
+    });
   });
 
-  const tokenRequest = createRequestPageTab(3, {
-    id: 'request-issue-token',
-    title: 'Issue Token',
-    collectionId: 'collection-auth',
-    method: 'POST',
-    url: 'https://localhost:3000/api/auth/token',
-    authorizationMode: 'basic',
-    authorizationValue: 'admin:secret',
-    bodyContent: '{\n  "scope": "read:all"\n}',
+  collections.forEach((collection) => {
+    const node = nodeMap.get(collection.id);
+    if (!node) {
+      return;
+    }
+
+    if (collection.parent_id == null) {
+      rootNodes.push(node);
+      return;
+    }
+
+    const parentNode = nodeMap.get(collection.parent_id);
+    if (!parentNode) {
+      rootNodes.push(node);
+      return;
+    }
+
+    parentNode.children = parentNode.children ?? [];
+    parentNode.children.push(node);
   });
 
-  const tabs = [healthRequest, createUserRequest, tokenRequest];
-  const collections: CollectionNode[] = [
-    {
-      id: 'collection-core',
-      name: 'Core APIs',
-      color: COLLECTION_COLORS[0],
-      requestIds: [healthRequest.id, createUserRequest.id],
-    },
-    {
-      id: 'collection-auth',
-      name: 'Identity',
-      color: COLLECTION_COLORS[1],
-      requestIds: [tokenRequest.id],
-    },
-    {
-      id: 'collection-playground',
-      name: 'Playground',
-      color: COLLECTION_COLORS[2],
-      requestIds: [],
-    },
-  ];
+  sortCollectionTreeNodes(rootNodes);
+  return rootNodes;
+};
+
+const fetchAllProjectCollections = async (
+  projectId: number
+): Promise<ProjectCollectionTreeNode[]> => {
+  const items: ProjectCollection[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await collectionService.list({
+      projectId,
+      page,
+      perPage: WORKBENCH_PAGE_SIZE,
+    });
+
+    items.push(...response.items);
+    totalPages = Math.max(response.meta?.pages ?? 1, 1);
+    page += 1;
+  } while (page <= totalPages);
+
+  return buildCollectionTreeFromList(items);
+};
+
+const fetchAllCollectionRequests = async (
+  projectId: number,
+  collectionId: number
+): Promise<ProjectRequest[]> => {
+  const items: ProjectRequest[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await requestService.list({
+      projectId,
+      collectionId,
+      page,
+      perPage: WORKBENCH_PAGE_SIZE,
+    });
+
+    items.push(...response.items);
+    totalPages = Math.max(response.meta?.pages ?? 1, 1);
+    page += 1;
+  } while (page <= totalPages);
+
+  return items;
+};
+
+const buildWorkbenchStateFromServer = (
+  treeNodes: ProjectCollectionTreeNode[],
+  requestsByCollectionId: Record<number, ProjectRequest[]>
+): InitialWorkbenchState => {
+  const flattenedCollections = flattenCollectionTree(treeNodes);
+  const collections: CollectionNode[] = flattenedCollections.map((collection, index) => ({
+    id: String(collection.id),
+    name: collection.name,
+    color: COLLECTION_COLORS[index % COLLECTION_COLORS.length],
+    requestIds: (requestsByCollectionId[collection.id] ?? []).map((request) => `request-${request.id}`),
+  }));
+  const tabs = flattenedCollections.flatMap((collection) =>
+    (requestsByCollectionId[collection.id] ?? []).map((request) => toRequestPageTab(request))
+  );
+  const firstTab = tabs[0] ?? null;
 
   return {
     tabs,
     collections,
-    activeTabId: healthRequest.id,
-    activeCollectionId: 'collection-core',
+    activeTabId: firstTab?.id ?? null,
+    openTabIds: firstTab ? [firstTab.id] : [],
+    activeCollectionId: firstTab?.collectionId ?? collections[0]?.id ?? null,
     expandedCollectionIds: collections.map((collection) => collection.id),
-    nextTabIndex: 4,
+    nextTabIndex: tabs.length + 1,
+  };
+};
+
+const getInitialWorkbenchState = (): InitialWorkbenchState => {
+  return {
+    tabs: [],
+    collections: [],
+    activeTabId: null,
+    openTabIds: [],
+    activeCollectionId: null,
+    expandedCollectionIds: [],
+    nextTabIndex: 1,
   };
 };
 
@@ -449,7 +621,8 @@ export function ApiRequestWorkbench({
   const initialState = useMemo(() => getInitialWorkbenchState(), []);
   const [tabs, setTabs] = useState<RequestPageTab[]>(initialState.tabs);
   const [collections, setCollections] = useState<CollectionNode[]>(initialState.collections);
-  const [activeTabId, setActiveTabId] = useState(initialState.activeTabId);
+  const [activeTabId, setActiveTabId] = useState<string | null>(initialState.activeTabId);
+  const [openTabIds, setOpenTabIds] = useState<string[]>(initialState.openTabIds);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(
     initialState.activeCollectionId
   );
@@ -465,18 +638,64 @@ export function ApiRequestWorkbench({
   const [creatingRequestCollectionId, setCreatingRequestCollectionId] = useState<string | null>(
     null
   );
+  const [deletingRequestTabId, setDeletingRequestTabId] = useState<string | null>(null);
+  const [renamingRequestTabId, setRenamingRequestTabId] = useState<string | null>(null);
   const [renameDialogCollectionId, setRenameDialogCollectionId] = useState<string | null>(null);
   const [renameDraftName, setRenameDraftName] = useState('');
+  const [renameDialogRequestTabId, setRenameDialogRequestTabId] = useState<string | null>(null);
+  const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
+  const [hasHydratedServerState, setHasHydratedServerState] = useState(false);
+  const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
   const createRequestMutation = useCreateRequest(projectId);
+  const updateRequestMutation = useUpdateRequest(projectId);
+  const deleteRequestMutation = useDeleteRequest(projectId);
+  const collectionTreeQuery = useQuery({
+    queryKey: ['collections', 'project', projectId, 'workbench-tree'],
+    queryFn: () => fetchAllProjectCollections(projectId),
+    enabled: Number.isInteger(projectId) && projectId > 0,
+    staleTime: 60_000,
+    placeholderData: (previousData) => previousData,
+  });
 
   const deferredSidebarQuery = useDeferredValue(sidebarQuery);
+  const serverCollections = useMemo(
+    () => flattenCollectionTree(collectionTreeQuery.data ?? []),
+    [collectionTreeQuery.data]
+  );
+  const persistedCollectionIds = useMemo(
+    () => serverCollections.map((collection) => collection.id),
+    [serverCollections]
+  );
+  const collectionRequestsQuery = useQuery({
+    queryKey: ['collections', 'project', projectId, 'workbench-requests', persistedCollectionIds],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        persistedCollectionIds.map(async (collectionId) => {
+          const requests = await fetchAllCollectionRequests(projectId, collectionId);
+          return [collectionId, requests] as const;
+        })
+      );
+
+      return Object.fromEntries(entries) as Record<number, ProjectRequest[]>;
+    },
+    enabled: collectionTreeQuery.isSuccess && persistedCollectionIds.length > 0,
+    staleTime: 60_000,
+    placeholderData: (previousData) => previousData,
+  });
 
   const tabMap = useMemo(() => new Map(tabs.map((tab) => [tab.id, tab])), [tabs]);
+  const openTabs = useMemo(
+    () =>
+      openTabIds
+        .map((tabId) => tabMap.get(tabId))
+        .filter((tab): tab is RequestPageTab => Boolean(tab)),
+    [openTabIds, tabMap]
+  );
   const activeTab = useMemo(
-    () => tabs.find((tab) => tab.id === activeTabId) ?? tabs[0] ?? null,
-    [activeTabId, tabs]
+    () => (activeTabId ? tabMap.get(activeTabId) ?? null : openTabs[0] ?? null),
+    [activeTabId, openTabs, tabMap]
   );
   const scratchpadTabs = useMemo(
     () => tabs.filter((tab) => !tab.collectionId),
@@ -534,6 +753,44 @@ export function ApiRequestWorkbench({
     setTabs((current) => current.map((tab) => (tab.id === tabId ? updater(tab) : tab)));
   };
 
+  useEffect(() => {
+    const canHydrateWorkbench =
+      collectionTreeQuery.isSuccess &&
+      (persistedCollectionIds.length === 0 || collectionRequestsQuery.isSuccess);
+
+    if (
+      !canHydrateWorkbench ||
+      hasHydratedServerState ||
+      tabs.length > 0 ||
+      collections.length > 0
+    ) {
+      return;
+    }
+
+    const nextState = buildWorkbenchStateFromServer(
+      serverCollections,
+      collectionRequestsQuery.data ?? {}
+    );
+
+    setTabs(nextState.tabs);
+    setCollections(nextState.collections);
+    setActiveTabId(nextState.activeTabId);
+    setOpenTabIds(nextState.openTabIds);
+    setActiveCollectionId(nextState.activeCollectionId);
+    setExpandedCollectionIds(nextState.expandedCollectionIds);
+    setNextTabIndex(nextState.nextTabIndex);
+    setHasHydratedServerState(true);
+  }, [
+    collectionRequestsQuery.data,
+    collectionRequestsQuery.isSuccess,
+    collectionTreeQuery.isSuccess,
+    collections.length,
+    hasHydratedServerState,
+    persistedCollectionIds.length,
+    serverCollections,
+    tabs.length,
+  ]);
+
   const updateActiveTab = (updater: (tab: RequestPageTab) => RequestPageTab) => {
     if (!activeTab) {
       return;
@@ -542,20 +799,178 @@ export function ApiRequestWorkbench({
     updateTab(activeTab.id, updater);
   };
 
-  const createCollection = () => {
-    const collectionNumber = collections.length + 1;
-    const nextCollection: CollectionNode = {
-      id: createLocalId('collection'),
-      name: `New Collection ${collectionNumber}`,
-      color: COLLECTION_COLORS[(collectionNumber - 1) % COLLECTION_COLORS.length],
-      requestIds: [],
-    };
+  const buildCreatePayloadFromTab = (
+    tab: RequestPageTab,
+    collectionId: number,
+    sortOrder: number,
+    name = tab.title
+  ): CreateRequestRequest => {
+    const scripts = toRequestScripts(tab.scripts);
 
-    startTransition(() => {
+    return {
+      collection_id: collectionId,
+      name,
+      description: '',
+      method: tab.method,
+      url: tab.url.trim() || PERSISTED_DRAFT_URL_PLACEHOLDER,
+      headers: toRequestKeyValues(tab.headersMode, tab.headersRows, tab.headersBulk),
+      query_params: toRequestKeyValues(tab.paramsMode, tab.paramsRows, tab.paramsBulk),
+      path_params: {},
+      body: tab.bodyContent,
+      body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
+      auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+      pre_request: scripts.pre_request,
+      test: scripts.test,
+      sort_order: sortOrder,
+    };
+  };
+
+  const buildUpdatePayloadFromTab = (
+    tab: RequestPageTab,
+    name = tab.title
+  ): UpdateRequestRequest => {
+    const scripts = toRequestScripts(tab.scripts);
+
+    return {
+      name,
+      description: '',
+      method: tab.method,
+      url: tab.url.trim() || PERSISTED_DRAFT_URL_PLACEHOLDER,
+      headers: toRequestKeyValues(tab.headersMode, tab.headersRows, tab.headersBulk),
+      query_params: toRequestKeyValues(tab.paramsMode, tab.paramsRows, tab.paramsBulk),
+      path_params: {},
+      body: tab.bodyContent,
+      body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
+      auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+      pre_request: scripts.pre_request,
+      test: scripts.test,
+    };
+  };
+
+  const syncPersistedRequestInWorkbench = (
+    sourceTabId: string,
+    persistedRequest: ProjectRequest,
+    overrides: Partial<Pick<RequestPageTab, 'isSending' | 'response'>> = {}
+  ) => {
+    const nextTab = toRequestPageTab(persistedRequest);
+
+    setTabs((current) =>
+      current.map((tab) =>
+        tab.id === sourceTabId
+          ? {
+              ...nextTab,
+              activeSection: tab.activeSection,
+              paramsMode: tab.paramsMode,
+              headersMode: tab.headersMode,
+              settings: tab.settings,
+              isSending: overrides.isSending ?? tab.isSending,
+              response: overrides.response ?? tab.response,
+            }
+          : tab
+      )
+    );
+
+    if (nextTab.id !== sourceTabId) {
+      setCollections((current) =>
+        current.map((collection) =>
+          collection.requestIds.includes(sourceTabId)
+            ? {
+                ...collection,
+                requestIds: collection.requestIds.map((requestId) =>
+                  requestId === sourceTabId ? nextTab.id : requestId
+                ),
+              }
+            : collection
+        )
+      );
+      setOpenTabIds((current) =>
+        current.map((requestId) => (requestId === sourceTabId ? nextTab.id : requestId))
+      );
+      setActiveTabId((current) => (current === sourceTabId ? nextTab.id : current));
+    }
+
+    return nextTab.id;
+  };
+
+  const persistTabRequest = async (
+    tab: RequestPageTab,
+    options: {
+      name?: string;
+      requireRunnableUrl?: boolean;
+    } = {}
+  ) => {
+    const persistedCollectionId = tab.collectionId ? Number(tab.collectionId) : null;
+
+    if (
+      !persistedCollectionId ||
+      !Number.isInteger(persistedCollectionId) ||
+      persistedCollectionId <= 0
+    ) {
+      throw new Error('Move this request into a saved collection before sending it.');
+    }
+
+    if (options.requireRunnableUrl) {
+      if (!tab.url.trim()) {
+        throw new Error('Enter a request URL before sending.');
+      }
+
+      try {
+        new URL(tab.url);
+      } catch {
+        throw new Error('The URL is not valid. Try a value like https://localhost:3000/health.');
+      }
+    }
+
+    const persistedRequestId = getPersistedRequestId(tab.id);
+    if (persistedRequestId) {
+      return requestService.update(
+        projectId,
+        persistedCollectionId,
+        persistedRequestId,
+        buildUpdatePayloadFromTab(tab, options.name)
+      );
+    }
+
+    const targetCollection = collections.find((collection) => collection.id === tab.collectionId);
+    return requestService.create(
+      projectId,
+      persistedCollectionId,
+      buildCreatePayloadFromTab(
+        tab,
+        persistedCollectionId,
+        targetCollection?.requestIds.length ?? 0,
+        options.name
+      )
+    );
+  };
+
+  const createCollection = async () => {
+    if (createCollectionMutation.isPending) {
+      return;
+    }
+
+    try {
+      const collectionNumber = collections.length + 1;
+      const createdCollection = await createCollectionMutation.mutateAsync({
+        name: `New Collection ${collectionNumber}`,
+        description: '',
+        is_folder: false,
+        sort_order: collections.length,
+      });
+      const nextCollection: CollectionNode = {
+        id: String(createdCollection.id),
+        name: createdCollection.name,
+        color: COLLECTION_COLORS[(collectionNumber - 1) % COLLECTION_COLORS.length],
+        requestIds: [],
+      };
+
       setCollections((current) => [nextCollection, ...current]);
-      setExpandedCollectionIds((current) => [nextCollection.id, ...current]);
+      setExpandedCollectionIds((current) =>
+        current.includes(nextCollection.id) ? current : [nextCollection.id, ...current]
+      );
       setActiveCollectionId(nextCollection.id);
-    });
+      setHasHydratedServerState(true);
+    } catch {}
   };
 
   const removeCollectionFromWorkbench = (collectionId: string) => {
@@ -564,24 +979,16 @@ export function ApiRequestWorkbench({
       return;
     }
 
+    const removedTabIds = new Set(targetCollection.requestIds);
     const remainingCollections = collections.filter((collection) => collection.id !== collectionId);
-    let remainingTabs = tabs.filter((tab) => tab.collectionId !== collectionId);
-    const activeTabRemoved = remainingTabs.every((tab) => tab.id !== activeTabId);
-
-    let nextActiveTabId = activeTabId;
-
-    if (remainingTabs.length === 0) {
-      const nextTab = createRequestPageTab(nextTabIndex);
-      remainingTabs = [nextTab];
-      nextActiveTabId = nextTab.id;
-      setNextTabIndex((current) => current + 1);
-    } else if (activeTabRemoved) {
-      nextActiveTabId = remainingTabs[0].id;
-    }
+    const remainingTabs = tabs.filter((tab) => tab.collectionId !== collectionId);
+    const nextOpenTabIds = openTabIds.filter((tabId) => !removedTabIds.has(tabId));
+    const nextActiveTabId = resolveNextActiveTabId(openTabIds, nextOpenTabIds, activeTabId);
 
     startTransition(() => {
       setCollections(remainingCollections);
       setTabs(remainingTabs);
+      setOpenTabIds(nextOpenTabIds);
       setExpandedCollectionIds((current) => current.filter((id) => id !== collectionId));
       setActiveCollectionId((current) =>
         current === collectionId ? remainingCollections[0]?.id ?? null : current
@@ -605,6 +1012,7 @@ export function ApiRequestWorkbench({
       }
 
       removeCollectionFromWorkbench(collection.id);
+    } catch {
     } finally {
       setDeletingCollectionId(null);
     }
@@ -619,6 +1027,18 @@ export function ApiRequestWorkbench({
     if (!open) {
       setRenameDialogCollectionId(null);
       setRenameDraftName('');
+    }
+  };
+
+  const openRenameRequestDialog = (request: RequestPageTab) => {
+    setRenameDialogRequestTabId(request.id);
+    setRenameRequestDraftName(request.title);
+  };
+
+  const closeRenameRequestDialog = (open: boolean) => {
+    if (!open) {
+      setRenameDialogRequestTabId(null);
+      setRenameRequestDraftName('');
     }
   };
 
@@ -660,6 +1080,7 @@ export function ApiRequestWorkbench({
         );
       });
       closeRenameCollectionDialog(false);
+    } catch {
     } finally {
       setRenamingCollectionId(null);
     }
@@ -676,6 +1097,7 @@ export function ApiRequestWorkbench({
 
   const selectRequest = (tabId: string, collectionId: string | null) => {
     setActiveTabId(tabId);
+    setOpenTabIds((current) => (current.includes(tabId) ? current : [...current, tabId]));
 
     if (collectionId) {
       setActiveCollectionId(collectionId);
@@ -683,6 +1105,35 @@ export function ApiRequestWorkbench({
         current.includes(collectionId) ? current : [...current, collectionId]
       );
     }
+  };
+
+  const renameRequestInWorkbench = (tabId: string, nextName: string) => {
+    startTransition(() => {
+      setTabs((current) =>
+        current.map((tab) => (tab.id === tabId ? { ...tab, title: nextName } : tab))
+      );
+    });
+  };
+
+  const removeRequestFromWorkbench = (tabId: string) => {
+    const nextOpenTabIds = openTabIds.filter((id) => id !== tabId);
+    const nextActiveTabId = resolveNextActiveTabId(openTabIds, nextOpenTabIds, activeTabId);
+
+    startTransition(() => {
+      setTabs((current) => current.filter((tab) => tab.id !== tabId));
+      setCollections((current) =>
+        current.map((collection) =>
+          collection.requestIds.includes(tabId)
+            ? {
+                ...collection,
+                requestIds: collection.requestIds.filter((requestId) => requestId !== tabId),
+              }
+            : collection
+        )
+      );
+      setOpenTabIds(nextOpenTabIds);
+      setActiveTabId(nextActiveTabId);
+    });
   };
 
   const handleDuplicateTab = () => {
@@ -702,6 +1153,7 @@ export function ApiRequestWorkbench({
 
     startTransition(() => {
       setTabs((current) => [...current, duplicatedTab]);
+      setOpenTabIds((current) => [...current, duplicatedTab.id]);
 
       if (duplicatedTab.collectionId) {
         setCollections((current) =>
@@ -721,42 +1173,89 @@ export function ApiRequestWorkbench({
     });
   };
 
-  const handleSaveTab = () => {
-    updateActiveTab((tab) => ({
+  const handleSaveTab = async () => {
+    if (!activeTab) {
+      return;
+    }
+
+    const nextName = getTabSaveLabel(activeTab);
+    const tabSnapshot = {
+      ...activeTab,
+      title: nextName,
+    };
+
+    updateTab(activeTab.id, (tab) => ({
       ...tab,
-      title: getTabSaveLabel(tab),
+      title: nextName,
     }));
+
+    if (!tabSnapshot.collectionId || !isPersistedCollectionId(tabSnapshot.collectionId)) {
+      return;
+    }
+
+    try {
+      const persistedRequest = await persistTabRequest(tabSnapshot, { name: nextName });
+      syncPersistedRequestInWorkbench(activeTab.id, persistedRequest);
+    } catch {}
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!activeTab) {
       return;
     }
 
     const tabSnapshot = activeTab;
-    const tabId = activeTab.id;
+    let tabId = activeTab.id;
 
     updateTab(tabId, (tab) => ({
       ...tab,
       isSending: true,
+      response: {
+        ...tab.response,
+        error: null,
+      },
     }));
 
-    window.setTimeout(() => {
-      const nextResponse = buildMockResponse(tabSnapshot, environment);
-
-      startTransition(() => {
-        updateTab(tabId, (tab) => ({
-          ...tab,
-          isSending: false,
-          response: nextResponse,
-        }));
+    try {
+      const persistedRequest = await persistTabRequest(tabSnapshot, {
+        requireRunnableUrl: true,
       });
-    }, 700);
+      tabId = syncPersistedRequestInWorkbench(tabId, persistedRequest, {
+        isSending: true,
+      });
+
+      const response = await requestService.run(
+        projectId,
+        persistedRequest.collection_id,
+        persistedRequest.id,
+        {
+          variables: {},
+        }
+      );
+
+      updateTab(tabId, (tab) => ({
+        ...tab,
+        isSending: false,
+        response: toResponseDraft(response),
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to send request.';
+
+      updateTab(tabId, (tab) => ({
+        ...tab,
+        isSending: false,
+        response: {
+          ...createEmptyResponse(),
+          error: message,
+        },
+      }));
+    }
   };
 
   const attachRequestTabToCollection = (collectionId: string, tab: RequestPageTab) => {
     startTransition(() => {
       setTabs((current) => [...current, tab]);
+      setOpenTabIds((current) => [...current, tab.id]);
       setCollections((current) =>
         current.map((collection) =>
           collection.id === collectionId
@@ -774,6 +1273,91 @@ export function ApiRequestWorkbench({
       setActiveTabId(tab.id);
       setNextTabIndex((current) => current + 1);
     });
+  };
+
+  const handleCloseTab = (tabId: string) => {
+    const nextOpenTabIds = openTabIds.filter((id) => id !== tabId);
+    const nextActiveTabId = resolveNextActiveTabId(openTabIds, nextOpenTabIds, activeTabId);
+
+    startTransition(() => {
+      setOpenTabIds(nextOpenTabIds);
+      setActiveTabId(nextActiveTabId);
+    });
+  };
+
+  const handleRenameRequest = async () => {
+    if (!renameDialogRequestTabId || renamingRequestTabId) {
+      return;
+    }
+
+    const nextName = renameRequestDraftName.trim();
+    if (!nextName) {
+      return;
+    }
+
+    const targetRequest = tabs.find((tab) => tab.id === renameDialogRequestTabId);
+    if (!targetRequest) {
+      closeRenameRequestDialog(false);
+      return;
+    }
+
+    setRenamingRequestTabId(targetRequest.id);
+
+    try {
+      const persistedCollectionId = targetRequest.collectionId
+        ? Number(targetRequest.collectionId)
+        : null;
+      const persistedRequestId = getPersistedRequestId(targetRequest.id);
+
+      if (
+        persistedCollectionId &&
+        Number.isInteger(persistedCollectionId) &&
+        persistedCollectionId > 0 &&
+        persistedRequestId
+      ) {
+        await updateRequestMutation.mutateAsync({
+          collectionId: persistedCollectionId,
+          requestId: persistedRequestId,
+          data: { name: nextName },
+        });
+      }
+
+      renameRequestInWorkbench(targetRequest.id, nextName);
+      closeRenameRequestDialog(false);
+    } catch {
+    } finally {
+      setRenamingRequestTabId(null);
+    }
+  };
+
+  const handleDeleteRequest = async (request: RequestPageTab) => {
+    if (deletingRequestTabId) {
+      return;
+    }
+
+    setDeletingRequestTabId(request.id);
+
+    try {
+      const persistedCollectionId = request.collectionId ? Number(request.collectionId) : null;
+      const persistedRequestId = getPersistedRequestId(request.id);
+
+      if (
+        persistedCollectionId &&
+        Number.isInteger(persistedCollectionId) &&
+        persistedCollectionId > 0 &&
+        persistedRequestId
+      ) {
+        await deleteRequestMutation.mutateAsync({
+          collectionId: persistedCollectionId,
+          requestId: persistedRequestId,
+        });
+      }
+
+      removeRequestFromWorkbench(request.id);
+    } catch {
+    } finally {
+      setDeletingRequestTabId(null);
+    }
   };
 
   const handleCreateRequest = async (collection: CollectionNode) => {
@@ -798,32 +1382,20 @@ export function ApiRequestWorkbench({
       const persistedCollectionId = Number(collection.id);
       const createdRequest = await createRequestMutation.mutateAsync({
         collectionId: persistedCollectionId,
-        data: {
-          collection_id: persistedCollectionId,
-          name: DEFAULT_NEW_REQUEST_TITLE,
-          description: '',
-          method: localTab.method,
-          url: localTab.url,
-          headers: [],
-          query_params: [],
-          path_params: {},
-          body: '',
-          body_type: 'none',
-          pre_request: '',
-          test: '',
-          sort_order: collection.requestIds.length,
-        },
+        data: buildCreatePayloadFromTab(
+          localTab,
+          persistedCollectionId,
+          collection.requestIds.length,
+          DEFAULT_NEW_REQUEST_TITLE
+        ),
       });
 
       attachRequestTabToCollection(collection.id, toRequestPageTab(createdRequest));
+    } catch {
     } finally {
       setCreatingRequestCollectionId(null);
     }
   };
-
-  if (!activeTab) {
-    return null;
-  }
 
   return (
     <main className="flex h-full min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,247,251,0.98))]">
@@ -832,9 +1404,10 @@ export function ApiRequestWorkbench({
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 overflow-hidden">
               <RequestTabs
-                tabs={tabs}
+                tabs={openTabs}
                 activeTabId={activeTabId}
                 onSelectTab={(tabId) => selectRequest(tabId, tabMap.get(tabId)?.collectionId ?? null)}
+                onCloseTab={handleCloseTab}
               />
             </div>
             <EnvironmentSwitcher
@@ -856,6 +1429,8 @@ export function ApiRequestWorkbench({
             deletingCollectionId={deletingCollectionId}
             renamingCollectionId={renamingCollectionId}
             creatingRequestCollectionId={creatingRequestCollectionId}
+            deletingRequestTabId={deletingRequestTabId}
+            renamingRequestTabId={renamingRequestTabId}
             expandedCollectionIds={expandedCollectionIds}
             scratchpadTabs={visibleScratchpadTabs}
             query={sidebarQuery}
@@ -863,77 +1438,92 @@ export function ApiRequestWorkbench({
             onCreateCollection={createCollection}
             onCreateRequest={handleCreateRequest}
             onDeleteCollection={handleDeleteCollection}
+            onDeleteRequest={handleDeleteRequest}
             onRenameCollection={openRenameCollectionDialog}
+            onRenameRequest={openRenameRequestDialog}
             onToggleCollection={toggleCollection}
             onSelectRequest={selectRequest}
           />
         </aside>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4 md:p-6">
-          <div className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-4">
-            <Card className="gap-0 rounded-[28px] border-border/60 bg-white/90 py-0 shadow-[0_12px_44px_rgba(15,23,42,0.08)]">
-              <CardHeader className="gap-4 border-b border-border/60 py-5">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                        API Request
-                      </Badge>
-                      {activeTab.collectionId ? (
-                        <Badge variant="secondary">
-                          {collections.find((collection) => collection.id === activeTab.collectionId)?.name || 'Collection'}
+          {activeTab ? (
+            <div className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-4">
+              <Card className="gap-0 rounded-[28px] border-border/60 bg-white/90 py-0 shadow-[0_12px_44px_rgba(15,23,42,0.08)]">
+                <CardHeader className="gap-4 border-b border-border/60 py-5">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                          API Request
                         </Badge>
-                      ) : (
-                        <Badge variant="secondary">Scratchpad</Badge>
-                      )}
+                        {activeTab.collectionId ? (
+                          <Badge variant="secondary">
+                            {collections.find((collection) => collection.id === activeTab.collectionId)?.name || 'Collection'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Scratchpad</Badge>
+                        )}
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl tracking-tight">{activeTab.title}</CardTitle>
+                        <CardDescription className="mt-1">
+                          Execute collection requests against the real backend runner and inspect live responses.
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl tracking-tight">{activeTab.title}</CardTitle>
-                      <CardDescription className="mt-1">
-                        Lightweight request workbench with local mock responses and per-tab draft state.
-                      </CardDescription>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={handleDuplicateTab}>
+                        <Copy className="h-4 w-4" />
+                        Duplicate
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleSaveTab}>
+                        <Save className="h-4 w-4" />
+                        Save tab
+                      </Button>
                     </div>
                   </div>
+                </CardHeader>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" onClick={handleDuplicateTab}>
-                      <Copy className="h-4 w-4" />
-                      Duplicate
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleSaveTab}>
-                      <Save className="h-4 w-4" />
-                      Save tab
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
+                <CardContent className="space-y-5 px-4 py-5 md:px-6">
+                  <RequestToolbar
+                    tab={activeTab}
+                    onMethodChange={(method) => updateActiveTab((tab) => ({ ...tab, method }))}
+                    onUrlChange={(url) => updateActiveTab((tab) => ({ ...tab, url }))}
+                    onSend={handleSend}
+                    onSave={handleSaveTab}
+                    onDuplicate={handleDuplicateTab}
+                  />
 
-              <CardContent className="space-y-5 px-4 py-5 md:px-6">
-                <RequestToolbar
-                  tab={activeTab}
-                  onMethodChange={(method) => updateActiveTab((tab) => ({ ...tab, method }))}
-                  onUrlChange={(url) => updateActiveTab((tab) => ({ ...tab, url }))}
-                  onSend={handleSend}
-                  onSave={handleSaveTab}
-                  onDuplicate={handleDuplicateTab}
-                />
+                  <RequestSectionTabs
+                    activeSection={activeTab.activeSection}
+                    onSelectSection={(section) =>
+                      updateActiveTab((tab) => ({ ...tab, activeSection: section }))
+                    }
+                  />
 
-                <RequestSectionTabs
-                  activeSection={activeTab.activeSection}
-                  onSelectSection={(section) =>
-                    updateActiveTab((tab) => ({ ...tab, activeSection: section }))
-                  }
-                />
+                  <RequestSectionPanel
+                    tab={activeTab}
+                    onTabChange={updateActiveTab}
+                  />
+                </CardContent>
+              </Card>
 
-                <RequestSectionPanel
-                  tab={activeTab}
-                  onTabChange={updateActiveTab}
-                />
-              </CardContent>
-            </Card>
-
-            <ResponsePanel response={activeTab.response} isSending={activeTab.isSending} />
-          </div>
+              <ResponsePanel response={activeTab.response} isSending={activeTab.isSending} />
+            </div>
+          ) : (
+            <div className="mx-auto flex min-h-full max-w-[960px] items-center justify-center">
+              <div className="px-6 py-16 text-center">
+                <p className="text-2xl font-medium tracking-tight text-text-muted">
+                  没有窗口打开
+                </p>
+                <p className="mt-3 text-base text-text-muted">
+                  从左侧 Collection 选择一个 request 重新打开，或创建一个新的 request。
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -944,6 +1534,14 @@ export function ApiRequestWorkbench({
         onOpenChange={closeRenameCollectionDialog}
         onValueChange={setRenameDraftName}
         onConfirm={handleRenameCollection}
+      />
+      <RenameRequestDialog
+        open={renameDialogRequestTabId !== null}
+        value={renameRequestDraftName}
+        isSubmitting={renamingRequestTabId !== null}
+        onOpenChange={closeRenameRequestDialog}
+        onValueChange={setRenameRequestDraftName}
+        onConfirm={handleRenameRequest}
       />
     </main>
   );
@@ -956,6 +1554,8 @@ function CollectionsSidebar({
   deletingCollectionId,
   renamingCollectionId,
   creatingRequestCollectionId,
+  deletingRequestTabId,
+  renamingRequestTabId,
   expandedCollectionIds,
   scratchpadTabs,
   query,
@@ -963,16 +1563,20 @@ function CollectionsSidebar({
   onCreateCollection,
   onCreateRequest,
   onDeleteCollection,
+  onDeleteRequest,
   onRenameCollection,
+  onRenameRequest,
   onToggleCollection,
   onSelectRequest,
 }: {
   collections: Array<{ collection: CollectionNode; requests: RequestPageTab[] }>;
   activeCollectionId: string | null;
-  activeTabId: string;
+  activeTabId: string | null;
   deletingCollectionId: string | null;
   renamingCollectionId: string | null;
   creatingRequestCollectionId: string | null;
+  deletingRequestTabId: string | null;
+  renamingRequestTabId: string | null;
   expandedCollectionIds: string[];
   scratchpadTabs: RequestPageTab[];
   query: string;
@@ -980,7 +1584,9 @@ function CollectionsSidebar({
   onCreateCollection: () => void;
   onCreateRequest: (collection: CollectionNode) => Promise<void>;
   onDeleteCollection: (collection: CollectionNode) => void;
+  onDeleteRequest: (request: RequestPageTab) => Promise<void>;
   onRenameCollection: (collection: CollectionNode) => void;
+  onRenameRequest: (request: RequestPageTab) => void;
   onToggleCollection: (collectionId: string) => void;
   onSelectRequest: (tabId: string, collectionId: string | null) => void;
 }) {
@@ -1060,22 +1666,16 @@ function CollectionsSidebar({
                 {isExpanded ? (
                   <div className="mt-1.5 space-y-1 pl-10">
                     {requests.map((request) => (
-                      <button
+                      <SidebarRequestRow
                         key={request.id}
-                        type="button"
-                        onClick={() => onSelectRequest(request.id, collection.id)}
-                        className={cn(
-                          'w-full rounded-xl px-3 py-1.5 text-left transition-colors',
-                          activeTabId === request.id
-                            ? 'bg-primary/10 text-text-main'
-                            : 'hover:bg-white/80'
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <MethodBadge method={request.method} compact />
-                          <p className="truncate text-sm font-medium">{request.title}</p>
-                        </div>
-                      </button>
+                        request={request}
+                        isActive={activeTabId === request.id}
+                        onSelect={() => onSelectRequest(request.id, collection.id)}
+                        isDeleting={deletingRequestTabId === request.id}
+                        isRenaming={renamingRequestTabId === request.id}
+                        onDelete={() => void onDeleteRequest(request)}
+                        onRename={() => onRenameRequest(request)}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -1090,20 +1690,17 @@ function CollectionsSidebar({
               </div>
               <div className="space-y-1.5">
                 {scratchpadTabs.map((tab) => (
-                  <button
+                  <SidebarRequestRow
                     key={tab.id}
-                    type="button"
-                    onClick={() => onSelectRequest(tab.id, null)}
-                    className={cn(
-                      'w-full rounded-xl px-3 py-1.5 text-left transition-colors',
-                      activeTabId === tab.id ? 'bg-primary/10 text-text-main' : 'hover:bg-white/80'
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 text-text-muted" />
-                      <p className="truncate text-sm font-medium">{tab.title}</p>
-                    </div>
-                  </button>
+                    request={tab}
+                    isActive={activeTabId === tab.id}
+                    onSelect={() => onSelectRequest(tab.id, null)}
+                    isScratchpad
+                    isDeleting={deletingRequestTabId === tab.id}
+                    isRenaming={renamingRequestTabId === tab.id}
+                    onDelete={() => void onDeleteRequest(tab)}
+                    onRename={() => onRenameRequest(tab)}
+                  />
                 ))}
               </div>
             </div>
@@ -1111,6 +1708,97 @@ function CollectionsSidebar({
         </div>
       </div>
     </div>
+  );
+}
+
+function SidebarRequestRow({
+  request,
+  isActive,
+  onSelect,
+  isScratchpad = false,
+  isDeleting,
+  isRenaming,
+  onDelete,
+  onRename,
+}: {
+  request: RequestPageTab;
+  isActive: boolean;
+  onSelect: () => void;
+  isScratchpad?: boolean;
+  isDeleting: boolean;
+  isRenaming: boolean;
+  onDelete: () => void;
+  onRename: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'group/request flex items-center gap-1 rounded-xl transition-colors',
+        isActive ? 'bg-primary/10 text-text-main' : 'hover:bg-white/80'
+      )}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        className="min-w-0 flex-1 rounded-xl px-3 py-1.5 text-left"
+      >
+        <div className="flex items-center gap-2">
+          {isScratchpad ? (
+            <FolderOpen className="h-4 w-4 text-text-muted" />
+          ) : (
+            <MethodBadge method={request.method} compact />
+          )}
+          <p className="truncate text-sm font-medium">{request.title}</p>
+        </div>
+      </button>
+
+      <RequestItemActionsMenu
+        isDeleting={isDeleting}
+        isRenaming={isRenaming}
+        onDelete={onDelete}
+        onRename={onRename}
+      />
+    </div>
+  );
+}
+
+function RequestItemActionsMenu({
+  isDeleting,
+  isRenaming,
+  onDelete,
+  onRename,
+}: {
+  isDeleting: boolean;
+  isRenaming: boolean;
+  onDelete: () => void;
+  onRename: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          isIcon
+          className="mr-1 h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/request:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          aria-label="Open request actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40 rounded-xl">
+        <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
+          {isRenaming ? 'Renaming...' : 'Rename'}
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" disabled={isDeleting} onSelect={onDelete}>
+          {isDeleting ? 'Deleting...' : 'Delete'}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>Share</DropdownMenuItem>
+        <DropdownMenuItem>Copy link</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -1219,38 +1907,122 @@ function RenameCollectionDialog({
   );
 }
 
+function RenameRequestDialog({
+  open,
+  value,
+  isSubmitting,
+  onOpenChange,
+  onValueChange,
+  onConfirm,
+}: {
+  open: boolean;
+  value: string;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onValueChange: (value: string) => void;
+  onConfirm: () => Promise<void>;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Rename Request</DialogTitle>
+          <DialogDescription>
+            Update the request name and sync it to the backend when this request already has a
+            persisted ID.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody>
+          <div className="space-y-2">
+            <Label htmlFor="rename-request-name">Request name</Label>
+            <Input
+              id="rename-request-name"
+              value={value}
+              onChange={(event) => onValueChange(event.target.value)}
+              placeholder="Enter request name"
+              className="rounded-2xl"
+            />
+          </div>
+        </DialogBody>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            loading={isSubmitting}
+            disabled={!value.trim()}
+            onClick={() => void onConfirm()}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function RequestTabs({
   tabs,
   activeTabId,
   onSelectTab,
+  onCloseTab,
 }: {
   tabs: RequestPageTab[];
-  activeTabId: string;
+  activeTabId: string | null;
   onSelectTab: (tabId: string) => void;
+  onCloseTab: (tabId: string) => void;
 }) {
+  if (tabs.length === 0) {
+    return (
+      <div className="flex h-10 items-center rounded-xl border border-dashed border-border/60 bg-white/55 px-4 text-sm text-text-muted">
+        没有窗口打开
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <div className="flex min-w-max items-center gap-2 pr-2">
         {tabs.map((tab) => (
-          <button
+          <div
             key={tab.id}
-            type="button"
-            onClick={() => onSelectTab(tab.id)}
             className={cn(
-              'group inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-all',
+              'group inline-flex items-center rounded-xl border pr-1 text-sm transition-all',
               tab.id === activeTabId
                 ? 'border-primary/30 bg-primary/10 text-text-main shadow-sm'
                 : 'border-border/60 bg-white/75 text-text-muted hover:border-border hover:bg-white hover:text-text-main'
             )}
           >
-            <span
+            <button
+              type="button"
+              onClick={() => onSelectTab(tab.id)}
+              className="inline-flex min-w-0 items-center gap-2 px-3 py-1.5"
+            >
+              <span
+                className={cn(
+                  'h-2 w-2 rounded-full',
+                  tab.id === activeTabId ? 'bg-primary' : 'bg-text-muted/40'
+                )}
+              />
+              <span className="truncate font-medium">{tab.title}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onCloseTab(tab.id)}
               className={cn(
-                'h-2 w-2 rounded-full',
-                tab.id === activeTabId ? 'bg-primary' : 'bg-text-muted/40'
+                'rounded-lg p-1 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main',
+                tab.id === activeTabId
+                  ? 'opacity-100'
+                  : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
               )}
-            />
-            <span className="truncate font-medium">{tab.title}</span>
-          </button>
+              aria-label={`Close ${tab.title}`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ))}
       </div>
     </div>
@@ -1322,7 +2094,7 @@ function RequestToolbar({
         <Input
           value={tab.url}
           onChange={(event) => onUrlChange(event.target.value)}
-          placeholder="https://localhost:3000/health"
+          placeholder="Paste API URL"
           className="h-11 rounded-2xl border-border/70 bg-white px-4 text-sm shadow-none"
         />
 
@@ -1700,7 +2472,7 @@ function AuthorizationPanel({
       <Card className="border-border/60 bg-white/85 py-0 shadow-sm">
         <CardHeader className="border-b border-border/60 py-5">
           <CardTitle>Credentials</CardTitle>
-          <CardDescription>Provide the mock secret or token value for the selected auth scheme.</CardDescription>
+          <CardDescription>Provide the credential value that should be sent with the request.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-5 py-5">
           {mode === 'none' ? (
@@ -1799,7 +2571,7 @@ function ScriptsPanel({
           onChange={(event) => onValueChange(event.target.value)}
           rows={14}
           className="min-h-[280px] rounded-2xl font-mono text-sm"
-          placeholder="// Write mock scripts here"
+          placeholder="// Write request scripts here"
         />
       </CardContent>
     </Card>
@@ -1821,17 +2593,17 @@ function SettingsPanel({
     {
       key: 'followRedirects',
       title: 'Follow redirects',
-      description: 'Keeps the mock request aligned with browser-like navigation behavior.',
+      description: 'Keep request execution aligned with browser-like redirect behavior.',
     },
     {
       key: 'strictTls',
       title: 'Strict TLS validation',
-      description: 'Simulate certificate enforcement before wiring a real network client.',
+      description: 'Control certificate verification once the runner supports stricter transport options.',
     },
     {
       key: 'persistCookies',
       title: 'Persist cookies',
-      description: 'Store cookies between sends for session-driven flows.',
+      description: 'Reserve cookie persistence for session-driven flows once request state is shared.',
     },
   ];
 
@@ -1864,6 +2636,10 @@ function ResponsePanel({
   response: ResponseDraft;
   isSending: boolean;
 }) {
+  const responseHeaders = Object.entries(response.headers)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join('\n');
+
   return (
     <Card className="min-h-[320px] gap-0 rounded-[28px] border-border/60 bg-white/90 py-0 shadow-[0_12px_44px_rgba(15,23,42,0.06)]">
       <CardHeader className="gap-4 border-b border-border/60 py-5">
@@ -1871,14 +2647,23 @@ function ResponsePanel({
           <div>
             <CardTitle className="text-xl tracking-tight">Response</CardTitle>
             <CardDescription className="mt-1">
-              Inspect the latest mock response payload, timing, and status details.
+              Inspect the latest real response payload, headers, timing, and status details.
             </CardDescription>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <MetricBadge label="Status" value={response.status ? `${response.status} ${response.statusLabel}` : '-'} />
-            <MetricBadge label="Time" value={response.durationMs ? `${response.durationMs} ms` : '-'} />
-            <MetricBadge label="Size" value={response.sizeBytes ? `${response.sizeBytes} B` : '-'} />
+            <MetricBadge
+              label="Status"
+              value={response.status !== null ? `${response.status} ${response.statusLabel}`.trim() : '-'}
+            />
+            <MetricBadge
+              label="Time"
+              value={response.durationMs !== null ? `${response.durationMs} ms` : '-'}
+            />
+            <MetricBadge
+              label="Size"
+              value={response.sizeBytes !== null ? `${response.sizeBytes} B` : '-'}
+            />
           </div>
         </div>
       </CardHeader>
@@ -1887,9 +2672,9 @@ function ResponsePanel({
         {isSending ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
-            <p className="mt-4 text-sm font-medium text-text-main">Sending mock request...</p>
+            <p className="mt-4 text-sm font-medium text-text-main">Sending request...</p>
             <p className="mt-1 text-sm text-text-muted">
-              The response panel updates when the simulated request completes.
+              The response panel updates as soon as the backend runner returns.
             </p>
           </div>
         ) : response.error ? (
@@ -1901,13 +2686,23 @@ function ResponsePanel({
           <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 text-center">
             <p className="text-base font-semibold text-text-main">Click Send to get a response</p>
             <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">
-              Once you trigger the mock request, this panel will render formatted JSON, status metadata, and any validation hints.
+              Once you trigger the request, this panel will render the latest response body, headers, and transport metadata.
             </p>
           </div>
         ) : (
-          <pre className="flex-1 overflow-auto rounded-[24px] border border-border/60 bg-slate-950/95 p-5 text-sm leading-6 text-slate-100">
-            {response.body}
-          </pre>
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
+            {responseHeaders ? (
+              <div className="rounded-[24px] border border-border/60 bg-slate-100/90 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+                  Headers
+                </p>
+                <pre className="overflow-auto text-xs leading-6 text-slate-700">{responseHeaders}</pre>
+              </div>
+            ) : null}
+            <pre className="flex-1 overflow-auto rounded-[24px] border border-border/60 bg-slate-950/95 p-5 text-sm leading-6 text-slate-100">
+              {response.body || '(empty body)'}
+            </pre>
+          </div>
         )}
       </CardContent>
     </Card>

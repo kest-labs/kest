@@ -21,6 +21,7 @@ type Repository interface {
 	Update(ctx context.Context, collection *Collection) error
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context, projectID uint, offset, limit int) ([]*Collection, int64, error)
+	ListAll(ctx context.Context, projectID uint) ([]*Collection, error)
 	GetByParentID(ctx context.Context, projectID uint, parentID *uint) ([]*Collection, error)
 	GetStats(ctx context.Context, collectionID uint) (*CollectionStats, error)
 }
@@ -90,6 +91,19 @@ func (r *repository) List(ctx context.Context, projectID uint, offset, limit int
 	}
 
 	return toDomainList(poList), total, nil
+}
+
+func (r *repository) ListAll(ctx context.Context, projectID uint) ([]*Collection, error) {
+	var poList []*CollectionPO
+
+	if err := r.db.WithContext(ctx).
+		Where("project_id = ?", projectID).
+		Order("sort_order ASC, created_at DESC").
+		Find(&poList).Error; err != nil {
+		return nil, err
+	}
+
+	return toDomainList(poList), nil
 }
 
 func (r *repository) GetByParentID(ctx context.Context, projectID uint, parentID *uint) ([]*Collection, error) {

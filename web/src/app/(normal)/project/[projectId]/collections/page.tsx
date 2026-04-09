@@ -8,7 +8,7 @@ interface ProjectCollectionsPageProps {
 }
 
 // 项目 collections 工作区入口。
-// 作用：挂载新的 Postman 风格 collections 双侧栏外观稿，先使用本地状态驱动。
+// 作用：挂载 Postman 风格 collections 工作区，并由后端 collections/request 数据驱动。
 export default async function ProjectCollectionsPage({
   params,
 }: ProjectCollectionsPageProps) {

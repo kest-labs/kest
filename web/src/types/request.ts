@@ -68,6 +68,13 @@ export interface RequestListMeta {
   pages: number;
 }
 
+export interface RequestListParams {
+  projectId: number | string;
+  collectionId: number | string;
+  page?: number;
+  perPage?: number;
+}
+
 export interface RequestListResponse {
   items: ProjectRequest[];
   meta: RequestListMeta;
@@ -104,4 +111,18 @@ export interface UpdateRequestRequest {
   pre_request?: string;
   test?: string;
   sort_order?: number;
+}
+
+export interface RunRequestRequest {
+  environment_id?: number;
+  variables?: Record<string, string>;
+}
+
+export interface RunRequestResponse {
+  status: number;
+  status_text: string;
+  headers: Record<string, string>;
+  body: string;
+  time: number;
+  size: number;
 }

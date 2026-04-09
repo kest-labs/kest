@@ -2,7 +2,10 @@ import request from '@/http';
 import type {
   CreateRequestRequest,
   ProjectRequest,
+  RequestListParams,
   RequestListResponse,
+  RunRequestRequest,
+  RunRequestResponse,
   UpdateRequestRequest,
 } from '@/types/request';
 
@@ -12,8 +15,18 @@ const normalizePayload = <T extends object>(payload: T) =>
   ) as T;
 
 export const requestService = {
-  list: (projectId: number | string, collectionId: number | string) =>
-    request.get<RequestListResponse>(`/projects/${projectId}/collections/${collectionId}/requests`),
+  list: ({
+    projectId,
+    collectionId,
+    page,
+    perPage,
+  }: RequestListParams) =>
+    request.get<RequestListResponse>(`/projects/${projectId}/collections/${collectionId}/requests`, {
+      params: normalizePayload({
+        page,
+        per_page: perPage,
+      }),
+    }),
 
   getById: (
     projectId: number | string,
@@ -52,6 +65,17 @@ export const requestService = {
   ) =>
     request.delete<void>(
       `/projects/${projectId}/collections/${collectionId}/requests/${requestId}`
+    ),
+
+  run: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    data: RunRequestRequest
+  ) =>
+    request.post<RunRequestResponse>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/run`,
+      normalizePayload(data)
     ),
 };
 

@@ -36,9 +36,11 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) Create(ctx context.Context, req *CreateCollectionRequest) (*Collection, error) {
+	parentID := normalizeParentID(req.ParentID)
+
 	// Validate parent if provided
-	if req.ParentID != nil {
-		parent, err := s.repo.GetByIDAndProject(ctx, *req.ParentID, req.ProjectID)
+	if parentID != nil {
+		parent, err := s.repo.GetByIDAndProject(ctx, *parentID, req.ProjectID)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +56,7 @@ func (s *service) Create(ctx context.Context, req *CreateCollectionRequest) (*Co
 		Name:        req.Name,
 		Description: req.Description,
 		ProjectID:   req.ProjectID,
-		ParentID:    req.ParentID,
+		ParentID:    parentID,
 		IsFolder:    req.IsFolder,
 		SortOrder:   req.SortOrder,
 	}
@@ -94,21 +96,32 @@ func (s *service) Update(ctx context.Context, id, projectID uint, req *UpdateCol
 		collection.Description = *req.Description
 	}
 	if req.ParentID != nil {
+		parentID := normalizeParentID(req.ParentID)
+
 		// Validate new parent
-		if *req.ParentID != 0 {
-			parent, err := s.repo.GetByIDAndProject(ctx, *req.ParentID, projectID)
+		if parentID != nil {
+			parent, err := s.repo.GetByIDAndProject(ctx, *parentID, projectID)
 			if err != nil {
 				return nil, err
 			}
 			if parent == nil || !parent.IsFolder {
 				return nil, ErrInvalidParent
 			}
-			// Prevent moving to self or descendant
-			if *req.ParentID == id {
+			// Prevent moving to self or descendant.
+			if *parentID == id {
+				return nil, ErrInvalidParent
+			}
+
+			createsCycle, err := s.wouldCreateCycle(ctx, projectID, id, *parentID)
+			if err != nil {
+				return nil, err
+			}
+			if createsCycle {
 				return nil, ErrInvalidParent
 			}
 		}
-		collection.ParentID = req.ParentID
+
+		collection.ParentID = parentID
 	}
 	if req.SortOrder != nil {
 		collection.SortOrder = *req.SortOrder
@@ -160,8 +173,7 @@ func (s *service) List(ctx context.Context, projectID uint, page, perPage int) (
 }
 
 func (s *service) GetTree(ctx context.Context, projectID uint) ([]*CollectionTreeNode, error) {
-	// Get all collections for the project
-	allCollections, _, err := s.repo.List(ctx, projectID, 0, 1000)
+	allCollections, err := s.repo.ListAll(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,13 +190,47 @@ func (s *service) Move(ctx context.Context, id, projectID uint, req *MoveCollect
 	return s.Update(ctx, id, projectID, updateReq)
 }
 
+func (s *service) wouldCreateCycle(ctx context.Context, projectID, collectionID, parentID uint) (bool, error) {
+	visited := map[uint]struct{}{}
+	currentID := parentID
+
+	for currentID != 0 {
+		if currentID == collectionID {
+			return true, nil
+		}
+		if _, seen := visited[currentID]; seen {
+			return true, nil
+		}
+		visited[currentID] = struct{}{}
+
+		current, err := s.repo.GetByIDAndProject(ctx, currentID, projectID)
+		if err != nil {
+			return false, err
+		}
+		if current == nil || current.ParentID == nil {
+			return false, nil
+		}
+
+		currentID = *current.ParentID
+	}
+
+	return false, nil
+}
+
+func normalizeParentID(parentID *uint) *uint {
+	if parentID == nil || *parentID == 0 {
+		return nil
+	}
+
+	return parentID
+}
+
 // buildTree converts flat collection list to tree structure
 func buildTree(collections []*Collection) []*CollectionTreeNode {
-	// Create map for quick lookup
 	nodeMap := make(map[uint]*CollectionTreeNode)
+	collectionMap := make(map[uint]*Collection)
 	var rootNodes []*CollectionTreeNode
 
-	// First pass: create all nodes
 	for _, c := range collections {
 		node := &CollectionTreeNode{
 			ID:          c.ID,
@@ -197,26 +243,58 @@ func buildTree(collections []*Collection) []*CollectionTreeNode {
 			Children:    []*CollectionTreeNode{},
 		}
 		nodeMap[c.ID] = node
+		collectionMap[c.ID] = c
 	}
 
-	// Second pass: build tree relationships
 	for _, c := range collections {
 		node := nodeMap[c.ID]
-		if c.ParentID == nil {
-			// Root level
+		parentID, ok := resolveTreeParentID(c, collectionMap)
+		if !ok {
 			rootNodes = append(rootNodes, node)
-		} else {
-			// Child node
-			if parentNode, ok := nodeMap[*c.ParentID]; ok {
-				parentNode.Children = append(parentNode.Children, node)
-			}
+			continue
 		}
+
+		parentNode, exists := nodeMap[parentID]
+		if !exists {
+			rootNodes = append(rootNodes, node)
+			continue
+		}
+
+		parentNode.Children = append(parentNode.Children, node)
 	}
 
-	// Sort children by sort_order
 	sortNodes(rootNodes)
 
 	return rootNodes
+}
+
+func resolveTreeParentID(collection *Collection, collectionMap map[uint]*Collection) (uint, bool) {
+	if collection == nil || collection.ParentID == nil {
+		return 0, false
+	}
+
+	immediateParentID := *collection.ParentID
+	visited := map[uint]struct{}{collection.ID: {}}
+	currentID := immediateParentID
+
+	for currentID != 0 {
+		if _, seen := visited[currentID]; seen {
+			return 0, false
+		}
+		visited[currentID] = struct{}{}
+
+		parent, exists := collectionMap[currentID]
+		if !exists {
+			return 0, false
+		}
+		if parent.ParentID == nil {
+			return immediateParentID, true
+		}
+
+		currentID = *parent.ParentID
+	}
+
+	return 0, false
 }
 
 // sortNodes sorts tree nodes by sort_order
