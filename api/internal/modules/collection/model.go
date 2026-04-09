@@ -9,14 +9,14 @@ import (
 
 // CollectionPO is the persistent object for database operations
 type CollectionPO struct {
-	ID          uint           `gorm:"primaryKey"`
-	Name        string         `gorm:"size:100;not null"`
-	Description string         `gorm:"size:500"`
-	ProjectID   uint           `gorm:"not null;index"`
-	ParentID    *uint          `gorm:"index"` // For folder hierarchy
-	IsFolder    bool           `gorm:"default:false"`
-	SortOrder   int            `gorm:"default:0"`
-	Settings    string         `gorm:"type:text"` // JSON settings as string
+	ID          uint   `gorm:"primaryKey"`
+	Name        string `gorm:"size:100;not null"`
+	Description string `gorm:"size:500"`
+	ProjectID   uint   `gorm:"not null;index"`
+	ParentID    *uint  `gorm:"index"` // For folder hierarchy
+	IsFolder    bool   `gorm:"default:false"`
+	SortOrder   int    `gorm:"default:0"`
+	Settings    string `gorm:"type:text"` // JSON settings as string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`

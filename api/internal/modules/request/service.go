@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/kest-labs/kest/api/internal/modules/collection"
 )
 
 // Common errors
@@ -16,30 +18,37 @@ var (
 
 // Service defines the interface for request business logic
 type Service interface {
-	Create(ctx context.Context, req *CreateRequestRequest) (*Request, error)
-	GetByID(ctx context.Context, id, collectionID uint) (*Request, error)
-	Update(ctx context.Context, id, collectionID uint, req *UpdateRequestRequest) (*Request, error)
-	Delete(ctx context.Context, id, collectionID uint) error
-	List(ctx context.Context, collectionID uint, page, perPage int) ([]*Request, int64, error)
-	Move(ctx context.Context, id, collectionID uint, req *MoveRequestRequest) (*Request, error)
+	Create(ctx context.Context, projectID uint, req *CreateRequestRequest) (*Request, error)
+	GetByID(ctx context.Context, id, collectionID, projectID uint) (*Request, error)
+	Update(ctx context.Context, id, collectionID, projectID uint, req *UpdateRequestRequest) (*Request, error)
+	Delete(ctx context.Context, id, collectionID, projectID uint) error
+	List(ctx context.Context, collectionID, projectID uint, page, perPage int) ([]*Request, int64, error)
+	Move(ctx context.Context, id, collectionID, projectID uint, req *MoveRequestRequest) (*Request, error)
 	Rollback(ctx context.Context, id, collectionID, versionID uint) (*Request, error)
 }
 
 // service implements Service interface
 type service struct {
-	repo Repository
+	repo           Repository
+	collectionRepo collection.Repository
 }
 
 // NewService creates a new request service
-func NewService(repo Repository) Service {
+func NewService(repo Repository, collectionRepo collection.Repository) Service {
 	return &service{
-		repo: repo,
+		repo:           repo,
+		collectionRepo: collectionRepo,
 	}
 }
 
-func (s *service) Create(ctx context.Context, req *CreateRequestRequest) (*Request, error) {
-	// Validate collection exists and is not a folder
-	// This would require collection repository - for now we assume valid
+func (s *service) Create(ctx context.Context, projectID uint, req *CreateRequestRequest) (*Request, error) {
+	parentCollection, err := s.collectionRepo.GetByIDAndProject(ctx, req.CollectionID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if parentCollection == nil || parentCollection.IsFolder {
+		return nil, ErrInvalidCollection
+	}
 
 	method := req.Method
 	if method == "" {
@@ -77,7 +86,11 @@ func (s *service) Create(ctx context.Context, req *CreateRequestRequest) (*Reque
 	return request, nil
 }
 
-func (s *service) GetByID(ctx context.Context, id, collectionID uint) (*Request, error) {
+func (s *service) GetByID(ctx context.Context, id, collectionID, projectID uint) (*Request, error) {
+	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+		return nil, err
+	}
+
 	request, err := s.repo.GetByIDAndCollection(ctx, id, collectionID)
 	if err != nil {
 		return nil, err
@@ -88,7 +101,11 @@ func (s *service) GetByID(ctx context.Context, id, collectionID uint) (*Request,
 	return request, nil
 }
 
-func (s *service) Update(ctx context.Context, id, collectionID uint, req *UpdateRequestRequest) (*Request, error) {
+func (s *service) Update(ctx context.Context, id, collectionID, projectID uint, req *UpdateRequestRequest) (*Request, error) {
+	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+		return nil, err
+	}
+
 	request, err := s.repo.GetByIDAndCollection(ctx, id, collectionID)
 	if err != nil {
 		return nil, err
@@ -145,7 +162,11 @@ func (s *service) Update(ctx context.Context, id, collectionID uint, req *Update
 	return request, nil
 }
 
-func (s *service) Delete(ctx context.Context, id, collectionID uint) error {
+func (s *service) Delete(ctx context.Context, id, collectionID, projectID uint) error {
+	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+		return err
+	}
+
 	request, err := s.repo.GetByIDAndCollection(ctx, id, collectionID)
 	if err != nil {
 		return err
@@ -157,7 +178,11 @@ func (s *service) Delete(ctx context.Context, id, collectionID uint) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *service) List(ctx context.Context, collectionID uint, page, perPage int) ([]*Request, int64, error) {
+func (s *service) List(ctx context.Context, collectionID, projectID uint, page, perPage int) ([]*Request, int64, error) {
+	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -172,7 +197,11 @@ func (s *service) List(ctx context.Context, collectionID uint, page, perPage int
 	return s.repo.List(ctx, collectionID, offset, perPage)
 }
 
-func (s *service) Move(ctx context.Context, id, collectionID uint, req *MoveRequestRequest) (*Request, error) {
+func (s *service) Move(ctx context.Context, id, collectionID, projectID uint, req *MoveRequestRequest) (*Request, error) {
+	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+		return nil, err
+	}
+
 	request, err := s.repo.GetByIDAndCollection(ctx, id, collectionID)
 	if err != nil {
 		return nil, err
@@ -182,6 +211,14 @@ func (s *service) Move(ctx context.Context, id, collectionID uint, req *MoveRequ
 	}
 
 	if req.CollectionID != nil {
+		targetCollection, err := s.collectionRepo.GetByIDAndProject(ctx, *req.CollectionID, projectID)
+		if err != nil {
+			return nil, err
+		}
+		if targetCollection == nil || targetCollection.IsFolder {
+			return nil, ErrInvalidCollection
+		}
+
 		request.CollectionID = *req.CollectionID
 	}
 	if req.SortOrder != nil {
@@ -199,6 +236,17 @@ func (s *service) Rollback(ctx context.Context, id, collectionID, versionID uint
 	// For now, return ErrVersionNotFound since history is tracked in another module
 	// We will integrate with history module later
 	return nil, ErrVersionNotFound
+}
+
+func (s *service) ensureProjectCollection(ctx context.Context, collectionID, projectID uint) error {
+	parentCollection, err := s.collectionRepo.GetByIDAndProject(ctx, collectionID, projectID)
+	if err != nil {
+		return err
+	}
+	if parentCollection == nil {
+		return ErrInvalidCollection
+	}
+	return nil
 }
 
 // parsePathParams converts interface{} to map[string]string

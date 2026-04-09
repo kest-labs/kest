@@ -4,12 +4,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiSpecService } from '@/services/api-spec';
 import type {
+  AcceptApiSpecAIDraftRequest,
+  ApiSpecAIDraft,
   ApiSpecLanguage,
   ApiSpecListParams,
   BatchGenDocRequest,
+  CreateApiSpecAIDraftRequest,
   CreateApiExampleRequest,
   CreateApiSpecRequest,
   ImportApiSpecsRequest,
+  RefineApiSpecAIDraftRequest,
   UpdateApiSpecRequest,
 } from '@/types/api-spec';
 
@@ -36,6 +40,10 @@ export const apiSpecKeys = {
     [...apiSpecKeys.project(projectId), 'categories'] as const,
   memberRole: (projectId: number | string) =>
     [...apiSpecKeys.project(projectId), 'member-role'] as const,
+  share: (projectId: number | string, specId: number | string) =>
+    [...apiSpecKeys.spec(projectId, specId), 'share'] as const,
+  aiDraft: (projectId: number | string, draftId: number | string) =>
+    [...apiSpecKeys.project(projectId), 'ai-draft', draftId] as const,
 };
 
 // 规格列表查询。
@@ -75,6 +83,35 @@ export function useApiSpecExamples(projectId?: number | string, specId?: number 
     queryKey: apiSpecKeys.examples(projectId ?? 'unknown', specId ?? 'unknown'),
     queryFn: () => apiSpecService.listExamples(projectId as number | string, specId as number | string),
     enabled: projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+  });
+}
+
+// 规格分享元数据查询。
+// 作用：读取当前规格是否已经发布分享，404 时返回 null，方便页面直接分支渲染。
+export function useApiSpecShare(projectId?: number | string, specId?: number | string) {
+  return useQuery({
+    queryKey: apiSpecKeys.share(projectId ?? 'unknown', specId ?? 'unknown'),
+    queryFn: async () => {
+      try {
+        return await apiSpecService.getShare(projectId as number | string, specId as number | string);
+      } catch (error) {
+        if ((error as { status?: number })?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    enabled: projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+  });
+}
+
+// AI draft 查询。
+// 作用：在弹窗刷新或接受创建后，支持按 draftId 重新拉取最新草稿。
+export function useApiSpecAIDraft(projectId?: number | string, draftId?: number | string) {
+  return useQuery({
+    queryKey: apiSpecKeys.aiDraft(projectId ?? 'unknown', draftId ?? 'unknown'),
+    queryFn: () => apiSpecService.getAIDraft(projectId as number | string, draftId as number | string),
+    enabled: projectId !== undefined && projectId !== null && draftId !== undefined && draftId !== null,
   });
 }
 
@@ -128,6 +165,74 @@ export function useCreateApiSpec(projectId: number | string) {
   });
 }
 
+const emitDraftWarnings = (warnings?: string[]) => {
+  warnings?.forEach((warning) => toast.warning(warning));
+};
+
+// AI 创建 draft mutation。
+// 作用：生成结构化草稿后直接写入 draft 缓存，供弹窗编辑与 refine 复用。
+export function useCreateApiSpecAIDraft(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateApiSpecAIDraftRequest) => apiSpecService.createAIDraft(projectId, data),
+    onSuccess: (draft) => {
+      queryClient.setQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, draft.id), draft);
+      toast.success('Generated AI API spec draft');
+    },
+  });
+}
+
+// AI refine mutation。
+// 作用：更新已有 draft，并保持 query cache 与服务端同步。
+export function useRefineApiSpecAIDraft(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      draftId,
+      data,
+    }: {
+      draftId: number | string;
+      data: RefineApiSpecAIDraftRequest;
+    }) => apiSpecService.refineAIDraft(projectId, draftId, data),
+    onSuccess: (draft) => {
+      queryClient.setQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, draft.id), draft);
+      toast.success('Refined AI draft');
+    },
+  });
+}
+
+// AI draft accept mutation。
+// 作用：把 draft 落成正式 spec，并刷新列表/详情缓存。
+export function useAcceptApiSpecAIDraft(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      draftId,
+      data,
+    }: {
+      draftId: number | string;
+      data: AcceptApiSpecAIDraftRequest;
+    }) => apiSpecService.acceptAIDraft(projectId, draftId, data),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
+      queryClient.setQueryData(apiSpecKeys.detail(projectId, result.spec.id), result.spec);
+      queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, result.spec.id) });
+      queryClient.setQueryData(apiSpecKeys.aiDraft(projectId, result.draft_id), {
+        ...(queryClient.getQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, result.draft_id)) ?? {
+          id: result.draft_id,
+        }),
+        accepted_spec_id: result.spec.id,
+        status: 'accepted',
+      });
+      emitDraftWarnings(result.warnings);
+      toast.success(`Created API spec ${result.spec.method} ${result.spec.path}`);
+    },
+  });
+}
+
 // 更新规格 mutation。
 // 作用：更新成功后同步刷新列表、详情和完整详情缓存。
 export function useUpdateApiSpec(projectId: number | string) {
@@ -141,6 +246,7 @@ export function useUpdateApiSpec(projectId: number | string) {
       queryClient.setQueryData(apiSpecKeys.detail(projectId, spec.id), spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, spec.id) });
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.examples(projectId, spec.id) });
+      queryClient.invalidateQueries({ queryKey: apiSpecKeys.share(projectId, spec.id) });
       toast.success(`Updated API spec ${spec.method} ${spec.path}`);
     },
   });
@@ -196,6 +302,7 @@ export function useGenApiDoc(projectId: number | string) {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       queryClient.setQueryData(apiSpecKeys.detail(projectId, spec.id), spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, spec.id) });
+      queryClient.invalidateQueries({ queryKey: apiSpecKeys.share(projectId, spec.id) });
       toast.success(`Generated ${spec.path} documentation`);
     },
   });
@@ -244,7 +351,36 @@ export function useCreateApiExample(projectId: number | string) {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.examples(projectId, variables.specId) });
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, variables.specId) });
+      queryClient.invalidateQueries({ queryKey: apiSpecKeys.share(projectId, variables.specId) });
       toast.success('API example created');
+    },
+  });
+}
+
+// 发布或刷新分享 mutation。
+// 作用：返回当前规格的公开 slug，并同步本地缓存。
+export function usePublishApiSpecShare(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (specId: number | string) => apiSpecService.publishShare(projectId, specId),
+    onSuccess: (share) => {
+      queryClient.setQueryData(apiSpecKeys.share(projectId, share.api_spec_id), share);
+      toast.success('Public share published');
+    },
+  });
+}
+
+// 删除分享 mutation。
+// 作用：关闭公开链接，并把分享查询缓存直接置空。
+export function useDeleteApiSpecShare(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (specId: number | string) => apiSpecService.deleteShare(projectId, specId),
+    onSuccess: (_, specId) => {
+      queryClient.setQueryData(apiSpecKeys.share(projectId, specId), null);
+      toast.success('Public share disabled');
     },
   });
 }

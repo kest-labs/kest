@@ -192,7 +192,7 @@ func ToAPISpecPO(req *CreateAPISpecRequest) *APISpecPO {
 	if req.IsPublic != nil {
 		po.IsPublic = *req.IsPublic
 	} else {
-		po.IsPublic = true
+		po.IsPublic = false
 	}
 
 	return po

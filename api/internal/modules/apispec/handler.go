@@ -3,12 +3,15 @@ package apispec
 import (
 	"context"
 	"errors"
+	"io"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
@@ -50,10 +53,8 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 
 // CreateSpec creates a new API specification
 func (h *Handler) CreateSpec(c *gin.Context) {
-	projectIDStr := c.Param("id")
-	projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid project ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -63,7 +64,7 @@ func (h *Handler) CreateSpec(c *gin.Context) {
 		return
 	}
 
-	req.ProjectID = uint(projectID)
+	req.ProjectID = projectID
 	spec, err := h.service.CreateSpec(c.Request.Context(), &req)
 	if err != nil {
 		if errors.Is(err, ErrSpecAlreadyExists) {
@@ -79,14 +80,22 @@ func (h *Handler) CreateSpec(c *gin.Context) {
 
 // GetSpec gets an API specification by ID
 func (h *Handler) GetSpec(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
-	spec, err := h.service.GetSpecByID(c.Request.Context(), uint(id))
+	id, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	spec, err := h.service.GetSpecByID(c.Request.Context(), projectID, id)
 	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "API spec not found", err)
 		return
 	}
@@ -96,14 +105,22 @@ func (h *Handler) GetSpec(c *gin.Context) {
 
 // GetSpecWithExamples gets an API specification with examples
 func (h *Handler) GetSpecWithExamples(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
-	spec, err := h.service.GetSpecWithExamples(c.Request.Context(), uint(id))
+	id, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	spec, err := h.service.GetSpecWithExamples(c.Request.Context(), projectID, id)
 	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "API spec not found", err)
 		return
 	}
@@ -113,9 +130,13 @@ func (h *Handler) GetSpecWithExamples(c *gin.Context) {
 
 // UpdateSpec updates an API specification
 func (h *Handler) UpdateSpec(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	id, ok := handler.ParseID(c, "sid")
+	if !ok {
 		return
 	}
 
@@ -125,8 +146,12 @@ func (h *Handler) UpdateSpec(c *gin.Context) {
 		return
 	}
 
-	spec, err := h.service.UpdateSpec(c.Request.Context(), uint(id), &req)
+	spec, err := h.service.UpdateSpec(c.Request.Context(), projectID, id, &req)
 	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "Failed to update API spec", err)
 		return
 	}
@@ -136,13 +161,21 @@ func (h *Handler) UpdateSpec(c *gin.Context) {
 
 // DeleteSpec deletes an API specification
 func (h *Handler) DeleteSpec(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
-	if err := h.service.DeleteSpec(c.Request.Context(), uint(id)); err != nil {
+	id, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	if err := h.service.DeleteSpec(c.Request.Context(), projectID, id); err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "Failed to delete API spec", err)
 		return
 	}
@@ -152,12 +185,16 @@ func (h *Handler) DeleteSpec(c *gin.Context) {
 
 // ListSpecs lists API specifications
 func (h *Handler) ListSpecs(c *gin.Context) {
-	projectID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
 	filter := &SpecListFilter{
-		ProjectID: uint(projectID),
+		ProjectID: projectID,
 		Version:   c.Query("version"),
 		Method:    c.Query("method"),
 		Tag:       c.Query("tag"),
@@ -183,11 +220,147 @@ func (h *Handler) ListSpecs(c *gin.Context) {
 	})
 }
 
+// CreateAIDraft generates a structured AI draft for an API spec.
+func (h *Handler) CreateAIDraft(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := getCurrentUserID(c)
+	if !ok {
+		response.Unauthorized(c, "Authentication required")
+		return
+	}
+
+	var req CreateAPISpecAIDraftRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	draft, err := h.service.CreateAIDraft(c.Request.Context(), projectID, userID, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrAIUnavailable):
+			response.Error(c, http.StatusServiceUnavailable, err.Error())
+		case errors.Is(err, ErrInvalidSpecData):
+			response.BadRequest(c, err.Error(), err)
+		default:
+			response.HandleError(c, "Failed to create AI draft", err)
+		}
+		return
+	}
+
+	response.Created(c, draft)
+}
+
+// GetAIDraft fetches a stored AI draft by ID.
+func (h *Handler) GetAIDraft(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	draftID, ok := handler.ParseID(c, "aid")
+	if !ok {
+		return
+	}
+
+	draft, err := h.service.GetAIDraft(c.Request.Context(), projectID, draftID)
+	if err != nil {
+		if errors.Is(err, ErrAIDraftNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to load AI draft", err)
+		return
+	}
+
+	response.Success(c, draft)
+}
+
+// RefineAIDraft applies an extra instruction to an existing AI draft.
+func (h *Handler) RefineAIDraft(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	draftID, ok := handler.ParseID(c, "aid")
+	if !ok {
+		return
+	}
+
+	var req RefineAPISpecAIDraftRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	draft, err := h.service.RefineAIDraft(c.Request.Context(), projectID, draftID, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrAIDraftNotFound):
+			response.NotFound(c, err.Error(), err)
+		case errors.Is(err, ErrAIUnavailable):
+			response.Error(c, http.StatusServiceUnavailable, err.Error())
+		case errors.Is(err, ErrInvalidSpecData):
+			response.BadRequest(c, err.Error(), err)
+		default:
+			response.HandleError(c, "Failed to refine AI draft", err)
+		}
+		return
+	}
+
+	response.Success(c, draft)
+}
+
+// AcceptAIDraft creates a formal API spec from a stored AI draft.
+func (h *Handler) AcceptAIDraft(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	draftID, ok := handler.ParseID(c, "aid")
+	if !ok {
+		return
+	}
+
+	var req AcceptAPISpecAIDraftRequest
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	result, err := h.service.AcceptAIDraft(c.Request.Context(), projectID, draftID, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrAIDraftNotFound):
+			response.NotFound(c, err.Error(), err)
+		case errors.Is(err, ErrInvalidSpecData):
+			response.BadRequest(c, err.Error(), err)
+		case errors.Is(err, ErrSpecAlreadyExists):
+			response.Conflict(c, err.Error(), err)
+		default:
+			response.HandleError(c, "Failed to accept AI draft", err)
+		}
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // CreateExample creates an API example
 func (h *Handler) CreateExample(c *gin.Context) {
-	sid, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid specification ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	sid, ok := handler.ParseID(c, "sid")
+	if !ok {
 		return
 	}
 
@@ -197,9 +370,13 @@ func (h *Handler) CreateExample(c *gin.Context) {
 		return
 	}
 
-	req.APISpecID = uint(sid)
-	example, err := h.service.CreateExample(c.Request.Context(), &req)
+	req.APISpecID = sid
+	example, err := h.service.CreateExample(c.Request.Context(), projectID, &req)
 	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "Failed to create example", err)
 		return
 	}
@@ -209,14 +386,22 @@ func (h *Handler) CreateExample(c *gin.Context) {
 
 // ListExamples lists all examples for an API specification
 func (h *Handler) ListExamples(c *gin.Context) {
-	sid, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid specification ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
-	examples, err := h.service.GetExamplesBySpecID(c.Request.Context(), uint(sid))
+	sid, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	examples, err := h.service.GetExamplesBySpecID(c.Request.Context(), projectID, sid)
 	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
 		response.HandleError(c, "Failed to list examples", err)
 		return
 	}
@@ -226,10 +411,8 @@ func (h *Handler) ListExamples(c *gin.Context) {
 
 // ImportSpecs imports multiple API specifications
 func (h *Handler) ImportSpecs(c *gin.Context) {
-	projectIDStr := c.Param("id")
-	projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid project ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -242,7 +425,7 @@ func (h *Handler) ImportSpecs(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.ImportSpecs(c.Request.Context(), uint(projectID), req.Specs); err != nil {
+	if err := h.service.ImportSpecs(c.Request.Context(), projectID, req.Specs); err != nil {
 		response.HandleError(c, "Failed to import specs", err)
 		return
 	}
@@ -252,10 +435,14 @@ func (h *Handler) ImportSpecs(c *gin.Context) {
 
 // ExportSpecs exports API specifications
 func (h *Handler) ExportSpecs(c *gin.Context) {
-	projectID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	format := c.DefaultQuery("format", "json")
 
-	data, err := h.service.ExportSpecs(c.Request.Context(), uint(projectID), format)
+	data, err := h.service.ExportSpecs(c.Request.Context(), projectID, format)
 	if err != nil {
 		response.HandleError(c, "Failed to export specs", err)
 		return
@@ -266,15 +453,19 @@ func (h *Handler) ExportSpecs(c *gin.Context) {
 
 // GenTest generates an AI-powered Kest flow test file for an API specification
 func (h *Handler) GenTest(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	id, ok := handler.ParseID(c, "sid")
+	if !ok {
 		return
 	}
 
 	lang := c.DefaultQuery("lang", "en")
 
-	flowContent, err := h.service.GenTest(c.Request.Context(), uint(id), lang)
+	flowContent, err := h.service.GenTest(c.Request.Context(), projectID, id, lang)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -284,9 +475,8 @@ func (h *Handler) GenTest(c *gin.Context) {
 		return
 	}
 
-	// Save to test_cases table asynchronously if saver is configured
 	if h.tcSaver != nil {
-		specID := uint(id)
+		specID := id
 		go func() {
 			_ = h.tcSaver.SaveGeneratedTestCase(context.Background(), specID, "[AI Generated]", flowContent)
 		}()
@@ -299,15 +489,19 @@ func (h *Handler) GenTest(c *gin.Context) {
 
 // GenDoc generates AI-powered documentation for an API specification
 func (h *Handler) GenDoc(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("sid"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	id, ok := handler.ParseID(c, "sid")
+	if !ok {
 		return
 	}
 
 	lang := c.DefaultQuery("lang", "en")
 
-	spec, err := h.service.GenDoc(c.Request.Context(), uint(id), lang)
+	spec, err := h.service.GenDoc(c.Request.Context(), projectID, id, lang)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -321,12 +515,9 @@ func (h *Handler) GenDoc(c *gin.Context) {
 }
 
 // BatchGenDoc triggers AI documentation generation for multiple specs concurrently.
-// Accepts optional category_id to scope generation to a single category.
-// Returns immediately with { total, queued, skipped }; work runs in the background.
 func (h *Handler) BatchGenDoc(c *gin.Context) {
-	projectID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.BadRequest(c, "Invalid project ID")
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -336,13 +527,120 @@ func (h *Handler) BatchGenDoc(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.BatchGenDoc(c.Request.Context(), uint(projectID), &req)
+	result, err := h.service.BatchGenDoc(c.Request.Context(), projectID, &req)
 	if err != nil {
 		response.HandleError(c, "Failed to start batch doc generation", err)
 		return
 	}
 
 	response.Success(c, result)
+}
+
+// GetShare returns the current internal share metadata for a spec.
+func (h *Handler) GetShare(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	specID, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	share, err := h.service.GetShareBySpecID(c.Request.Context(), projectID, specID)
+	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) || errors.Is(err, ErrShareNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to load share", err)
+		return
+	}
+
+	response.Success(c, share)
+}
+
+// PublishShare creates or refreshes the public share snapshot for a spec.
+func (h *Handler) PublishShare(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	specID, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		response.Unauthorized(c, "Authentication required")
+		return
+	}
+
+	userID, typeOK := userIDValue.(uint)
+	if !typeOK {
+		response.Error(c, http.StatusUnauthorized, "Invalid user context")
+		return
+	}
+
+	share, err := h.service.PublishShare(c.Request.Context(), projectID, specID, userID)
+	if err != nil {
+		if errors.Is(err, ErrSpecNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to publish share", err)
+		return
+	}
+
+	response.Success(c, share)
+}
+
+// DeleteShare disables a published share.
+func (h *Handler) DeleteShare(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	specID, ok := handler.ParseID(c, "sid")
+	if !ok {
+		return
+	}
+
+	if err := h.service.DeleteShareBySpecID(c.Request.Context(), projectID, specID); err != nil {
+		if errors.Is(err, ErrSpecNotFound) || errors.Is(err, ErrShareNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to delete share", err)
+		return
+	}
+
+	response.NoContent(c)
+}
+
+// GetPublicShare serves the anonymous share snapshot.
+func (h *Handler) GetPublicShare(c *gin.Context) {
+	slug := c.Param("slug")
+	if slug == "" {
+		response.BadRequest(c, "Invalid share slug")
+		return
+	}
+
+	share, err := h.service.GetPublicShareBySlug(c.Request.Context(), slug)
+	if err != nil {
+		if errors.Is(err, ErrShareNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to load public share", err)
+		return
+	}
+
+	response.Success(c, share)
 }
 
 // Convenience aliases for cleaner route definitions
@@ -352,6 +650,35 @@ func (h *Handler) List(c *gin.Context) {
 
 func (h *Handler) Create(c *gin.Context) {
 	h.CreateSpec(c)
+}
+
+func getCurrentUserID(c *gin.Context) (uint, bool) {
+	value, exists := c.Get("userID")
+	if !exists {
+		return 0, false
+	}
+
+	switch userID := value.(type) {
+	case uint:
+		return userID, true
+	case int:
+		if userID < 0 {
+			return 0, false
+		}
+		return uint(userID), true
+	case int64:
+		if userID < 0 {
+			return 0, false
+		}
+		return uint(userID), true
+	case float64:
+		if userID < 0 {
+			return 0, false
+		}
+		return uint(userID), true
+	default:
+		return 0, false
+	}
 }
 
 func (h *Handler) Get(c *gin.Context) {

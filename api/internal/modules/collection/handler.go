@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -13,7 +14,8 @@ import (
 // Handler handles HTTP requests for collection module
 type Handler struct {
 	contracts.BaseModule
-	service Service
+	service       Service
+	memberService member.Service
 }
 
 // Name returns the module name
@@ -22,9 +24,10 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new collection handler
-func NewHandler(service Service) *Handler {
+func NewHandler(service Service, memberService member.Service) *Handler {
 	return &Handler{
-		service: service,
+		service:       service,
+		memberService: memberService,
 	}
 }
 

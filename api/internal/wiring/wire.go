@@ -51,6 +51,7 @@ func InitApplication() (*app.Application, error) {
 		export.ProviderSet,
 		importer.ProviderSet,
 		apispec.ProviderSet,
+		provideAPISpecHandler,
 		category.ProviderSet,
 		environment.ProviderSet,
 		flow.ProviderSet,

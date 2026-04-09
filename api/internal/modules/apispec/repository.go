@@ -23,6 +23,7 @@ type Repository interface {
 	// API Spec operations
 	CreateSpec(ctx context.Context, spec *APISpecPO) error
 	GetSpecByID(ctx context.Context, id uint) (*APISpecPO, error)
+	GetSpecByIDAndProject(ctx context.Context, id, projectID uint) (*APISpecPO, error)
 	GetSpecByMethodAndPath(ctx context.Context, projectID uint, method, path string) (*APISpecPO, error)
 	UpdateSpec(ctx context.Context, spec *APISpecPO) error
 	DeleteSpec(ctx context.Context, id uint) error
@@ -35,6 +36,18 @@ type Repository interface {
 	GetExamplesBySpecID(ctx context.Context, specID uint) ([]*APIExamplePO, error)
 	GetExampleByID(ctx context.Context, id uint) (*APIExamplePO, error)
 	DeleteExample(ctx context.Context, id uint) error
+
+	// AI draft operations
+	CreateAIDraft(ctx context.Context, draft *APISpecAIDraftPO) error
+	GetAIDraftByIDAndProject(ctx context.Context, id, projectID uint) (*APISpecAIDraftPO, error)
+	UpdateAIDraft(ctx context.Context, draft *APISpecAIDraftPO) error
+
+	// Share operations
+	CreateShare(ctx context.Context, share *APISpecSharePO) error
+	UpdateShare(ctx context.Context, share *APISpecSharePO) error
+	GetShareBySpecID(ctx context.Context, projectID, specID uint) (*APISpecSharePO, error)
+	GetShareBySlug(ctx context.Context, slug string) (*APISpecSharePO, error)
+	DeleteShareBySpecID(ctx context.Context, projectID, specID uint) error
 }
 
 // repository is the private implementation
@@ -56,6 +69,16 @@ func (r *repository) CreateSpec(ctx context.Context, spec *APISpecPO) error {
 func (r *repository) GetSpecByID(ctx context.Context, id uint) (*APISpecPO, error) {
 	var spec APISpecPO
 	if err := r.db.WithContext(ctx).First(&spec, id).Error; err != nil {
+		return nil, err
+	}
+	return &spec, nil
+}
+
+func (r *repository) GetSpecByIDAndProject(ctx context.Context, id, projectID uint) (*APISpecPO, error) {
+	var spec APISpecPO
+	if err := r.db.WithContext(ctx).
+		Where("id = ? AND project_id = ?", id, projectID).
+		First(&spec).Error; err != nil {
 		return nil, err
 	}
 	return &spec, nil
@@ -173,4 +196,60 @@ func (r *repository) GetExampleByID(ctx context.Context, id uint) (*APIExamplePO
 
 func (r *repository) DeleteExample(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&APIExamplePO{}, id).Error
+}
+
+// ========== AI Draft Operations ==========
+
+func (r *repository) CreateAIDraft(ctx context.Context, draft *APISpecAIDraftPO) error {
+	return r.db.WithContext(ctx).Create(draft).Error
+}
+
+func (r *repository) GetAIDraftByIDAndProject(ctx context.Context, id, projectID uint) (*APISpecAIDraftPO, error) {
+	var draft APISpecAIDraftPO
+	if err := r.db.WithContext(ctx).
+		Where("id = ? AND project_id = ?", id, projectID).
+		First(&draft).Error; err != nil {
+		return nil, err
+	}
+	return &draft, nil
+}
+
+func (r *repository) UpdateAIDraft(ctx context.Context, draft *APISpecAIDraftPO) error {
+	return r.db.WithContext(ctx).Save(draft).Error
+}
+
+// ========== Share Operations ==========
+
+func (r *repository) CreateShare(ctx context.Context, share *APISpecSharePO) error {
+	return r.db.WithContext(ctx).Create(share).Error
+}
+
+func (r *repository) UpdateShare(ctx context.Context, share *APISpecSharePO) error {
+	return r.db.WithContext(ctx).Save(share).Error
+}
+
+func (r *repository) GetShareBySpecID(ctx context.Context, projectID, specID uint) (*APISpecSharePO, error) {
+	var share APISpecSharePO
+	if err := r.db.WithContext(ctx).
+		Where("project_id = ? AND api_spec_id = ?", projectID, specID).
+		First(&share).Error; err != nil {
+		return nil, err
+	}
+	return &share, nil
+}
+
+func (r *repository) GetShareBySlug(ctx context.Context, slug string) (*APISpecSharePO, error) {
+	var share APISpecSharePO
+	if err := r.db.WithContext(ctx).
+		Where("slug = ?", slug).
+		First(&share).Error; err != nil {
+		return nil, err
+	}
+	return &share, nil
+}
+
+func (r *repository) DeleteShareBySpecID(ctx context.Context, projectID, specID uint) error {
+	return r.db.WithContext(ctx).
+		Where("project_id = ? AND api_spec_id = ?", projectID, specID).
+		Delete(&APISpecSharePO{}).Error
 }

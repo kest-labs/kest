@@ -1,6 +1,9 @@
 import request from '@/http';
 import type {
+  AcceptApiSpecAIDraftRequest,
+  AcceptApiSpecAIDraftResponse,
   ApiSpec,
+  ApiSpecAIDraft,
   ApiSpecExample,
   ApiSpecExamplesResponse,
   ApiSpecExportFormat,
@@ -8,13 +11,17 @@ import type {
   ApiSpecLanguage,
   ApiSpecListParams,
   ApiSpecListResponse,
+  ApiSpecShare,
   BatchGenDocRequest,
   BatchGenDocResponse,
+  CreateApiSpecAIDraftRequest,
   CreateApiExampleRequest,
   CreateApiSpecRequest,
   GenApiTestResponse,
   ImportApiSpecsRequest,
   ImportApiSpecsResponse,
+  PublicApiSpecShare,
+  RefineApiSpecAIDraftRequest,
   ProjectCategoryListResponse,
   ProjectMemberRoleResponse,
   UpdateApiSpecRequest,
@@ -58,6 +65,32 @@ export const apiSpecService = {
   create: (projectId: number | string, data: CreateApiSpecRequest) =>
     request.post<ApiSpec>(`/projects/${projectId}/api-specs`, normalizePayload(data)),
 
+  createAIDraft: (projectId: number | string, data: CreateApiSpecAIDraftRequest) =>
+    request.post<ApiSpecAIDraft>(`/projects/${projectId}/api-specs/ai-drafts`, normalizePayload(data)),
+
+  getAIDraft: (projectId: number | string, draftId: number | string) =>
+    request.get<ApiSpecAIDraft>(`/projects/${projectId}/api-specs/ai-drafts/${draftId}`),
+
+  refineAIDraft: (
+    projectId: number | string,
+    draftId: number | string,
+    data: RefineApiSpecAIDraftRequest
+  ) =>
+    request.post<ApiSpecAIDraft>(
+      `/projects/${projectId}/api-specs/ai-drafts/${draftId}/refine`,
+      normalizePayload(data)
+    ),
+
+  acceptAIDraft: (
+    projectId: number | string,
+    draftId: number | string,
+    data: AcceptApiSpecAIDraftRequest
+  ) =>
+    request.post<AcceptApiSpecAIDraftResponse>(
+      `/projects/${projectId}/api-specs/ai-drafts/${draftId}/accept`,
+      normalizePayload(data)
+    ),
+
   update: (projectId: number | string, specId: number | string, data: UpdateApiSpecRequest) =>
     request.patch<ApiSpec>(`/projects/${projectId}/api-specs/${specId}`, normalizePayload(data)),
 
@@ -93,6 +126,20 @@ export const apiSpecService = {
 
   createExample: (projectId: number | string, specId: number | string, data: CreateApiExampleRequest) =>
     request.post<ApiSpecExample>(`/projects/${projectId}/api-specs/${specId}/examples`, normalizePayload(data)),
+
+  getShare: (projectId: number | string, specId: number | string) =>
+    request.get<ApiSpecShare>(`/projects/${projectId}/api-specs/${specId}/share`),
+
+  publishShare: (projectId: number | string, specId: number | string) =>
+    request.post<ApiSpecShare>(`/projects/${projectId}/api-specs/${specId}/share`),
+
+  deleteShare: (projectId: number | string, specId: number | string) =>
+    request.delete<void>(`/projects/${projectId}/api-specs/${specId}/share`),
+
+  getPublicShare: (slug: string) =>
+    request.get<PublicApiSpecShare>(`/public/api-spec-shares/${slug}`, {
+      skipAuth: true,
+    }),
 
   listCategories: (projectId: number | string) =>
     request.get<ProjectCategoryListResponse>(`/projects/${projectId}/categories`, {

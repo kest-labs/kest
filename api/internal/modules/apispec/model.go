@@ -31,7 +31,7 @@ type APISpecPO struct {
 	Responses      string `gorm:"type:text"`     // JSON map of responses
 	Examples       string `gorm:"type:text"`     // JSON array of examples
 	Version        string `gorm:"size:50;index"` // API version
-	IsPublic       bool   `gorm:"default:true"`  // Public or private
+	IsPublic       bool   `gorm:"default:false"` // Public or private
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      gorm.DeletedAt `gorm:"index"`

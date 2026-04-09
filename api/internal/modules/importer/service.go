@@ -134,7 +134,7 @@ func (s *service) importItems(ctx context.Context, projectID, parentID uint, ite
 		} else if item.Request != nil {
 			// Create request for this collection node
 			reqReq := s.convertFromPostmanRequest(item.Request, col.ID)
-			if _, err := s.requestService.Create(ctx, reqReq); err != nil {
+			if _, err := s.requestService.Create(ctx, projectID, reqReq); err != nil {
 				return err
 			}
 		}

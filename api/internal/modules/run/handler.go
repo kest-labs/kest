@@ -3,6 +3,7 @@ package run
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
 	"github.com/kest-labs/kest/api/internal/modules/variable"
@@ -13,12 +14,14 @@ import (
 type Handler struct {
 	contracts.BaseModule
 	requestService request.Service
+	memberService  member.Service
 	runner         runner.Runner
 }
 
-func NewHandler(requestService request.Service, runner runner.Runner) *Handler {
+func NewHandler(requestService request.Service, memberService member.Service, runner runner.Runner) *Handler {
 	return &Handler{
 		requestService: requestService,
+		memberService:  memberService,
 		runner:         runner,
 	}
 }
@@ -28,11 +31,16 @@ func (h *Handler) Name() string {
 }
 
 type RunRequest struct {
-	EnvironmentID *uint            `json:"environment_id"`
+	EnvironmentID *uint             `json:"environment_id"`
 	Variables     map[string]string `json:"variables"`
 }
 
 func (h *Handler) Run(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -48,9 +56,13 @@ func (h *Handler) Run(c *gin.Context) {
 		return
 	}
 
-	reqModel, err := h.requestService.GetByID(c.Request.Context(), requestID, collectionID)
+	reqModel, err := h.requestService.GetByID(c.Request.Context(), requestID, collectionID, projectID)
 	if err != nil {
 		if err == request.ErrRequestNotFound {
+			response.NotFound(c, err.Error())
+			return
+		}
+		if err == request.ErrCollectionNotFound || err == request.ErrInvalidCollection {
 			response.NotFound(c, err.Error())
 			return
 		}

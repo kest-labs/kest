@@ -7,8 +7,10 @@ import {
   Bot,
   Boxes,
   Braces,
+  Copy,
   Download,
   Eye,
+  ExternalLink,
   FileCode2,
   FileJson2,
   FlaskConical,
@@ -19,6 +21,7 @@ import {
   RefreshCw,
   ScrollText,
   Search,
+  Share2,
   ShieldCheck,
   Sparkles,
   Tags,
@@ -60,8 +63,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
+import { ApiSpecAICreateDialog } from '@/components/features/project/api-spec-ai-create-dialog';
 import { buildApiPath } from '@/config/api';
 import {
+  buildApiSpecShareRoute,
   buildProjectCategoriesRoute,
   buildProjectDetailRoute,
   buildProjectEnvironmentsRoute,
@@ -76,18 +81,24 @@ import {
   useApiSpec,
   useApiSpecExamples,
   useApiSpecFull,
+  useApiSpecShare,
   useApiSpecs,
+  useAcceptApiSpecAIDraft,
   useBatchGenApiDocs,
+  useCreateApiSpecAIDraft,
   useCreateApiExample,
   useCreateApiSpec,
+  useDeleteApiSpecShare,
   useDeleteApiSpec,
   useExportApiSpecs,
   useGenApiDoc,
   useGenApiTest,
   useGeneratedApiTest,
   useImportApiSpecs,
+  usePublishApiSpecShare,
   useProjectApiCategories,
   useProjectMemberRole,
+  useRefineApiSpecAIDraft,
   useUpdateApiSpec,
 } from '@/hooks/use-api-specs';
 import { useProject, useProjectStats } from '@/hooks/use-projects';
@@ -1371,6 +1382,7 @@ export function ApiSpecManagementPage({
   const [generatedTestLanguage, setGeneratedTestLanguage] = useState<ApiSpecLanguage>('en');
   const [formMode, setFormMode] = useState<SpecFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isAICreateOpen, setIsAICreateOpen] = useState(false);
   const [editingSpecId, setEditingSpecId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApiSpec | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -1413,6 +1425,7 @@ export function ApiSpecManagementPage({
   const specDetailQuery = useApiSpec(projectId, activeSpecId ?? undefined);
   const specFullQuery = useApiSpecFull(projectId, activeSpecId ?? undefined);
   const specExamplesQuery = useApiSpecExamples(projectId, activeSpecId ?? undefined);
+  const specShareQuery = useApiSpecShare(projectId, activeSpecId ?? undefined);
   const generatedTestQuery = useGeneratedApiTest(projectId, activeSpecId ?? undefined, generatedTestLanguage);
   const editingSpecQuery = useApiSpec(projectId, editingSpecId ?? undefined);
 
@@ -1444,21 +1457,34 @@ export function ApiSpecManagementPage({
   const activeSpecExamplesPath = activeSpecId
     ? buildApiPath(`/projects/${projectId}/api-specs/${activeSpecId}/examples`)
     : buildApiPath(`/projects/${projectId}/api-specs/:sid/examples`);
+  const activeSpecSharePath = activeSpecId
+    ? buildApiPath(`/projects/${projectId}/api-specs/${activeSpecId}/share`)
+    : buildApiPath(`/projects/${projectId}/api-specs/:sid/share`);
 
   const createSpecMutation = useCreateApiSpec(projectId);
   const updateSpecMutation = useUpdateApiSpec(projectId);
+  const createAIDraftMutation = useCreateApiSpecAIDraft(projectId);
+  const refineAIDraftMutation = useRefineApiSpecAIDraft(projectId);
+  const acceptAIDraftMutation = useAcceptApiSpecAIDraft(projectId);
   const deleteSpecMutation = useDeleteApiSpec(projectId);
+  const publishShareMutation = usePublishApiSpecShare(projectId);
+  const deleteShareMutation = useDeleteApiSpecShare(projectId);
   const importSpecsMutation = useImportApiSpecs(projectId);
   const exportSpecsMutation = useExportApiSpecs(projectId);
   const genDocMutation = useGenApiDoc(projectId);
   const genTestMutation = useGenApiTest(projectId);
   const batchGenMutation = useBatchGenApiDocs(projectId);
   const createExampleMutation = useCreateApiExample(projectId);
+  const shareRoute = specShareQuery.data?.slug ? buildApiSpecShareRoute(specShareQuery.data.slug) : null;
 
   const openCreateDialog = () => {
     setFormMode('create');
     setEditingSpecId(null);
     setIsFormOpen(true);
+  };
+
+  const openAICreateDialog = () => {
+    setIsAICreateOpen(true);
   };
 
   const openEditDialog = (specId: number) => {
@@ -1589,6 +1615,41 @@ export function ApiSpecManagementPage({
     }
   };
 
+  const handleCopyShareLink = async (route = shareRoute) => {
+    if (!route || typeof window === 'undefined') {
+      return;
+    }
+
+    const absoluteUrl = new URL(route, window.location.origin).toString();
+    await navigator.clipboard.writeText(absoluteUrl);
+    toast.success('Public share link copied to clipboard');
+  };
+
+  const handlePublishShare = async () => {
+    if (!activeSpecId) {
+      return;
+    }
+
+    try {
+      const share = await publishShareMutation.mutateAsync(activeSpecId);
+      await handleCopyShareLink(buildApiSpecShareRoute(share.slug));
+    } catch {
+      // HTTP 错误由全局错误处理和 toast 负责提示。
+    }
+  };
+
+  const handleDeleteShare = async () => {
+    if (!activeSpecId) {
+      return;
+    }
+
+    try {
+      await deleteShareMutation.mutateAsync(activeSpecId);
+    } catch {
+      // HTTP 错误由全局错误处理和 toast 负责提示。
+    }
+  };
+
   const handleCopyGeneratedTest = async () => {
     if (!generatedTestQuery.data) {
       return;
@@ -1597,6 +1658,28 @@ export function ApiSpecManagementPage({
     await navigator.clipboard.writeText(generatedTestQuery.data);
     toast.success('Generated test copied to clipboard');
   };
+
+  const handleCreateAIDraft = async (
+    payload: Parameters<typeof createAIDraftMutation.mutateAsync>[0]
+  ) => createAIDraftMutation.mutateAsync(payload);
+
+  const handleRefineAIDraft = async (
+    draftId: number,
+    payload: Parameters<typeof refineAIDraftMutation.mutateAsync>[0]['data']
+  ) =>
+    refineAIDraftMutation.mutateAsync({
+      draftId,
+      data: payload,
+    });
+
+  const handleAcceptAIDraft = async (
+    draftId: number,
+    payload: Parameters<typeof acceptAIDraftMutation.mutateAsync>[0]['data']
+  ) =>
+    acceptAIDraftMutation.mutateAsync({
+      draftId,
+      data: payload,
+    });
 
   return (
     <div className="flex-1 space-y-8 p-6 pt-6">
@@ -1686,6 +1769,10 @@ export function ApiSpecManagementPage({
             <Button type="button" variant="outline" onClick={() => setIsBatchGenOpen(true)} disabled={!canWrite}>
               <Sparkles className="h-4 w-4" />
               Batch Gen Doc
+            </Button>
+            <Button type="button" variant="outline" onClick={openAICreateDialog} disabled={!canWrite}>
+              <Bot className="h-4 w-4" />
+              AI Create
             </Button>
             <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
               <Plus className="h-4 w-4" />
@@ -2009,6 +2096,47 @@ export function ApiSpecManagementPage({
 
               {selectedSpec ? (
                 <div className="flex flex-wrap gap-2">
+                  {specShareQuery.data ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleCopyShareLink()}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        Copy Link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        asChild
+                      >
+                        <Link href={shareRoute || '#'} target="_blank" rel="noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Preview Share
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canWrite || deleteShareMutation.isPending}
+                        onClick={() => void handleDeleteShare()}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Disable Share
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!canWrite || publishShareMutation.isPending}
+                      onClick={() => void handlePublishShare()}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Publish Share
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -2061,11 +2189,23 @@ export function ApiSpecManagementPage({
                         <Badge variant={selectedSpec.is_public ? 'default' : 'secondary'}>
                           {selectedSpec.is_public ? 'Public' : 'Private'}
                         </Badge>
+                        {specShareQuery.data ? <Badge variant="outline">Shared</Badge> : null}
                         <Badge variant="outline">{selectedSpec.doc_source || 'manual'}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {selectedSpec.summary || 'No summary provided for this spec.'}
                       </p>
+                      {specShareQuery.data ? (
+                        <p className="text-xs text-muted-foreground">
+                          分享接口：
+                          {' '}
+                          <code>{activeSpecSharePath}</code>
+                          {' '}
+                          · 对外页面：
+                          {' '}
+                          <code>{shareRoute}</code>
+                        </p>
+                      ) : null}
                     </div>
 
                     {/* 详情面板右上角提供项目概览和环境页入口，便于规格编写时切换上下文。 */}
@@ -2323,6 +2463,10 @@ export function ApiSpecManagementPage({
                     <div>POST {apiSpecsPath}/import</div>
                     <div>GET {apiSpecsPath}/export</div>
                     <div>POST {apiSpecsPath}/batch-gen-doc</div>
+                    <div>POST {apiSpecsPath}/ai-drafts</div>
+                    <div>GET {apiSpecsPath}/ai-drafts/:aid</div>
+                    <div>POST {apiSpecsPath}/ai-drafts/:aid/refine</div>
+                    <div>POST {apiSpecsPath}/ai-drafts/:aid/accept</div>
                     <div>GET {activeSpecPath}</div>
                     <div>GET {activeSpecFullPath}</div>
                     <div>PATCH {activeSpecPath}</div>
@@ -2331,6 +2475,9 @@ export function ApiSpecManagementPage({
                     <div>POST {activeSpecPath}/gen-test</div>
                     <div>GET {activeSpecExamplesPath}</div>
                     <div>POST {activeSpecExamplesPath}</div>
+                    <div>GET {activeSpecSharePath}</div>
+                    <div>POST {activeSpecSharePath}</div>
+                    <div>DELETE {activeSpecSharePath}</div>
                   </div>
                 </div>
               </>
@@ -2354,6 +2501,23 @@ export function ApiSpecManagementPage({
           }
         }}
         onSubmit={handleSpecSubmit}
+      />
+
+      <ApiSpecAICreateDialog
+        open={isAICreateOpen}
+        onOpenChange={setIsAICreateOpen}
+        projectId={projectId}
+        categories={categoryOptions}
+        isSubmittingDraft={createAIDraftMutation.isPending}
+        isSubmittingRefine={refineAIDraftMutation.isPending}
+        isSubmittingAccept={acceptAIDraftMutation.isPending}
+        onCreateDraft={handleCreateAIDraft}
+        onRefineDraft={handleRefineAIDraft}
+        onAcceptDraft={handleAcceptAIDraft}
+        onAccepted={(specId) => {
+          setSelectedSpecId(specId);
+          setDetailTab('overview');
+        }}
       />
 
       <DeleteSpecDialog

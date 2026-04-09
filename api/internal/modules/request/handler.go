@@ -2,9 +2,11 @@ package request
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -12,7 +14,8 @@ import (
 // Handler handles HTTP requests for request module
 type Handler struct {
 	contracts.BaseModule
-	service Service
+	service       Service
+	memberService member.Service
 }
 
 // Name returns the module name
@@ -21,14 +24,20 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new request handler
-func NewHandler(service Service) *Handler {
+func NewHandler(service Service, memberService member.Service) *Handler {
 	return &Handler{
-		service: service,
+		service:       service,
+		memberService: memberService,
 	}
 }
 
 // Create handles POST /projects/:id/collections/:cid/requests
 func (h *Handler) Create(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -41,8 +50,12 @@ func (h *Handler) Create(c *gin.Context) {
 
 	req.CollectionID = collectionID
 
-	request, err := h.service.Create(c.Request.Context(), &req)
+	request, err := h.service.Create(c.Request.Context(), projectID, &req)
 	if err != nil {
+		if errors.Is(err, ErrInvalidCollection) {
+			response.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
 		response.InternalServerError(c, err.Error(), err)
 		return
 	}
@@ -52,6 +65,11 @@ func (h *Handler) Create(c *gin.Context) {
 
 // Get handles GET /projects/:id/collections/:cid/requests/:rid
 func (h *Handler) Get(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -62,9 +80,13 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	request, err := h.service.GetByID(c.Request.Context(), requestID, collectionID)
+	request, err := h.service.GetByID(c.Request.Context(), requestID, collectionID, projectID)
 	if err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
+			response.NotFound(c, err.Error())
+			return
+		}
+		if errors.Is(err, ErrInvalidCollection) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -77,6 +99,11 @@ func (h *Handler) Get(c *gin.Context) {
 
 // Update handles PUT /projects/:id/collections/:cid/requests/:rid
 func (h *Handler) Update(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -92,9 +119,13 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	request, err := h.service.Update(c.Request.Context(), requestID, collectionID, &req)
+	request, err := h.service.Update(c.Request.Context(), requestID, collectionID, projectID, &req)
 	if err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
+			response.NotFound(c, err.Error())
+			return
+		}
+		if errors.Is(err, ErrInvalidCollection) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -107,6 +138,11 @@ func (h *Handler) Update(c *gin.Context) {
 
 // Delete handles DELETE /projects/:id/collections/:cid/requests/:rid
 func (h *Handler) Delete(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -117,8 +153,12 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), requestID, collectionID); err != nil {
+	if err := h.service.Delete(c.Request.Context(), requestID, collectionID, projectID); err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
+			response.NotFound(c, err.Error())
+			return
+		}
+		if errors.Is(err, ErrInvalidCollection) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -131,6 +171,11 @@ func (h *Handler) Delete(c *gin.Context) {
 
 // List handles GET /projects/:id/collections/:cid/requests
 func (h *Handler) List(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -139,8 +184,12 @@ func (h *Handler) List(c *gin.Context) {
 	page := handler.QueryInt(c, "page", 1)
 	perPage := handler.QueryInt(c, "per_page", 20)
 
-	requests, total, err := h.service.List(c.Request.Context(), collectionID, page, perPage)
+	requests, total, err := h.service.List(c.Request.Context(), collectionID, projectID, page, perPage)
 	if err != nil {
+		if errors.Is(err, ErrInvalidCollection) {
+			response.NotFound(c, err.Error())
+			return
+		}
 		response.InternalServerError(c, err.Error(), err)
 		return
 	}
@@ -158,6 +207,11 @@ func (h *Handler) List(c *gin.Context) {
 
 // Move handles PATCH /projects/:id/collections/:cid/requests/:rid/move
 func (h *Handler) Move(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return
@@ -173,9 +227,13 @@ func (h *Handler) Move(c *gin.Context) {
 		return
 	}
 
-	request, err := h.service.Move(c.Request.Context(), requestID, collectionID, &req)
+	request, err := h.service.Move(c.Request.Context(), requestID, collectionID, projectID, &req)
 	if err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
+			response.NotFound(c, err.Error())
+			return
+		}
+		if errors.Is(err, ErrInvalidCollection) {
 			response.NotFound(c, err.Error())
 			return
 		}

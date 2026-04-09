@@ -192,5 +192,126 @@ export interface ProjectMemberRoleResponse {
   updated_at: string;
 }
 
+export interface ApiSpecShare {
+  id: number;
+  project_id: number;
+  api_spec_id: number;
+  slug: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PublicApiSpecShare {
+  slug: string;
+  shared_at: string;
+  updated_at: string;
+  method: HttpMethod;
+  path: string;
+  summary: string;
+  description: string;
+  doc_markdown?: string;
+  doc_markdown_zh?: string;
+  doc_markdown_en?: string;
+  doc_source?: ApiSpecDocSource;
+  doc_updated_at?: string | null;
+  doc_updated_at_zh?: string | null;
+  doc_updated_at_en?: string | null;
+  tags: string[];
+  request_body?: RequestBodySpec;
+  parameters?: ParameterSpec[];
+  responses?: Record<string, ResponseSpec>;
+  version: string;
+}
+
+export interface ApiSpecAIDraftFieldInsight {
+  source: string;
+  confidence: number;
+}
+
+export interface ApiSpecAIDraftReference {
+  id: number;
+  method: HttpMethod;
+  path: string;
+  summary: string;
+  version: string;
+  tags?: string[];
+  explicit: boolean;
+  score: number;
+}
+
+export interface ApiSpecAIDraftConventions {
+  auth_style?: string;
+  default_version?: string;
+  common_versions?: string[];
+  common_tags?: string[];
+  success_envelope_keys?: string[];
+  error_envelope_keys?: string[];
+  method_success_statuses?: Record<string, string[]>;
+}
+
+export interface ApiSpecAIDraftSpec {
+  category_id?: number | null;
+  method: HttpMethod;
+  path: string;
+  summary: string;
+  description: string;
+  tags?: string[];
+  request_body?: RequestBodySpec;
+  parameters?: ParameterSpec[];
+  responses?: Record<string, ResponseSpec>;
+  version: string;
+  is_public: boolean;
+}
+
+export interface CreateApiSpecAIDraftRequest {
+  intent: string;
+  method?: HttpMethod;
+  path?: string;
+  category_id?: number;
+  use_project_conventions?: boolean;
+  reference_spec_ids?: number[];
+  lang?: ApiSpecLanguage;
+}
+
+export interface RefineApiSpecAIDraftRequest {
+  instruction: string;
+  fields?: string[];
+  current_draft?: ApiSpecAIDraftSpec;
+  lang?: ApiSpecLanguage;
+}
+
+export interface AcceptApiSpecAIDraftRequest {
+  overrides?: ApiSpecAIDraftSpec;
+  generate_doc?: boolean;
+  generate_test?: boolean;
+  lang?: ApiSpecLanguage;
+}
+
+export interface ApiSpecAIDraft {
+  id: number;
+  project_id: number;
+  created_by: number;
+  accepted_spec_id?: number | null;
+  status: string;
+  intent: string;
+  seed_input: CreateApiSpecAIDraftRequest;
+  draft: ApiSpecAIDraftSpec;
+  references?: ApiSpecAIDraftReference[];
+  assumptions?: string[];
+  questions?: string[];
+  field_insights?: Record<string, ApiSpecAIDraftFieldInsight>;
+  conventions?: ApiSpecAIDraftConventions | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcceptApiSpecAIDraftResponse {
+  draft_id: number;
+  spec: ApiSpec;
+  generated_test?: string;
+  warnings?: string[];
+}
+
 export type ApiSpecExportPayload = ApiSpec[] | Record<string, unknown> | string;
 export type { ProjectCategory, ProjectCategoryListResponse } from './category';

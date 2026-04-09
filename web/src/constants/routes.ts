@@ -6,6 +6,7 @@ export const ROUTES = {
     HOME: '/',
     ABOUT: '/about',
     CONTACT: '/contact',
+    API_SPEC_SHARE: '/share/api-spec/:slug',
   },
 
   // 认证相关路由。
@@ -121,4 +122,10 @@ export function buildProjectFlowsRoute(projectId: string | number): string {
 // 作用：为 `/project/:projectId/test-cases` 生成稳定地址，避免业务组件手写模板字符串。
 export function buildProjectTestCasesRoute(projectId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.PROJECT_TEST_CASES, { projectId });
+}
+
+// API spec 分享页路由 helper。
+// 作用：为匿名公开接口页生成稳定地址，便于复制外部访问链接。
+export function buildApiSpecShareRoute(slug: string): string {
+  return buildRoute(ROUTES.SITE.API_SPEC_SHARE, { slug });
 }
