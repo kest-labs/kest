@@ -4,8 +4,10 @@
   "description": "LlamaFront AI Scaffold - AI-powered frontend application scaffold built with Next.js, TypeScript, and Tailwind CSS for the AI era",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "dev:custom": "node ./scripts/next-runner.mjs dev --turbopack",
+    "dev": "next dev --webpack",
+    "dev:custom": "node ./scripts/next-runner.mjs dev --webpack",
+    "dev:turbo": "next dev --turbopack",
+    "dev:custom:turbo": "node ./scripts/next-runner.mjs dev --turbopack",
     "build": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true next build",
     "build:quiet": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true next build",
     "start": "pnpm exec next start",

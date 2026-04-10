@@ -321,7 +321,7 @@ const createRequestPageTab = (
     overrides.settings ?? {
       followRedirects: true,
       strictTls: false,
-      persistCookies: true,
+      persistCookies: false,
     },
   response: overrides.response ?? createEmptyResponse(),
   isSending: overrides.isSending ?? false,
@@ -366,6 +366,14 @@ const getTabSaveLabel = (tab: RequestPageTab) => {
 
 const byteLength = (value: string) =>
   typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(value).length : value.length;
+
+const encodeBase64 = (value: string) => {
+  if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
+    return window.btoa(value);
+  }
+
+  throw new Error('Base64 encoding is not available in this browser context.');
+};
 
 const requestBodyTypeFromMode = (mode: BodyMode, value: string) => {
   if (!value.trim()) {
@@ -464,6 +472,156 @@ const toResponseDraft = (response: RunRequestResponse): ResponseDraft => ({
   body: formatResponseBody(response.body),
   error: null,
 });
+
+const isEnabledRequestKeyValue = (row: RequestKeyValue) => row.enabled !== false && row.key.trim().length > 0;
+
+const headersToObject = (headers: Headers) =>
+  Object.fromEntries(Array.from(headers.entries()));
+
+const applyPathParamsToUrl = (url: string, pathParams: Record<string, string>) => {
+  let resolvedUrl = url;
+
+  Object.entries(pathParams).forEach(([key, value]) => {
+    const encodedValue = encodeURIComponent(value);
+    resolvedUrl = resolvedUrl
+      .replaceAll(`{{${key}}}`, encodedValue)
+      .replaceAll(`:${key}`, encodedValue);
+  });
+
+  return resolvedUrl;
+};
+
+const buildExecutableRequestUrl = (request: ProjectRequest) => {
+  const resolvedUrl = applyPathParamsToUrl(request.url, request.path_params ?? {});
+  const targetUrl = new URL(resolvedUrl);
+
+  request.query_params
+    .filter(isEnabledRequestKeyValue)
+    .forEach((queryParam) => {
+      targetUrl.searchParams.append(queryParam.key.trim(), queryParam.value);
+    });
+
+  if (request.auth?.type === 'api-key') {
+    const apiKeyLocation = request.auth.api_key?.add_to ?? request.auth.api_key?.in;
+    if (
+      apiKeyLocation === 'query' &&
+      request.auth.api_key?.key?.trim() &&
+      request.auth.api_key.value
+    ) {
+      targetUrl.searchParams.set(request.auth.api_key.key.trim(), request.auth.api_key.value);
+    }
+  }
+
+  return targetUrl.toString();
+};
+
+const buildDirectRequestHeaders = (request: ProjectRequest) => {
+  const headers = new Headers();
+
+  request.headers
+    .filter(isEnabledRequestKeyValue)
+    .forEach((header) => {
+      headers.set(header.key.trim(), header.value);
+    });
+
+  if (request.auth?.type === 'bearer' && request.auth.bearer?.token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${request.auth.bearer.token}`);
+  }
+
+  if (request.auth?.type === 'basic' && request.auth.basic && !headers.has('Authorization')) {
+    headers.set(
+      'Authorization',
+      `Basic ${encodeBase64(`${request.auth.basic.username}:${request.auth.basic.password}`)}`
+    );
+  }
+
+  if (request.auth?.type === 'api-key') {
+    const apiKeyLocation = request.auth.api_key?.add_to ?? request.auth.api_key?.in;
+    if (
+      apiKeyLocation !== 'query' &&
+      request.auth.api_key?.key?.trim() &&
+      request.auth.api_key.value
+    ) {
+      headers.set(request.auth.api_key.key.trim(), request.auth.api_key.value);
+    }
+  }
+
+  if (request.body.trim() && request.body_type === 'json' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (request.body.trim() && request.body_type === 'text' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'text/plain');
+  }
+
+  return headers;
+};
+
+const buildDirectRequestBody = (request: ProjectRequest) => {
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    return undefined;
+  }
+
+  return request.body.trim() ? request.body : undefined;
+};
+
+const executeRequestInBrowser = async (
+  request: ProjectRequest,
+  settings: RequestPageTab['settings']
+): Promise<RunRequestResponse> => {
+  const targetUrl = buildExecutableRequestUrl(request);
+  const targetOrigin = new URL(targetUrl).origin;
+  const currentOrigin =
+    typeof window !== 'undefined' ? window.location.origin : '';
+  const isCrossOrigin = Boolean(currentOrigin) && currentOrigin !== targetOrigin;
+  const requestHeaders = buildDirectRequestHeaders(request);
+  const requestBody = buildDirectRequestBody(request);
+  const startedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+
+  try {
+    const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: requestHeaders,
+      body: requestBody,
+      redirect: settings.followRedirects ? 'follow' : 'manual',
+      credentials: settings.persistCookies ? 'include' : 'same-origin',
+    });
+    const responseBody = await response.text();
+    const finishedAt =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    const responseHeaders = headersToObject(response.headers);
+
+    return {
+      status: response.status,
+      status_text: response.statusText || `${response.status}`,
+      headers: responseHeaders,
+      body: responseBody,
+      time: Math.max(0, Math.round(finishedAt - startedAt)),
+      size:
+        Number(response.headers.get('content-length') ?? '') ||
+        byteLength(responseBody),
+    };
+  } catch (error) {
+    if (error instanceof TypeError) {
+      if (isCrossOrigin && settings.persistCookies) {
+        throw new Error(
+          'Direct browser request failed. This is a cross-origin request with cookie credentials enabled. Disable Persist cookies, or configure the target API to allow this exact origin and credentials in CORS.'
+        );
+      }
+
+      throw new Error(
+        'Direct browser request failed. The target may not allow CORS from this origin, or the request was blocked by the browser network policy.'
+      );
+    }
+
+    throw error;
+  }
+};
 
 const flattenCollectionTree = (nodes: ProjectCollectionTreeNode[]): ProjectCollectionTreeNode[] =>
   nodes.flatMap((node) => [node, ...flattenCollectionTree(node.children ?? [])]);
@@ -601,6 +759,81 @@ const buildWorkbenchStateFromServer = (
   };
 };
 
+const mergeServerCollections = (
+  currentCollections: CollectionNode[],
+  serverCollections: CollectionNode[]
+) => {
+  const currentById = new Map(currentCollections.map((collection) => [collection.id, collection]));
+  const serverIds = new Set(serverCollections.map((collection) => collection.id));
+  const localOnlyCollections = currentCollections.filter(
+    (collection) => !serverIds.has(collection.id) && !isPersistedCollectionId(collection.id)
+  );
+
+  return [
+    ...serverCollections.map((collection) => {
+      const currentCollection = currentById.get(collection.id);
+      const localOnlyRequestIds =
+        currentCollection?.requestIds.filter(
+          (requestId) => getPersistedRequestId(requestId) === null
+        ) ?? [];
+
+      return {
+        ...collection,
+        color: currentCollection?.color ?? collection.color,
+        requestIds: Array.from(new Set([...localOnlyRequestIds, ...collection.requestIds])),
+      };
+    }),
+    ...localOnlyCollections,
+  ];
+};
+
+const mergeServerTabs = (currentTabs: RequestPageTab[], serverTabs: RequestPageTab[]) => {
+  const serverIds = new Set(serverTabs.map((tab) => tab.id));
+  const localOnlyTabs = currentTabs.filter(
+    (tab) => !serverIds.has(tab.id) && getPersistedRequestId(tab.id) === null
+  );
+
+  return [...serverTabs, ...localOnlyTabs];
+};
+
+const mergeExpandedCollectionIds = (currentIds: string[], serverIds: string[]) => {
+  if (currentIds.length === 0) {
+    return serverIds;
+  }
+
+  return Array.from(new Set([...serverIds, ...currentIds]));
+};
+
+const areStringArraysEqual = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
+
+const areCollectionNodesEqual = (left: CollectionNode[], right: CollectionNode[]) =>
+  left.length === right.length &&
+  left.every((collection, index) => {
+    const other = right[index];
+
+    return (
+      collection.id === other.id &&
+      collection.name === other.name &&
+      collection.color === other.color &&
+      areStringArraysEqual(collection.requestIds, other.requestIds)
+    );
+  });
+
+const areTabsEquivalent = (left: RequestPageTab[], right: RequestPageTab[]) =>
+  left.length === right.length &&
+  left.every((tab, index) => {
+    const other = right[index];
+
+    return (
+      tab.id === other.id &&
+      tab.title === other.title &&
+      tab.collectionId === other.collectionId &&
+      tab.method === other.method &&
+      tab.url === other.url
+    );
+  });
+
 const getInitialWorkbenchState = (): InitialWorkbenchState => {
   return {
     tabs: [],
@@ -644,7 +877,6 @@ export function ApiRequestWorkbench({
   const [renameDraftName, setRenameDraftName] = useState('');
   const [renameDialogRequestTabId, setRenameDialogRequestTabId] = useState<string | null>(null);
   const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
-  const [hasHydratedServerState, setHasHydratedServerState] = useState(false);
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
@@ -673,8 +905,12 @@ export function ApiRequestWorkbench({
     queryFn: async () => {
       const entries = await Promise.all(
         persistedCollectionIds.map(async (collectionId) => {
-          const requests = await fetchAllCollectionRequests(projectId, collectionId);
-          return [collectionId, requests] as const;
+          try {
+            const requests = await fetchAllCollectionRequests(projectId, collectionId);
+            return [collectionId, requests] as const;
+          } catch {
+            return [collectionId, []] as const;
+          }
         })
       );
 
@@ -754,15 +990,40 @@ export function ApiRequestWorkbench({
   };
 
   useEffect(() => {
-    const canHydrateWorkbench =
-      collectionTreeQuery.isSuccess &&
-      (persistedCollectionIds.length === 0 || collectionRequestsQuery.isSuccess);
+    if (!collectionTreeQuery.isSuccess) {
+      return;
+    }
+
+    const nextCollections = buildWorkbenchStateFromServer(
+      serverCollections,
+      collectionRequestsQuery.data ?? {}
+    ).collections;
+
+    setCollections((current) => {
+      const mergedCollections = mergeServerCollections(current, nextCollections);
+      return areCollectionNodesEqual(current, mergedCollections) ? current : mergedCollections;
+    });
+    setActiveCollectionId((current) => current ?? nextCollections[0]?.id ?? null);
+    setExpandedCollectionIds((current) => {
+      const mergedIds = mergeExpandedCollectionIds(
+        current,
+        nextCollections.map((collection) => collection.id)
+      );
+      return areStringArraysEqual(current, mergedIds) ? current : mergedIds;
+    });
+  }, [
+    collectionRequestsQuery.data,
+    collectionTreeQuery.isSuccess,
+    serverCollections,
+  ]);
+
+  useEffect(() => {
+    const hasPersistedRequestTabs = tabs.some((tab) => getPersistedRequestId(tab.id) !== null);
 
     if (
-      !canHydrateWorkbench ||
-      hasHydratedServerState ||
-      tabs.length > 0 ||
-      collections.length > 0
+      !collectionTreeQuery.isSuccess ||
+      !collectionRequestsQuery.isSuccess ||
+      hasPersistedRequestTabs
     ) {
       return;
     }
@@ -772,23 +1033,30 @@ export function ApiRequestWorkbench({
       collectionRequestsQuery.data ?? {}
     );
 
-    setTabs(nextState.tabs);
-    setCollections(nextState.collections);
-    setActiveTabId(nextState.activeTabId);
-    setOpenTabIds(nextState.openTabIds);
-    setActiveCollectionId(nextState.activeCollectionId);
-    setExpandedCollectionIds(nextState.expandedCollectionIds);
-    setNextTabIndex(nextState.nextTabIndex);
-    setHasHydratedServerState(true);
+    setTabs((current) => {
+      const mergedTabs = mergeServerTabs(current, nextState.tabs);
+      return areTabsEquivalent(current, mergedTabs) ? current : mergedTabs;
+    });
+    setOpenTabIds((current) => {
+      if (current.length > 0) {
+        return current;
+      }
+
+      return areStringArraysEqual(current, nextState.openTabIds) ? current : nextState.openTabIds;
+    });
+    setActiveTabId((current) => current ?? nextState.activeTabId);
+    setActiveCollectionId((current) => current ?? nextState.activeCollectionId);
+    setExpandedCollectionIds((current) => {
+      const mergedIds = mergeExpandedCollectionIds(current, nextState.expandedCollectionIds);
+      return areStringArraysEqual(current, mergedIds) ? current : mergedIds;
+    });
+    setNextTabIndex((current) => Math.max(current, nextState.nextTabIndex));
   }, [
     collectionRequestsQuery.data,
     collectionRequestsQuery.isSuccess,
     collectionTreeQuery.isSuccess,
-    collections.length,
-    hasHydratedServerState,
-    persistedCollectionIds.length,
     serverCollections,
-    tabs.length,
+    tabs,
   ]);
 
   const updateActiveTab = (updater: (tab: RequestPageTab) => RequestPageTab) => {
@@ -969,7 +1237,6 @@ export function ApiRequestWorkbench({
         current.includes(nextCollection.id) ? current : [nextCollection.id, ...current]
       );
       setActiveCollectionId(nextCollection.id);
-      setHasHydratedServerState(true);
     } catch {}
   };
 
@@ -1224,14 +1491,7 @@ export function ApiRequestWorkbench({
         isSending: true,
       });
 
-      const response = await requestService.run(
-        projectId,
-        persistedRequest.collection_id,
-        persistedRequest.id,
-        {
-          variables: {},
-        }
-      );
+      const response = await executeRequestInBrowser(persistedRequest, tabSnapshot.settings);
 
       updateTab(tabId, (tab) => ({
         ...tab,
@@ -1468,19 +1728,33 @@ export function ApiRequestWorkbench({
                       <div>
                         <CardTitle className="text-xl tracking-tight">{activeTab.title}</CardTitle>
                         <CardDescription className="mt-1">
-                          Execute collection requests against the real backend runner and inspect live responses.
+                          Execute collection requests directly from your browser and inspect the live response locally.
                         </CardDescription>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" onClick={handleDuplicateTab}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        isIcon
+                        className="h-10 w-10 rounded-2xl"
+                        onClick={handleDuplicateTab}
+                        aria-label="Duplicate tab"
+                        title="Duplicate tab"
+                      >
                         <Copy className="h-4 w-4" />
-                        Duplicate
                       </Button>
-                      <Button type="button" variant="outline" onClick={handleSaveTab}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        isIcon
+                        className="h-10 w-10 rounded-2xl"
+                        onClick={handleSaveTab}
+                        aria-label="Save tab"
+                        title="Save tab"
+                      >
                         <Save className="h-4 w-4" />
-                        Save tab
                       </Button>
                     </div>
                   </div>
@@ -2099,11 +2373,26 @@ function RequestToolbar({
         />
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" className="h-11 rounded-2xl" onClick={onSave}>
+          <Button
+            type="button"
+            variant="outline"
+            isIcon
+            className="h-11 w-11 rounded-2xl"
+            onClick={onSave}
+            aria-label="Save tab"
+            title="Save tab"
+          >
             <Save className="h-4 w-4" />
-            Save
           </Button>
-          <Button type="button" variant="outline" className="h-11 rounded-2xl" onClick={onDuplicate}>
+          <Button
+            type="button"
+            variant="outline"
+            isIcon
+            className="h-11 w-11 rounded-2xl"
+            onClick={onDuplicate}
+            aria-label="Duplicate tab"
+            title="Duplicate tab"
+          >
             <Copy className="h-4 w-4" />
           </Button>
           <Button type="button" className="h-11 rounded-2xl px-5" onClick={onSend} loading={tab.isSending}>
@@ -2603,7 +2892,7 @@ function SettingsPanel({
     {
       key: 'persistCookies',
       title: 'Persist cookies',
-      description: 'Reserve cookie persistence for session-driven flows once request state is shared.',
+      description: 'Enable only for cookie-based sessions. Cross-origin cookie requests need explicit CORS allow-origin and allow-credentials support.',
     },
   ];
 
@@ -2674,7 +2963,7 @@ function ResponsePanel({
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
             <p className="mt-4 text-sm font-medium text-text-main">Sending request...</p>
             <p className="mt-1 text-sm text-text-muted">
-              The response panel updates as soon as the backend runner returns.
+              The response panel updates as soon as the browser receives the target API response.
             </p>
           </div>
         ) : response.error ? (
@@ -2686,7 +2975,7 @@ function ResponsePanel({
           <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 text-center">
             <p className="text-base font-semibold text-text-main">Click Send to get a response</p>
             <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">
-              Once you trigger the request, this panel will render the latest response body, headers, and transport metadata.
+              Once you trigger the request, this panel will render the latest response body, headers, and browser transport metadata.
             </p>
           </div>
         ) : (
