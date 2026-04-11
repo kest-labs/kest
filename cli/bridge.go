@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -21,8 +22,16 @@ const (
 var (
 	bridgeHost           string
 	bridgePort           int
+	bridgeCORSMode       string
 	bridgeAllowedOrigins []string
 )
+
+type bridgeOriginPolicy struct {
+	mode    string
+	mu      sync.Mutex
+	allowed map[string]struct{}
+	logged  map[string]struct{}
+}
 
 type bridgeRunRequest struct {
 	Method          string            `json:"method"`
@@ -59,16 +68,19 @@ only to the local bridge, and the bridge performs the real HTTP request locally.
   # Start on a custom port
   kest bridge --port 8799
 
-  # Allow a custom frontend origin
-  kest bridge --allow-origin https://your-kest.example.com`,
+  # Restrict to explicit frontend origins only
+  kest bridge --cors-mode strict --allow-origin https://your-kest.example.com`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		allowedOrigins := normalizeBridgeOrigins(bridgeAllowedOrigins)
+		originPolicy := newBridgeOriginPolicy(
+			bridgeCORSMode,
+			normalizeBridgeOrigins(bridgeAllowedOrigins),
+		)
 		addr := fmt.Sprintf("%s:%d", bridgeHost, bridgePort)
 
 		mux := http.NewServeMux()
 		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			if handleBridgeCORS(w, r, allowedOrigins) {
+			if handleBridgeCORS(w, r, originPolicy) {
 				return
 			}
 
@@ -78,12 +90,13 @@ only to the local bridge, and the bridge performs the real HTTP request locally.
 			}
 
 			writeBridgeJSON(w, http.StatusOK, map[string]any{
-				"ok":   true,
-				"name": "kest-local-bridge",
+				"ok":        true,
+				"name":      "kest-local-bridge",
+				"cors_mode": originPolicy.mode,
 			})
 		})
 		mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
-			if handleBridgeCORS(w, r, allowedOrigins) {
+			if handleBridgeCORS(w, r, originPolicy) {
 				return
 			}
 
@@ -112,9 +125,14 @@ only to the local bridge, and the bridge performs the real HTTP request locally.
 		})
 
 		fmt.Printf("🔌 Kest local bridge listening on http://%s\n", addr)
-		fmt.Println("   Allowed origins:")
-		for _, origin := range allowedOrigins {
-			fmt.Printf("   - %s\n", origin)
+		fmt.Printf("   CORS mode: %s\n", originPolicy.mode)
+		if originPolicy.mode == "strict" {
+			fmt.Println("   Allowed origins:")
+			for _, origin := range originPolicy.listAllowedOrigins() {
+				fmt.Printf("   - %s\n", origin)
+			}
+		} else {
+			fmt.Println("   Allowed origins: auto-reflect any web origin on demand")
 		}
 
 		return http.ListenAndServe(addr, mux)
@@ -124,18 +142,72 @@ only to the local bridge, and the bridge performs the real HTTP request locally.
 func init() {
 	bridgeCmd.Flags().StringVar(&bridgeHost, "host", defaultBridgeHost, "Host interface to bind")
 	bridgeCmd.Flags().IntVar(&bridgePort, "port", defaultBridgePort, "Port to listen on")
+	bridgeCmd.Flags().StringVar(
+		&bridgeCORSMode,
+		"cors-mode",
+		"auto",
+		"CORS mode: auto reflects the caller origin automatically, strict requires allow-origin values",
+	)
 	bridgeCmd.Flags().StringArrayVar(
 		&bridgeAllowedOrigins,
 		"allow-origin",
-		[]string{
-			"https://www.kest.run",
-			"http://localhost:3000",
-			"http://127.0.0.1:3000",
-		},
-		"Frontend origin allowed to call the bridge",
+		nil,
+		"Frontend origin allowed to call the bridge when --cors-mode strict is enabled",
 	)
 
 	rootCmd.AddCommand(bridgeCmd)
+}
+
+func newBridgeOriginPolicy(mode string, origins []string) *bridgeOriginPolicy {
+	normalizedMode := strings.ToLower(strings.TrimSpace(mode))
+	if normalizedMode != "strict" {
+		normalizedMode = "auto"
+	}
+
+	allowed := make(map[string]struct{}, len(origins))
+	for _, origin := range origins {
+		allowed[origin] = struct{}{}
+	}
+
+	return &bridgeOriginPolicy{
+		mode:    normalizedMode,
+		allowed: allowed,
+		logged:  make(map[string]struct{}),
+	}
+}
+
+func (p *bridgeOriginPolicy) resolve(origin string) (string, bool) {
+	trimmed := strings.TrimSpace(origin)
+	if trimmed == "" {
+		return "", true
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.mode == "strict" {
+		_, ok := p.allowed[trimmed]
+		return trimmed, ok
+	}
+
+	if _, seen := p.logged[trimmed]; !seen {
+		p.logged[trimmed] = struct{}{}
+		fmt.Printf("   ↳ auto-allowed origin: %s\n", trimmed)
+	}
+	p.allowed[trimmed] = struct{}{}
+
+	return trimmed, true
+}
+
+func (p *bridgeOriginPolicy) listAllowedOrigins() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	result := make([]string, 0, len(p.allowed))
+	for origin := range p.allowed {
+		result = append(result, origin)
+	}
+	return result
 }
 
 func normalizeBridgeOrigins(origins []string) []string {
@@ -160,25 +232,18 @@ func normalizeBridgeOrigins(origins []string) []string {
 func handleBridgeCORS(
 	w http.ResponseWriter,
 	r *http.Request,
-	allowedOrigins []string,
+	originPolicy *bridgeOriginPolicy,
 ) bool {
 	origin := strings.TrimSpace(r.Header.Get("Origin"))
 	if origin != "" {
-		allowed := false
-		for _, candidate := range allowedOrigins {
-			if candidate == origin {
-				allowed = true
-				break
-			}
-		}
-
+		resolvedOrigin, allowed := originPolicy.resolve(origin)
 		if !allowed {
 			writeBridgeError(w, http.StatusForbidden, "origin not allowed")
 			return true
 		}
 
 		headers := w.Header()
-		headers.Set("Access-Control-Allow-Origin", origin)
+		headers.Set("Access-Control-Allow-Origin", resolvedOrigin)
 		headers.Set(
 			"Vary",
 			"Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network",
