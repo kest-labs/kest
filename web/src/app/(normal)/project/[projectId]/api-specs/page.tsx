@@ -9,6 +9,7 @@ interface ProjectApiSpecsPageProps {
   searchParams: Promise<{
     item?: string;
     mode?: string;
+    ai?: string;
   }>;
 }
 
@@ -19,7 +20,7 @@ export default async function ProjectApiSpecsPage({
   searchParams,
 }: ProjectApiSpecsPageProps) {
   const { projectId } = await params;
-  const { item, mode } = await searchParams;
+  const { item, mode, ai } = await searchParams;
   const numericProjectId = Number(projectId);
 
   if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
@@ -37,6 +38,7 @@ export default async function ProjectApiSpecsPage({
       projectId={numericProjectId}
       module="api-specs"
       selectedItemId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      autoOpenAICreate={ai === 'create'}
     />
   );
 }

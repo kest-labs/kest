@@ -9,6 +9,7 @@ import {
   PROJECT_WORKSPACE_MODULES,
   buildProjectWorkspaceRoute,
 } from '@/components/features/project/project-navigation';
+import { buildProjectDetailRoute } from '@/constants/routes';
 import { cn } from '@/utils';
 
 export function ProjectWorkspaceLayout({
@@ -19,6 +20,8 @@ export function ProjectWorkspaceLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const readyModules = PROJECT_WORKSPACE_MODULES.filter((item) => item.status !== 'planned');
+  const plannedModules = PROJECT_WORKSPACE_MODULES.filter((item) => item.status === 'planned');
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row">
@@ -32,7 +35,7 @@ export function ProjectWorkspaceLayout({
               isIcon
               className="h-8 w-8 rounded-full text-text-muted"
             >
-              <Link href="/project">
+              <Link href={buildProjectDetailRoute(projectId)}>
                 <ArrowLeft className="h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -41,37 +44,67 @@ export function ProjectWorkspaceLayout({
           <Separator />
 
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            <nav className="space-y-2">
-              {PROJECT_WORKSPACE_MODULES.map((item) => {
-                const Icon = item.icon;
-                const href = buildProjectWorkspaceRoute(projectId, item.value);
-                const isActive = pathname === href || pathname.startsWith(`${href}?`) || pathname.startsWith(`${href}/`);
+            <nav className="space-y-4">
+              <div className="space-y-2">
+                {readyModules.map((item) => {
+                  const Icon = item.icon;
+                  const href = buildProjectWorkspaceRoute(projectId, item.value);
+                  const isActive = pathname === href || pathname.startsWith(`${href}?`) || pathname.startsWith(`${href}/`);
 
-                return (
-                  <Link
-                    key={item.value}
-                    href={href}
-                    className={cn(
-                      'group flex flex-col items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-2.5 text-center transition-colors',
-                      isActive
-                        ? ' text-text-main '
-                        : 'text-text-muted hover:bg-background/70 hover:text-black'
-                    )}
-                  >
-                    <div
+                  return (
+                    <Link
+                      key={item.value}
+                      href={href}
                       className={cn(
-                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
-                        isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-text-muted'
+                        'group flex flex-col items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-2.5 text-center transition-colors',
+                        isActive
+                          ? ' text-text-main '
+                          : 'text-text-muted hover:bg-background/70 hover:text-black'
                       )}
                     >
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-medium leading-4">{item.label}</p>
-                    </div>
-                  </Link>
-                );
-              })}
+                      <div
+                        className={cn(
+                          'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
+                          isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-text-muted'
+                        )}
+                      >
+                        <Icon className="h-3 w-3" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium leading-4">{item.label}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {plannedModules.length > 0 ? (
+                <>
+                  <Separator />
+                  <div className="space-y-2 pt-1">
+                    {plannedModules.map((item) => {
+                      const Icon = item.icon;
+
+                      return (
+                        <div
+                          key={item.value}
+                          className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/60 px-2 py-2.5 text-center text-text-muted"
+                        >
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-text-muted">
+                            <Icon className="h-3 w-3" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-medium leading-4">{item.label}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-text-muted/80">
+                              Soon
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
             </nav>
           </div>
         </div>

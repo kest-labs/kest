@@ -5,15 +5,14 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
-  FileClock,
   FileJson2,
-  FolderGit2,
   FolderKanban,
   Globe,
   Plus,
   Search,
   Tags,
   Trash2,
+  Users,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -354,15 +353,11 @@ function ProjectDashboardWelcome({
                 Dashboard overview
               </Badge>
               <CardTitle className="text-2xl tracking-tight">
-                Preview first, enter workspace second
+                Choose a project and continue where work happens
               </CardTitle>
               <CardDescription className="max-w-3xl">
-                This page separates project-level browsing from project-scoped work. Select a
-                project in the left sidebar to inspect its summary here. Only the
-                {' '}
-                <span className="font-medium text-text-main">Open Project</span>
-                {' '}
-                action switches into the double-sidebar workspace.
+                The left sidebar is your project inventory. The right panel is a launchpad:
+                inspect the project, then jump into AI-assisted API Specs, Environments, or Test Cases.
               </CardDescription>
             </div>
 
@@ -413,25 +408,23 @@ function ProjectDashboardWelcome({
 
         <Card className="border-dashed border-border/70">
           <CardHeader>
-            <CardTitle>Workspace model</CardTitle>
+            <CardTitle>Recommended workflow</CardTitle>
             <CardDescription>
-              Once you enter a project, navigation shifts to a project-scoped dual-sidebar layout.
+              Keep the user journey simple: define interfaces, set runtime context, then validate behavior.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-text-muted">
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">First sidebar</p>
-              <p className="mt-1">Categories, Environments, History, API Specs, and Flows.</p>
+              <p className="font-medium text-text-main">1. Define interfaces</p>
+              <p className="mt-1">Start in API Specs and use AI draft to turn product intent into a structured endpoint.</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">Second sidebar</p>
-              <p className="mt-1">Contextual resource list for the active module.</p>
+              <p className="font-medium text-text-main">2. Configure runtime context</p>
+              <p className="mt-1">Add Environments and Collections once requests need real endpoints and reusable drafts.</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">Content area</p>
-              <p className="mt-1">
-                Dedicated detail surface that only renders after the user selects a concrete item.
-              </p>
+              <p className="font-medium text-text-main">3. Validate and iterate</p>
+              <p className="mt-1">Move to Test Cases after the spec and environment baseline is clear.</p>
             </div>
           </CardContent>
         </Card>
@@ -493,8 +486,13 @@ function ProjectPreviewPanel({
             <div className="flex flex-wrap gap-2">
               <Button asChild>
                 <Link href={buildProjectDetailRoute(project.id)}>
-                  Open Project
+                  Project Overview
                   <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`${buildProjectApiSpecsRoute(project.id)}?ai=create`}>
+                  AI Draft API
                 </Link>
               </Button>
               <Button type="button" variant="outline" onClick={onEdit}>
@@ -545,10 +543,10 @@ function ProjectPreviewPanel({
               variant="success"
             />
             <StatCard
-              title="Flows"
-              value={stats?.flow_count ?? 'Pending'}
-              description="Backend integration is still placeholder-based"
-              icon={FolderGit2}
+              title="Members"
+              value={stats?.member_count ?? '0'}
+              description="People who can work in this project"
+              icon={Users}
               variant="warning"
             />
           </>
@@ -573,7 +571,7 @@ function ProjectPreviewPanel({
             ) : environments.length === 0 ? (
               <EmptyPreviewState
                 title="No environments yet"
-                description="The workspace will show an empty module until environments are created."
+                description="Add at least one base URL and shared variables before running requests against real targets."
                 actionHref={`${buildProjectEnvironmentsRoute(project.id)}?mode=manage`}
                 actionLabel="Manage environments"
               />
@@ -625,7 +623,7 @@ function ProjectPreviewPanel({
             ) : apiSpecs.length === 0 ? (
               <EmptyPreviewState
                 title="No API specs yet"
-                description="The default workspace module will open in guide mode until a spec is selected."
+                description="Import or define the project's APIs first so documentation and tests have a stable source of truth."
                 actionHref={`${buildProjectApiSpecsRoute(project.id)}?mode=manage`}
                 actionLabel="Manage API specs"
               />
@@ -677,7 +675,7 @@ function ProjectPreviewPanel({
             ) : flatCategories.length === 0 ? (
               <EmptyPreviewState
                 title="No categories yet"
-                description="The category module will show an empty state until categories are created."
+                description="Create categories only when the surface area is large enough to need taxonomy and ownership grouping."
                 actionHref={`${buildProjectCategoriesRoute(project.id)}?mode=manage`}
                 actionLabel="Manage categories"
               />
@@ -711,44 +709,55 @@ function ProjectPreviewPanel({
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-dashed border-border/70">
+          <Card className="border-border/60">
             <CardHeader>
-              <CardTitle>History summary</CardTitle>
+              <CardTitle>Recommended next steps</CardTitle>
               <CardDescription>
-                The dedicated history module is scaffolded as a placeholder because its frontend data
-                source is not wired yet.
+                Use the current project state to decide what the next operator action should be.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-border/60 bg-background/70 p-4 text-sm text-text-muted">
-                When the history API is ready, this area will summarize recent executions and the
-                workspace second sidebar will list concrete history records.
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-sm font-medium text-text-main">Build the source of truth</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  {apiSpecs.length === 0
+                    ? 'The project should start in API Specs with AI draft. There is no interface inventory yet.'
+                    : 'The project already has API Specs. Expand or refine them before generating test coverage.'}
+                </p>
               </div>
-              <Button asChild variant="outline">
-                <Link href={buildProjectTestCasesRoute(project.id)}>
-                  Open legacy test cases
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-dashed border-border/70">
-            <CardHeader>
-              <CardTitle>Flows summary</CardTitle>
-              <CardDescription>
-                Flow pages are part of the new information architecture, but they currently render as
-                product placeholders.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-border/60 bg-background/70 p-4 text-sm text-text-muted">
-                The workspace still includes a dedicated Flows navigation branch so the navigation model
-                stays complete before backend integration lands.
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-sm font-medium text-text-main">Prepare runtime configuration</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  {environments.length === 0
+                    ? 'No environments are configured. Add development or staging targets before execution starts.'
+                    : 'Environment setup exists. Keep headers and variables current so test runs stay reproducible.'}
+                </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-text-muted">
-                <FileClock className="h-4 w-4" />
-                Added as a first-class placeholder instead of being skipped.
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-sm font-medium text-text-main">Move into validation</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  Open Test Cases once the interface and environment baseline are stable enough to automate.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <Link href={`${buildProjectApiSpecsRoute(project.id)}?ai=create`}>
+                    AI Draft API
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={buildProjectEnvironmentsRoute(project.id)}>
+                    Environments
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={buildProjectTestCasesRoute(project.id)}>
+                    Test Cases
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
             </CardContent>
           </Card>

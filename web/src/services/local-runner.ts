@@ -17,6 +17,16 @@ interface LocalRunnerErrorPayload {
 }
 
 const localRunnerBaseUrl = env.NEXT_PUBLIC_LOCAL_RUNNER_URL.replace(/\/+$/, '');
+const defaultBridgeAllowedOrigins = new Set([
+  'https://kest.run',
+  'https://www.kest.run',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:3003',
+  'http://127.0.0.1:3003',
+]);
 
 const normalizePayload = <T extends object>(payload: T) =>
   Object.fromEntries(
@@ -27,6 +37,7 @@ const getBridgeStartupCommand = () => {
   try {
     const target = new URL(localRunnerBaseUrl);
     const flags: string[] = [];
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin.trim() : '';
 
     if (target.hostname && target.hostname !== '127.0.0.1') {
       flags.push(`--host ${target.hostname}`);
@@ -34,6 +45,10 @@ const getBridgeStartupCommand = () => {
 
     if (target.port && target.port !== '8788') {
       flags.push(`--port ${target.port}`);
+    }
+
+    if (currentOrigin && !defaultBridgeAllowedOrigins.has(currentOrigin)) {
+      flags.push(`--allow-origin ${currentOrigin}`);
     }
 
     return ['kest bridge', ...flags].join(' ');

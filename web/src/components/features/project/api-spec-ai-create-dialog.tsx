@@ -110,10 +110,10 @@ const parseJsonField = <T,>(value: string, label: string, expected: 'object' | '
   const parsed = JSON.parse(trimmed) as T;
   const isArray = Array.isArray(parsed);
   if (expected === 'array' && !isArray) {
-    throw new Error(`${label} 必须是 JSON array。`);
+    throw new Error(`${label} must be a JSON array.`);
   }
   if (expected === 'object' && (parsed === null || isArray || typeof parsed !== 'object')) {
-    throw new Error(`${label} 必须是 JSON object。`);
+    throw new Error(`${label} must be a JSON object.`);
   }
 
   return parsed;
@@ -158,13 +158,13 @@ export function ApiSpecAICreateDialog({
     draftId: number,
     payload: AcceptApiSpecAIDraftRequest
   ) => Promise<AcceptApiSpecAIDraftResponse>;
-  onAccepted: (specId: number) => void;
+  onAccepted: (result: { specId: number; continueToTests: boolean }) => void;
 }) {
   const [intent, setIntent] = useState('');
   const [seedMethod, setSeedMethod] = useState<HttpMethod>('GET');
   const [seedPath, setSeedPath] = useState('');
   const [seedCategoryId, setSeedCategoryId] = useState('');
-  const [lang, setLang] = useState<ApiSpecLanguage>('zh');
+  const [lang, setLang] = useState<ApiSpecLanguage>('en');
   const [useProjectConventions, setUseProjectConventions] = useState(true);
   const [draft, setDraft] = useState<ApiSpecAIDraft | null>(null);
   const [editableDraft, setEditableDraft] = useState<EditableDraftState>(createEmptyEditableDraft);
@@ -172,6 +172,7 @@ export function ApiSpecAICreateDialog({
   const [refineField, setRefineField] = useState('all');
   const [generateDoc, setGenerateDoc] = useState(true);
   const [generateTest, setGenerateTest] = useState(false);
+  const [continueToTests, setContinueToTests] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -180,7 +181,7 @@ export function ApiSpecAICreateDialog({
       setSeedMethod('GET');
       setSeedPath('');
       setSeedCategoryId('');
-      setLang('zh');
+      setLang('en');
       setUseProjectConventions(true);
       setDraft(null);
       setEditableDraft(createEmptyEditableDraft());
@@ -188,6 +189,7 @@ export function ApiSpecAICreateDialog({
       setRefineField('all');
       setGenerateDoc(true);
       setGenerateTest(false);
+      setContinueToTests(true);
       setValidationError(null);
     }
   }, [open]);
@@ -218,7 +220,7 @@ export function ApiSpecAICreateDialog({
 
   const handleGenerateDraft = async () => {
     if (!intent.trim()) {
-      setValidationError('Intent 是必填项。');
+      setValidationError('Intent is required.');
       return;
     }
 
@@ -243,7 +245,7 @@ export function ApiSpecAICreateDialog({
     }
 
     if (!refineInstruction.trim()) {
-      setValidationError('Refine instruction 不能为空。');
+      setValidationError('Refine instruction is required.');
       return;
     }
 
@@ -260,7 +262,7 @@ export function ApiSpecAICreateDialog({
       setEditableDraft(formatEditableDraft(result.draft));
       setRefineInstruction('');
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : 'Refine draft 失败。');
+      setValidationError(error instanceof Error ? error.message : 'Unable to refine the draft.');
     }
   };
 
@@ -278,10 +280,13 @@ export function ApiSpecAICreateDialog({
         generate_test: generateTest,
         lang,
       });
-      onAccepted(result.spec.id);
+      onAccepted({
+        specId: result.spec.id,
+        continueToTests,
+      });
       onOpenChange(false);
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : 'Create spec 失败。');
+      setValidationError(error instanceof Error ? error.message : 'Unable to create the spec.');
     }
   };
 
@@ -294,10 +299,11 @@ export function ApiSpecAICreateDialog({
             AI Create API Spec
           </DialogTitle>
           <DialogDescription>
-            先输入一句话需求，再让 AI 结合项目现有接口风格生成 draft。当前项目 ID 为
+            Start with one sentence of product intent, then let AI draft the spec using the current
+            project conventions. Project ID:
             {' '}
             <code>{projectId}</code>
-            ，不会读取 request 原始敏感数据。
+            . Raw request secrets are not used as prompt context.
           </DialogDescription>
         </DialogHeader>
 
@@ -314,7 +320,7 @@ export function ApiSpecAICreateDialog({
             <CardHeader>
               <CardTitle className="text-base">1. Intent</CardTitle>
               <CardDescription>
-                先给 AI 一句业务意图，可选补 method、path 和 category 作为 seed。
+                Give AI the goal first, then optionally pin method, path, and category as seeds.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 lg:grid-cols-2">
@@ -324,7 +330,7 @@ export function ApiSpecAICreateDialog({
                   id="ai-intent"
                   value={intent}
                   onChange={(event) => setIntent(event.target.value)}
-                  placeholder="例如：新增一个创建订单接口，登录后可用，需要商品列表、收货地址、优惠券"
+                  placeholder="Example: Create an order endpoint for signed-in users with line items, shipping address, and coupon support"
                   rows={5}
                 />
               </div>
@@ -392,7 +398,7 @@ export function ApiSpecAICreateDialog({
                 <div className="space-y-1">
                   <div className="text-sm font-medium">Use project conventions</div>
                   <div className="text-sm text-muted-foreground">
-                    让 AI 参考当前项目已有 specs 的版本、标签和状态码风格。
+                    Reuse the current project's versioning, tags, and response code patterns.
                   </div>
                 </div>
                 <Switch checked={useProjectConventions} onCheckedChange={setUseProjectConventions} />
@@ -406,7 +412,7 @@ export function ApiSpecAICreateDialog({
                 <CardHeader>
                   <CardTitle className="text-base">2. Draft Review</CardTitle>
                   <CardDescription>
-                    可以先人工微调，再做 refine 或直接创建正式 spec。
+                    Review and adjust the draft before refining it again or creating the final spec.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -480,7 +486,7 @@ export function ApiSpecAICreateDialog({
                     <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3">
                       <div>
                         <div className="text-sm font-medium">Public</div>
-                        <div className="text-sm text-muted-foreground">Accept 后是否默认标记为 public。</div>
+                        <div className="text-sm text-muted-foreground">Mark the spec public after creation.</div>
                       </div>
                       <Switch
                         checked={editableDraft.isPublic}
@@ -552,7 +558,7 @@ export function ApiSpecAICreateDialog({
                       Refine
                     </CardTitle>
                     <CardDescription>
-                      对当前 draft 局部重写，不需要整份重新生成。
+                      Rewrite a focused part of the draft without regenerating everything.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -578,7 +584,7 @@ export function ApiSpecAICreateDialog({
                         id="draft-refine"
                         value={refineInstruction}
                         onChange={(event) => setRefineInstruction(event.target.value)}
-                        placeholder="例如：沿用项目统一的错误响应结构，成功返回体包裹在 data 里"
+                        placeholder="Example: Use the project's standard error envelope and wrap successful responses in data"
                         rows={5}
                       />
                     </div>
@@ -593,7 +599,7 @@ export function ApiSpecAICreateDialog({
                 <Card className="border-border/60">
                   <CardHeader>
                     <CardTitle className="text-base">Why This Draft</CardTitle>
-                    <CardDescription>展示 AI 当前参考的项目上下文与不确定项。</CardDescription>
+                    <CardDescription>Show the context, assumptions, and open questions behind this draft.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 text-sm">
                     <div className="space-y-2">
@@ -703,7 +709,8 @@ export function ApiSpecAICreateDialog({
                 <div className="space-y-1">
                   <div className="font-medium">Generate a structured draft first</div>
                   <div className="max-w-xl text-sm text-muted-foreground">
-                    Draft 会结合项目内已有 API Specs 推导 method、parameters、request body 和 responses。
+                    The draft uses existing API specs in this project to infer method, parameters,
+                    request body, and responses.
                   </div>
                 </div>
               </CardContent>
@@ -720,6 +727,10 @@ export function ApiSpecAICreateDialog({
             <div className="flex items-center gap-2">
               <Switch checked={generateTest} onCheckedChange={setGenerateTest} disabled={!draft} />
               <span className="text-sm text-muted-foreground">Generate Test</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={continueToTests} onCheckedChange={setContinueToTests} disabled={!draft} />
+              <span className="text-sm text-muted-foreground">Open Test Cases after Create</span>
             </div>
           </div>
 

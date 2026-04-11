@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Boxes,
@@ -167,18 +168,18 @@ const parseJsonInput = <T,>(
   try {
     parsed = JSON.parse(trimmedValue);
   } catch {
-    throw new Error(`${label} 必须是合法的 JSON。`);
+    throw new Error(`${label} must be valid JSON.`);
   }
 
   if (expectation === 'array' && !Array.isArray(parsed)) {
-    throw new Error(`${label} 必须是 JSON 数组。`);
+    throw new Error(`${label} must be a JSON array.`);
   }
 
   if (
     expectation === 'object' &&
     (Array.isArray(parsed) || typeof parsed !== 'object' || parsed === null)
   ) {
-    throw new Error(`${label} 必须是 JSON 对象。`);
+    throw new Error(`${label} must be a JSON object.`);
   }
 
   return parsed as T;
@@ -274,9 +275,12 @@ const getDuplicateDraft = (testCase?: ProjectTestCase | null): DuplicateDraft =>
   name: testCase ? `${testCase.name} Copy` : '',
 });
 
-const getFromSpecDraft = (): FromSpecDraft => ({
-  apiSpecId: '',
-  name: '',
+const getDefaultFromSpecName = (apiSpec?: ApiSpec | null) =>
+  apiSpec ? `Test ${apiSpec.method} ${apiSpec.path}`.trim() : '';
+
+const getFromSpecDraft = (apiSpec?: ApiSpec | null): FromSpecDraft => ({
+  apiSpecId: apiSpec?.id ? String(apiSpec.id) : '',
+  name: getDefaultFromSpecName(apiSpec),
   env: '',
   useExample: false,
   exampleId: 'auto',
@@ -409,47 +413,47 @@ function TestCaseFormDialog({
     let extractVars: ExtractVariable[] | undefined;
 
     if (mode === 'create' && !draft.apiSpecId) {
-      nextErrors.apiSpecId = '创建测试用例时必须选择 API Spec。';
+      nextErrors.apiSpecId = 'Select an API spec before creating a test case.';
     }
 
     if (!trimmedName) {
-      nextErrors.name = '名称是必填项。';
+      nextErrors.name = 'Name is required.';
     }
 
     try {
       headers = parseStringRecordInput(draft.headers, 'Headers');
     } catch (error) {
-      nextErrors.headers = error instanceof Error ? error.message : 'Headers 无法解析。';
+      nextErrors.headers = error instanceof Error ? error.message : 'Unable to parse Headers.';
     }
 
     try {
       queryParams = parseStringRecordInput(draft.queryParams, 'Query Params');
     } catch (error) {
-      nextErrors.queryParams = error instanceof Error ? error.message : 'Query Params 无法解析。';
+      nextErrors.queryParams = error instanceof Error ? error.message : 'Unable to parse Query Params.';
     }
 
     try {
       pathParams = parseStringRecordInput(draft.pathParams, 'Path Params');
     } catch (error) {
-      nextErrors.pathParams = error instanceof Error ? error.message : 'Path Params 无法解析。';
+      nextErrors.pathParams = error instanceof Error ? error.message : 'Unable to parse Path Params.';
     }
 
     try {
       requestBody = parseJsonInput(draft.requestBody, 'Request Body');
     } catch (error) {
-      nextErrors.requestBody = error instanceof Error ? error.message : 'Request Body 无法解析。';
+      nextErrors.requestBody = error instanceof Error ? error.message : 'Unable to parse Request Body.';
     }
 
     try {
       assertions = parseJsonInput<TestCaseAssertion[]>(draft.assertions, 'Assertions', 'array');
     } catch (error) {
-      nextErrors.assertions = error instanceof Error ? error.message : 'Assertions 无法解析。';
+      nextErrors.assertions = error instanceof Error ? error.message : 'Unable to parse Assertions.';
     }
 
     try {
       extractVars = parseJsonInput<ExtractVariable[]>(draft.extractVars, 'Extract Vars', 'array');
     } catch (error) {
-      nextErrors.extractVars = error instanceof Error ? error.message : 'Extract Vars 无法解析。';
+      nextErrors.extractVars = error instanceof Error ? error.message : 'Unable to parse Extract Vars.';
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -498,8 +502,8 @@ function TestCaseFormDialog({
           <DialogTitle>{mode === 'create' ? 'Create Test Case' : 'Edit Test Case'}</DialogTitle>
           <DialogDescription>
             {mode === 'create'
-              ? '通过 POST /v1/projects/:id/test-cases 创建测试用例。'
-              : '通过 PATCH /v1/projects/:id/test-cases/:tcid 更新当前测试用例。'}
+              ? 'Create a project test case with POST /v1/projects/:id/test-cases.'
+              : 'Update the current test case with PATCH /v1/projects/:id/test-cases/:tcid.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -514,7 +518,7 @@ function TestCaseFormDialog({
             <Alert className="mt-2">
               <AlertTitle>Unable to load test case details</AlertTitle>
               <AlertDescription>
-                当前测试用例详情尚未加载完成，请关闭后重试。
+                The current test case is still loading. Close this dialog and try again.
               </AlertDescription>
             </Alert>
           ) : (
@@ -733,7 +737,7 @@ function DuplicateTestCaseDialog({
     const trimmedName = draft.name.trim();
 
     if (!trimmedName) {
-      setError('副本名称是必填项。');
+      setError('New name is required.');
       return;
     }
 
@@ -746,7 +750,7 @@ function DuplicateTestCaseDialog({
         <DialogHeader>
           <DialogTitle>Duplicate Test Case</DialogTitle>
           <DialogDescription>
-            通过 POST /v1/projects/:id/test-cases/:tcid/duplicate 复制当前测试用例。
+            Duplicate the current test case with POST /v1/projects/:id/test-cases/:tcid/duplicate.
           </DialogDescription>
         </DialogHeader>
 
@@ -789,6 +793,8 @@ function CreateFromSpecDialog({
   open,
   projectId,
   apiSpecs,
+  initialSpecId,
+  flowSource,
   isSubmitting,
   onOpenChange,
   onSubmit,
@@ -796,12 +802,18 @@ function CreateFromSpecDialog({
   open: boolean;
   projectId: number;
   apiSpecs: ApiSpec[];
+  initialSpecId?: number | null;
+  flowSource?: 'ai' | null;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateTestCaseFromSpecRequest) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<FromSpecDraft>(() => getFromSpecDraft());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const initialSpec = useMemo(
+    () => apiSpecs.find((spec) => spec.id === initialSpecId) ?? null,
+    [apiSpecs, initialSpecId]
+  );
 
   const selectedSpecId = draft.apiSpecId ? Number(draft.apiSpecId) : undefined;
   const specExamplesQuery = useApiSpecExamples(
@@ -815,6 +827,24 @@ function CreateFromSpecDialog({
     [apiSpecs, selectedSpecId]
   );
 
+  useEffect(() => {
+    if (!open) {
+      setDraft(getFromSpecDraft());
+      setErrors({});
+      return;
+    }
+
+    setErrors({});
+
+    if (!initialSpecId) {
+      return;
+    }
+
+    if (initialSpec && !draft.apiSpecId) {
+      setDraft(getFromSpecDraft(initialSpec));
+    }
+  }, [draft.apiSpecId, initialSpec, initialSpecId, open]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -823,11 +853,11 @@ function CreateFromSpecDialog({
     const trimmedEnv = draft.env.trim();
 
     if (!draft.apiSpecId) {
-      nextErrors.apiSpecId = '必须选择 API Spec。';
+      nextErrors.apiSpecId = 'Select an API spec.';
     }
 
     if (!trimmedName) {
-      nextErrors.name = '名称是必填项。';
+      nextErrors.name = 'Name is required.';
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -851,12 +881,25 @@ function CreateFromSpecDialog({
         <DialogHeader>
           <DialogTitle>Create Test Case from API Spec</DialogTitle>
           <DialogDescription>
-            通过 POST /v1/projects/:id/test-cases/from-spec 从现有 API Spec 快速生成测试用例。
+            Turn an existing API spec into the first runnable test case without rebuilding the request by hand.
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           <form id="from-spec-test-case-form" onSubmit={handleSubmit} className="space-y-5 py-1">
+            {flowSource === 'ai' && initialSpec ? (
+              <Alert>
+                <AlertTitle>Continue from AI-generated spec</AlertTitle>
+                <AlertDescription>
+                  The new spec
+                  {' '}
+                  <code>{initialSpec.method} {initialSpec.path}</code>
+                  {' '}
+                  was just created. Generate its first test case now to keep the authoring flow continuous.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <div className="space-y-2">
               <Label htmlFor="from-spec-api-spec">API Spec</Label>
               <Select
@@ -868,7 +911,9 @@ function CreateFromSpecDialog({
                     exampleId: 'auto',
                     name:
                       value !== 'none' && !current.name.trim()
-                        ? `Test ${apiSpecs.find((spec) => spec.id === Number(value))?.method || ''} ${apiSpecs.find((spec) => spec.id === Number(value))?.path || ''}`.trim()
+                        ? getDefaultFromSpecName(
+                            apiSpecs.find((spec) => spec.id === Number(value)) ?? null
+                          )
                         : current.name,
                   }))
                 }
@@ -931,7 +976,8 @@ function CreateFromSpecDialog({
                     Use API Example
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    如果当前 API Spec 已经有 examples，可以把 request/response 示例直接带入新测试用例。
+                    If the selected API spec already has examples, seed the test case with the
+                    request and response example data.
                   </p>
                 </div>
                 <Switch
@@ -983,7 +1029,7 @@ function CreateFromSpecDialog({
             Cancel
           </Button>
           <Button type="submit" form="from-spec-test-case-form" loading={isSubmitting}>
-            Create from Spec
+            Generate Test Case
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1019,13 +1065,13 @@ function RunTestCaseDialog({
     try {
       globalVars = parseJsonInput<Record<string, unknown>>(draft.globalVars, 'Global Vars', 'object');
     } catch (error) {
-      nextErrors.globalVars = error instanceof Error ? error.message : 'Global Vars 无法解析。';
+      nextErrors.globalVars = error instanceof Error ? error.message : 'Unable to parse Global Vars.';
     }
 
     try {
       variableKeys = parseStringRecordInput(draft.variableKeys, 'Variable Keys');
     } catch (error) {
-      nextErrors.variableKeys = error instanceof Error ? error.message : 'Variable Keys 无法解析。';
+      nextErrors.variableKeys = error instanceof Error ? error.message : 'Unable to parse Variable Keys.';
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -1046,7 +1092,8 @@ function RunTestCaseDialog({
         <DialogHeader>
           <DialogTitle>Run Test Case</DialogTitle>
           <DialogDescription>
-            通过 POST /v1/projects/:id/test-cases/:tcid/run 执行当前测试用例，并支持环境与变量覆盖。
+            Run the current test case with POST /v1/projects/:id/test-cases/:tcid/run and override
+            the environment or variables if needed.
           </DialogDescription>
         </DialogHeader>
 
@@ -1144,7 +1191,7 @@ function DeleteTestCaseDialog({
         <DialogHeader>
           <DialogTitle>Delete Test Case</DialogTitle>
           <DialogDescription>
-            删除后无法恢复，运行历史也会失去入口。
+            This action cannot be undone. Run history will also lose its direct entry point.
           </DialogDescription>
         </DialogHeader>
 
@@ -1204,7 +1251,8 @@ function RunDetailDialog({
         <DialogHeader>
           <DialogTitle>Run Detail</DialogTitle>
           <DialogDescription>
-            查看 GET /v1/projects/:id/test-cases/:tcid/runs/:rid 返回的完整 request / response / assertions。
+            Inspect the full request, response, and assertions returned by
+            GET /v1/projects/:id/test-cases/:tcid/runs/:rid.
           </DialogDescription>
         </DialogHeader>
 
@@ -1219,7 +1267,7 @@ function RunDetailDialog({
             <Alert>
               <AlertTitle>Unable to load run detail</AlertTitle>
               <AlertDescription>
-                当前运行详情读取失败，请稍后重试。
+                The run detail could not be loaded. Try again in a moment.
               </AlertDescription>
             </Alert>
           ) : (
@@ -1340,9 +1388,16 @@ function RunDetailDialog({
 
 export function TestCaseManagementPage({
   projectId,
+  autoOpenFromSpecSpecId = null,
+  flowSource = null,
 }: {
   projectId: number;
+  autoOpenFromSpecSpecId?: number | null;
+  flowSource?: 'ai' | null;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [apiSpecFilter, setApiSpecFilter] = useState('all');
@@ -1354,7 +1409,7 @@ export function TestCaseManagementPage({
   const [formMode, setFormMode] = useState<TestCaseFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formTargetId, setFormTargetId] = useState<number | null>(null);
-  const [isFromSpecOpen, setIsFromSpecOpen] = useState(false);
+  const [isFromSpecOpen, setIsFromSpecOpen] = useState(Boolean(autoOpenFromSpecSpecId));
   const [duplicateTarget, setDuplicateTarget] = useState<ProjectTestCase | null>(null);
   const [runTarget, setRunTarget] = useState<ProjectTestCase | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectTestCase | null>(null);
@@ -1460,6 +1515,25 @@ export function TestCaseManagementPage({
 
   const activeSpec = activeTestCase ? apiSpecsById.get(activeTestCase.api_spec_id) : undefined;
   const latestHistoryRun = runHistory[0] ?? null;
+  const autoOpenSpec = autoOpenFromSpecSpecId ? apiSpecsById.get(autoOpenFromSpecSpecId) : undefined;
+
+  useEffect(() => {
+    if (autoOpenFromSpecSpecId) {
+      setIsFromSpecOpen(true);
+    }
+  }, [autoOpenFromSpecSpecId]);
+
+  const clearGenerationIntent = () => {
+    if (!searchParams?.size) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('fromSpec');
+    nextParams.delete('source');
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+  };
 
   const selectTestCase = (testCaseId: number) => {
     setSelectedTestCaseId(testCaseId);
@@ -1511,6 +1585,7 @@ export function TestCaseManagementPage({
       selectTestCase(created.id);
       setPage(1);
       setIsFromSpecOpen(false);
+      clearGenerationIntent();
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -1656,7 +1731,7 @@ export function TestCaseManagementPage({
                 disabled={!canCreate}
               >
                 <FileJson2 className="h-4 w-4" />
-                Create from Spec
+                Generate from Spec
               </Button>
               <Button type="button" onClick={openCreateDialog} disabled={!canCreate}>
                 <Plus className="h-4 w-4" />
@@ -1680,8 +1755,28 @@ export function TestCaseManagementPage({
           <Alert>
             <AlertTitle>No API specs available</AlertTitle>
             <AlertDescription>
-              Test case creation depends on existing API Specs. Create an API Spec first, then come back
-              to attach test cases to it.
+              Test case generation depends on existing API Specs. Start with an AI draft or create an
+              API Spec first, then come back to generate coverage from it.
+              <div className="mt-3">
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`${buildProjectApiSpecsRoute(projectId)}?ai=create`}>
+                    <FileJson2 className="h-4 w-4" />
+                    AI Draft API Spec
+                  </Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {flowSource === 'ai' && autoOpenSpec ? (
+          <Alert>
+            <AlertTitle>AI spec ready for validation</AlertTitle>
+            <AlertDescription>
+              Continue the flow by generating the first test case from
+              {' '}
+              <code>{autoOpenSpec.method} {autoOpenSpec.path}</code>
+              .
             </AlertDescription>
           </Alert>
         ) : null}
@@ -1819,7 +1914,7 @@ export function TestCaseManagementPage({
                       </Button>
                       <Button type="button" variant="outline" onClick={() => setIsFromSpecOpen(true)}>
                         <FileJson2 className="h-4 w-4" />
-                        Create from Spec
+                        Generate from Spec
                       </Button>
                     </div>
                   ) : null}
@@ -2339,8 +2434,15 @@ export function TestCaseManagementPage({
         open={isFromSpecOpen}
         projectId={projectId}
         apiSpecs={apiSpecs}
+        initialSpecId={autoOpenFromSpecSpecId}
+        flowSource={flowSource}
         isSubmitting={fromSpecMutation.isPending}
-        onOpenChange={setIsFromSpecOpen}
+        onOpenChange={(open) => {
+          setIsFromSpecOpen(open);
+          if (!open) {
+            clearGenerationIntent();
+          }
+        }}
         onSubmit={handleFromSpecSubmit}
       />
 

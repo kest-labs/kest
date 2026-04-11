@@ -5,21 +5,21 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   ArrowLeft,
-  BarChart3,
   Copy,
   FileJson2,
   FlaskConical,
   FolderKanban,
+  FolderOpen,
   Globe,
   Key,
   Layers3,
   Pencil,
   ShieldCheck,
+  Sparkles,
   Tags,
   Terminal,
   Trash2,
   Users,
-  Workflow,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -38,6 +38,7 @@ import { apiExternalBaseUrl, buildApiPath } from '@/config/api';
 import {
   buildProjectApiSpecsRoute,
   buildProjectCategoriesRoute,
+  buildProjectCollectionsRoute,
   buildProjectEnvironmentsRoute,
   buildProjectTestCasesRoute,
   ROUTES,
@@ -82,8 +83,6 @@ export function ProjectDetailPage({
 
   const project = projectQuery.data;
   const projectStats = projectStatsQuery.data;
-  const projectPath = buildApiPath(`/projects/${projectId}`);
-  const projectStatsPath = buildApiPath(`/projects/${projectId}/stats`);
   const cliPlatformUrl = (apiExternalBaseUrl || buildApiPath('/')).replace(/\/$/, '');
   const cliConfigCommand = generatedCliToken && project
     ? [
@@ -185,14 +184,8 @@ export function ProjectDetailPage({
                 <FolderKanban className="h-6 w-6 text-primary" />
               </div>
               <p className="max-w-3xl text-sm text-text-muted">
-                This page presents the project detail record from
-                {' '}
-                <code>{projectPath}</code>
-                {' '}
-                together with aggregated stats from
-                {' '}
-                <code>{projectStatsPath}</code>
-                .
+                Use this overview to understand the project scope, decide the next module to enter,
+                and keep sync and validation tasks tied to the same workspace.
               </p>
             </div>
 
@@ -208,10 +201,20 @@ export function ProjectDetailPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* 详情页顶部保留跨模块跳转：
-                当前项目可以直接切到 environments、categories、API specs 和 test cases 管理页面。 */}
             <Button type="button" variant="outline" onClick={() => void projectQuery.refetch()}>
               Refresh Detail
+            </Button>
+            <Button type="button" asChild>
+              <Link href={`${buildProjectApiSpecsRoute(projectId)}?ai=create`}>
+                <Sparkles className="h-4 w-4" />
+                AI Draft API
+              </Link>
+            </Button>
+            <Button type="button" variant="outline" asChild>
+              <Link href={buildProjectCollectionsRoute(projectId)}>
+                <FolderOpen className="h-4 w-4" />
+                Collections
+              </Link>
             </Button>
             <Button type="button" variant="outline" asChild>
               <Link href={buildProjectEnvironmentsRoute(projectId)}>
@@ -223,12 +226,6 @@ export function ProjectDetailPage({
               <Link href={buildProjectCategoriesRoute(projectId)}>
                 <Tags className="h-4 w-4" />
                 Categories
-              </Link>
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectApiSpecsRoute(projectId)}>
-                <FileJson2 className="h-4 w-4" />
-                API Specs
               </Link>
             </Button>
             <Button type="button" variant="outline" asChild>
@@ -272,10 +269,10 @@ export function ProjectDetailPage({
             variant="primary"
           />
           <StatCard
-            title="Flows"
-            value={projectStats.flow_count}
-            description="Flow assets tracked in this project"
-            icon={Workflow}
+            title="Categories"
+            value={projectStats.category_count}
+            description="Grouping structure available in this project"
+            icon={Tags}
             variant="success"
           />
           <StatCard
@@ -306,7 +303,7 @@ export function ProjectDetailPage({
           <CardHeader className="border-b bg-muted/20">
             <CardTitle>Project Overview</CardTitle>
             <CardDescription>
-              Core detail data returned by <code>{projectPath}</code>.
+              Keep the project anchored around a simple operating sequence instead of exposing internal wiring.
             </CardDescription>
           </CardHeader>
 
@@ -330,40 +327,49 @@ export function ProjectDetailPage({
                       </div>
                       <p className="font-mono text-xs text-muted-foreground">{project.slug}</p>
                     </div>
-                    {/* 项目概览卡片提供子模块入口，避免用户返回列表页再跳转。 */}
                     <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="outline" asChild>
+                        <Link href={buildProjectCollectionsRoute(project.id)}>
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          Open Collections
+                        </Link>
+                      </Button>
                       <Button type="button" size="sm" variant="outline" asChild>
                         <Link href={buildProjectEnvironmentsRoute(project.id)}>
                           <Globe className="h-3.5 w-3.5" />
-                          Manage Environments
+                          Open Environments
                         </Link>
                       </Button>
                       <Button type="button" size="sm" variant="outline" asChild>
                         <Link href={buildProjectCategoriesRoute(project.id)}>
                           <Tags className="h-3.5 w-3.5" />
-                          Manage Categories
+                          Open Categories
                         </Link>
                       </Button>
                       <Button type="button" size="sm" variant="outline" asChild>
-                        <Link href={buildProjectApiSpecsRoute(project.id)}>
-                          <FileJson2 className="h-3.5 w-3.5" />
-                          Manage API Specs
+                        <Link href={`${buildProjectApiSpecsRoute(project.id)}?ai=create`}>
+                          <Sparkles className="h-3.5 w-3.5" />
+                          AI Draft API
                         </Link>
                       </Button>
                       <Button type="button" size="sm" variant="outline" asChild>
                         <Link href={buildProjectTestCasesRoute(project.id)}>
                           <FlaskConical className="h-3.5 w-3.5" />
-                          Manage Test Cases
+                          Open Test Cases
                         </Link>
                       </Button>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl border p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Project ID</div>
                     <div className="mt-2 font-mono text-sm">{project.id}</div>
+                  </div>
+                  <div className="rounded-xl border p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Platform</div>
+                    <div className="mt-2 text-sm">{resolvePlatformLabel(project.platform)}</div>
                   </div>
                   <div className="rounded-xl border p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Created At</div>
@@ -371,22 +377,26 @@ export function ProjectDetailPage({
                   </div>
                 </div>
 
-                <div className="rounded-xl border bg-muted/20 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <BarChart3 className="h-4 w-4" />
-                    Connected API Endpoints
+                <div className="grid gap-3 xl:grid-cols-3">
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="mb-2 text-sm font-medium text-text-main">1. Define the surface</div>
+                    <p className="text-sm leading-6 text-text-muted">
+                      Start in API Specs with AI draft so the interface inventory becomes structured quickly.
+                    </p>
                   </div>
-                  <div className="space-y-2 font-mono text-xs text-muted-foreground">
-                    <div>GET {projectPath}</div>
-                  <div>PATCH {projectPath}</div>
-                  <div>DELETE {projectPath}</div>
-                  <div>GET {projectStatsPath}</div>
-                  <div>GET {buildApiPath(`/projects/${projectId}/environments`)}</div>
-                  <div>GET {buildApiPath(`/projects/${projectId}/categories`)}</div>
-                  <div>GET {buildApiPath(`/projects/${projectId}/api-specs`)}</div>
-                  <div>GET {buildApiPath(`/projects/${projectId}/test-cases`)}</div>
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="mb-2 text-sm font-medium text-text-main">2. Prepare runtime context</div>
+                    <p className="text-sm leading-6 text-text-muted">
+                      Use Collections for request drafts and Environments for base URLs, headers, and variables.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="mb-2 text-sm font-medium text-text-main">3. Move into validation</div>
+                    <p className="text-sm leading-6 text-text-muted">
+                      Generate or maintain Test Cases after the spec and runtime baseline are reliable.
+                    </p>
+                  </div>
                 </div>
-              </div>
               </>
             )}
           </CardContent>
@@ -397,7 +407,7 @@ export function ProjectDetailPage({
             <CardHeader className="border-b bg-muted/20">
               <CardTitle>Project Stats</CardTitle>
               <CardDescription>
-                Aggregated counts used as a quick health snapshot for the project workspace.
+                A compact health snapshot for the project surface and team footprint.
               </CardDescription>
             </CardHeader>
 
@@ -416,8 +426,8 @@ export function ProjectDetailPage({
                       <div className="mt-2 text-2xl font-semibold">{projectStats.api_spec_count}</div>
                     </div>
                     <div className="rounded-xl border p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Flows</div>
-                      <div className="mt-2 text-2xl font-semibold">{projectStats.flow_count}</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Categories</div>
+                      <div className="mt-2 text-2xl font-semibold">{projectStats.category_count}</div>
                     </div>
                     <div className="rounded-xl border p-4">
                       <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Environments</div>

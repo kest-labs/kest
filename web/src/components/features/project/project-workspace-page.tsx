@@ -5,14 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import {
   ArrowRight,
+  Bot,
   Clock3,
   FileClock,
   FileJson2,
+  FlaskConical,
   Globe,
   Layers3,
   Plus,
   RefreshCw,
   Search,
+  Sparkles,
   Tags,
 } from 'lucide-react';
 import {
@@ -49,6 +52,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiRequestWorkbench } from '@/components/features/project/api-request-workbench';
+import { ApiSpecAICreateDialog } from '@/components/features/project/api-spec-ai-create-dialog';
 import {
   buildCategoryOptions,
   findProjectCategory,
@@ -67,10 +71,13 @@ import {
   buildProjectTestCasesRoute,
 } from '@/constants/routes';
 import {
+  useAcceptApiSpecAIDraft,
   useApiSpecFull,
   useApiSpecs,
+  useCreateApiSpecAIDraft,
   useCreateApiSpec,
   useProjectApiCategories,
+  useRefineApiSpecAIDraft,
 } from '@/hooks/use-api-specs';
 import { useProjectCategories, useProjectCategory } from '@/hooks/use-categories';
 import { useEnvironment, useEnvironments } from '@/hooks/use-environments';
@@ -110,10 +117,12 @@ export function ProjectWorkspacePage({
   projectId,
   module,
   selectedItemId,
+  autoOpenAICreate = false,
 }: {
   projectId: number;
   module: ProjectWorkspaceModule;
   selectedItemId?: number | null;
+  autoOpenAICreate?: boolean;
 }) {
   const projectQuery = useProject(projectId);
   const projectName = projectQuery.data?.name || `Project #${projectId}`;
@@ -127,6 +136,7 @@ export function ProjectWorkspacePage({
           projectId={projectId}
           projectName={projectName}
           selectedItemId={selectedItemId}
+          autoOpenAICreate={autoOpenAICreate}
         />
       );
     case 'environments':
@@ -164,14 +174,17 @@ function ApiSpecsWorkspaceSection({
   projectId,
   projectName,
   selectedItemId,
+  autoOpenAICreate,
 }: {
   projectId: number;
   projectName: string;
   selectedItemId?: number | null;
+  autoOpenAICreate?: boolean;
 }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isAICreateOpen, setIsAICreateOpen] = useState(autoOpenAICreate ?? false);
   const deferredSearch = useDeferredValue(searchQuery);
 
   const specsQuery = useApiSpecs({
@@ -182,6 +195,9 @@ function ApiSpecsWorkspaceSection({
   const selectedSpecQuery = useApiSpecFull(projectId, selectedItemId ?? undefined);
   const categoriesQuery = useProjectApiCategories(projectId);
   const createSpecMutation = useCreateApiSpec(projectId);
+  const createAIDraftMutation = useCreateApiSpecAIDraft(projectId);
+  const refineAIDraftMutation = useRefineApiSpecAIDraft(projectId);
+  const acceptAIDraftMutation = useAcceptApiSpecAIDraft(projectId);
 
   const specs = specsQuery.data?.items ?? EMPTY_SPECS;
   const categoryOptions = useMemo(
@@ -222,6 +238,16 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
+  const handleAICreateOpenChange = (open: boolean) => {
+    setIsAICreateOpen(open);
+
+    if (!open && autoOpenAICreate) {
+      router.replace(
+        selectedItemId ? buildModuleHref(projectId, 'api-specs', selectedItemId) : buildProjectApiSpecsRoute(projectId)
+      );
+    }
+  };
+
   return (
     <>
       <WorkspaceFrame
@@ -237,16 +263,22 @@ function ApiSpecsWorkspaceSection({
             loading={specsQuery.isLoading}
             error={specsQuery.error}
             headerActions={
-              <Button type="button" size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Add Spec
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" onClick={() => setIsAICreateOpen(true)}>
+                  <Sparkles className="h-4 w-4" />
+                  Describe with AI
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setIsCreateOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Spec
+                </Button>
+              </div>
             }
             emptyState={
               <SidebarEmptyState
                 icon={FileJson2}
                 title="No API specs"
-                description="This project does not have saved specs yet."
+                description="Start with an AI draft or create the first spec manually."
               />
             }
           >
@@ -300,7 +332,11 @@ function ApiSpecsWorkspaceSection({
                     Full manager
                   </Link>
                 </Button>
-                <Button type="button" onClick={() => setIsCreateOpen(true)}>
+                <Button type="button" onClick={() => setIsAICreateOpen(true)}>
+                  <Sparkles className="h-4 w-4" />
+                  AI Draft
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Add Spec
                 </Button>
@@ -312,12 +348,11 @@ function ApiSpecsWorkspaceSection({
             ) : selectedItemId && !selectedSpec ? (
               <MissingDetailState moduleLabel="API spec" clearHref={buildProjectApiSpecsRoute(projectId)} />
             ) : !selectedSpec ? (
-              <GuideState
-                icon={FileJson2}
-                title="Choose an API spec"
-                description="The content area stays focused on detail rendering only after a concrete API spec is selected."
-                actionHref={`${buildProjectApiSpecsRoute(projectId)}?mode=manage`}
-                actionLabel="Open full manager"
+              <ApiSpecsGuideState
+                onOpenAICreate={() => setIsAICreateOpen(true)}
+                onOpenManualCreate={() => setIsCreateOpen(true)}
+                managerHref={`${buildProjectApiSpecsRoute(projectId)}?mode=manage`}
+                testCasesHref={buildProjectTestCasesRoute(projectId)}
               />
             ) : (
               <div className="space-y-6">
@@ -412,6 +447,38 @@ function ApiSpecsWorkspaceSection({
         isSubmitting={createSpecMutation.isPending}
         onOpenChange={setIsCreateOpen}
         onSubmit={handleCreateSpec}
+      />
+      <ApiSpecAICreateDialog
+        open={isAICreateOpen}
+        onOpenChange={handleAICreateOpenChange}
+        projectId={projectId}
+        categories={categoryOptions}
+        isSubmittingDraft={createAIDraftMutation.isPending}
+        isSubmittingRefine={refineAIDraftMutation.isPending}
+        isSubmittingAccept={acceptAIDraftMutation.isPending}
+        onCreateDraft={(payload) => createAIDraftMutation.mutateAsync(payload)}
+        onRefineDraft={(draftId, payload) =>
+          refineAIDraftMutation.mutateAsync({
+            draftId,
+            data: payload,
+          })
+        }
+        onAcceptDraft={(draftId, payload) =>
+          acceptAIDraftMutation.mutateAsync({
+            draftId,
+            data: payload,
+          })
+        }
+        onAccepted={({ specId, continueToTests }) => {
+          void specsQuery.refetch();
+
+          if (continueToTests) {
+            router.replace(`${buildProjectTestCasesRoute(projectId)}?fromSpec=${specId}&source=ai`);
+            return;
+          }
+
+          router.replace(buildModuleHref(projectId, 'api-specs', specId));
+        }}
       />
     </>
   );
@@ -1150,6 +1217,82 @@ function GuideState({
             </Link>
           </Button>
         ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApiSpecsGuideState({
+  onOpenAICreate,
+  onOpenManualCreate,
+  managerHref,
+  testCasesHref,
+}: {
+  onOpenAICreate: () => void;
+  onOpenManualCreate: () => void;
+  managerHref: string;
+  testCasesHref: string;
+}) {
+  return (
+    <Card className="border-border/60">
+      <CardContent className="space-y-6 py-8">
+        <div className="flex flex-col items-start gap-4 rounded-[28px] border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-background p-6">
+          <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+            <Bot className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-2xl font-semibold tracking-tight text-text-main">
+              Describe the API, let AI draft the spec
+            </p>
+            <p className="max-w-3xl text-sm leading-6 text-text-muted">
+              Keep the primary flow simple: describe the endpoint in plain language, review the draft,
+              then create the formal spec and move straight into generated test cases.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" onClick={onOpenAICreate}>
+              <Sparkles className="h-4 w-4" />
+              Describe with AI
+            </Button>
+            <Button type="button" variant="outline" onClick={onOpenManualCreate}>
+              <Plus className="h-4 w-4" />
+              Add Spec Manually
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href={managerHref}>
+                Full manager
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-5">
+            <p className="text-sm font-semibold text-text-main">1. Capture intent</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Start from a sentence, method, and path instead of a long manual form.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-5">
+            <p className="text-sm font-semibold text-text-main">2. Review the draft</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              AI uses project conventions to propose parameters, request body, and responses.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-5">
+            <p className="text-sm font-semibold text-text-main">3. Move into testing</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Once the spec exists, switch to test cases and generate coverage from the same source of truth.
+            </p>
+            <Button asChild size="sm" variant="outline" className="mt-4">
+              <Link href={testCasesHref}>
+                Open Test Cases
+                <FlaskConical className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

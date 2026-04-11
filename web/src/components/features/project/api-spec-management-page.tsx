@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -1372,6 +1373,7 @@ export function ApiSpecManagementPage({
 }: {
   projectId: number;
 }) {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [method, setMethod] = useState<'all' | HttpMethod>('all');
@@ -2514,7 +2516,12 @@ export function ApiSpecManagementPage({
         onCreateDraft={handleCreateAIDraft}
         onRefineDraft={handleRefineAIDraft}
         onAcceptDraft={handleAcceptAIDraft}
-        onAccepted={(specId) => {
+        onAccepted={({ specId, continueToTests }) => {
+          if (continueToTests) {
+            router.push(`${buildProjectTestCasesRoute(projectId)}?fromSpec=${specId}&source=ai`);
+            return;
+          }
+
           setSelectedSpecId(specId);
           setDetailTab('overview');
         }}

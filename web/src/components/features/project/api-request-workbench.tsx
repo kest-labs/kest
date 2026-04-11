@@ -1491,6 +1491,20 @@ export function ApiRequestWorkbench({
     });
   };
 
+  const createScratchpadRequest = () => {
+    const nextTab = createRequestPageTab(nextTabIndex, {
+      id: createLocalId('request-tab'),
+      collectionId: null,
+    });
+
+    startTransition(() => {
+      setTabs((current) => [...current, nextTab]);
+      setOpenTabIds((current) => [...current, nextTab.id]);
+      setActiveTabId(nextTab.id);
+      setNextTabIndex((current) => current + 1);
+    });
+  };
+
   const handleCloseTab = (tabId: string) => {
     const nextOpenTabIds = openTabIds.filter((id) => id !== tabId);
     const nextActiveTabId = resolveNextActiveTabId(openTabIds, nextOpenTabIds, activeTabId);
@@ -1649,9 +1663,11 @@ export function ApiRequestWorkbench({
             renamingRequestTabId={renamingRequestTabId}
             expandedCollectionIds={expandedCollectionIds}
             scratchpadTabs={visibleScratchpadTabs}
+            isEmpty={collectionViews.length === 0 && visibleScratchpadTabs.length === 0}
             query={sidebarQuery}
             onQueryChange={setSidebarQuery}
             onCreateCollection={createCollection}
+            onCreateScratchpadRequest={createScratchpadRequest}
             onCreateRequest={handleCreateRequest}
             onDeleteCollection={handleDeleteCollection}
             onDeleteRequest={handleDeleteRequest}
@@ -1744,13 +1760,26 @@ export function ApiRequestWorkbench({
             </div>
           ) : (
             <div className="mx-auto flex min-h-full max-w-[960px] items-center justify-center">
-              <div className="px-6 py-16 text-center">
-                <p className="text-2xl font-medium tracking-tight text-text-muted">
-                  没有窗口打开
+              <div className="w-full max-w-[680px] rounded-[28px] border border-dashed border-border/70 bg-white/72 px-8 py-16 text-center shadow-[0_20px_80px_rgba(15,23,42,0.05)]">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                  <FolderOpen className="h-6 w-6" />
+                </div>
+                <p className="mt-6 text-2xl font-semibold tracking-tight text-text-main">
+                  Start a request workspace
                 </p>
-                <p className="mt-3 text-base text-text-muted">
-                  从左侧 Collection 选择一个 request 重新打开，或创建一个新的 request。
+                <p className="mt-3 text-base leading-7 text-text-muted">
+                  Create a saved collection for reusable requests, or open a scratchpad request for one-off debugging.
                 </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <Button type="button" onClick={createCollection}>
+                    <Plus className="h-4 w-4" />
+                    New Collection
+                  </Button>
+                  <Button type="button" variant="outline" onClick={createScratchpadRequest}>
+                    <Plus className="h-4 w-4" />
+                    Scratchpad Request
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1788,9 +1817,11 @@ function CollectionsSidebar({
   renamingRequestTabId,
   expandedCollectionIds,
   scratchpadTabs,
+  isEmpty,
   query,
   onQueryChange,
   onCreateCollection,
+  onCreateScratchpadRequest,
   onCreateRequest,
   onDeleteCollection,
   onDeleteRequest,
@@ -1809,9 +1840,11 @@ function CollectionsSidebar({
   renamingRequestTabId: string | null;
   expandedCollectionIds: string[];
   scratchpadTabs: RequestPageTab[];
+  isEmpty: boolean;
   query: string;
   onQueryChange: (value: string) => void;
   onCreateCollection: () => void;
+  onCreateScratchpadRequest: () => void;
   onCreateRequest: (collection: CollectionNode) => Promise<void>;
   onDeleteCollection: (collection: CollectionNode) => void;
   onDeleteRequest: (request: RequestPageTab) => Promise<void>;
@@ -1823,6 +1856,25 @@ function CollectionsSidebar({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="space-y-4 p-4">
+        {isEmpty ? (
+          <div className="rounded-[24px] border border-dashed border-border/70 bg-white/70 p-4">
+            <p className="text-sm font-semibold text-text-main">Start with a collection or scratchpad</p>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              Collections hold reusable requests. Scratchpad tabs are for quick experiments that do not need project structure yet.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={onCreateCollection}>
+                <Plus className="h-4 w-4" />
+                New Collection
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={onCreateScratchpadRequest}>
+                <Plus className="h-4 w-4" />
+                Scratchpad
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
@@ -2208,7 +2260,7 @@ function RequestTabs({
   if (tabs.length === 0) {
     return (
       <div className="flex h-10 items-center rounded-xl border border-dashed border-border/60 bg-white/55 px-4 text-sm text-text-muted">
-        没有窗口打开
+        No open tabs
       </div>
     );
   }
