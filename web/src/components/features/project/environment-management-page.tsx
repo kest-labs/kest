@@ -23,6 +23,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  ActionMenu,
+  type ActionMenuItem,
+} from '@/components/features/project/action-menu';
+import {
   Dialog,
   DialogBody,
   DialogContent,
@@ -738,9 +742,67 @@ export function EnvironmentManagementPage({
     await Promise.all(tasks);
   };
 
+  const isHeaderRefreshing =
+    projectQuery.isFetching ||
+    projectStatsQuery.isFetching ||
+    memberRoleQuery.isFetching ||
+    environmentsQuery.isFetching;
+  const headerActionItems: ActionMenuItem[] = [
+    {
+      key: 'environment-refresh',
+      label: isHeaderRefreshing ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: isHeaderRefreshing,
+      onSelect: () => {
+        void handleRefresh();
+      },
+    },
+    {
+      key: 'environment-api-specs',
+      label: 'API Specs',
+      icon: FileJson2,
+      href: buildProjectApiSpecsRoute(projectId),
+      separatorBefore: true,
+    },
+    {
+      key: 'environment-categories',
+      label: 'Categories',
+      icon: Tags,
+      href: buildProjectCategoriesRoute(projectId),
+    },
+    {
+      key: 'environment-test-cases',
+      label: 'Test Cases',
+      icon: FlaskConical,
+      href: buildProjectTestCasesRoute(projectId),
+    },
+  ];
+  const detailActionItems: ActionMenuItem[] = selectedEnvironment
+    ? [
+        {
+          key: 'environment-duplicate',
+          label: 'Duplicate',
+          icon: Boxes,
+          disabled: !canWrite,
+          onSelect: () => setDuplicateTarget(selectedEnvironment),
+        },
+        {
+          key: 'environment-delete',
+          label: 'Delete',
+          icon: Trash2,
+          destructive: true,
+          disabled: !canWrite,
+          separatorBefore: true,
+          onSelect: () => setDeleteTarget(selectedEnvironment),
+        },
+      ]
+    : [];
+
   return (
-    <div className="flex-1 space-y-8 p-6 pt-6">
-      <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
+    <>
+      <main className="h-full min-h-0 overflow-y-auto">
+        <div className="space-y-8 p-6 pt-6">
+          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xOCAxOGgyNHYyNEgxOHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-50" />
         <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-3">
@@ -786,55 +848,15 @@ export function EnvironmentManagementPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* 环境页顶部保留与 API Specs / Categories / Test Cases 页的双向跳转，方便在项目核心配置域之间切换。 */}
-            <Button
-              type="button"
-              variant="outline"
-              asChild
-            >
-              <Link href={buildProjectApiSpecsRoute(projectId)}>
-                <FileJson2 className="h-4 w-4" />
-                API Specs
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              asChild
-            >
-              <Link href={buildProjectCategoriesRoute(projectId)}>
-                <Tags className="h-4 w-4" />
-                Categories
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              asChild
-            >
-              <Link href={buildProjectTestCasesRoute(projectId)}>
-                <FlaskConical className="h-4 w-4" />
-                Test Cases
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleRefresh()}
-              loading={
-                projectQuery.isFetching ||
-                projectStatsQuery.isFetching ||
-                memberRoleQuery.isFetching ||
-                environmentsQuery.isFetching
-              }
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
             <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
               <Plus className="h-4 w-4" />
               Create Environment
             </Button>
+            <ActionMenu
+              items={headerActionItems}
+              ariaLabel="Open environment management actions"
+              triggerVariant="outline"
+            />
           </div>
         </div>
       </div>
@@ -956,61 +978,43 @@ export function EnvironmentManagementPage({
                         </TableCell>
                         <TableCell>{formatDate(environment.updated_at, 'YYYY-MM-DD HH:mm')}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setSelectedEnvironmentId(environment.id);
-                                setDetailTab('overview');
-                              }}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                              View
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={!canWrite}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                openEditDialog(environment.id);
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={!canWrite}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setDuplicateTarget(environment);
-                              }}
-                            >
-                              <Boxes className="h-3.5 w-3.5" />
-                              Duplicate
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              disabled={!canWrite}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setDeleteTarget(environment);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </Button>
-                          </div>
+                          <ActionMenu
+                            items={[
+                              {
+                                key: `environment-view-${environment.id}`,
+                                label: 'View',
+                                icon: Eye,
+                                onSelect: () => {
+                                  setSelectedEnvironmentId(environment.id);
+                                  setDetailTab('overview');
+                                },
+                              },
+                              {
+                                key: `environment-edit-${environment.id}`,
+                                label: 'Edit',
+                                icon: Pencil,
+                                disabled: !canWrite,
+                                onSelect: () => openEditDialog(environment.id),
+                              },
+                              {
+                                key: `environment-duplicate-${environment.id}`,
+                                label: 'Duplicate',
+                                icon: Boxes,
+                                disabled: !canWrite,
+                                onSelect: () => setDuplicateTarget(environment),
+                              },
+                              {
+                                key: `environment-delete-${environment.id}`,
+                                label: 'Delete',
+                                icon: Trash2,
+                                destructive: true,
+                                disabled: !canWrite,
+                                onSelect: () => setDeleteTarget(environment),
+                              },
+                            ]}
+                            ariaLabel={`Open actions for ${environment.name}`}
+                            stopPropagation
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1075,16 +1079,11 @@ export function EnvironmentManagementPage({
                         <Pencil className="h-3.5 w-3.5" />
                         Edit
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setDuplicateTarget(selectedEnvironment)}
-                        disabled={!canWrite}
-                      >
-                        <Boxes className="h-3.5 w-3.5" />
-                        Duplicate
-                      </Button>
+                      <ActionMenu
+                        items={detailActionItems}
+                        ariaLabel="Open selected environment actions"
+                        triggerVariant="outline"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1159,7 +1158,9 @@ export function EnvironmentManagementPage({
             )}
           </CardContent>
         </Card>
-      </div>
+          </div>
+        </div>
+      </main>
 
       <EnvironmentFormDialog
         key={`${formMode}-${editingEnvironmentQuery.data?.id ?? 'new'}-${isFormOpen ? 'open' : 'closed'}`}
@@ -1201,7 +1202,7 @@ export function EnvironmentManagementPage({
         }}
         onSubmit={handleDuplicateEnvironment}
       />
-    </div>
+    </>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Boxes,
@@ -23,6 +23,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ActionMenu,
+  type ActionMenuItem,
+} from '@/components/features/project/action-menu';
 import {
   Dialog,
   DialogBody,
@@ -808,12 +812,12 @@ function CreateFromSpecDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateTestCaseFromSpecRequest) => Promise<void>;
 }) {
-  const [draft, setDraft] = useState<FromSpecDraft>(() => getFromSpecDraft());
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const initialSpec = useMemo(
     () => apiSpecs.find((spec) => spec.id === initialSpecId) ?? null,
     [apiSpecs, initialSpecId]
   );
+  const [draft, setDraft] = useState<FromSpecDraft>(() => getFromSpecDraft(initialSpec ?? undefined));
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const selectedSpecId = draft.apiSpecId ? Number(draft.apiSpecId) : undefined;
   const specExamplesQuery = useApiSpecExamples(
@@ -826,24 +830,6 @@ function CreateFromSpecDialog({
     () => apiSpecs.find((spec) => spec.id === selectedSpecId),
     [apiSpecs, selectedSpecId]
   );
-
-  useEffect(() => {
-    if (!open) {
-      setDraft(getFromSpecDraft());
-      setErrors({});
-      return;
-    }
-
-    setErrors({});
-
-    if (!initialSpecId) {
-      return;
-    }
-
-    if (initialSpec && !draft.apiSpecId) {
-      setDraft(getFromSpecDraft(initialSpec));
-    }
-  }, [draft.apiSpecId, initialSpec, initialSpecId, open]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1517,12 +1503,6 @@ export function TestCaseManagementPage({
   const latestHistoryRun = runHistory[0] ?? null;
   const autoOpenSpec = autoOpenFromSpecSpecId ? apiSpecsById.get(autoOpenFromSpecSpecId) : undefined;
 
-  useEffect(() => {
-    if (autoOpenFromSpecSpecId) {
-      setIsFromSpecOpen(true);
-    }
-  }, [autoOpenFromSpecSpecId]);
-
   const clearGenerationIntent = () => {
     if (!searchParams?.size) {
       return;
@@ -1654,10 +1634,87 @@ export function TestCaseManagementPage({
     }
   };
 
+  const isHeaderRefreshing = testCasesQuery.isFetching && !testCasesQuery.isLoading;
+  const headerActionItems: ActionMenuItem[] = [
+    {
+      key: 'test-cases-refresh',
+      label: isHeaderRefreshing ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: isHeaderRefreshing,
+      onSelect: () => {
+        void testCasesQuery.refetch();
+      },
+    },
+    {
+      key: 'test-cases-generate-from-spec',
+      label: 'Generate from Spec',
+      icon: FileJson2,
+      disabled: !canCreate,
+      onSelect: () => setIsFromSpecOpen(true),
+    },
+    {
+      key: 'test-cases-api-specs',
+      label: 'API Specs',
+      icon: FileJson2,
+      href: buildProjectApiSpecsRoute(projectId),
+      separatorBefore: true,
+    },
+    {
+      key: 'test-cases-environments',
+      label: 'Environments',
+      icon: Globe,
+      href: buildProjectEnvironmentsRoute(projectId),
+    },
+    {
+      key: 'test-cases-categories',
+      label: 'Categories',
+      icon: Tags,
+      href: buildProjectCategoriesRoute(projectId),
+    },
+  ];
+  const detailActionItems: ActionMenuItem[] = activeTestCase
+    ? [
+        {
+          key: 'test-case-refresh',
+          label:
+            activeTestCaseQuery.isFetching && !activeTestCaseQuery.isLoading ? 'Refreshing...' : 'Refresh',
+          icon: RefreshCw,
+          disabled: activeTestCaseQuery.isFetching && !activeTestCaseQuery.isLoading,
+          onSelect: () => {
+            void activeTestCaseQuery.refetch();
+          },
+        },
+        {
+          key: 'test-case-edit',
+          label: 'Edit',
+          icon: Pencil,
+          disabled: !canWrite,
+          onSelect: () => openEditDialog(activeTestCase),
+        },
+        {
+          key: 'test-case-duplicate',
+          label: 'Duplicate',
+          icon: Copy,
+          disabled: !canWrite,
+          onSelect: () => setDuplicateTarget(activeTestCase),
+        },
+        {
+          key: 'test-case-delete',
+          label: 'Delete',
+          icon: Trash2,
+          destructive: true,
+          separatorBefore: true,
+          disabled: !canWrite,
+          onSelect: () => setDeleteTarget(activeTestCase),
+        },
+      ]
+    : [];
+
   return (
     <>
-      <div className="flex-1 space-y-8 p-6 pt-6">
-        <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
+      <main className="h-full min-h-0 overflow-y-auto">
+        <div className="space-y-8 p-6 pt-6">
+          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xOCAxOGgyNHYyNEgxOHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-50" />
           <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="space-y-3">
@@ -1697,46 +1754,15 @@ export function TestCaseManagementPage({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void testCasesQuery.refetch()}
-                loading={testCasesQuery.isFetching && !testCasesQuery.isLoading}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href={buildProjectApiSpecsRoute(projectId)}>
-                  <FileJson2 className="h-4 w-4" />
-                  API Specs
-                </Link>
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href={buildProjectEnvironmentsRoute(projectId)}>
-                  <Globe className="h-4 w-4" />
-                  Environments
-                </Link>
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href={buildProjectCategoriesRoute(projectId)}>
-                  <Tags className="h-4 w-4" />
-                  Categories
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsFromSpecOpen(true)}
-                disabled={!canCreate}
-              >
-                <FileJson2 className="h-4 w-4" />
-                Generate from Spec
-              </Button>
               <Button type="button" onClick={openCreateDialog} disabled={!canCreate}>
                 <Plus className="h-4 w-4" />
                 New Test Case
               </Button>
+              <ActionMenu
+                items={headerActionItems}
+                ariaLabel="Open test case management actions"
+                triggerVariant="outline"
+              />
             </div>
           </div>
         </div>
@@ -1967,35 +1993,58 @@ export function TestCaseManagementPage({
                               <TableCell>{testCase.assertions?.length ?? 0}</TableCell>
                               <TableCell>{formatDate(testCase.updated_at)}</TableCell>
                               <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      selectTestCase(testCase.id);
-                                      openEditDialog(testCase);
-                                    }}
-                                    disabled={!canWrite}
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      selectTestCase(testCase.id);
-                                      setRunTarget(testCase);
-                                    }}
-                                    disabled={!canWrite}
-                                  >
-                                    <Play className="h-3.5 w-3.5" />
-                                    Run
-                                  </Button>
-                                </div>
+                                <ActionMenu
+                                  items={[
+                                    {
+                                      key: `test-case-view-${testCase.id}`,
+                                      label: 'View',
+                                      onSelect: () => selectTestCase(testCase.id),
+                                    },
+                                    {
+                                      key: `test-case-edit-${testCase.id}`,
+                                      label: 'Edit',
+                                      icon: Pencil,
+                                      disabled: !canWrite,
+                                      onSelect: () => {
+                                        selectTestCase(testCase.id);
+                                        openEditDialog(testCase);
+                                      },
+                                    },
+                                    {
+                                      key: `test-case-run-${testCase.id}`,
+                                      label: 'Run',
+                                      icon: Play,
+                                      disabled: !canWrite,
+                                      onSelect: () => {
+                                        selectTestCase(testCase.id);
+                                        setRunTarget(testCase);
+                                      },
+                                    },
+                                    {
+                                      key: `test-case-duplicate-${testCase.id}`,
+                                      label: 'Duplicate',
+                                      icon: Copy,
+                                      disabled: !canWrite,
+                                      onSelect: () => {
+                                        selectTestCase(testCase.id);
+                                        setDuplicateTarget(testCase);
+                                      },
+                                    },
+                                    {
+                                      key: `test-case-delete-${testCase.id}`,
+                                      label: 'Delete',
+                                      icon: Trash2,
+                                      destructive: true,
+                                      disabled: !canWrite,
+                                      onSelect: () => {
+                                        selectTestCase(testCase.id);
+                                        setDeleteTarget(testCase);
+                                      },
+                                    },
+                                  ]}
+                                  ariaLabel={`Open actions for ${testCase.name}`}
+                                  stopPropagation
+                                />
                               </TableCell>
                             </TableRow>
                           );
@@ -2101,49 +2150,17 @@ export function TestCaseManagementPage({
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
                           type="button"
-                          variant="outline"
-                          onClick={() => void activeTestCaseQuery.refetch()}
-                          loading={activeTestCaseQuery.isFetching && !activeTestCaseQuery.isLoading}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                          Refresh
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => openEditDialog(activeTestCase)}
-                          disabled={!canWrite}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setDuplicateTarget(activeTestCase)}
-                          disabled={!canWrite}
-                        >
-                          <Copy className="h-4 w-4" />
-                          Duplicate
-                        </Button>
-                        <Button
-                          type="button"
                           onClick={() => setRunTarget(activeTestCase)}
                           disabled={!canWrite}
                         >
                           <Play className="h-4 w-4" />
                           Run
                         </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setDeleteTarget(activeTestCase)}
-                          disabled={!canWrite}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
+                        <ActionMenu
+                          items={detailActionItems}
+                          ariaLabel="Open selected test case actions"
+                          triggerVariant="outline"
+                        />
                       </div>
                     </div>
                   </div>
@@ -2408,7 +2425,8 @@ export function TestCaseManagementPage({
             </CardContent>
           </Card>
         </div>
-      </div>
+        </div>
+      </main>
 
       <TestCaseFormDialog
         key={`${formMode}-${formTargetId ?? 'create'}-${formTarget?.updated_at ?? 'draft'}-${isFormOpen ? 'open' : 'closed'}`}

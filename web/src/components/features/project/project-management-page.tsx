@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import { Input } from '@/components/ui/input';
 import {
   DeleteProjectDialog,
@@ -104,6 +105,17 @@ export function ProjectManagementPage() {
   const projectsPath = buildApiPath('/projects');
   const projectDetailPath = buildApiPath('/projects/:id');
   const projectStatsPath = buildApiPath('/projects/:id/stats');
+  const headerActionItems: ActionMenuItem[] = [
+    {
+      key: 'refresh',
+      label: projectsQuery.isFetching && !projectsQuery.isLoading ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: projectsQuery.isFetching && !projectsQuery.isLoading,
+      onSelect: () => {
+        void projectsQuery.refetch();
+      },
+    },
+  ];
 
   // 打开创建弹窗时显式清空编辑态，避免沿用上一条记录的数据。
   const openCreateDialog = () => {
@@ -181,19 +193,15 @@ export function ProjectManagementPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void projectsQuery.refetch()}
-              loading={projectsQuery.isFetching && !projectsQuery.isLoading}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
             <Button type="button" onClick={openCreateDialog}>
               <Plus className="h-4 w-4" />
               Create Project
             </Button>
+            <ActionMenu
+              items={headerActionItems}
+              ariaLabel="Open project page actions"
+              triggerVariant="outline"
+            />
           </div>
         </div>
       </div>
@@ -293,10 +301,15 @@ export function ProjectManagementPage() {
                     {filteredProjects.map((project) => (
                       <TableRow key={project.id} className="transition-colors hover:bg-muted/20">
                         <TableCell className="min-w-[220px]">
-                          <div className="space-y-1">
-                            <div className="font-medium">{project.name}</div>
-                            <div className="text-xs text-muted-foreground">ID {project.id}</div>
-                          </div>
+                          <Link
+                            href={buildProjectDetailRoute(project.id)}
+                            className="block rounded-lg px-1 py-1 transition-colors hover:bg-muted/30"
+                          >
+                            <div className="space-y-1">
+                              <div className="font-medium">{project.name}</div>
+                              <div className="text-xs text-muted-foreground">ID {project.id}</div>
+                            </div>
+                          </Link>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{project.slug}</TableCell>
                         <TableCell>
@@ -307,60 +320,55 @@ export function ProjectManagementPage() {
                         </TableCell>
                         <TableCell>{formatDate(project.created_at, 'YYYY-MM-DD')}</TableCell>
                         <TableCell className="text-right">
-                          {/* 项目列表统一暴露五个独立入口：
-                              概览页承载 stats，环境页承载环境配置，分类页承载层级管理，
-                              API Specs 页承载接口规格管理，Test Cases 页承载测试用例和运行历史。 */}
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={buildProjectDetailRoute(project.id)}>
-                                <BarChart3 className="h-3.5 w-3.5" />
-                                Overview
-                              </Link>
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={buildProjectApiSpecsRoute(project.id)}>
-                                <FileJson2 className="h-3.5 w-3.5" />
-                                API Specs
-                              </Link>
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={buildProjectEnvironmentsRoute(project.id)}>
-                                <Globe className="h-3.5 w-3.5" />
-                                Environments
-                              </Link>
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={buildProjectCategoriesRoute(project.id)}>
-                                <Tags className="h-3.5 w-3.5" />
-                                Categories
-                              </Link>
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={buildProjectTestCasesRoute(project.id)}>
-                                <FlaskConical className="h-3.5 w-3.5" />
-                                Test Cases
-                              </Link>
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(project)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => setDeleteTarget(project)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </Button>
-                          </div>
+                          <ActionMenu
+                            items={[
+                              {
+                                key: `overview-${project.id}`,
+                                label: 'Overview',
+                                icon: BarChart3,
+                                href: buildProjectDetailRoute(project.id),
+                              },
+                              {
+                                key: `api-specs-${project.id}`,
+                                label: 'API Specs',
+                                icon: FileJson2,
+                                href: buildProjectApiSpecsRoute(project.id),
+                              },
+                              {
+                                key: `environments-${project.id}`,
+                                label: 'Environments',
+                                icon: Globe,
+                                href: buildProjectEnvironmentsRoute(project.id),
+                              },
+                              {
+                                key: `categories-${project.id}`,
+                                label: 'Categories',
+                                icon: Tags,
+                                href: buildProjectCategoriesRoute(project.id),
+                              },
+                              {
+                                key: `test-cases-${project.id}`,
+                                label: 'Test Cases',
+                                icon: FlaskConical,
+                                href: buildProjectTestCasesRoute(project.id),
+                              },
+                              {
+                                key: `edit-${project.id}`,
+                                label: 'Edit',
+                                icon: Pencil,
+                                separatorBefore: true,
+                                onSelect: () => openEditDialog(project),
+                              },
+                              {
+                                key: `delete-${project.id}`,
+                                label: 'Delete',
+                                icon: Trash2,
+                                destructive: true,
+                                onSelect: () => setDeleteTarget(project),
+                              },
+                            ]}
+                            ariaLabel={`Open actions for ${project.name}`}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}

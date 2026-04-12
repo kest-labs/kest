@@ -550,8 +550,12 @@ func (h *Handler) GetShare(c *gin.Context) {
 
 	share, err := h.service.GetShareBySpecID(c.Request.Context(), projectID, specID)
 	if err != nil {
-		if errors.Is(err, ErrSpecNotFound) || errors.Is(err, ErrShareNotFound) {
+		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
+			return
+		}
+		if errors.Is(err, ErrShareNotFound) {
+			response.Success(c, nil)
 			return
 		}
 		response.HandleError(c, "Failed to load share", err)

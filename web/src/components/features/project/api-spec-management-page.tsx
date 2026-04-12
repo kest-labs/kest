@@ -35,6 +35,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  ActionMenu,
+  type ActionMenuItem,
+} from '@/components/features/project/action-menu';
+import {
   Dialog,
   DialogBody,
   DialogContent,
@@ -1370,8 +1374,10 @@ function ExampleFormDialog({
  */
 export function ApiSpecManagementPage({
   projectId,
+  initialSpecId = null,
 }: {
   projectId: number;
+  initialSpecId?: number | null;
 }) {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -1379,7 +1385,7 @@ export function ApiSpecManagementPage({
   const [method, setMethod] = useState<'all' | HttpMethod>('all');
   const [version, setVersion] = useState('');
   const [tag, setTag] = useState('');
-  const [selectedSpecId, setSelectedSpecId] = useState<number | null>(null);
+  const [selectedSpecId, setSelectedSpecId] = useState<number | null>(initialSpecId);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [generatedTestLanguage, setGeneratedTestLanguage] = useState<ApiSpecLanguage>('en');
   const [formMode, setFormMode] = useState<SpecFormMode>('create');
@@ -1419,10 +1425,7 @@ export function ApiSpecManagementPage({
 
   const specs = specsQuery.data?.items ?? EMPTY_SPECS;
 
-  const activeSpecId =
-    selectedSpecId && specs.some((spec) => spec.id === selectedSpecId)
-      ? selectedSpecId
-      : specs[0]?.id ?? null;
+  const activeSpecId = selectedSpecId ?? specs[0]?.id ?? null;
   const selectedSpecSummary = specs.find((spec) => spec.id === activeSpecId) ?? null;
   const specDetailQuery = useApiSpec(projectId, activeSpecId ?? undefined);
   const specFullQuery = useApiSpecFull(projectId, activeSpecId ?? undefined);
@@ -1683,9 +1686,152 @@ export function ApiSpecManagementPage({
       data: payload,
     });
 
+  const isHeaderRefreshing =
+    specsQuery.isFetching ||
+    projectQuery.isFetching ||
+    projectStatsQuery.isFetching ||
+    memberRoleQuery.isFetching;
+  const headerActionItems: ActionMenuItem[] = [
+    {
+      key: 'api-spec-refresh',
+      label: isHeaderRefreshing ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: isHeaderRefreshing,
+      onSelect: () => {
+        void handleRefresh();
+      },
+    },
+    {
+      key: 'api-spec-import',
+      label: 'Import',
+      icon: Upload,
+      disabled: !canWrite,
+      onSelect: () => setIsImportOpen(true),
+    },
+    {
+      key: 'api-spec-export',
+      label: 'Export',
+      icon: Download,
+      onSelect: () => setIsExportOpen(true),
+    },
+    {
+      key: 'api-spec-batch-doc',
+      label: 'Batch Gen Doc',
+      icon: Sparkles,
+      disabled: !canWrite,
+      onSelect: () => setIsBatchGenOpen(true),
+    },
+    {
+      key: 'api-spec-ai-create',
+      label: 'AI Create',
+      icon: Bot,
+      disabled: !canWrite,
+      onSelect: openAICreateDialog,
+    },
+    {
+      key: 'api-spec-categories',
+      label: 'Categories',
+      icon: Tags,
+      href: buildProjectCategoriesRoute(projectId),
+      separatorBefore: true,
+    },
+    {
+      key: 'api-spec-environments',
+      label: 'Environments',
+      icon: Globe,
+      href: buildProjectEnvironmentsRoute(projectId),
+    },
+    {
+      key: 'api-spec-test-cases',
+      label: 'Test Cases',
+      icon: FlaskConical,
+      href: buildProjectTestCasesRoute(projectId),
+    },
+  ];
+  const detailActionItems: ActionMenuItem[] = selectedSpec
+    ? [
+        specShareQuery.data
+          ? {
+              key: 'detail-copy-link',
+              label: 'Copy Link',
+              icon: Copy,
+              onSelect: () => {
+                void handleCopyShareLink();
+              },
+            }
+          : {
+              key: 'detail-publish-share',
+              label: 'Publish Share',
+              icon: Share2,
+              disabled: !canWrite || publishShareMutation.isPending,
+              onSelect: () => {
+                void handlePublishShare();
+              },
+            },
+        {
+          key: 'detail-preview-share',
+          label: 'Preview Share',
+          icon: ExternalLink,
+          href: shareRoute || '#',
+          external: true,
+          hidden: !Boolean(specShareQuery.data && shareRoute),
+        },
+        {
+          key: 'detail-disable-share',
+          label: 'Disable Share',
+          icon: Trash2,
+          destructive: true,
+          hidden: !Boolean(specShareQuery.data),
+          disabled: !canWrite || deleteShareMutation.isPending,
+          onSelect: () => {
+            void handleDeleteShare();
+          },
+        },
+        {
+          key: 'detail-generate-doc',
+          label: 'Gen Doc',
+          icon: Bot,
+          separatorBefore: true,
+          disabled: !canWrite,
+          onSelect: () => setAiAction({ mode: 'doc', spec: selectedSpec }),
+        },
+        {
+          key: 'detail-generate-test',
+          label: 'Gen Test',
+          icon: FileCode2,
+          disabled: !canWrite,
+          onSelect: () => setAiAction({ mode: 'test', spec: selectedSpec }),
+        },
+        {
+          key: 'detail-project-overview',
+          label: 'Project Overview',
+          icon: FolderKanban,
+          separatorBefore: true,
+          href: buildProjectDetailRoute(projectId),
+        },
+        {
+          key: 'detail-categories',
+          label: 'Categories',
+          icon: Tags,
+          href: buildProjectCategoriesRoute(projectId),
+        },
+        {
+          key: 'detail-delete-spec',
+          label: 'Delete',
+          icon: Trash2,
+          destructive: true,
+          separatorBefore: true,
+          disabled: !canWrite,
+          onSelect: () => setDeleteTarget(selectedSpec),
+        },
+      ]
+    : [];
+
   return (
-    <div className="flex-1 space-y-8 p-6 pt-6">
-      <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
+    <>
+      <main className="h-full min-h-0 overflow-y-auto">
+        <div className="space-y-8 p-6 pt-6">
+          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0yMCAxMmgxNnYxNkgyMHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PHBhdGggZD0iTTEyIDIwaDE2djE2SDEyeiIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS1vcGFjaXR5PSIuMDUiLz48L2c+PC9zdmc+')] opacity-50" />
         <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-3">
@@ -1727,59 +1873,15 @@ export function ApiSpecManagementPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* API Specs 页面同样暴露环境页、分类页和 Test Cases 页入口，方便在项目核心配置模块之间切换。 */}
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectCategoriesRoute(projectId)}>
-                <Tags className="h-4 w-4" />
-                Categories
-              </Link>
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectEnvironmentsRoute(projectId)}>
-                <Globe className="h-4 w-4" />
-                Environments
-              </Link>
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectTestCasesRoute(projectId)}>
-                <FlaskConical className="h-4 w-4" />
-                Test Cases
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleRefresh()}
-              loading={
-                specsQuery.isFetching ||
-                projectQuery.isFetching ||
-                projectStatsQuery.isFetching ||
-                memberRoleQuery.isFetching
-              }
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setIsImportOpen(true)} disabled={!canWrite}>
-              <Upload className="h-4 w-4" />
-              Import
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setIsExportOpen(true)}>
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setIsBatchGenOpen(true)} disabled={!canWrite}>
-              <Sparkles className="h-4 w-4" />
-              Batch Gen Doc
-            </Button>
-            <Button type="button" variant="outline" onClick={openAICreateDialog} disabled={!canWrite}>
-              <Bot className="h-4 w-4" />
-              AI Create
-            </Button>
             <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
               <Plus className="h-4 w-4" />
               Create Spec
             </Button>
+            <ActionMenu
+              items={headerActionItems}
+              ariaLabel="Open API spec management actions"
+              triggerVariant="outline"
+            />
           </div>
         </div>
       </div>
@@ -1972,77 +2074,59 @@ export function ApiSpecManagementPage({
                           </TableCell>
                           <TableCell>{formatDate(spec.updated_at, 'YYYY-MM-DD HH:mm')}</TableCell>
                           <TableCell className="text-right">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelectedSpecId(spec.id);
-                                  setDetailTab('overview');
-                                }}
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                                View
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!canWrite}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  openEditDialog(spec.id);
-                                }}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                Edit
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!canWrite}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelectedSpecId(spec.id);
-                                  setAiAction({ mode: 'doc', spec });
-                                }}
-                              >
-                                <Bot className="h-3.5 w-3.5" />
-                                Gen Doc
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!canWrite}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelectedSpecId(spec.id);
-                                  setAiAction({ mode: 'test', spec });
-                                }}
-                              >
-                                <FileCode2 className="h-3.5 w-3.5" />
-                                Gen Test
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                disabled={!canWrite}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelectedSpecId(spec.id);
-                                  setDeleteTarget(spec);
-                                }}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                              </Button>
-                            </div>
+                            <ActionMenu
+                              items={[
+                                {
+                                  key: `spec-view-${spec.id}`,
+                                  label: 'View',
+                                  icon: Eye,
+                                  onSelect: () => {
+                                    setSelectedSpecId(spec.id);
+                                    setDetailTab('overview');
+                                  },
+                                },
+                                {
+                                  key: `spec-edit-${spec.id}`,
+                                  label: 'Edit',
+                                  icon: Pencil,
+                                  disabled: !canWrite,
+                                  onSelect: () => openEditDialog(spec.id),
+                                },
+                                {
+                                  key: `spec-doc-${spec.id}`,
+                                  label: 'Gen Doc',
+                                  icon: Bot,
+                                  disabled: !canWrite,
+                                  onSelect: () => {
+                                    setSelectedSpecId(spec.id);
+                                    setAiAction({ mode: 'doc', spec });
+                                  },
+                                },
+                                {
+                                  key: `spec-test-${spec.id}`,
+                                  label: 'Gen Test',
+                                  icon: FileCode2,
+                                  disabled: !canWrite,
+                                  onSelect: () => {
+                                    setSelectedSpecId(spec.id);
+                                    setAiAction({ mode: 'test', spec });
+                                  },
+                                },
+                                {
+                                  key: `spec-delete-${spec.id}`,
+                                  label: 'Delete',
+                                  icon: Trash2,
+                                  destructive: true,
+                                  disabled: !canWrite,
+                                  onSelect: () => {
+                                    setSelectedSpecId(spec.id);
+                                    setDeleteTarget(spec);
+                                  },
+                                },
+                              ]}
+                              ariaLabel={`Open actions for ${spec.path}`}
+                              stopPropagation
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2098,47 +2182,6 @@ export function ApiSpecManagementPage({
 
               {selectedSpec ? (
                 <div className="flex flex-wrap gap-2">
-                  {specShareQuery.data ? (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleCopyShareLink()}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        Copy Link
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        asChild
-                      >
-                        <Link href={shareRoute || '#'} target="_blank" rel="noreferrer">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Preview Share
-                        </Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!canWrite || deleteShareMutation.isPending}
-                        onClick={() => void handleDeleteShare()}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Disable Share
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!canWrite || publishShareMutation.isPending}
-                      onClick={() => void handlePublishShare()}
-                    >
-                      <Share2 className="h-3.5 w-3.5" />
-                      Publish Share
-                    </Button>
-                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -2148,24 +2191,11 @@ export function ApiSpecManagementPage({
                     <Pencil className="h-3.5 w-3.5" />
                     Edit
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!canWrite}
-                    onClick={() => setAiAction({ mode: 'doc', spec: selectedSpec })}
-                  >
-                    <Bot className="h-3.5 w-3.5" />
-                    Gen Doc
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!canWrite}
-                    onClick={() => setAiAction({ mode: 'test', spec: selectedSpec })}
-                  >
-                    <FileCode2 className="h-3.5 w-3.5" />
-                    Gen Test
-                  </Button>
+                  <ActionMenu
+                    items={detailActionItems}
+                    ariaLabel="Open selected API spec actions"
+                    triggerVariant="outline"
+                  />
                 </div>
               ) : null}
             </div>
@@ -2210,27 +2240,6 @@ export function ApiSpecManagementPage({
                       ) : null}
                     </div>
 
-                    {/* 详情面板右上角提供项目概览和环境页入口，便于规格编写时切换上下文。 */}
-                    <div className="flex gap-2">
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={buildProjectDetailRoute(projectId)}>
-                          <FolderKanban className="h-3.5 w-3.5" />
-                          Project Overview
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={buildProjectCategoriesRoute(projectId)}>
-                          <Tags className="h-3.5 w-3.5" />
-                          Categories
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={buildProjectEnvironmentsRoute(projectId)}>
-                          <Globe className="h-3.5 w-3.5" />
-                          Environments
-                        </Link>
-                      </Button>
-                    </div>
                   </div>
                 </div>
 
@@ -2486,7 +2495,9 @@ export function ApiSpecManagementPage({
             )}
           </CardContent>
         </Card>
-      </div>
+          </div>
+        </div>
+      </main>
 
       <SpecFormDialog
         key={`${formMode}-${editingSpecQuery.data?.updated_at ?? editingSpecId ?? 'new'}-${isFormOpen ? 'open' : 'closed'}`}
@@ -2582,7 +2593,7 @@ export function ApiSpecManagementPage({
         onOpenChange={setIsExampleOpen}
         onSubmit={handleCreateExample}
       />
-    </div>
+    </>
   );
 }
 

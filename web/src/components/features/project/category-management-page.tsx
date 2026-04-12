@@ -24,6 +24,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ActionMenu,
+  type ActionMenuItem,
+} from '@/components/features/project/action-menu';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -314,10 +318,92 @@ export function CategoryManagementPage({
   // 父分类选项统计。
   // 作用：用于头部摘要展示“当前可选父级数量”。
   const parentOptions = buildCategoryOptions(categoryTree);
+  const isHeaderRefreshing =
+    categoriesQuery.isFetching ||
+    projectQuery.isFetching ||
+    projectStatsQuery.isFetching ||
+    memberRoleQuery.isFetching ||
+    selectedCategoryQuery.isFetching;
+  const selectedCategoryCanMoveUp = selectedCategory
+    ? reorderCategoryIdsWithinSiblings(flatCategories, selectedCategory.id, 'up') !== null
+    : false;
+  const selectedCategoryCanMoveDown = selectedCategory
+    ? reorderCategoryIdsWithinSiblings(flatCategories, selectedCategory.id, 'down') !== null
+    : false;
+  const headerActionItems: ActionMenuItem[] = [
+    {
+      key: 'category-refresh',
+      label: isHeaderRefreshing ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: isHeaderRefreshing,
+      onSelect: () => {
+        void handleRefresh();
+      },
+    },
+    {
+      key: 'category-api-specs',
+      label: 'API Specs',
+      icon: FileJson2,
+      href: buildProjectApiSpecsRoute(projectId),
+      separatorBefore: true,
+    },
+    {
+      key: 'category-environments',
+      label: 'Environments',
+      icon: Globe,
+      href: buildProjectEnvironmentsRoute(projectId),
+    },
+    {
+      key: 'category-test-cases',
+      label: 'Test Cases',
+      icon: FlaskConical,
+      href: buildProjectTestCasesRoute(projectId),
+    },
+  ];
+  const detailActionItems: ActionMenuItem[] = selectedCategory
+    ? [
+        {
+          key: 'category-create-child',
+          label: 'Create Child',
+          icon: Plus,
+          disabled: !canWrite,
+          onSelect: () => openCreateDialog(selectedCategory.id),
+        },
+        {
+          key: 'category-move-up',
+          label: 'Move Up',
+          icon: ArrowUp,
+          disabled: !canWrite || Boolean(deferredSearch.trim()) || !selectedCategoryCanMoveUp || sortCategoriesMutation.isPending,
+          onSelect: () => {
+            void handleMoveCategory(selectedCategory.id, 'up');
+          },
+        },
+        {
+          key: 'category-move-down',
+          label: 'Move Down',
+          icon: ArrowDown,
+          disabled: !canWrite || Boolean(deferredSearch.trim()) || !selectedCategoryCanMoveDown || sortCategoriesMutation.isPending,
+          onSelect: () => {
+            void handleMoveCategory(selectedCategory.id, 'down');
+          },
+        },
+        {
+          key: 'category-delete',
+          label: 'Delete',
+          icon: Trash2,
+          destructive: true,
+          separatorBefore: true,
+          disabled: !canWrite,
+          onSelect: () => setDeleteTargetId(selectedCategory.id),
+        },
+      ]
+    : [];
 
   return (
-    <div className="flex-1 space-y-8 p-6 pt-6">
-      <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
+    <>
+      <main className="h-full min-h-0 overflow-y-auto">
+        <div className="space-y-8 p-6 pt-6">
+          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xOCAxOGgyNHYyNEgxOHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-50" />
         <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-3">
@@ -357,43 +443,15 @@ export function CategoryManagementPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectApiSpecsRoute(projectId)}>
-                <FileJson2 className="h-4 w-4" />
-                API Specs
-              </Link>
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectEnvironmentsRoute(projectId)}>
-                <Globe className="h-4 w-4" />
-                Environments
-              </Link>
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href={buildProjectTestCasesRoute(projectId)}>
-                <FlaskConical className="h-4 w-4" />
-                Test Cases
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleRefresh()}
-              loading={
-                categoriesQuery.isFetching ||
-                projectQuery.isFetching ||
-                projectStatsQuery.isFetching ||
-                memberRoleQuery.isFetching ||
-                selectedCategoryQuery.isFetching
-              }
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
             <Button type="button" onClick={() => openCreateDialog()} disabled={!canWrite}>
               <Plus className="h-4 w-4" />
               Create Category
             </Button>
+            <ActionMenu
+              items={headerActionItems}
+              ariaLabel="Open category management actions"
+              triggerVariant="outline"
+            />
           </div>
         </div>
       </div>
@@ -565,70 +623,64 @@ export function CategoryManagementPage({
                             </TableCell>
                             <TableCell>{formatDate(category.updated_at, 'YYYY-MM-DD')}</TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant={activeCategoryId === category.id ? 'default' : 'outline'}
-                                  onClick={() => setSelectedCategoryId(category.id)}
-                                >
-                                  View
-                                </Button>
-                                {canWrite ? (
-                                  <>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => openEditDialog(category.id)}
-                                    >
-                                      <Pencil className="h-3.5 w-3.5" />
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      isIcon
-                                      aria-label={`Move ${category.name} up`}
-                                      title="Move up"
-                                      onClick={() => void handleMoveCategory(category.id, 'up')}
-                                      disabled={
-                                        Boolean(deferredSearch.trim()) ||
-                                        sortCategoriesMutation.isPending ||
-                                        reorderCategoryIdsWithinSiblings(flatCategories, category.id, 'up') === null
-                                      }
-                                    >
-                                      <ArrowUp className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      isIcon
-                                      aria-label={`Move ${category.name} down`}
-                                      title="Move down"
-                                      onClick={() => void handleMoveCategory(category.id, 'down')}
-                                      disabled={
-                                        Boolean(deferredSearch.trim()) ||
-                                        sortCategoriesMutation.isPending ||
-                                        reorderCategoryIdsWithinSiblings(flatCategories, category.id, 'down') === null
-                                      }
-                                    >
-                                      <ArrowDown className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={() => setDeleteTargetId(category.id)}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </>
-                                ) : null}
-                              </div>
+                              <ActionMenu
+                                items={[
+                                  {
+                                    key: `category-view-${category.id}`,
+                                    label: 'View',
+                                    onSelect: () => setSelectedCategoryId(category.id),
+                                  },
+                                  {
+                                    key: `category-create-child-${category.id}`,
+                                    label: 'Create Child',
+                                    icon: Plus,
+                                    disabled: !canWrite,
+                                    onSelect: () => openCreateDialog(category.id),
+                                  },
+                                  {
+                                    key: `category-edit-${category.id}`,
+                                    label: 'Edit',
+                                    icon: Pencil,
+                                    disabled: !canWrite,
+                                    onSelect: () => openEditDialog(category.id),
+                                  },
+                                  {
+                                    key: `category-up-${category.id}`,
+                                    label: 'Move Up',
+                                    icon: ArrowUp,
+                                    disabled:
+                                      !canWrite ||
+                                      Boolean(deferredSearch.trim()) ||
+                                      sortCategoriesMutation.isPending ||
+                                      reorderCategoryIdsWithinSiblings(flatCategories, category.id, 'up') === null,
+                                    onSelect: () => {
+                                      void handleMoveCategory(category.id, 'up');
+                                    },
+                                  },
+                                  {
+                                    key: `category-down-${category.id}`,
+                                    label: 'Move Down',
+                                    icon: ArrowDown,
+                                    disabled:
+                                      !canWrite ||
+                                      Boolean(deferredSearch.trim()) ||
+                                      sortCategoriesMutation.isPending ||
+                                      reorderCategoryIdsWithinSiblings(flatCategories, category.id, 'down') === null,
+                                    onSelect: () => {
+                                      void handleMoveCategory(category.id, 'down');
+                                    },
+                                  },
+                                  {
+                                    key: `category-delete-${category.id}`,
+                                    label: 'Delete',
+                                    icon: Trash2,
+                                    destructive: true,
+                                    disabled: !canWrite,
+                                    onSelect: () => setDeleteTargetId(category.id),
+                                  },
+                                ]}
+                                ariaLabel={`Open actions for ${category.name}`}
+                              />
                             </TableCell>
                           </TableRow>
                         );
@@ -728,28 +780,21 @@ export function CategoryManagementPage({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {canWrite ? (
-                        <>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openCreateDialog(selectedCategory.id)}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Create Child
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditDialog(selectedCategory.id)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                        </>
-                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditDialog(selectedCategory.id)}
+                        disabled={!canWrite}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <ActionMenu
+                        items={detailActionItems}
+                        ariaLabel="Open selected category actions"
+                        triggerVariant="outline"
+                      />
                     </div>
                   </div>
                 </div>
@@ -842,6 +887,8 @@ export function CategoryManagementPage({
           <div>PUT {buildApiPath('/projects/:id/categories/sort')}</div>
         </CardContent>
       </Card>
+        </div>
+      </main>
 
       <CategoryFormDialog
         key={`${formMode}-${editingCategoryId ?? 'new'}-${defaultParentId ?? 'root'}-${isFormOpen ? 'open' : 'closed'}`}
@@ -874,7 +921,7 @@ export function CategoryManagementPage({
         }}
         onConfirm={handleDeleteCategory}
       />
-    </div>
+    </>
   );
 }
 

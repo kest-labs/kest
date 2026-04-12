@@ -22,16 +22,20 @@ export default async function ProjectApiSpecsPage({
   const { projectId } = await params;
   const { item, mode, ai } = await searchParams;
   const numericProjectId = Number(projectId);
+  const selectedItemId = Number(item);
 
   if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
     notFound();
   }
 
   if (mode === 'manage') {
-    return <ApiSpecManagementPage projectId={numericProjectId} />;
+    return (
+      <ApiSpecManagementPage
+        projectId={numericProjectId}
+        initialSpecId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      />
+    );
   }
-
-  const selectedItemId = Number(item);
 
   return (
     <ProjectWorkspacePage

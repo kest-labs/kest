@@ -19,6 +19,10 @@ import {
   Tags,
 } from 'lucide-react';
 import {
+  ActionMenu,
+  type ActionMenuItem,
+} from '@/components/features/project/action-menu';
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -225,6 +229,16 @@ function ApiSpecsWorkspaceSection({
     selectedSpec?.doc_markdown_zh ||
     selectedSpec?.doc_markdown ||
     null;
+  const fullManagerHref = `${buildProjectApiSpecsRoute(projectId)}?mode=manage`;
+  const isRefreshing = specsQuery.isFetching || selectedSpecQuery.isFetching;
+
+  const handleRefresh = () => {
+    void specsQuery.refetch();
+
+    if (selectedItemId) {
+      void selectedSpecQuery.refetch();
+    }
+  };
 
   const handleCreateSpec = async (payload: CreateApiSpecRequest) => {
     try {
@@ -248,6 +262,34 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
+  const moduleActionItems: ActionMenuItem[] = [
+    {
+      key: 'api-specs-manager',
+      label: 'Open full manager',
+      icon: FileJson2,
+      href: fullManagerHref,
+    },
+    {
+      key: 'api-specs-refresh',
+      label: isRefreshing ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: isRefreshing,
+      onSelect: handleRefresh,
+    },
+    {
+      key: 'api-specs-ai-draft',
+      label: 'AI Draft',
+      icon: Sparkles,
+      onSelect: () => setIsAICreateOpen(true),
+    },
+    {
+      key: 'api-specs-create',
+      label: 'Add Spec',
+      icon: Plus,
+      onSelect: () => setIsCreateOpen(true),
+    },
+  ];
+
   return (
     <>
       <WorkspaceFrame
@@ -262,18 +304,6 @@ function ApiSpecsWorkspaceSection({
             count={filteredSpecs.length}
             loading={specsQuery.isLoading}
             error={specsQuery.error}
-            headerActions={
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" onClick={() => setIsAICreateOpen(true)}>
-                  <Sparkles className="h-4 w-4" />
-                  Describe with AI
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setIsCreateOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Add Spec
-                </Button>
-              </div>
-            }
             emptyState={
               <SidebarEmptyState
                 icon={FileJson2}
@@ -295,6 +325,27 @@ function ApiSpecsWorkspaceSection({
                     <span>{spec.examples?.length ?? 0} examples</span>
                   </>
                 }
+                actionsMenu={
+                  <ActionMenu
+                    items={[
+                      {
+                        key: `spec-open-${spec.id}`,
+                        label: 'Open',
+                        icon: ArrowRight,
+                        href: buildModuleHref(projectId, 'api-specs', spec.id),
+                      },
+                      {
+                        key: `spec-manager-${spec.id}`,
+                        label: 'Open in full manager',
+                        icon: FileJson2,
+                        href: `${fullManagerHref}&item=${spec.id}`,
+                      },
+                    ]}
+                    ariaLabel={`Open actions for ${spec.method} ${spec.path}`}
+                    stopPropagation
+                    triggerClassName="h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100"
+                  />
+                }
               />
             ))}
           </ResourceSidebar>
@@ -312,34 +363,15 @@ function ApiSpecsWorkspaceSection({
             }
             actions={
               <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    void specsQuery.refetch();
-
-                    if (selectedItemId) {
-                      void selectedSpecQuery.refetch();
-                    }
-                  }}
-                  loading={specsQuery.isFetching || selectedSpecQuery.isFetching}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href={`${buildProjectApiSpecsRoute(projectId)}?mode=manage`}>
-                    Full manager
-                  </Link>
-                </Button>
-                <Button type="button" onClick={() => setIsAICreateOpen(true)}>
-                  <Sparkles className="h-4 w-4" />
-                  AI Draft
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(true)}>
+                <Button type="button" onClick={() => setIsCreateOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Add Spec
                 </Button>
+                <ActionMenu
+                  items={moduleActionItems}
+                  ariaLabel="Open API spec workspace actions"
+                  triggerVariant="outline"
+                />
               </>
             }
           >
@@ -524,7 +556,23 @@ function EnvironmentsWorkspaceSection({
   const selectedEnvironmentFromList =
     environments.find((environment) => environment.id === selectedItemId) ?? null;
   const selectedEnvironment = selectedEnvironmentQuery.data ?? selectedEnvironmentFromList;
+  const fullManagerHref = `${buildProjectEnvironmentsRoute(projectId)}?mode=manage`;
+  const refreshActionItems: ActionMenuItem[] = [
+    {
+      key: 'environments-refresh',
+      label:
+        environmentsQuery.isFetching || selectedEnvironmentQuery.isFetching ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: environmentsQuery.isFetching || selectedEnvironmentQuery.isFetching,
+      onSelect: () => {
+        void environmentsQuery.refetch();
 
+        if (selectedItemId) {
+          void selectedEnvironmentQuery.refetch();
+        }
+      },
+    },
+  ];
   return (
     <WorkspaceFrame
       sidebar={
@@ -576,26 +624,16 @@ function EnvironmentsWorkspaceSection({
           }
           actions={
             <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  void environmentsQuery.refetch();
-
-                  if (selectedItemId) {
-                    void selectedEnvironmentQuery.refetch();
-                  }
-                }}
-                loading={environmentsQuery.isFetching || selectedEnvironmentQuery.isFetching}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
               <Button asChild variant="outline">
-                <Link href={`${buildProjectEnvironmentsRoute(projectId)}?mode=manage`}>
+                <Link href={fullManagerHref}>
                   Full manager
                 </Link>
               </Button>
+              <ActionMenu
+                items={refreshActionItems}
+                ariaLabel="Open environment workspace actions"
+                triggerVariant="outline"
+              />
             </>
           }
         >
@@ -719,7 +757,22 @@ function CategoriesWorkspaceSection({
   const selectedCategory = selectedCategoryQuery.data ?? selectedCategoryFromList;
   const selectedCategoryTreeNode = findProjectCategory(categoriesQuery.data?.items, selectedCategory?.id);
   const childCategories = selectedCategoryTreeNode?.children ?? [];
+  const fullManagerHref = `${buildProjectCategoriesRoute(projectId)}?mode=manage`;
+  const refreshActionItems: ActionMenuItem[] = [
+    {
+      key: 'categories-refresh',
+      label: categoriesQuery.isFetching || selectedCategoryQuery.isFetching ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: categoriesQuery.isFetching || selectedCategoryQuery.isFetching,
+      onSelect: () => {
+        void categoriesQuery.refetch();
 
+        if (selectedItemId) {
+          void selectedCategoryQuery.refetch();
+        }
+      },
+    },
+  ];
   return (
     <WorkspaceFrame
       sidebar={
@@ -772,26 +825,16 @@ function CategoriesWorkspaceSection({
           }
           actions={
             <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  void categoriesQuery.refetch();
-
-                  if (selectedItemId) {
-                    void selectedCategoryQuery.refetch();
-                  }
-                }}
-                loading={categoriesQuery.isFetching || selectedCategoryQuery.isFetching}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
               <Button asChild variant="outline">
-                <Link href={`${buildProjectCategoriesRoute(projectId)}?mode=manage`}>
+                <Link href={fullManagerHref}>
                   Full manager
                 </Link>
               </Button>
+              <ActionMenu
+                items={refreshActionItems}
+                ariaLabel="Open category workspace actions"
+                triggerVariant="outline"
+              />
             </>
           }
         >
@@ -1074,6 +1117,7 @@ function ResourceListItem({
   title,
   description,
   meta,
+  actionsMenu,
   indentLevel = 0,
 }: {
   href: string;
@@ -1081,23 +1125,28 @@ function ResourceListItem({
   title: string;
   description: string;
   meta?: React.ReactNode;
+  actionsMenu?: React.ReactNode;
   indentLevel?: number;
 }) {
   return (
-    <Link
-      href={href}
+    <div
       className={cn(
-        'block rounded-2xl border px-4 py-3 transition-colors',
+        'group/resource rounded-2xl border px-4 py-3 transition-colors',
         active
           ? 'border-primary/30 bg-primary/10 shadow-sm'
           : 'border-transparent bg-background/70 hover:border-border/60 hover:bg-background'
       )}
       style={{ marginLeft: indentLevel > 0 ? `${indentLevel * 12}px` : undefined }}
     >
-      <p className="truncate text-sm font-medium text-text-main">{title}</p>
-      <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">{description}</p>
-      {meta ? <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">{meta}</div> : null}
-    </Link>
+      <div className="flex items-start justify-between gap-3">
+        <Link href={href} className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-text-main">{title}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">{description}</p>
+          {meta ? <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">{meta}</div> : null}
+        </Link>
+        {actionsMenu ? <div className="shrink-0">{actionsMenu}</div> : null}
+      </div>
+    </div>
   );
 }
 
