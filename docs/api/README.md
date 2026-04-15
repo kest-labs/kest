@@ -85,6 +85,10 @@ Based on the current `web/src` service, hook, and page usage audit on 2026-04-15
 - `GET /v1/projects/:id/collections/:cid`
 - `PATCH /v1/projects/:id/collections/:cid/move`
 
+The following Export endpoint is also not connected in the frontend yet:
+
+- `GET /v1/projects/:id/collections/:cid/export/postman`
+
 ## API Modules
 
 1. [Authentication & Users](./01-authentication.md)

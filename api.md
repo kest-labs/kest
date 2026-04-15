@@ -1325,7 +1325,7 @@ curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/collections/:cid/reques
 
 | 方法 | 接口路径 | 说明 | 认证 |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/collections/:cid/export/postman` | 导出 Postman | 🔓 |
+| `GET` | `/v1/projects/:id/collections/:cid/export/postman` | 导出 Postman（前端未使用） | 🔓 |
 
 ### GET `/v1/projects/:id/collections/:cid/export/postman`
 
