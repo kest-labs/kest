@@ -1,5 +1,10 @@
 import request from '@/http';
-import type { HistoryListParams, HistoryListResponse, ProjectHistory } from '@/types/history';
+import type {
+  CreateHistoryRequest,
+  HistoryListParams,
+  HistoryListResponse,
+  ProjectHistory,
+} from '@/types/history';
 
 const normalizeParams = <T extends object>(params: T) =>
   Object.fromEntries(
@@ -7,6 +12,11 @@ const normalizeParams = <T extends object>(params: T) =>
   ) as T;
 
 export const historyService = {
+  create: (projectId: number | string, data: CreateHistoryRequest) =>
+    request.post<ProjectHistory>(`/projects/${projectId}/history`, data, {
+      skipErrorHandler: true,
+    }),
+
   list: ({
     projectId,
     page = 1,

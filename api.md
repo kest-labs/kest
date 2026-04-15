@@ -18,7 +18,7 @@ Authorization: Bearer <token>
 
 ## 概览
 
-接口总数：**115**
+接口总数：**116**
 
 ## 目录
 
@@ -29,7 +29,7 @@ Authorization: Bearer <token>
 - [示例（Example）](#example)（7 个接口）
 - [导出（Export）](#export)（1 个接口）
 - [流程（Flow）](#flow)（15 个接口）
-- [历史记录（History）](#history)（2 个接口）
+- [历史记录（History）](#history)（3 个接口）
 - [导入（Importer）](#importer)（1 个接口）
 - [成员（Member）](#member)（4 个接口）
 - [权限（Permission）](#permission)（9 个接口）
@@ -1859,8 +1859,77 @@ curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/flows/:fid/runs/:rid/eve
 
 | 方法 | 接口路径 | 说明 | 认证 |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/history` | 获取历史记录列表 | 🔓 |
-| `GET` | `/v1/projects/:id/history/:hid` | 获取历史详情 | 🔓 |
+| `POST` | `/v1/projects/:id/history` | 创建历史记录 | 🔒 |
+| `GET` | `/v1/projects/:id/history` | 获取历史记录列表 | 🔒 |
+| `GET` | `/v1/projects/:id/history/:hid` | 获取历史详情 | 🔒 |
+
+### POST `/v1/projects/:id/history`
+
+**创建历史记录**
+
+| 属性 | 值 |
+|----------|-------|
+| 认证 | 🔒 需要认证 |
+| 路由名 | `history.create` |
+
+#### 路径参数
+
+| 参数 | 类型 | 说明 |
+|-----------|------|-------------|
+| `id` | `integer` | 项目 ID |
+
+#### 请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|-----------|------|------|-------------|
+| `entity_type` | `string` | 是 | 记录关联的实体类型，例如 `request` |
+| `entity_id` | `integer` | 是 | 记录关联的实体 ID |
+| `action` | `string` | 是 | 历史动作，例如 `run`、`run_failed` |
+| `data` | `object` | 是 | 历史快照数据 |
+| `diff` | `object` | 否 | 变更差异数据 |
+| `message` | `string` | 否 | 历史说明消息 |
+
+`project_id` 由路径参数 `id` 注入，`user_id` 由当前登录用户注入，不需要前端显式传入。
+
+#### 响应
+
+```json
+{
+  "action": "string",
+  "created_at": "2024-01-01T00:00:00Z",
+  "data": "object",
+  "diff": "object",
+  "entity_id": 1,
+  "entity_type": "string",
+  "id": 1,
+  "message": "string",
+  "project_id": 1,
+  "user_id": 1
+}
+```
+
+#### 示例
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/history' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "entity_type": "request",
+    "entity_id": 12,
+    "action": "run",
+    "data": {
+      "request": {
+        "method": "GET",
+        "url": "https://api.example.com/users"
+      },
+      "response": {
+        "status": 200
+      }
+    },
+    "message": "Request executed from workbench"
+  }'
+```
 
 ### GET `/v1/projects/:id/history`
 
@@ -1868,7 +1937,7 @@ curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/flows/:fid/runs/:rid/eve
 
 | 属性 | 值 |
 |----------|-------|
-| 认证 | 🔓 无需认证 |
+| 认证 | 🔒 需要认证 |
 | 路由名 | `history.list` |
 
 #### 路径参数
@@ -1908,7 +1977,7 @@ curl -X GET 'http://localhost:8025/api/v1/v1/projects/1/history'
 
 | 属性 | 值 |
 |----------|-------|
-| 认证 | 🔓 无需认证 |
+| 认证 | 🔒 需要认证 |
 | 路由名 | `history.show` |
 
 #### 路径参数

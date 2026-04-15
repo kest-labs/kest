@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { historyService } from '@/services/history';
-import type { HistoryListParams } from '@/types/history';
+import type { CreateHistoryRequest, HistoryListParams } from '@/types/history';
 
 export const historyKeys = {
   all: ['histories'] as const,
@@ -30,5 +30,17 @@ export function useProjectHistory(projectId?: number | string, historyId?: numbe
       projectId !== null &&
       historyId !== undefined &&
       historyId !== null,
+  });
+}
+
+export function useCreateProjectHistory(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateHistoryRequest) => historyService.create(projectId, data),
+    onSuccess: (history) => {
+      queryClient.invalidateQueries({ queryKey: historyKeys.lists(projectId) });
+      queryClient.setQueryData(historyKeys.detail(projectId, history.id), history);
+    },
   });
 }

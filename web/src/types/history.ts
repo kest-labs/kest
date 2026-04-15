@@ -14,6 +14,15 @@ export interface ProjectHistory {
   created_at: string;
 }
 
+export interface CreateHistoryRequest {
+  entity_type: string;
+  entity_id: number;
+  action: string;
+  data: Record<string, unknown>;
+  diff?: Record<string, unknown>;
+  message?: string;
+}
+
 export interface HistoryListMeta {
   total: number;
   page: number;

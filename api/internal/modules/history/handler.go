@@ -5,23 +5,55 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 type Handler struct {
 	contracts.BaseModule
-	service Service
+	service       Service
+	memberService member.Service
 }
 
-func NewHandler(service Service) *Handler {
+func NewHandler(service Service, memberService member.Service) *Handler {
 	return &Handler{
-		service: service,
+		service:       service,
+		memberService: memberService,
 	}
 }
 
 func (h *Handler) Name() string {
 	return "history"
+}
+
+// Create handles POST /projects/:id/history
+func (h *Handler) Create(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	var req RecordHistoryRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	req.ProjectID = projectID
+	req.UserID = userID
+
+	history, err := h.service.Record(c.Request.Context(), &req)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Created(c, toResponse(history))
 }
 
 // List handles GET /projects/:id/history

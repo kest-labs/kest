@@ -81,7 +81,7 @@ func InitApplication() (*app.Application, error) {
 	runHandler := run.NewHandler(requestService, memberService, runnerRunner)
 	historyRepository := history.NewRepository(db)
 	historyService := history.NewService(historyRepository)
-	historyHandler := history.NewHandler(historyService)
+	historyHandler := history.NewHandler(historyService, memberService)
 	exportService := export.NewService(collectionService, requestService)
 	exportHandler := export.NewHandler(exportService)
 	importerService := importer.NewService(collectionService, requestService)

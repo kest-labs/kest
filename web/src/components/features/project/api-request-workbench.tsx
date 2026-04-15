@@ -63,6 +63,7 @@ import {
   useSetDefaultRequestExample,
   useUpdateRequestExample,
 } from '@/hooks/use-example';
+import { useCreateProjectHistory } from '@/hooks/use-histories';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
 import { useCreateRequest, useDeleteRequest, useUpdateRequest } from '@/hooks/use-requests';
@@ -74,6 +75,7 @@ import type {
   SaveExampleResponseRequest,
   UpdateExampleRequest,
 } from '@/types/example';
+import type { CreateHistoryRequest } from '@/types/history';
 import type {
   CreateRequestRequest,
   ProjectRequest,
@@ -615,6 +617,145 @@ const formatExampleTimestamp = (value: string) => {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
 };
 
+const HISTORY_SENSITIVE_HEADER_NAMES = new Set([
+  'authorization',
+  'proxy-authorization',
+  'cookie',
+  'set-cookie',
+  'x-api-key',
+  'api-key',
+  'x-auth-token',
+]);
+
+const maskHistoryValue = (value: string) => {
+  if (!value) {
+    return '';
+  }
+
+  if (value.length <= 6) {
+    return '****';
+  }
+
+  return `${value.slice(0, 3)}****${value.slice(-2)}`;
+};
+
+const sanitizeHistoryHeaders = (headers: RequestKeyValue[]) =>
+  headers.map((header) => {
+    const normalizedKey = header.key.trim().toLowerCase();
+    return HISTORY_SENSITIVE_HEADER_NAMES.has(normalizedKey)
+      ? { ...header, value: maskHistoryValue(header.value) }
+      : header;
+  });
+
+const sanitizeHistoryHeaderMap = (headers: Record<string, string>) =>
+  Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [
+      key,
+      HISTORY_SENSITIVE_HEADER_NAMES.has(key.trim().toLowerCase()) ? maskHistoryValue(value) : value,
+    ])
+  );
+
+const sanitizeHistoryAuth = (auth?: RequestAuthConfig | null) => {
+  if (!auth?.type) {
+    return null;
+  }
+
+  switch (auth.type) {
+    case 'basic':
+      return auth.basic
+        ? {
+            type: 'basic',
+            basic: {
+              username: auth.basic.username,
+              password: auth.basic.password ? '****' : '',
+            },
+          }
+        : { type: 'basic' };
+    case 'bearer':
+      return {
+        type: 'bearer',
+        bearer: auth.bearer?.token ? '****' : '',
+      };
+    case 'api-key':
+      return auth.api_key
+        ? {
+            type: 'api-key',
+            api_key: {
+              key: auth.api_key.key,
+              in: auth.api_key.in ?? auth.api_key.add_to ?? 'header',
+              value: auth.api_key.value ? '****' : '',
+            },
+          }
+        : { type: 'api-key' };
+    default:
+      return { type: auth.type };
+  }
+};
+
+const buildRequestRunHistoryPayload = ({
+  request,
+  executedUrl,
+  requestHeaders,
+  requestBody,
+  settings,
+  response,
+  errorMessage,
+}: {
+  request: ProjectRequest;
+  executedUrl: string;
+  requestHeaders: Record<string, string>;
+  requestBody?: string;
+  settings: RequestPageTab['settings'];
+  response?: RunRequestResponse;
+  errorMessage?: string;
+}): CreateHistoryRequest => {
+  const requestLabel =
+    request.url === PERSISTED_DRAFT_URL_PLACEHOLDER ? request.name : `${request.method} ${request.url}`;
+  const succeeded = !errorMessage;
+
+  return {
+    entity_type: 'request',
+    entity_id: request.id,
+    action: succeeded ? 'run' : 'run_failed',
+    message: succeeded
+      ? `Executed ${requestLabel}${response ? ` (${response.status})` : ''}`
+      : `Failed to execute ${requestLabel}: ${errorMessage}`,
+    data: {
+      request: {
+        id: request.id,
+        collection_id: request.collection_id,
+        name: request.name,
+        method: request.method,
+        url: request.url,
+        executed_url: executedUrl,
+        headers: sanitizeHistoryHeaders(request.headers),
+        executed_headers: sanitizeHistoryHeaderMap(requestHeaders),
+        query_params: request.query_params,
+        path_params: request.path_params,
+        body: requestBody ?? '',
+        body_type: request.body_type,
+        auth: sanitizeHistoryAuth(request.auth),
+      },
+      runner: {
+        mode: 'local',
+        follow_redirects: settings.followRedirects,
+        strict_tls: settings.strictTls,
+      },
+      response: response
+        ? {
+            status: response.status,
+            status_text: response.status_text,
+            headers: sanitizeHistoryHeaderMap(response.headers ?? {}),
+            body: response.body,
+            time: response.time,
+            size: response.size,
+          }
+        : undefined,
+      error: errorMessage || undefined,
+    },
+  };
+};
+
 const applyExampleToTab = (tab: RequestPageTab, example: RequestExample): RequestPageTab => {
   const paramsRows = toKeyValueRows(example.query_params);
   const headersRows = toKeyValueRows(example.headers);
@@ -1001,6 +1142,7 @@ export function ApiRequestWorkbench({
   const createRequestMutation = useCreateRequest(projectId);
   const updateRequestMutation = useUpdateRequest(projectId);
   const deleteRequestMutation = useDeleteRequest(projectId);
+  const createHistoryMutation = useCreateProjectHistory(projectId);
   const createExampleMutation = useCreateRequestExample(projectId);
   const updateExampleMutation = useUpdateRequestExample(projectId);
   const deleteExampleMutation = useDeleteRequestExample(projectId);
@@ -1872,6 +2014,10 @@ export function ApiRequestWorkbench({
 
     const tabSnapshot = activeTab;
     let tabId = activeTab.id;
+    let persistedRequest: ProjectRequest | null = null;
+    let executableUrl = '';
+    let executableHeaders: Record<string, string> = {};
+    let executableBody: string | undefined;
 
     updateTab(tabId, (tab) => ({
       ...tab,
@@ -1883,7 +2029,7 @@ export function ApiRequestWorkbench({
     }));
 
     try {
-      const persistedRequest = await persistTabRequest(tabSnapshot, {
+      persistedRequest = await persistTabRequest(tabSnapshot, {
         requireRunnableUrl: true,
       });
       tabId = syncPersistedRequestInWorkbench(tabId, persistedRequest, {
@@ -1896,11 +2042,14 @@ export function ApiRequestWorkbench({
         );
       }
 
+      executableUrl = buildExecutableRequestUrl(persistedRequest);
+      executableHeaders = headersToObject(buildDirectRequestHeaders(persistedRequest));
+      executableBody = buildDirectRequestBody(persistedRequest);
       const response = await localRunnerService.execute({
         method: persistedRequest.method,
-        url: buildExecutableRequestUrl(persistedRequest),
-        headers: headersToObject(buildDirectRequestHeaders(persistedRequest)),
-        body: buildDirectRequestBody(persistedRequest),
+        url: executableUrl,
+        headers: executableHeaders,
+        body: executableBody,
         follow_redirects: tabSnapshot.settings.followRedirects,
         strict_tls: tabSnapshot.settings.strictTls,
       });
@@ -1910,6 +2059,19 @@ export function ApiRequestWorkbench({
         isSending: false,
         response: toResponseDraft(response),
       }));
+
+      void createHistoryMutation
+        .mutateAsync(
+          buildRequestRunHistoryPayload({
+            request: persistedRequest,
+            executedUrl: executableUrl,
+            requestHeaders: executableHeaders,
+            requestBody: executableBody,
+            settings: tabSnapshot.settings,
+            response,
+          })
+        )
+        .catch(() => {});
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to send request.';
 
@@ -1921,6 +2083,27 @@ export function ApiRequestWorkbench({
           error: message,
         },
       }));
+
+      if (persistedRequest) {
+        if (!executableUrl) {
+          executableUrl = buildExecutableRequestUrl(persistedRequest);
+          executableHeaders = headersToObject(buildDirectRequestHeaders(persistedRequest));
+          executableBody = buildDirectRequestBody(persistedRequest);
+        }
+
+        void createHistoryMutation
+          .mutateAsync(
+            buildRequestRunHistoryPayload({
+              request: persistedRequest,
+              executedUrl: executableUrl,
+              requestHeaders: executableHeaders,
+              requestBody: executableBody,
+              settings: tabSnapshot.settings,
+              errorMessage: message,
+            })
+          )
+          .catch(() => {});
+      }
     }
   };
 

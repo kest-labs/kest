@@ -6,7 +6,7 @@ import "time"
 type RecordHistoryRequest struct {
 	EntityType string                 `json:"entity_type" binding:"required"`
 	EntityID   uint                   `json:"entity_id" binding:"required"`
-	ProjectID  uint                   `json:"project_id" binding:"required"`
+	ProjectID  uint                   `json:"project_id"`
 	UserID     uint                   `json:"user_id"`
 	Action     string                 `json:"action" binding:"required"`
 	Data       map[string]interface{} `json:"data" binding:"required"`

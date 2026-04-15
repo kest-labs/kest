@@ -89,6 +89,12 @@ The following Export endpoint is also not connected in the frontend yet:
 
 - `GET /v1/projects/:id/collections/:cid/export/postman`
 
+History write is now connected in the frontend:
+
+- `POST /v1/projects/:id/history`
+
+The request workbench uses this endpoint after `Send` to automatically write one `request` history record for each execution attempt.
+
 ## API Modules
 
 1. [Authentication & Users](./01-authentication.md)
