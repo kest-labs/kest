@@ -77,6 +77,14 @@ All API responses follow a consistent format:
 | 429 | Too Many Requests - Rate limit exceeded |
 | 500 | Internal Server Error - Server error |
 
+## Frontend Integration Note
+
+Based on the current `web/src` service, hook, and page usage audit on 2026-04-15, the following Collection endpoints are not connected in the frontend yet:
+
+- `GET /v1/projects/:id/collections/tree`
+- `GET /v1/projects/:id/collections/:cid`
+- `PATCH /v1/projects/:id/collections/:cid/move`
+
 ## API Modules
 
 1. [Authentication & Users](./01-authentication.md)

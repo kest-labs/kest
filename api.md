@@ -487,11 +487,11 @@ curl -X DELETE 'http://localhost:8025/api/v1/v1/projects/1/categories/:cid'
 |--------|----------|-------------|------|
 | `POST` | `/v1/projects/:id/collections` | 创建集合 | 🔓 |
 | `GET` | `/v1/projects/:id/collections` | 获取集合列表 | 🔓 |
-| `GET` | `/v1/projects/:id/collections/tree` | 获取集合树 | 🔓 |
-| `GET` | `/v1/projects/:id/collections/:cid` | 获取集合详情 | 🔓 |
+| `GET` | `/v1/projects/:id/collections/tree` | 获取集合树（前端未使用） | 🔓 |
+| `GET` | `/v1/projects/:id/collections/:cid` | 获取集合详情（前端未使用） | 🔓 |
 | `PUT` | `/v1/projects/:id/collections/:cid` | 更新集合 | 🔓 |
 | `DELETE` | `/v1/projects/:id/collections/:cid` | 删除集合 | 🔓 |
-| `PATCH` | `/v1/projects/:id/collections/:cid/move` | 移动集合 | 🔓 |
+| `PATCH` | `/v1/projects/:id/collections/:cid/move` | 移动集合（前端未使用） | 🔓 |
 
 ### POST `/v1/projects/:id/collections`
 
@@ -4111,4 +4111,3 @@ curl -X DELETE 'http://localhost:8025/api/v1/v1/workspaces/1/members/:uid'
 ```
 
 ---
-
