@@ -1,42 +1,90 @@
 import request from '@/http';
-import type { ExampleQuerySchema, CreateExampleRequest, UpdateExampleRequest } from '@/types/example';
+import type {
+  CreateExampleRequest,
+  RequestExample,
+  SaveExampleResponseRequest,
+  UpdateExampleRequest,
+} from '@/types/example';
 
-/**
- * Example Service (Template)
- * 
- * Demonstrates the standard pattern for API service definitions.
- * All methods are stateless pure functions using the centralized request utility.
- */
+const normalizePayload = <T extends object>(payload: T) =>
+  Object.fromEntries(
+    Object.entries(payload as Record<string, unknown>).filter(([, value]) => value !== undefined)
+  ) as T;
+
 export const exampleService = {
-  /**
-   * Fetch a paginated list of items
-   */
-  getList: (params?: ExampleQuerySchema) => 
-    request.get('/example', { params }),
-    
-  /**
-   * Fetch a single item by ID
-   */
-  getDetail: (id: string) => 
-    request.get(`/example/${id}`),
-    
-  /**
-   * Create a new item
-   */
-  create: (data: CreateExampleRequest) => 
-    request.post('/example', data),
-    
-  /**
-   * Update an existing item (Partial update)
-   */
-  update: (id: string, data: UpdateExampleRequest) => 
-    request.patch(`/example/${id}`, data),
-    
-  /**
-   * Delete an item
-   */
-  delete: (id: string) => 
-    request.delete(`/example/${id}`),
+  list: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string
+  ) =>
+    request.get<RequestExample[]>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples`
+    ),
+
+  getById: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    exampleId: number | string
+  ) =>
+    request.get<RequestExample>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`
+    ),
+
+  create: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    data: CreateExampleRequest
+  ) =>
+    request.post<RequestExample>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples`,
+      normalizePayload(data)
+    ),
+
+  update: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    exampleId: number | string,
+    data: UpdateExampleRequest
+  ) =>
+    request.put<RequestExample>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`,
+      normalizePayload(data)
+    ),
+
+  delete: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    exampleId: number | string
+  ) =>
+    request.delete<void>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`
+    ),
+
+  saveResponse: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    exampleId: number | string,
+    data: SaveExampleResponseRequest
+  ) =>
+    request.post<RequestExample>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}/response`,
+      normalizePayload(data)
+    ),
+
+  setDefault: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    exampleId: number | string
+  ) =>
+    request.post<RequestExample>(
+      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}/default`
+    ),
 };
 
 export type ExampleService = typeof exampleService;

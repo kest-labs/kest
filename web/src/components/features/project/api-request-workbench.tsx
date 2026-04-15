@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   ChevronDown,
   ChevronRight,
@@ -10,9 +11,11 @@ import {
   FolderOpen,
   MoreHorizontal,
   Plus,
+  RefreshCw,
   Save,
   Search,
   SendHorizonal,
+  Star,
   Trash2,
   X,
 } from 'lucide-react';
@@ -51,11 +54,22 @@ import {
   useDeleteCollection,
   useUpdateCollection,
 } from '@/hooks/use-collections';
+import {
+  useCreateRequestExample,
+  useRequestExamples,
+  useSaveRequestExampleResponse,
+  useSetDefaultRequestExample,
+} from '@/hooks/use-example';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
 import { useCreateRequest, useDeleteRequest, useUpdateRequest } from '@/hooks/use-requests';
 import { requestService } from '@/services/request';
 import type { ProjectCollection, ProjectCollectionTreeNode } from '@/types/collection';
+import type {
+  CreateExampleRequest,
+  RequestExample,
+  SaveExampleResponseRequest,
+} from '@/types/example';
 import type {
   CreateRequestRequest,
   ProjectRequest,
@@ -67,7 +81,14 @@ import type {
 import { cn } from '@/utils';
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-type RequestSection = 'params' | 'authorization' | 'headers' | 'body' | 'scripts' | 'settings';
+type RequestSection =
+  | 'params'
+  | 'authorization'
+  | 'headers'
+  | 'body'
+  | 'scripts'
+  | 'settings'
+  | 'examples';
 type BulkMode = 'table' | 'bulk';
 type AuthorizationMode = 'none' | 'bearer' | 'basic' | 'api-key';
 type BodyMode = 'json' | 'raw' | 'form-data';
@@ -133,6 +154,12 @@ interface InitialWorkbenchState {
   nextTabIndex: number;
 }
 
+interface ExampleFormDraft {
+  name: string;
+  description: string;
+  isDefault: boolean;
+}
+
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 const ENVIRONMENT_OPTIONS = ['development', 'staging', 'production'] as const;
 const SECTION_ITEMS: Array<{ value: RequestSection; label: string }> = [
@@ -142,6 +169,7 @@ const SECTION_ITEMS: Array<{ value: RequestSection; label: string }> = [
   { value: 'body', label: 'Body' },
   { value: 'scripts', label: 'Scripts' },
   { value: 'settings', label: 'Settings' },
+  { value: 'examples', label: 'Examples' },
 ];
 const BODY_MODE_OPTIONS: BodyMode[] = ['json', 'raw', 'form-data'];
 const AUTHORIZATION_OPTIONS: AuthorizationMode[] = ['none', 'bearer', 'basic', 'api-key'];
@@ -474,6 +502,70 @@ const toResponseDraft = (response: RunRequestResponse): ResponseDraft => ({
   body: formatResponseBody(response.body),
   error: null,
 });
+
+const canCaptureResponse = (response: ResponseDraft) =>
+  response.status !== null && !response.error;
+
+const getExampleFormDraft = (requestLabel: string): ExampleFormDraft => ({
+  name: requestLabel,
+  description: '',
+  isDefault: false,
+});
+
+const toCreateExamplePayload = (
+  tab: RequestPageTab,
+  draft: ExampleFormDraft
+): CreateExampleRequest => ({
+  name: draft.name.trim(),
+  description: draft.description.trim() || undefined,
+  url: tab.url.trim() || undefined,
+  method: tab.method,
+  headers: toRequestKeyValues(tab.headersMode, tab.headersRows, tab.headersBulk),
+  query_params: toRequestKeyValues(tab.paramsMode, tab.paramsRows, tab.paramsBulk),
+  body: tab.bodyContent,
+  body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
+  auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+  is_default: draft.isDefault,
+});
+
+const toSaveExampleResponsePayload = (
+  response: ResponseDraft
+): SaveExampleResponseRequest | null => {
+  if (!canCaptureResponse(response)) {
+    return null;
+  }
+
+  return {
+    response_status: response.status ?? 0,
+    response_headers: response.headers,
+    response_body: response.body,
+    response_time: response.durationMs ?? 0,
+  };
+};
+
+const applyExampleToTab = (tab: RequestPageTab, example: RequestExample): RequestPageTab => {
+  const paramsRows = toKeyValueRows(example.query_params);
+  const headersRows = toKeyValueRows(example.headers);
+  const method = toRequestMethod(example.method);
+
+  return {
+    ...tab,
+    method,
+    url: example.url || '',
+    activeSection:
+      method === 'POST' || method === 'PUT' || method === 'PATCH' ? 'body' : 'params',
+    paramsMode: 'table',
+    paramsRows,
+    paramsBulk: rowsToBulkText(paramsRows),
+    authorizationMode: toAuthorizationMode(example.auth),
+    authorizationValue: toAuthorizationValue(example.auth),
+    headersMode: 'table',
+    headersRows,
+    headersBulk: rowsToBulkText(headersRows),
+    bodyMode: toBodyMode(example.body_type),
+    bodyContent: example.body || '',
+  };
+};
 
 const isEnabledRequestKeyValue = (row: RequestKeyValue) => row.enabled !== false && row.key.trim().length > 0;
 
@@ -824,12 +916,18 @@ export function ApiRequestWorkbench({
   const [renameDraftName, setRenameDraftName] = useState('');
   const [renameDialogRequestTabId, setRenameDialogRequestTabId] = useState<string | null>(null);
   const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
+  const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
+  const [savingResponseExampleId, setSavingResponseExampleId] = useState<number | null>(null);
+  const [defaultingExampleId, setDefaultingExampleId] = useState<number | null>(null);
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
   const createRequestMutation = useCreateRequest(projectId);
   const updateRequestMutation = useUpdateRequest(projectId);
   const deleteRequestMutation = useDeleteRequest(projectId);
+  const createExampleMutation = useCreateRequestExample(projectId);
+  const saveExampleResponseMutation = useSaveRequestExampleResponse(projectId);
+  const setDefaultExampleMutation = useSetDefaultRequestExample(projectId);
   const collectionTreeQuery = useQuery({
     queryKey: ['collections', 'project', projectId, 'workbench-tree'],
     queryFn: () => fetchAllProjectCollections(projectId),
@@ -879,6 +977,41 @@ export function ApiRequestWorkbench({
   const activeTab = useMemo(
     () => (activeTabId ? tabMap.get(activeTabId) ?? null : openTabs[0] ?? null),
     [activeTabId, openTabs, tabMap]
+  );
+  const persistedActiveCollectionId = useMemo(() => {
+    if (!activeTab?.collectionId || !isPersistedCollectionId(activeTab.collectionId)) {
+      return null;
+    }
+
+    return Number(activeTab.collectionId);
+  }, [activeTab?.collectionId]);
+  const persistedActiveRequestId = useMemo(
+    () => (activeTab ? getPersistedRequestId(activeTab.id) : null),
+    [activeTab]
+  );
+  const examplesQuery = useRequestExamples(
+    persistedActiveCollectionId && persistedActiveRequestId
+      ? {
+          projectId,
+          collectionId: persistedActiveCollectionId,
+          requestId: persistedActiveRequestId,
+        }
+      : undefined
+  );
+  const requestExamples = useMemo(
+    () =>
+      [...(examplesQuery.data ?? [])].sort((left, right) => {
+        if (left.is_default !== right.is_default) {
+          return left.is_default ? -1 : 1;
+        }
+
+        if (left.sort_order !== right.sort_order) {
+          return left.sort_order - right.sort_order;
+        }
+
+        return left.id - right.id;
+      }),
+    [examplesQuery.data]
   );
   const scratchpadTabs = useMemo(
     () => tabs.filter((tab) => !tab.collectionId),
@@ -1157,6 +1290,140 @@ export function ApiRequestWorkbench({
         options.name
       )
     );
+  };
+
+  const ensurePersistedRequestForExamples = async (tab: RequestPageTab) => {
+    if (!tab.collectionId || !isPersistedCollectionId(tab.collectionId)) {
+      throw new Error('Move this request into a saved collection before creating examples.');
+    }
+
+    const collectionId = Number(tab.collectionId);
+    const persistedRequestId = getPersistedRequestId(tab.id);
+
+    if (persistedRequestId) {
+      return {
+        collectionId,
+        requestId: persistedRequestId,
+      };
+    }
+
+    const persistedRequest = await persistTabRequest(tab, {
+      name: getTabSaveLabel(tab),
+    });
+
+    syncPersistedRequestInWorkbench(tab.id, persistedRequest);
+
+    return {
+      collectionId,
+      requestId: persistedRequest.id,
+    };
+  };
+
+  const openCreateExampleDialog = () => {
+    if (!activeTab) {
+      return;
+    }
+
+    if (!activeTab.collectionId || !isPersistedCollectionId(activeTab.collectionId)) {
+      toast.error('Move this request into a saved collection before creating examples.');
+      return;
+    }
+
+    setIsExampleDialogOpen(true);
+  };
+
+  const handleCreateExample = async (draft: ExampleFormDraft) => {
+    if (!activeTab) {
+      return;
+    }
+
+    const tabSnapshot = activeTab;
+
+    try {
+      const { collectionId, requestId } = await ensurePersistedRequestForExamples(tabSnapshot);
+      const createdExample = await createExampleMutation.mutateAsync({
+        collectionId,
+        requestId,
+        data: toCreateExamplePayload(tabSnapshot, draft),
+      });
+      const responsePayload = toSaveExampleResponsePayload(tabSnapshot.response);
+
+      if (responsePayload) {
+        await saveExampleResponseMutation.mutateAsync({
+          collectionId,
+          requestId,
+          exampleId: createdExample.id,
+          data: responsePayload,
+        });
+      }
+
+      setIsExampleDialogOpen(false);
+      setActiveTabId(`request-${requestId}`);
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
+  };
+
+  const handleApplyExample = (example: RequestExample) => {
+    if (!activeTab) {
+      return;
+    }
+
+    updateActiveTab((tab) => applyExampleToTab(tab, example));
+    toast.success(`Applied example "${example.name}"`);
+  };
+
+  const handleSaveLatestResponseToExample = async (example: RequestExample) => {
+    if (!activeTab) {
+      return;
+    }
+
+    const responsePayload = toSaveExampleResponsePayload(activeTab.response);
+    if (!responsePayload) {
+      toast.error('Send the request first so there is a real response to capture.');
+      return;
+    }
+
+    try {
+      setSavingResponseExampleId(example.id);
+      const { collectionId, requestId } = await ensurePersistedRequestForExamples(activeTab);
+      await saveExampleResponseMutation.mutateAsync({
+        collectionId,
+        requestId,
+        exampleId: example.id,
+        data: responsePayload,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    } finally {
+      setSavingResponseExampleId(null);
+    }
+  };
+
+  const handleSetDefaultExample = async (example: RequestExample) => {
+    if (!activeTab) {
+      return;
+    }
+
+    try {
+      setDefaultingExampleId(example.id);
+      const { collectionId, requestId } = await ensurePersistedRequestForExamples(activeTab);
+      await setDefaultExampleMutation.mutateAsync({
+        collectionId,
+        requestId,
+        exampleId: example.id,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    } finally {
+      setDefaultingExampleId(null);
+    }
   };
 
   const createCollection = async () => {
@@ -1495,7 +1762,7 @@ export function ApiRequestWorkbench({
     });
   };
 
-  const createScratchpadRequest = () => {
+  const createScratchpadRequest = useCallback(() => {
     const nextTab = createRequestPageTab(nextTabIndex, {
       id: createLocalId('request-tab'),
       collectionId: null,
@@ -1507,7 +1774,7 @@ export function ApiRequestWorkbench({
       setActiveTabId(nextTab.id);
       setNextTabIndex((current) => current + 1);
     });
-  };
+  }, [nextTabIndex]);
 
   useEffect(() => {
     if (searchParams.get('quickRequest') !== '1' || quickRequestIntentConsumedRef.current) {
@@ -1647,6 +1914,12 @@ export function ApiRequestWorkbench({
     }
   };
 
+  const canCreateExamples =
+    Boolean(activeTab?.collectionId) &&
+    Boolean(activeTab?.collectionId && isPersistedCollectionId(activeTab.collectionId));
+  const requestIsPersisted = persistedActiveRequestId !== null;
+  const activeResponseCanBeCaptured = activeTab ? canCaptureResponse(activeTab.response) : false;
+
   return (
     <main className="flex h-full min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,247,251,0.98))]">
       <div className="border-b border-border/60 bg-white/80 backdrop-blur">
@@ -1769,14 +2042,41 @@ export function ApiRequestWorkbench({
                     }
                   />
 
-                  <RequestSectionPanel
-                    tab={activeTab}
-                    onTabChange={updateActiveTab}
-                  />
+                  {activeTab.activeSection === 'examples' ? (
+                    <ExamplesPanel
+                      canCreateExamples={canCreateExamples}
+                      requestPersisted={requestIsPersisted}
+                      hasCapturableResponse={activeResponseCanBeCaptured}
+                      examples={requestExamples}
+                      isLoading={examplesQuery.isLoading}
+                      isError={Boolean(examplesQuery.error)}
+                      isRefreshing={examplesQuery.isFetching}
+                      savingResponseExampleId={savingResponseExampleId}
+                      defaultingExampleId={defaultingExampleId}
+                      onCreateExample={openCreateExampleDialog}
+                      onRefresh={() => {
+                        void examplesQuery.refetch();
+                      }}
+                      onApplyExample={handleApplyExample}
+                      onSaveLatestResponse={handleSaveLatestResponseToExample}
+                      onSetDefault={handleSetDefaultExample}
+                    />
+                  ) : (
+                    <RequestSectionPanel
+                      tab={activeTab}
+                      onTabChange={updateActiveTab}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
-              <ResponsePanel response={activeTab.response} isSending={activeTab.isSending} />
+              <ResponsePanel
+                response={activeTab.response}
+                isSending={activeTab.isSending}
+                onSaveAsExample={openCreateExampleDialog}
+                canSaveAsExample={canCreateExamples && activeResponseCanBeCaptured}
+                isSavingExample={createExampleMutation.isPending || saveExampleResponseMutation.isPending}
+              />
             </div>
           ) : (
             <div className="mx-auto flex min-h-full max-w-[960px] items-center justify-center">
@@ -1806,6 +2106,15 @@ export function ApiRequestWorkbench({
         </div>
       </div>
 
+      <ExampleFormDialog
+        key={`${activeTab?.id ?? 'no-request'}-${isExampleDialogOpen ? 'open' : 'closed'}`}
+        open={isExampleDialogOpen}
+        requestLabel={activeTab ? getTabSaveLabel(activeTab) : DEFAULT_NEW_REQUEST_TITLE}
+        capturesResponse={activeResponseCanBeCaptured}
+        isSubmitting={createExampleMutation.isPending || saveExampleResponseMutation.isPending}
+        onOpenChange={setIsExampleDialogOpen}
+        onSubmit={handleCreateExample}
+      />
       <RenameCollectionDialog
         open={renameDialogCollectionId !== null}
         value={renameDraftName}
@@ -2263,6 +2572,294 @@ function RenameRequestDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ExampleFormDialog({
+  open,
+  requestLabel,
+  capturesResponse,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  requestLabel: string;
+  capturesResponse: boolean;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (draft: ExampleFormDraft) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState<ExampleFormDraft>(() => getExampleFormDraft(requestLabel));
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!draft.name.trim()) {
+      setError('Example name is required.');
+      return;
+    }
+
+    setError(null);
+    await onSubmit(draft);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="default">
+        <DialogHeader>
+          <DialogTitle>Save Request Example</DialogTitle>
+          <DialogDescription>
+            Save the current request snapshot as a reusable example.
+            {capturesResponse
+              ? ' The latest response will be captured into this example as well.'
+              : ' You can capture a real response later after sending the request.'}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form id="request-example-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="request-example-name">Example name</Label>
+              <Input
+                id="request-example-name"
+                value={draft.name}
+                onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Create user - happy path"
+                errorText={error ?? undefined}
+                root
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="request-example-description">Description</Label>
+              <Textarea
+                id="request-example-description"
+                value={draft.description}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, description: event.target.value }))
+                }
+                rows={5}
+                placeholder="What scenario does this example cover?"
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-slate-50/80 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-text-main">Set as default example</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  The default example becomes the primary saved scenario for this request.
+                </p>
+              </div>
+              <Switch
+                checked={draft.isDefault}
+                onCheckedChange={(checked) =>
+                  setDraft((current) => ({ ...current, isDefault: checked }))
+                }
+              />
+            </div>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" form="request-example-form" loading={isSubmitting}>
+            Save Example
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExamplesPanel({
+  canCreateExamples,
+  requestPersisted,
+  hasCapturableResponse,
+  examples,
+  isLoading,
+  isError,
+  isRefreshing,
+  savingResponseExampleId,
+  defaultingExampleId,
+  onCreateExample,
+  onRefresh,
+  onApplyExample,
+  onSaveLatestResponse,
+  onSetDefault,
+}: {
+  canCreateExamples: boolean;
+  requestPersisted: boolean;
+  hasCapturableResponse: boolean;
+  examples: RequestExample[];
+  isLoading: boolean;
+  isError: boolean;
+  isRefreshing: boolean;
+  savingResponseExampleId: number | null;
+  defaultingExampleId: number | null;
+  onCreateExample: () => void;
+  onRefresh: () => void;
+  onApplyExample: (example: RequestExample) => void;
+  onSaveLatestResponse: (example: RequestExample) => Promise<void>;
+  onSetDefault: (example: RequestExample) => Promise<void>;
+}) {
+  return (
+    <div className="space-y-4">
+      <Card className="border-border/60 bg-white/85 py-0 shadow-sm">
+        <CardHeader className="border-b border-border/60 py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>Examples</CardTitle>
+              <CardDescription className="mt-1">
+                Save named request and response snapshots so common scenarios can be replayed quickly.
+              </CardDescription>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                disabled={!requestPersisted || isRefreshing}
+              >
+                <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+                Refresh
+              </Button>
+              <Button type="button" size="sm" onClick={onCreateExample} disabled={!canCreateExamples}>
+                <Plus className="h-4 w-4" />
+                New Example
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 px-5 py-5">
+          {!canCreateExamples ? (
+            <div className="rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 p-5">
+              <p className="text-sm font-semibold text-text-main">Examples need a saved collection request</p>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                Quick requests are intentionally ephemeral. Move this request into a saved collection first,
+                then save examples from there.
+              </p>
+            </div>
+          ) : !requestPersisted ? (
+            <div className="rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 p-5">
+              <p className="text-sm font-semibold text-text-main">This request has not been persisted yet</p>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                Create the first example and the workbench will save this request into the collection
+                automatically before storing the example.
+              </p>
+            </div>
+          ) : null}
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {[0, 1].map((item) => (
+                <div key={item} className="rounded-[24px] border border-border/60 p-4">
+                  <div className="h-5 w-48 animate-pulse rounded-full bg-muted" />
+                  <div className="mt-3 h-4 w-72 animate-pulse rounded-full bg-muted" />
+                  <div className="mt-5 h-10 animate-pulse rounded-2xl bg-muted" />
+                </div>
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="rounded-[24px] border border-rose-200 bg-rose-50/70 p-5 text-sm text-rose-700">
+              Unable to load examples for this request. Try refreshing the panel.
+            </div>
+          ) : examples.length === 0 ? (
+            <div className="rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 p-5">
+              <p className="text-sm font-semibold text-text-main">No examples yet</p>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                Save the current request as an example to preserve a named scenario and optionally
+                attach the latest real response.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {examples.map((example) => (
+                <div
+                  key={example.id}
+                  className="rounded-[24px] border border-border/60 bg-white/90 p-4 shadow-sm"
+                >
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-text-main">{example.name}</p>
+                        {example.is_default ? (
+                          <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                            Default
+                          </Badge>
+                        ) : null}
+                        <Badge variant="secondary">
+                          {example.method} {example.url || 'No URL'}
+                        </Badge>
+                      </div>
+
+                      {example.description ? (
+                        <p className="text-sm leading-6 text-text-muted">{example.description}</p>
+                      ) : null}
+
+                      <div className="flex flex-wrap gap-2">
+                        <MetricBadge
+                          label="Headers"
+                          value={`${example.headers?.length ?? 0}`}
+                        />
+                        <MetricBadge
+                          label="Params"
+                          value={`${example.query_params?.length ?? 0}`}
+                        />
+                        <MetricBadge
+                          label="Body"
+                          value={example.body?.trim() ? example.body_type : 'none'}
+                        />
+                        <MetricBadge
+                          label="Response"
+                          value={
+                            example.response_status > 0
+                              ? `${example.response_status} / ${example.response_time} ms`
+                              : 'Not captured'
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 xl:max-w-[460px] xl:justify-end">
+                      <Button type="button" variant="outline" size="sm" onClick={() => onApplyExample(example)}>
+                        <Copy className="h-4 w-4" />
+                        Apply
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void onSaveLatestResponse(example)}
+                        disabled={!hasCapturableResponse}
+                        loading={savingResponseExampleId === example.id}
+                      >
+                        <Save className="h-4 w-4" />
+                        Capture Latest Response
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void onSetDefault(example)}
+                        disabled={example.is_default}
+                        loading={defaultingExampleId === example.id}
+                      >
+                        <Star className="h-4 w-4" />
+                        Set Default
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -2949,9 +3546,15 @@ function SettingsPanel({
 function ResponsePanel({
   response,
   isSending,
+  onSaveAsExample,
+  canSaveAsExample,
+  isSavingExample,
 }: {
   response: ResponseDraft;
   isSending: boolean;
+  onSaveAsExample: () => void;
+  canSaveAsExample: boolean;
+  isSavingExample: boolean;
 }) {
   const responseHeaders = Object.entries(response.headers)
     .map(([key, value]) => `${key}: ${value}`)
@@ -2969,6 +3572,17 @@ function ResponsePanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onSaveAsExample}
+              disabled={!canSaveAsExample}
+              loading={isSavingExample}
+            >
+              <Save className="h-4 w-4" />
+              Save as Example
+            </Button>
             <MetricBadge
               label="Status"
               value={response.status !== null ? `${response.status} ${response.statusLabel}`.trim() : '-'}

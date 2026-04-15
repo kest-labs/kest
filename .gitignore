@@ -177,6 +177,7 @@ web/TEST_*.md
 # ===========================================
 # Storage and runtime data
 # ===========================================
+.kest/
 storage/
 api/storage/
 web/storage/

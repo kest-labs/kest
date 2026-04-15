@@ -1,184 +1,218 @@
-/**
- * Example React Query hooks
- * Encapsulating state, side effects, and cache management.
- */
-
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { exampleService } from '@/services/example';
-import { useT } from '@/i18n/client';
-import type { ExampleQuerySchema, CreateExampleRequest, UpdateExampleRequest } from '@/types/example';
+import type {
+  CreateExampleRequest,
+  RequestExamplePathParams,
+  SaveExampleResponseRequest,
+  UpdateExampleRequest,
+} from '@/types/example';
 
-// ============================================================================
-// Query Keys
-// ============================================================================
-
-/**
- * Centralized query keys for the example domain
- */
 export const exampleKeys = {
   all: ['examples'] as const,
-  lists: () => [...exampleKeys.all, 'list'] as const,
-  list: (params: ExampleQuerySchema) => [...exampleKeys.lists(), params] as const,
-  details: () => [...exampleKeys.all, 'detail'] as const,
-  detail: (id: string) => [...exampleKeys.details(), id] as const,
+  project: (projectId: number | string) => [...exampleKeys.all, 'project', projectId] as const,
+  request: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string
+  ) => [...exampleKeys.project(projectId), 'collection', collectionId, 'request', requestId] as const,
+  list: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string
+  ) => [...exampleKeys.request(projectId, collectionId, requestId), 'list'] as const,
+  detail: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    exampleId: number | string
+  ) => [...exampleKeys.request(projectId, collectionId, requestId), 'detail', exampleId] as const,
 };
 
-// ============================================================================
-// Hooks
-// ============================================================================
-
-/**
- * Hook for fetching example items list
- */
-export function useExamples(params?: ExampleQuerySchema) {
+export function useRequestExamples(params?: Partial<RequestExamplePathParams>) {
   return useQuery({
-    queryKey: exampleKeys.list(params || {}),
-    queryFn: () => exampleService.getList(params),
+    queryKey: exampleKeys.list(
+      params?.projectId ?? 'unknown',
+      params?.collectionId ?? 'unknown',
+      params?.requestId ?? 'unknown'
+    ),
+    queryFn: () =>
+      exampleService.list(
+        params?.projectId as number | string,
+        params?.collectionId as number | string,
+        params?.requestId as number | string
+      ),
+    enabled:
+      params?.projectId !== undefined &&
+      params?.projectId !== null &&
+      params?.collectionId !== undefined &&
+      params?.collectionId !== null &&
+      params?.requestId !== undefined &&
+      params?.requestId !== null,
+    staleTime: 30_000,
   });
 }
 
-/**
- * Hook for fetching example item detail
- */
-export function useExample(id: string) {
+export function useRequestExample(
+  params?: Partial<RequestExamplePathParams> & { exampleId?: number | string }
+) {
   return useQuery({
-    queryKey: exampleKeys.detail(id),
-    queryFn: () => exampleService.getDetail(id),
-    enabled: !!id,
+    queryKey: exampleKeys.detail(
+      params?.projectId ?? 'unknown',
+      params?.collectionId ?? 'unknown',
+      params?.requestId ?? 'unknown',
+      params?.exampleId ?? 'unknown'
+    ),
+    queryFn: () =>
+      exampleService.getById(
+        params?.projectId as number | string,
+        params?.collectionId as number | string,
+        params?.requestId as number | string,
+        params?.exampleId as number | string
+      ),
+    enabled:
+      params?.projectId !== undefined &&
+      params?.projectId !== null &&
+      params?.collectionId !== undefined &&
+      params?.collectionId !== null &&
+      params?.requestId !== undefined &&
+      params?.requestId !== null &&
+      params?.exampleId !== undefined &&
+      params?.exampleId !== null,
   });
 }
 
-/**
- * Hook for creating a new example item
- * Implements Optimistic Updates (List appending)
- */
-export function useCreateExample() {
+export function useCreateRequestExample(projectId: number | string) {
   const queryClient = useQueryClient();
-  const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateExampleRequest) => exampleService.create(data),
-
-    onMutate: async (newItem) => {
-      // 1. Cancel outgoing list fetches
-      await queryClient.cancelQueries({ queryKey: exampleKeys.lists() });
-
-      // 2. Snapshot previous lists
-      const previousLists = queryClient.getQueryData(exampleKeys.lists());
-
-      // 3. Optimistically add to the cache
-      // Note: In a real app, you'd match the specific list query key (e.g., page 1)
-      queryClient.setQueriesData({ queryKey: exampleKeys.lists() }, (old: any) => {
-        if (!old) return [newItem];
-        if (Array.isArray(old)) return [newItem, ...old];
-        if (old.data) return { ...old, data: [newItem, ...old.data] };
-        return old;
+    mutationFn: ({
+      collectionId,
+      requestId,
+      data,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      data: CreateExampleRequest;
+    }) => exampleService.create(projectId, collectionId, requestId, data),
+    onSuccess: (example, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
       });
-
-      return { previousLists };
-    },
-
-    onError: (err: any) => {
-      // Rollback: Invalidate lists to get fresh data from server
-      queryClient.invalidateQueries({ queryKey: exampleKeys.lists() });
-      toast.error(err.message || 'Failed to create');
-    },
-
-    onSettled: (data, error) => {
-      // Final synchronization
-      queryClient.invalidateQueries({ queryKey: exampleKeys.lists() });
-      if (data && !error) {
-        toast.success(t.common?.('success') || 'Created successfully');
-      }
+      queryClient.setQueryData(
+        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        example
+      );
+      toast.success(`Created example "${example.name}"`);
     },
   });
 }
 
-/**
- * Hook for updating an existing example item
- * Implements Optimistic Updates with "Refetch-on-Failure" rollback strategy.
- */
-export function useUpdateExample() {
+export function useUpdateRequestExample(projectId: number | string) {
   const queryClient = useQueryClient();
-  const t = useT();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateExampleRequest }) =>
-      exampleService.update(id, data),
-
-    onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: exampleKeys.detail(id) });
-      const previousItem = queryClient.getQueryData(exampleKeys.detail(id));
-
-      if (previousItem) {
-        queryClient.setQueryData(exampleKeys.detail(id), {
-          ...(previousItem as any),
-          ...data,
-        });
-      }
-
-      return { previousItem };
-    },
-
-    onError: (err: any, { id }) => {
-      queryClient.invalidateQueries({ queryKey: exampleKeys.detail(id) });
-      toast.error(err.message || 'Failed to update');
-    },
-
-    onSettled: (data, error, { id }) => {
-      queryClient.invalidateQueries({ queryKey: exampleKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: exampleKeys.lists() });
-      
-      if (data && !error) {
-        toast.success(t.common?.('success') || 'Updated successfully');
-      }
-    },
-  });
-}
-
-/**
- * Hook for deleting an example item
- * Implements Optimistic Updates (List filtering)
- */
-export function useDeleteExample() {
-  const queryClient = useQueryClient();
-  const t = useT();
-
-  return useMutation({
-    mutationFn: (id: string) => exampleService.delete(id),
-
-    onMutate: async (id) => {
-      // 1. Cancel outgoing fetches
-      await queryClient.cancelQueries({ queryKey: exampleKeys.lists() });
-      await queryClient.cancelQueries({ queryKey: exampleKeys.detail(id) });
-
-      // 2. Optimistically remove from all lists
-      queryClient.setQueriesData({ queryKey: exampleKeys.lists() }, (old: any) => {
-        if (!old) return [];
-        if (Array.isArray(old)) return old.filter((item: any) => item.id !== id);
-        if (old.data) return { ...old, data: old.data.filter((item: any) => item.id !== id) };
-        return old;
+    mutationFn: ({
+      collectionId,
+      requestId,
+      exampleId,
+      data,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      exampleId: number | string;
+      data: UpdateExampleRequest;
+    }) => exampleService.update(projectId, collectionId, requestId, exampleId, data),
+    onSuccess: (example, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
       });
-
-      return { id };
+      queryClient.setQueryData(
+        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        example
+      );
+      toast.success(`Updated example "${example.name}"`);
     },
+  });
+}
 
-    onError: (err: any, id) => {
-      queryClient.invalidateQueries({ queryKey: exampleKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: exampleKeys.detail(id) });
-      toast.error(err.message || 'Failed to delete');
+export function useDeleteRequestExample(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      exampleId,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      exampleId: number | string;
+    }) => exampleService.delete(projectId, collectionId, requestId, exampleId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+      });
+      queryClient.removeQueries({
+        queryKey: exampleKeys.detail(projectId, variables.collectionId, variables.requestId, variables.exampleId),
+      });
+      toast.success('Example deleted');
     },
+  });
+}
 
-    onSettled: (data, error, id) => {
-      queryClient.invalidateQueries({ queryKey: exampleKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: exampleKeys.detail(id) });
-      
-      if (!error) {
-        toast.success(t.common?.('success') || 'Deleted successfully');
-      }
+export function useSaveRequestExampleResponse(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      exampleId,
+      data,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      exampleId: number | string;
+      data: SaveExampleResponseRequest;
+    }) => exampleService.saveResponse(projectId, collectionId, requestId, exampleId, data),
+    onSuccess: (example, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+      });
+      queryClient.setQueryData(
+        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        example
+      );
+      toast.success(`Captured response for "${example.name}"`);
+    },
+  });
+}
+
+export function useSetDefaultRequestExample(projectId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      exampleId,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      exampleId: number | string;
+    }) => exampleService.setDefault(projectId, collectionId, requestId, exampleId),
+    onSuccess: (example, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+      });
+      queryClient.setQueryData(
+        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        example
+      );
+      toast.success(`Set "${example.name}" as default example`);
     },
   });
 }

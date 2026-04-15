@@ -1,28 +1,54 @@
-/**
- * Example domain types
- * Following the project specification for type definitions.
- */
+import type { RequestAuthConfig, RequestKeyValue } from '@/types/request';
 
-export interface ExampleItem {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'active' | 'inactive';
-  createdAt: string;
-  updatedAt: string;
+export type RequestExampleBodyType = 'none' | 'json' | 'form-data' | 'text';
+
+export interface RequestExample {
+  id: number;
+  request_id: number;
+  name: string;
+  description: string;
+  url: string;
+  method: string;
+  headers: RequestKeyValue[];
+  query_params: RequestKeyValue[];
+  body: string;
+  body_type: RequestExampleBodyType;
+  auth?: RequestAuthConfig | null;
+  response_status: number;
+  response_headers: Record<string, string>;
+  response_body: string;
+  response_time: number;
+  is_default: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RequestExamplePathParams {
+  projectId: number | string;
+  collectionId: number | string;
+  requestId: number | string;
 }
 
 export interface CreateExampleRequest {
-  title: string;
+  name: string;
   description?: string;
-  status?: 'active' | 'inactive';
+  url?: string;
+  method?: string;
+  headers?: RequestKeyValue[];
+  query_params?: RequestKeyValue[];
+  body?: string;
+  body_type?: RequestExampleBodyType;
+  auth?: RequestAuthConfig | null;
+  is_default?: boolean;
+  sort_order?: number;
 }
 
-export interface UpdateExampleRequest extends Partial<CreateExampleRequest> {}
+export type UpdateExampleRequest = Partial<CreateExampleRequest>;
 
-export interface ExampleQuerySchema {
-  keyword?: string;
-  status?: 'active' | 'inactive';
-  page?: number;
-  pageSize?: number;
+export interface SaveExampleResponseRequest {
+  response_status: number;
+  response_headers?: Record<string, string>;
+  response_body?: string;
+  response_time: number;
 }
