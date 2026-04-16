@@ -17,6 +17,7 @@ import {
   SendHorizonal,
   Star,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  collectionKeys,
   useCreateCollection,
   useDeleteCollection,
   useUpdateCollection,
@@ -64,6 +66,7 @@ import {
   useUpdateRequestExample,
 } from '@/hooks/use-example';
 import { useCreateProjectHistory } from '@/hooks/use-histories';
+import { useImportPostmanCollection } from '@/hooks/use-importer';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
 import { useCreateRequest, useDeleteRequest, useUpdateRequest } from '@/hooks/use-requests';
@@ -76,6 +79,7 @@ import type {
   UpdateExampleRequest,
 } from '@/types/example';
 import type { CreateHistoryRequest } from '@/types/history';
+import type { ImportPostmanCollectionRequest } from '@/types/importer';
 import type {
   CreateRequestRequest,
   ProjectRequest,
@@ -147,6 +151,7 @@ interface CollectionNode {
   id: string;
   name: string;
   color: string;
+  isFolder: boolean;
   requestIds: string[];
 }
 
@@ -164,6 +169,11 @@ interface ExampleFormDraft {
   name: string;
   description: string;
   isDefault: boolean;
+}
+
+interface ImportDialogTarget {
+  parentCollectionId: string | null;
+  parentCollectionName: string | null;
 }
 
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -894,10 +904,13 @@ const sortCollectionTreeNodes = (nodes: ProjectCollectionTreeNode[]) => {
 const buildCollectionTreeFromList = (
   collections: ProjectCollection[]
 ): ProjectCollectionTreeNode[] => {
+  const uniqueCollections = Array.from(
+    new Map(collections.map((collection) => [collection.id, collection])).values()
+  );
   const nodeMap = new Map<number, ProjectCollectionTreeNode>();
   const rootNodes: ProjectCollectionTreeNode[] = [];
 
-  collections.forEach((collection) => {
+  uniqueCollections.forEach((collection) => {
     nodeMap.set(collection.id, {
       id: collection.id,
       name: collection.name,
@@ -910,7 +923,7 @@ const buildCollectionTreeFromList = (
     });
   });
 
-  collections.forEach((collection) => {
+  uniqueCollections.forEach((collection) => {
     const node = nodeMap.get(collection.id);
     if (!node) {
       return;
@@ -954,7 +967,11 @@ const fetchAllProjectCollections = async (
     page += 1;
   } while (page <= totalPages);
 
-  return buildCollectionTreeFromList(items);
+  const dedupedItems = Array.from(
+    new Map(items.map((collection) => [collection.id, collection])).values()
+  );
+
+  return buildCollectionTreeFromList(dedupedItems);
 };
 
 const fetchAllCollectionRequests = async (
@@ -990,6 +1007,7 @@ const buildWorkbenchStateFromServer = (
     id: String(collection.id),
     name: collection.name,
     color: COLLECTION_COLORS[index % COLLECTION_COLORS.length],
+    isFolder: collection.is_folder,
     requestIds: (requestsByCollectionId[collection.id] ?? []).map((request) => `request-${request.id}`),
   }));
   const tabs = flattenedCollections.flatMap((collection) =>
@@ -1029,6 +1047,7 @@ const mergeServerCollections = (
       return {
         ...collection,
         color: currentCollection?.color ?? collection.color,
+        isFolder: currentCollection?.isFolder ?? collection.isFolder,
         requestIds: Array.from(new Set([...localOnlyRequestIds, ...collection.requestIds])),
       };
     }),
@@ -1053,6 +1072,32 @@ const mergeExpandedCollectionIds = (currentIds: string[], serverIds: string[]) =
   return Array.from(new Set([...serverIds, ...currentIds]));
 };
 
+const normalizeCollectionNodes = (items: CollectionNode[]) => {
+  const orderedIds: string[] = [];
+  const mergedById = new Map<string, CollectionNode>();
+
+  items.forEach((collection) => {
+    const existing = mergedById.get(collection.id);
+    const nextRequestIds = existing
+      ? Array.from(new Set([...existing.requestIds, ...collection.requestIds]))
+      : Array.from(new Set(collection.requestIds));
+
+    if (!existing) {
+      orderedIds.push(collection.id);
+    }
+
+    mergedById.set(collection.id, {
+      ...(existing ?? collection),
+      ...collection,
+      requestIds: nextRequestIds,
+    });
+  });
+
+  return orderedIds
+    .map((collectionId) => mergedById.get(collectionId))
+    .filter((collection): collection is CollectionNode => Boolean(collection));
+};
+
 const areStringArraysEqual = (left: string[], right: string[]) =>
   left.length === right.length && left.every((value, index) => value === right[index]);
 
@@ -1065,6 +1110,7 @@ const areCollectionNodesEqual = (left: CollectionNode[], right: CollectionNode[]
       collection.id === other.id &&
       collection.name === other.name &&
       collection.color === other.color &&
+      collection.isFolder === other.isFolder &&
       areStringArraysEqual(collection.requestIds, other.requestIds)
     );
   });
@@ -1129,6 +1175,8 @@ export function ApiRequestWorkbench({
   const [renameDraftName, setRenameDraftName] = useState('');
   const [renameDialogRequestTabId, setRenameDialogRequestTabId] = useState<string | null>(null);
   const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
+  const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
+  const [importPostmanFile, setImportPostmanFile] = useState<File | null>(null);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
   const [viewingExampleId, setViewingExampleId] = useState<number | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<number | null>(null);
@@ -1139,6 +1187,7 @@ export function ApiRequestWorkbench({
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
+  const importPostmanMutation = useImportPostmanCollection(projectId);
   const createRequestMutation = useCreateRequest(projectId);
   const updateRequestMutation = useUpdateRequest(projectId);
   const deleteRequestMutation = useDeleteRequest(projectId);
@@ -1149,7 +1198,7 @@ export function ApiRequestWorkbench({
   const saveExampleResponseMutation = useSaveRequestExampleResponse(projectId);
   const setDefaultExampleMutation = useSetDefaultRequestExample(projectId);
   const collectionTreeQuery = useQuery({
-    queryKey: ['collections', 'project', projectId, 'workbench-tree'],
+    queryKey: collectionKeys.workbenchTree(projectId),
     queryFn: () => fetchAllProjectCollections(projectId),
     enabled: Number.isInteger(projectId) && projectId > 0,
     staleTime: 60_000,
@@ -1161,15 +1210,24 @@ export function ApiRequestWorkbench({
     () => flattenCollectionTree(collectionTreeQuery.data ?? []),
     [collectionTreeQuery.data]
   );
-  const persistedCollectionIds = useMemo(
-    () => serverCollections.map((collection) => collection.id),
+  const persistedRequestCollectionIds = useMemo(
+    () =>
+      serverCollections
+        .filter((collection) => !collection.is_folder)
+        .map((collection) => collection.id),
     [serverCollections]
   );
   const collectionRequestsQuery = useQuery({
-    queryKey: ['collections', 'project', projectId, 'workbench-requests', persistedCollectionIds],
+    queryKey: [
+      'collections',
+      'project',
+      projectId,
+      'workbench-requests',
+      persistedRequestCollectionIds,
+    ],
     queryFn: async () => {
       const entries = await Promise.all(
-        persistedCollectionIds.map(async (collectionId) => {
+        persistedRequestCollectionIds.map(async (collectionId) => {
           try {
             const requests = await fetchAllCollectionRequests(projectId, collectionId);
             return [collectionId, requests] as const;
@@ -1181,12 +1239,30 @@ export function ApiRequestWorkbench({
 
       return Object.fromEntries(entries) as Record<number, ProjectRequest[]>;
     },
-    enabled: collectionTreeQuery.isSuccess && persistedCollectionIds.length > 0,
+    enabled: collectionTreeQuery.isSuccess && persistedRequestCollectionIds.length > 0,
     staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   });
 
   const tabMap = useMemo(() => new Map(tabs.map((tab) => [tab.id, tab])), [tabs]);
+  const updateCollections = useCallback(
+    (
+      updater:
+        | CollectionNode[]
+        | ((currentCollections: CollectionNode[]) => CollectionNode[])
+    ) => {
+      setCollections((current) => {
+        const nextCollections =
+          typeof updater === 'function' ? updater(current) : updater;
+        const normalizedCollections = normalizeCollectionNodes(nextCollections);
+
+        return areCollectionNodesEqual(current, normalizedCollections)
+          ? current
+          : normalizedCollections;
+      });
+    },
+    []
+  );
   const openTabs = useMemo(
     () =>
       openTabIds
@@ -1311,6 +1387,42 @@ export function ApiRequestWorkbench({
     setTabs((current) => current.map((tab) => (tab.id === tabId ? updater(tab) : tab)));
   };
 
+  const refreshWorkbenchFromServer = useCallback(async () => {
+    const treeNodes = await fetchAllProjectCollections(projectId);
+    const flattenedCollections = flattenCollectionTree(treeNodes);
+    const requestEntries = await Promise.all(
+      flattenedCollections
+        .filter((collection) => !collection.is_folder)
+        .map(async (collection) => {
+        try {
+          const requests = await fetchAllCollectionRequests(projectId, collection.id);
+          return [collection.id, requests] as const;
+        } catch {
+          return [collection.id, []] as const;
+        }
+      })
+    );
+    const requestsByCollectionId = Object.fromEntries(requestEntries) as Record<number, ProjectRequest[]>;
+    const nextState = buildWorkbenchStateFromServer(treeNodes, requestsByCollectionId);
+
+    updateCollections((current) => {
+      const mergedCollections = mergeServerCollections(current, nextState.collections);
+      return mergedCollections;
+    });
+    setTabs((current) => {
+      const mergedTabs = mergeServerTabs(current, nextState.tabs);
+      return areTabsEquivalent(current, mergedTabs) ? current : mergedTabs;
+    });
+    setOpenTabIds((current) => (current.length > 0 ? current : nextState.openTabIds));
+    setActiveTabId((current) => current ?? nextState.activeTabId);
+    setActiveCollectionId((current) => current ?? nextState.activeCollectionId);
+    setExpandedCollectionIds((current) => {
+      const mergedIds = mergeExpandedCollectionIds(current, nextState.expandedCollectionIds);
+      return areStringArraysEqual(current, mergedIds) ? current : mergedIds;
+    });
+    setNextTabIndex((current) => Math.max(current, nextState.nextTabIndex));
+  }, [projectId, updateCollections]);
+
   useEffect(() => {
     if (!collectionTreeQuery.isSuccess) {
       return;
@@ -1321,9 +1433,9 @@ export function ApiRequestWorkbench({
       collectionRequestsQuery.data ?? {}
     ).collections;
 
-    setCollections((current) => {
+    updateCollections((current) => {
       const mergedCollections = mergeServerCollections(current, nextCollections);
-      return areCollectionNodesEqual(current, mergedCollections) ? current : mergedCollections;
+      return mergedCollections;
     });
     setActiveCollectionId((current) => current ?? nextCollections[0]?.id ?? null);
     setExpandedCollectionIds((current) => {
@@ -1337,6 +1449,7 @@ export function ApiRequestWorkbench({
     collectionRequestsQuery.data,
     collectionTreeQuery.isSuccess,
     serverCollections,
+    updateCollections,
   ]);
 
   useEffect(() => {
@@ -1468,7 +1581,7 @@ export function ApiRequestWorkbench({
     );
 
     if (nextTab.id !== sourceTabId) {
-      setCollections((current) =>
+      updateCollections((current) =>
         current.map((collection) =>
           collection.requestIds.includes(sourceTabId)
             ? {
@@ -1770,14 +1883,91 @@ export function ApiRequestWorkbench({
         id: String(createdCollection.id),
         name: createdCollection.name,
         color: COLLECTION_COLORS[(collectionNumber - 1) % COLLECTION_COLORS.length],
+        isFolder: createdCollection.is_folder,
         requestIds: [],
       };
 
-      setCollections((current) => [nextCollection, ...current]);
+      updateCollections((current) => [nextCollection, ...current]);
       setExpandedCollectionIds((current) =>
         current.includes(nextCollection.id) ? current : [nextCollection.id, ...current]
       );
       setActiveCollectionId(nextCollection.id);
+    } catch {}
+  };
+
+  const openRootImportDialog = () => {
+    setImportDialogTarget({
+      parentCollectionId: null,
+      parentCollectionName: null,
+    });
+    setImportPostmanFile(null);
+  };
+
+  const openCollectionImportDialog = (collection: CollectionNode) => {
+    if (!collection.isFolder) {
+      toast.error('Import Postman can only target a folder collection or the project root.');
+      return;
+    }
+
+    setImportDialogTarget({
+      parentCollectionId: collection.id,
+      parentCollectionName: collection.name,
+    });
+    setImportPostmanFile(null);
+  };
+
+  const closeImportDialog = (open: boolean) => {
+    if (!open) {
+      setImportDialogTarget(null);
+      setImportPostmanFile(null);
+    }
+  };
+
+  const handleImportPostman = async () => {
+    if (!importDialogTarget) {
+      return;
+    }
+
+    if (!importPostmanFile) {
+      toast.error('Choose a Postman collection file before importing.');
+      return;
+    }
+
+    const payload: ImportPostmanCollectionRequest = {
+      file: importPostmanFile,
+    };
+
+    if (importDialogTarget.parentCollectionId) {
+      const targetCollection = collections.find(
+        (collection) => collection.id === importDialogTarget.parentCollectionId
+      );
+
+      if (!targetCollection?.isFolder) {
+        toast.error('Import Postman can only target a folder collection or the project root.');
+        return;
+      }
+
+      if (!isPersistedCollectionId(importDialogTarget.parentCollectionId)) {
+        toast.error('Save the target collection before importing into it.');
+        return;
+      }
+
+      payload.parent_id = Number(importDialogTarget.parentCollectionId);
+    }
+
+    try {
+      await importPostmanMutation.mutateAsync(payload);
+      await refreshWorkbenchFromServer();
+
+      if (importDialogTarget.parentCollectionId) {
+        setExpandedCollectionIds((current) =>
+          current.includes(importDialogTarget.parentCollectionId as string)
+            ? current
+            : [...current, importDialogTarget.parentCollectionId as string]
+        );
+      }
+
+      closeImportDialog(false);
     } catch {}
   };
 
@@ -1794,7 +1984,7 @@ export function ApiRequestWorkbench({
     const nextActiveTabId = resolveNextActiveTabId(openTabIds, nextOpenTabIds, activeTabId);
 
     startTransition(() => {
-      setCollections(remainingCollections);
+      updateCollections(remainingCollections);
       setTabs(remainingTabs);
       setOpenTabIds(nextOpenTabIds);
       setExpandedCollectionIds((current) => current.filter((id) => id !== collectionId));
@@ -1881,7 +2071,7 @@ export function ApiRequestWorkbench({
       }
 
       startTransition(() => {
-        setCollections((current) =>
+        updateCollections((current) =>
           current.map((collection) =>
             collection.id === targetCollection.id ? { ...collection, name: nextName } : collection
           )
@@ -1929,7 +2119,7 @@ export function ApiRequestWorkbench({
 
     startTransition(() => {
       setTabs((current) => current.filter((tab) => tab.id !== tabId));
-      setCollections((current) =>
+      updateCollections((current) =>
         current.map((collection) =>
           collection.requestIds.includes(tabId)
             ? {
@@ -1964,7 +2154,7 @@ export function ApiRequestWorkbench({
       setOpenTabIds((current) => [...current, duplicatedTab.id]);
 
       if (duplicatedTab.collectionId) {
-        setCollections((current) =>
+        updateCollections((current) =>
           current.map((collection) =>
             collection.id === duplicatedTab.collectionId
               ? {
@@ -2111,7 +2301,7 @@ export function ApiRequestWorkbench({
     startTransition(() => {
       setTabs((current) => [...current, tab]);
       setOpenTabIds((current) => [...current, tab.id]);
-      setCollections((current) =>
+      updateCollections((current) =>
         current.map((collection) =>
           collection.id === collectionId
             ? {
@@ -2318,6 +2508,12 @@ export function ApiRequestWorkbench({
             activeCollectionId={activeCollectionId}
             activeTabId={activeTabId}
             deletingCollectionId={deletingCollectionId}
+            importingCollectionId={
+              importPostmanMutation.isPending ? (importDialogTarget?.parentCollectionId ?? null) : null
+            }
+            isImportingRoot={
+              importPostmanMutation.isPending && importDialogTarget?.parentCollectionId === null
+            }
             renamingCollectionId={renamingCollectionId}
             creatingRequestCollectionId={creatingRequestCollectionId}
             deletingRequestTabId={deletingRequestTabId}
@@ -2329,8 +2525,10 @@ export function ApiRequestWorkbench({
             onQueryChange={setSidebarQuery}
             onCreateCollection={createCollection}
             onCreateScratchpadRequest={createScratchpadRequest}
+            onImportRootCollection={openRootImportDialog}
             onCreateRequest={handleCreateRequest}
             onDeleteCollection={handleDeleteCollection}
+            onImportCollection={openCollectionImportDialog}
             onDeleteRequest={handleDeleteRequest}
             onRenameCollection={openRenameCollectionDialog}
             onRenameRequest={openRenameRequestDialog}
@@ -2529,6 +2727,16 @@ export function ApiRequestWorkbench({
         onValueChange={setRenameRequestDraftName}
         onConfirm={handleRenameRequest}
       />
+      <ImportPostmanDialog
+        key={`${importDialogTarget?.parentCollectionId ?? 'root'}-${importDialogTarget ? 'open' : 'closed'}`}
+        open={importDialogTarget !== null}
+        targetLabel={importDialogTarget?.parentCollectionName ?? null}
+        file={importPostmanFile}
+        isSubmitting={importPostmanMutation.isPending}
+        onOpenChange={closeImportDialog}
+        onFileChange={setImportPostmanFile}
+        onSubmit={handleImportPostman}
+      />
     </main>
   );
 }
@@ -2538,6 +2746,8 @@ function CollectionsSidebar({
   activeCollectionId,
   activeTabId,
   deletingCollectionId,
+  importingCollectionId,
+  isImportingRoot,
   renamingCollectionId,
   creatingRequestCollectionId,
   deletingRequestTabId,
@@ -2549,8 +2759,10 @@ function CollectionsSidebar({
   onQueryChange,
   onCreateCollection,
   onCreateScratchpadRequest,
+  onImportRootCollection,
   onCreateRequest,
   onDeleteCollection,
+  onImportCollection,
   onDeleteRequest,
   onRenameCollection,
   onRenameRequest,
@@ -2561,6 +2773,8 @@ function CollectionsSidebar({
   activeCollectionId: string | null;
   activeTabId: string | null;
   deletingCollectionId: string | null;
+  importingCollectionId: string | null;
+  isImportingRoot: boolean;
   renamingCollectionId: string | null;
   creatingRequestCollectionId: string | null;
   deletingRequestTabId: string | null;
@@ -2572,8 +2786,10 @@ function CollectionsSidebar({
   onQueryChange: (value: string) => void;
   onCreateCollection: () => void;
   onCreateScratchpadRequest: () => void;
+  onImportRootCollection: () => void;
   onCreateRequest: (collection: CollectionNode) => Promise<void>;
   onDeleteCollection: (collection: CollectionNode) => void;
+  onImportCollection: (collection: CollectionNode) => void;
   onDeleteRequest: (request: RequestPageTab) => Promise<void>;
   onRenameCollection: (collection: CollectionNode) => void;
   onRenameRequest: (request: RequestPageTab) => void;
@@ -2593,6 +2809,16 @@ function CollectionsSidebar({
               <Button type="button" size="sm" onClick={onCreateCollection}>
                 <Plus className="h-4 w-4" />
                 New Collection
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                loading={isImportingRoot}
+                onClick={onImportRootCollection}
+              >
+                <Upload className="h-4 w-4" />
+                Import Postman
               </Button>
               <Button type="button" size="sm" variant="outline" onClick={onCreateScratchpadRequest}>
                 <Plus className="h-4 w-4" />
@@ -2614,6 +2840,16 @@ function CollectionsSidebar({
           </div>
           <Button type="button" variant="outline" size="sm" isIcon onClick={onCreateCollection}>
             <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            isIcon
+            loading={isImportingRoot}
+            onClick={onImportRootCollection}
+          >
+            <Upload className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -2663,10 +2899,13 @@ function CollectionsSidebar({
                   </button>
 
                   <CollectionActionsMenu
+                    isFolder={collection.isFolder}
                     isCreatingRequest={creatingRequestCollectionId === collection.id}
                     isDeleting={deletingCollectionId === collection.id}
+                    isImporting={importingCollectionId === collection.id}
                     isRenaming={renamingCollectionId === collection.id}
                     onCreateRequest={() => void onCreateRequest(collection)}
+                    onImport={() => onImportCollection(collection)}
                     onRename={() => onRenameCollection(collection)}
                     onDelete={() => void onDeleteCollection(collection)}
                   />
@@ -2812,17 +3051,23 @@ function RequestItemActionsMenu({
 }
 
 function CollectionActionsMenu({
+  isFolder,
   isCreatingRequest,
   isDeleting,
+  isImporting,
   isRenaming,
   onCreateRequest,
+  onImport,
   onRename,
   onDelete,
 }: {
+  isFolder: boolean;
   isCreatingRequest: boolean;
   isDeleting: boolean;
+  isImporting: boolean;
   isRenaming: boolean;
   onCreateRequest: () => void;
+  onImport: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -2841,11 +3086,13 @@ function CollectionActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44 rounded-xl">
-        <DropdownMenuItem disabled={isCreatingRequest} onSelect={onCreateRequest}>
+        <DropdownMenuItem disabled={isFolder || isCreatingRequest} onSelect={onCreateRequest}>
           {isCreatingRequest ? 'Creating...' : 'New request'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Import</DropdownMenuItem>
+        <DropdownMenuItem disabled={!isFolder || isImporting} onSelect={onImport}>
+          {isImporting ? 'Importing...' : 'Import Postman'}
+        </DropdownMenuItem>
         <DropdownMenuItem>Export</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
@@ -2856,6 +3103,73 @@ function CollectionActionsMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function ImportPostmanDialog({
+  open,
+  targetLabel,
+  file,
+  isSubmitting,
+  onOpenChange,
+  onFileChange,
+  onSubmit,
+}: {
+  open: boolean;
+  targetLabel: string | null;
+  file: File | null;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFileChange: (file: File | null) => void;
+  onSubmit: () => Promise<void>;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Import Postman Collection</DialogTitle>
+          <DialogDescription>
+            {targetLabel
+              ? `Upload a Postman collection JSON file and import all requests into one collection under "${targetLabel}".`
+              : 'Upload a Postman collection JSON file and import all requests into one collection at the project root.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="import-postman-file">Collection file</Label>
+              <Input
+                id="import-postman-file"
+                type="file"
+                accept=".json,application/json"
+                className="h-auto cursor-pointer py-2"
+                onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+              />
+            </div>
+            <p className="text-sm text-text-muted">
+              {file
+                ? `Selected file: ${file.name}`
+                : 'Choose a Postman collection export in JSON format.'}
+            </p>
+          </div>
+        </DialogBody>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            loading={isSubmitting}
+            disabled={!file}
+            onClick={() => void onSubmit()}
+          >
+            Import
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

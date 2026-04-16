@@ -3,6 +3,7 @@ package importer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -10,6 +11,8 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/collection"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 )
+
+var ErrInvalidPostmanCollection = errors.New("invalid postman collection format")
 
 type PostmanCollection struct {
 	Info PostmanInfo   `json:"info"`
@@ -85,15 +88,27 @@ func (s *service) ImportPostman(ctx context.Context, projectID, parentID uint, f
 
 	var pmCol PostmanCollection
 	if err := json.Unmarshal(bytes, &pmCol); err != nil {
-		return fmt.Errorf("invalid postman collection format: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidPostmanCollection, err)
 	}
 
-	// Create root collection
+	return s.importPostmanCollection(ctx, projectID, parentID, &pmCol)
+}
+
+func (s *service) importPostmanCollection(
+	ctx context.Context,
+	projectID, parentID uint,
+	pmCol *PostmanCollection,
+) error {
+	rootName := pmCol.Info.Name
+	if rootName == "" {
+		rootName = "Imported Collection"
+	}
+
 	rootReq := &collection.CreateCollectionRequest{
 		ProjectID:   projectID,
-		Name:        pmCol.Info.Name,
+		Name:        rootName,
 		Description: pmCol.Info.Description,
-		IsFolder:    true,
+		IsFolder:    false,
 	}
 	if parentID > 0 {
 		rootReq.ParentID = &parentID
@@ -104,50 +119,54 @@ func (s *service) ImportPostman(ctx context.Context, projectID, parentID uint, f
 		return fmt.Errorf("failed to create root collection: %w", err)
 	}
 
-	// Recursively import items
-	return s.importItems(ctx, projectID, rootCol.ID, pmCol.Item)
-}
-
-func (s *service) importItems(ctx context.Context, projectID, parentID uint, items []PostmanItem) error {
-	for i, item := range items {
-		isFolder := len(item.Item) > 0 || item.Request == nil
-
-		// Create folder or collection node
-		colReq := &collection.CreateCollectionRequest{
-			ProjectID:   projectID,
-			ParentID:    &parentID,
-			Name:        item.Name,
-			Description: item.Description,
-			IsFolder:    isFolder,
-			SortOrder:   i,
-		}
-
-		col, err := s.collectionService.Create(ctx, colReq)
-		if err != nil {
+	requestItems := flattenPostmanRequests(pmCol.Item)
+	for i, item := range requestItems {
+		reqReq := s.convertFromPostmanRequest(item, rootCol.ID, i)
+		if _, err := s.requestService.Create(ctx, projectID, reqReq); err != nil {
 			return err
 		}
-
-		if isFolder {
-			if err := s.importItems(ctx, projectID, col.ID, item.Item); err != nil {
-				return err
-			}
-		} else if item.Request != nil {
-			// Create request for this collection node
-			reqReq := s.convertFromPostmanRequest(item.Request, col.ID)
-			if _, err := s.requestService.Create(ctx, projectID, reqReq); err != nil {
-				return err
-			}
-		}
 	}
+
 	return nil
 }
 
-func (s *service) convertFromPostmanRequest(pr *PostmanRequest, collectionID uint) *request.CreateRequestRequest {
+func flattenPostmanRequests(items []PostmanItem) []PostmanItem {
+	requestItems := make([]PostmanItem, 0)
+
+	var walk func(items []PostmanItem)
+	walk = func(items []PostmanItem) {
+		for _, item := range items {
+			if item.Request != nil {
+				requestItems = append(requestItems, item)
+			}
+			if len(item.Item) > 0 {
+				walk(item.Item)
+			}
+		}
+	}
+
+	walk(items)
+	return requestItems
+}
+
+func (s *service) convertFromPostmanRequest(
+	item PostmanItem,
+	collectionID uint,
+	sortOrder int,
+) *request.CreateRequestRequest {
+	requestName := item.Name
+	if requestName == "" {
+		requestName = "Imported Request"
+	}
+
+	pr := item.Request
 	req := &request.CreateRequestRequest{
 		CollectionID: collectionID,
-		Name:         "Default Request",
+		Name:         requestName,
+		Description:  item.Description,
 		Method:       pr.Method,
 		URL:          pr.URL.Raw,
+		SortOrder:    sortOrder,
 	}
 
 	for _, h := range pr.Header {

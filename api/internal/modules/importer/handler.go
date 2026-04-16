@@ -1,8 +1,13 @@
 package importer
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/modules/collection"
+	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -38,6 +43,12 @@ func (h *Handler) ImportPostman(c *gin.Context) {
 	}
 
 	if err := h.service.ImportPostman(c.Request.Context(), projectID, uint(parentID), file); err != nil {
+		if errors.Is(err, ErrInvalidPostmanCollection) ||
+			errors.Is(err, collection.ErrInvalidParent) ||
+			errors.Is(err, request.ErrInvalidCollection) {
+			response.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
 		response.InternalServerError(c, err.Error(), err)
 		return
 	}

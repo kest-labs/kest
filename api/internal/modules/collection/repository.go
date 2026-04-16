@@ -86,7 +86,7 @@ func (r *repository) List(ctx context.Context, projectID uint, offset, limit int
 		return nil, 0, err
 	}
 
-	if err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Offset(offset).Limit(limit).Order("sort_order ASC, created_at DESC").Find(&poList).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Offset(offset).Limit(limit).Order("sort_order ASC, created_at DESC, id DESC").Find(&poList).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -98,7 +98,7 @@ func (r *repository) ListAll(ctx context.Context, projectID uint) ([]*Collection
 
 	if err := r.db.WithContext(ctx).
 		Where("project_id = ?", projectID).
-		Order("sort_order ASC, created_at DESC").
+		Order("sort_order ASC, created_at DESC, id DESC").
 		Find(&poList).Error; err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (r *repository) GetByParentID(ctx context.Context, projectID uint, parentID
 		query = query.Where("parent_id = ?", *parentID)
 	}
 
-	if err := query.Order("sort_order ASC, created_at DESC").Find(&poList).Error; err != nil {
+	if err := query.Order("sort_order ASC, created_at DESC, id DESC").Find(&poList).Error; err != nil {
 		return nil, err
 	}
 
