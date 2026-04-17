@@ -2480,7 +2480,7 @@ export function ApiRequestWorkbench({
   const activeResponseCanBeCaptured = activeTab ? canCaptureResponse(activeTab.response) : false;
 
   return (
-    <main className="flex h-full min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,247,251,0.98))]">
+    <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,247,251,0.98))]">
       <div className="border-b border-border/60 bg-white/80 backdrop-blur">
         <div className="px-4 py-3 md:px-6">
           <div className="flex items-center gap-2">
@@ -2502,8 +2502,8 @@ export function ApiRequestWorkbench({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden xl:flex-row xl:flex">
-        <aside className="w-full shrink-0 border-b border-border/60 bg-white/82 backdrop-blur xl:w-[320px] xl:border-b-0 xl:border-r">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
+        <aside className="h-[42dvh] min-h-[280px] w-full shrink-0 border-b border-border/60 bg-white/82 backdrop-blur xl:h-auto xl:min-h-0 xl:w-[320px] xl:border-b-0 xl:border-r">
           <CollectionsSidebar
             collections={collectionViews}
             activeCollectionId={activeCollectionId}
