@@ -6,7 +6,6 @@ export type ApiSpecDocSource = 'manual' | 'ai';
 export type ApiSpecLanguage = 'en' | 'zh';
 export type ApiSpecExportFormat = 'json' | 'openapi' | 'swagger' | 'markdown';
 export type ApiSpecParameterLocation = 'query' | 'header' | 'path' | 'cookie';
-export type ProjectMemberRole = 'owner' | 'admin' | 'write' | 'read';
 
 // 请求体 schema 描述。
 // 作用：映射后端 `request_body` 结构，供表单和详情展示复用。
@@ -177,19 +176,6 @@ export interface CreateApiExampleRequest {
 export interface ApiSpecExamplesResponse {
   items: ApiSpecExample[];
   total: number;
-}
-
-// 当前用户在项目中的成员角色。
-// 作用：驱动前端的只读/可写权限控制。
-export interface ProjectMemberRoleResponse {
-  id: number;
-  project_id: number;
-  user_id: number;
-  username: string;
-  email: string;
-  role: ProjectMemberRole;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ApiSpecShare {

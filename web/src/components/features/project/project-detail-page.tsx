@@ -40,6 +40,7 @@ import {
   buildProjectCategoriesRoute,
   buildProjectCollectionsRoute,
   buildProjectEnvironmentsRoute,
+  buildProjectMembersRoute,
   buildProjectTestCasesRoute,
   ROUTES,
 } from '@/constants/routes';
@@ -233,6 +234,12 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
                   </Link>
                 </Button>
                 <Button type="button" variant="outline" asChild>
+                  <Link href={buildProjectMembersRoute(projectId)}>
+                    <Users className="h-4 w-4" />
+                    Members
+                  </Link>
+                </Button>
+                <Button type="button" variant="outline" asChild>
                   <Link href={buildProjectTestCasesRoute(projectId)}>
                     <FlaskConical className="h-4 w-4" />
                     Test Cases
@@ -356,6 +363,12 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
                             <Link href={buildProjectCategoriesRoute(project.id)}>
                               <Tags className="h-3.5 w-3.5" />
                               Open Categories
+                            </Link>
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" asChild>
+                            <Link href={buildProjectMembersRoute(project.id)}>
+                              <Users className="h-3.5 w-3.5" />
+                              Open Members
                             </Link>
                           </Button>
                           <Button type="button" size="sm" variant="outline" asChild>

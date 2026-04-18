@@ -55,7 +55,6 @@ import {
   buildProjectDetailRoute,
   buildProjectTestCasesRoute,
 } from '@/constants/routes';
-import { useProjectMemberRole } from '@/hooks/use-api-specs';
 import {
   useCreateEnvironment,
   useDeleteEnvironment,
@@ -64,6 +63,7 @@ import {
   useEnvironments,
   useUpdateEnvironment,
 } from '@/hooks/use-environments';
+import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject, useProjectStats } from '@/hooks/use-projects';
 import type {
   CreateEnvironmentRequest,
@@ -71,13 +71,16 @@ import type {
   ProjectEnvironment,
   UpdateEnvironmentRequest,
 } from '@/types/environment';
-import type { ProjectMemberRole } from '@/types/api-spec';
+import {
+  PROJECT_MEMBER_WRITE_ROLES,
+  type ProjectMemberRole,
+} from '@/types/member';
 import { cn, formatDate } from '@/utils';
 
 const EMPTY_ENVIRONMENTS: ProjectEnvironment[] = [];
 // 具备写权限的角色集合。
 // 作用：统一控制环境页面上的创建、编辑、复制和删除动作。
-const WRITE_ROLES: ProjectMemberRole[] = ['write', 'admin', 'owner'];
+const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 // 环境表单模式。
 // 作用：区分当前弹窗是在创建新环境还是编辑已有环境。

@@ -23,12 +23,11 @@ import type {
   PublicApiSpecShare,
   RefineApiSpecAIDraftRequest,
   ProjectCategoryListResponse,
-  ProjectMemberRoleResponse,
   UpdateApiSpecRequest,
 } from '@/types/api-spec';
 
 // API Specifications 服务层。
-// 作用：集中封装项目级 API 规格、示例、导入导出、AI 生成、分类和成员角色查询请求。
+// 作用：集中封装项目级 API 规格、示例、导入导出、AI 生成和分类查询请求。
 // 额外约束：请求体会先清理 `undefined` 字段，避免把无意义空字段发给后端。
 const normalizePayload = <T extends object>(payload: T) =>
   Object.fromEntries(
@@ -145,9 +144,6 @@ export const apiSpecService = {
     request.get<ProjectCategoryListResponse>(`/projects/${projectId}/categories`, {
       params: { tree: true },
     }),
-
-  getMyRole: (projectId: number | string) =>
-    request.get<ProjectMemberRoleResponse>(`/projects/${projectId}/members/me`),
 };
 
 export type ApiSpecService = typeof apiSpecService;

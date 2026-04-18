@@ -65,9 +65,12 @@ import {
   useSortCategories,
   useUpdateCategory,
 } from '@/hooks/use-categories';
-import { useProjectMemberRole } from '@/hooks/use-api-specs';
+import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject, useProjectStats } from '@/hooks/use-projects';
-import type { ProjectMemberRole } from '@/types/api-spec';
+import {
+  PROJECT_MEMBER_WRITE_ROLES,
+  type ProjectMemberRole,
+} from '@/types/member';
 import type {
   CreateCategoryRequest,
   ProjectCategory,
@@ -81,7 +84,7 @@ const PAGE_SIZE = 8;
 const EMPTY_CATEGORIES: ProjectCategory[] = [];
 // 拥有写权限的角色集合。
 // 作用：统一控制分类页的创建、编辑、删除和排序按钮可见性。
-const WRITE_ROLES: ProjectMemberRole[] = ['write', 'admin', 'owner'];
+const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 // 成员角色文案解析器。
 // 作用：把 owner/admin/write/read 转成首字母大写标签。

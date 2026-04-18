@@ -102,10 +102,10 @@ import {
   useImportApiSpecs,
   usePublishApiSpecShare,
   useProjectApiCategories,
-  useProjectMemberRole,
   useRefineApiSpecAIDraft,
   useUpdateApiSpec,
 } from '@/hooks/use-api-specs';
+import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject, useProjectStats } from '@/hooks/use-projects';
 import type {
   ApiSpec,
@@ -119,18 +119,21 @@ import type {
   CreateApiSpecRequest,
   HttpMethod,
   ParameterSpec,
-  ProjectMemberRole,
   RequestBodySpec,
   ResponseSpec,
   UpdateApiSpecRequest,
 } from '@/types/api-spec';
+import {
+  PROJECT_MEMBER_WRITE_ROLES,
+  type ProjectMemberRole,
+} from '@/types/member';
 import { cn, formatDate } from '@/utils';
 
 const PAGE_SIZE = 10;
 const EMPTY_SPECS: ApiSpec[] = [];
 // 具备写权限的角色集合。
 // 作用：统一控制页面上的创建、编辑、删除、导入和 AI 动作入口。
-const WRITE_ROLES: ProjectMemberRole[] = ['write', 'admin', 'owner'];
+const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 // API 规格表单与筛选栏使用的静态选项。
 // 作用：集中维护 method、文档来源、语言和导出格式等枚举文案。

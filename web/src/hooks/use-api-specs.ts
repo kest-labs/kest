@@ -18,7 +18,7 @@ import type {
 } from '@/types/api-spec';
 
 // API Specifications 域的 React Query key。
-// 作用：统一管理规格列表、详情、示例、分类、成员角色和 AI 结果缓存。
+// 作用：统一管理规格列表、详情、示例、分类和 AI 结果缓存。
 export const apiSpecKeys = {
   all: ['api-specs'] as const,
   project: (projectId: number | string) => [...apiSpecKeys.all, 'project', projectId] as const,
@@ -38,8 +38,6 @@ export const apiSpecKeys = {
     [...apiSpecKeys.generatedTests(projectId, specId), lang] as const,
   categories: (projectId: number | string) =>
     [...apiSpecKeys.project(projectId), 'categories'] as const,
-  memberRole: (projectId: number | string) =>
-    [...apiSpecKeys.project(projectId), 'member-role'] as const,
   share: (projectId: number | string, specId: number | string) =>
     [...apiSpecKeys.spec(projectId, specId), 'share'] as const,
   aiDraft: (projectId: number | string, draftId: number | string) =>
@@ -121,17 +119,6 @@ export function useProjectApiCategories(projectId?: number | string) {
   return useQuery({
     queryKey: apiSpecKeys.categories(projectId ?? 'unknown'),
     queryFn: () => apiSpecService.listCategories(projectId as number | string),
-    enabled: projectId !== undefined && projectId !== null,
-    staleTime: 60_000,
-  });
-}
-
-// 当前用户在项目中的角色查询。
-// 作用：根据 read/write/admin/owner 控制页面上的可写操作按钮。
-export function useProjectMemberRole(projectId?: number | string) {
-  return useQuery({
-    queryKey: apiSpecKeys.memberRole(projectId ?? 'unknown'),
-    queryFn: () => apiSpecService.getMyRole(projectId as number | string),
     enabled: projectId !== undefined && projectId !== null,
     staleTime: 60_000,
   });

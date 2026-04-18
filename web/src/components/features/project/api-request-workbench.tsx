@@ -411,6 +411,11 @@ const getTabSaveLabel = (tab: RequestPageTab) => {
   }
 };
 
+const getPersistedTabName = (tab: RequestPageTab) => {
+  const trimmedTitle = tab.title.trim();
+  return trimmedTitle || getTabSaveLabel(tab);
+};
+
 const byteLength = (value: string) =>
   typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(value).length : value.length;
 
@@ -1671,7 +1676,7 @@ export function ApiRequestWorkbench({
     }
 
     const persistedRequest = await persistTabRequest(tab, {
-      name: getTabSaveLabel(tab),
+      name: getPersistedTabName(tab),
     });
 
     syncPersistedRequestInWorkbench(tab.id, persistedRequest);
@@ -2177,7 +2182,7 @@ export function ApiRequestWorkbench({
       return;
     }
 
-    const nextName = getTabSaveLabel(activeTab);
+    const nextName = getPersistedTabName(activeTab);
     const tabSnapshot = {
       ...activeTab,
       title: nextName,

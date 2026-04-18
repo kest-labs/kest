@@ -1,7 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { FileJson2, FlaskConical, FolderGit2, FolderOpen, Globe, History, Tags } from 'lucide-react';
+import { FileJson2, FlaskConical, FolderGit2, FolderOpen, Globe, History, Tags, Users } from 'lucide-react';
 import {
   buildProjectApiSpecsRoute,
   buildProjectCategoriesRoute,
@@ -9,6 +9,7 @@ import {
   buildProjectEnvironmentsRoute,
   buildProjectFlowsRoute,
   buildProjectHistoriesRoute,
+  buildProjectMembersRoute,
   buildProjectTestCasesRoute,
 } from '@/constants/routes';
 
@@ -18,6 +19,7 @@ export type ProjectWorkspaceModule =
   | 'environments'
   | 'collections'
   | 'categories'
+  | 'members'
   | 'histories'
   | 'flows';
 
@@ -72,6 +74,14 @@ export const PROJECT_WORKSPACE_MODULES: ProjectWorkspaceModuleMeta[] = [
     status: 'ready',
   },
   {
+    value: 'members',
+    label: 'Members',
+    shortLabel: 'Members',
+    description: 'Manage project access, operational roles, and who can change project resources.',
+    icon: Users,
+    status: 'ready',
+  },
+  {
     value: 'histories',
     label: 'History',
     shortLabel: 'History',
@@ -108,6 +118,8 @@ export const buildProjectWorkspaceRoute = (
       return buildProjectCollectionsRoute(projectId);
     case 'categories':
       return buildProjectCategoriesRoute(projectId);
+    case 'members':
+      return buildProjectMembersRoute(projectId);
     case 'histories':
       return buildProjectHistoriesRoute(projectId);
     case 'flows':

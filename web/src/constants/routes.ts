@@ -26,6 +26,7 @@ export const ROUTES = {
     PROJECT_COLLECTIONS: '/project/:projectId/collections',
     PROJECT_CATEGORIES: '/project/:projectId/categories',
     PROJECT_ENVIRONMENTS: '/project/:projectId/environments',
+    PROJECT_MEMBERS: '/project/:projectId/members',
     PROJECT_API_SPECS: '/project/:projectId/api-specs',
     PROJECT_HISTORIES: '/project/:projectId/histories',
     PROJECT_FLOWS: '/project/:projectId/flows',
@@ -92,6 +93,12 @@ export function buildProjectCollectionsRoute(projectId: string | number): string
 // 作用：为 `/project/:projectId/environments` 生成稳定地址，作为环境管理页入口。
 export function buildProjectEnvironmentsRoute(projectId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.PROJECT_ENVIRONMENTS, { projectId });
+}
+
+// 项目成员动态路由 helper。
+// 作用：为 `/project/:projectId/members` 生成稳定地址，作为成员管理页入口。
+export function buildProjectMembersRoute(projectId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.PROJECT_MEMBERS, { projectId });
 }
 
 // 项目分类动态路由 helper。

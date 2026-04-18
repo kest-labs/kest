@@ -64,8 +64,9 @@ import {
   buildProjectDetailRoute,
   buildProjectEnvironmentsRoute,
 } from '@/constants/routes';
-import { useApiSpecExamples, useApiSpecs, useProjectMemberRole } from '@/hooks/use-api-specs';
+import { useApiSpecExamples, useApiSpecs } from '@/hooks/use-api-specs';
 import { useEnvironments } from '@/hooks/use-environments';
+import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject } from '@/hooks/use-projects';
 import {
   useCreateTestCase,
@@ -79,8 +80,12 @@ import {
   useTestCases,
   useUpdateTestCase,
 } from '@/hooks/use-test-cases';
-import type { ApiSpec, ProjectMemberRole } from '@/types/api-spec';
+import type { ApiSpec } from '@/types/api-spec';
 import type { ProjectEnvironment } from '@/types/environment';
+import {
+  PROJECT_MEMBER_WRITE_ROLES,
+  type ProjectMemberRole,
+} from '@/types/member';
 import type {
   CreateTestCaseFromSpecRequest,
   CreateTestCaseRequest,
@@ -101,7 +106,7 @@ const EMPTY_TEST_CASES: ProjectTestCase[] = [];
 const EMPTY_RUNS: TestCaseRun[] = [];
 const EMPTY_SPECS: ApiSpec[] = [];
 const EMPTY_ENVIRONMENTS: ProjectEnvironment[] = [];
-const WRITE_ROLES: ProjectMemberRole[] = ['write', 'admin', 'owner'];
+const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 type TestCaseFormMode = 'create' | 'edit';
 type DetailTab = 'overview' | 'request' | 'runs';

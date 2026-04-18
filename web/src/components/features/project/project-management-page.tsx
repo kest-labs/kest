@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Tags,
   Trash2,
+  Users,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ import {
   buildProjectCategoriesRoute,
   buildProjectDetailRoute,
   buildProjectEnvironmentsRoute,
+  buildProjectMembersRoute,
   buildProjectTestCasesRoute,
 } from '@/constants/routes';
 import {
@@ -345,6 +347,12 @@ export function ProjectManagementPage() {
                                 label: 'Categories',
                                 icon: Tags,
                                 href: buildProjectCategoriesRoute(project.id),
+                              },
+                              {
+                                key: `members-${project.id}`,
+                                label: 'Members',
+                                icon: Users,
+                                href: buildProjectMembersRoute(project.id),
                               },
                               {
                                 key: `test-cases-${project.id}`,
