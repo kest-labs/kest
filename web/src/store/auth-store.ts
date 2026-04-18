@@ -20,6 +20,18 @@ interface AuthState {
   reset: () => void;
 }
 
+class SessionRestoreError extends Error {
+  status?: number;
+  shouldLog: boolean;
+
+  constructor(message: string, options?: { status?: number; shouldLog?: boolean }) {
+    super(message);
+    this.name = 'SessionRestoreError';
+    this.status = options?.status;
+    this.shouldLog = options?.shouldLog ?? true;
+  }
+}
+
 const defaultState = {
   user: null,
   isAuthenticated: false,
@@ -83,7 +95,10 @@ const useAuthStoreBase = create<AuthState>()(
           });
 
           if (!response.ok) {
-            throw new Error('Failed to restore session');
+            throw new SessionRestoreError('Failed to restore session', {
+              status: response.status,
+              shouldLog: response.status !== 401 && response.status !== 403,
+            });
           }
 
           const payload = await response.json();
@@ -99,7 +114,9 @@ const useAuthStoreBase = create<AuthState>()(
             isSystemReady: true,
           });
         } catch (error) {
-          console.error('Auth initialization failed:', error);
+          if (!(error instanceof SessionRestoreError) || error.shouldLog) {
+            console.error('Auth initialization failed:', error);
+          }
           // token 失效或后端不可用时，主动清空本地会话，避免进入假登录状态。
           set({
             user: null,
