@@ -27,6 +27,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
@@ -68,6 +69,9 @@ func InitApplication() (*app.Application, error) {
 	projectRepository := project.NewRepository(db)
 	projectService := project.NewService(projectRepository, memberService)
 	projectHandler := project.NewHandler(projectService, memberService)
+	projectinviteRepository := projectinvite.NewRepository(db)
+	projectinviteService := projectinvite.NewService(projectinviteRepository)
+	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
 	collectionHandler := collection.NewHandler(collectionService, memberService)
@@ -104,24 +108,25 @@ func InitApplication() (*app.Application, error) {
 	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
-		User:        handler,
-		Member:      memberHandler,
-		Permission:  permissionHandler,
-		Audit:       auditHandler,
-		Project:     projectHandler,
-		Collection:  collectionHandler,
-		Request:     requestHandler,
-		Example:     exampleHandler,
-		Run:         runHandler,
-		History:     historyHandler,
-		Export:      exportHandler,
-		Importer:    importerHandler,
-		APISpec:     apispecHandler,
-		Category:    categoryHandler,
-		Environment: environmentHandler,
-		Flow:        flowHandler,
-		TestCase:    testcaseHandler,
-		System:      systemHandler,
+		User:          handler,
+		Member:        memberHandler,
+		Permission:    permissionHandler,
+		Audit:         auditHandler,
+		Project:       projectHandler,
+		ProjectInvite: projectinviteHandler,
+		Collection:    collectionHandler,
+		Request:       requestHandler,
+		Example:       exampleHandler,
+		Run:           runHandler,
+		History:       historyHandler,
+		Export:        exportHandler,
+		Importer:      importerHandler,
+		APISpec:       apispecHandler,
+		Category:      categoryHandler,
+		Environment:   environmentHandler,
+		Flow:          flowHandler,
+		TestCase:      testcaseHandler,
+		System:        systemHandler,
 	}
 	application := &app.Application{
 		Config:       configConfig,

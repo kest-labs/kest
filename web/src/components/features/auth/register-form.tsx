@@ -2,10 +2,17 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +23,10 @@ import { useT } from '@/i18n/client';
 export function RegisterForm() {
   const t = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const registerMutation = useRegister();
   const loginMutation = useLogin();
+  const returnUrl = searchParams.get('returnUrl');
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -34,7 +43,7 @@ export function RegisterForm() {
   );
 
   const updateField = (field: keyof typeof form, value: string | boolean) => {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm(current => ({ ...current, [field]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -69,7 +78,7 @@ export function RegisterForm() {
         description: t.auth('accountCreated'),
       });
 
-      router.replace(authConfig.routes.afterLogin);
+      router.replace(returnUrl || authConfig.routes.afterLogin);
     } catch {
       // Error toast is handled by the global HTTP error handler.
     }
@@ -81,9 +90,7 @@ export function RegisterForm() {
         <CardTitle className="text-2xl font-bold tracking-tight">
           {t.auth('createAccount')}
         </CardTitle>
-        <CardDescription>
-          {t.auth('getStarted')}
-        </CardDescription>
+        <CardDescription>{t.auth('getStarted')}</CardDescription>
       </CardHeader>
       <CardContent className="px-0 pt-4">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -92,7 +99,7 @@ export function RegisterForm() {
             <Input
               id="username"
               value={form.username}
-              onChange={(event) => updateField('username', event.target.value)}
+              onChange={event => updateField('username', event.target.value)}
               placeholder={t.auth('enterUsername')}
               autoComplete="username"
               required
@@ -105,7 +112,7 @@ export function RegisterForm() {
               id="email"
               type="email"
               value={form.email}
-              onChange={(event) => updateField('email', event.target.value)}
+              onChange={event => updateField('email', event.target.value)}
               placeholder={t.auth('enterEmail')}
               autoComplete="email"
               required
@@ -117,7 +124,7 @@ export function RegisterForm() {
             <Input
               id="nickname"
               value={form.nickname}
-              onChange={(event) => updateField('nickname', event.target.value)}
+              onChange={event => updateField('nickname', event.target.value)}
               placeholder={t.auth('enterNickname')}
               className="bg-bg-canvas"
             />
@@ -127,7 +134,7 @@ export function RegisterForm() {
             <Input
               id="phone"
               value={form.phone}
-              onChange={(event) => updateField('phone', event.target.value)}
+              onChange={event => updateField('phone', event.target.value)}
               placeholder={t.auth('enterPhone')}
               autoComplete="tel"
               className="bg-bg-canvas"
@@ -139,7 +146,7 @@ export function RegisterForm() {
               id="password"
               type="password"
               value={form.password}
-              onChange={(event) => updateField('password', event.target.value)}
+              onChange={event => updateField('password', event.target.value)}
               autoComplete="new-password"
               required
               className="bg-bg-canvas"
@@ -151,7 +158,7 @@ export function RegisterForm() {
               id="confirm-password"
               type="password"
               value={form.confirmPassword}
-              onChange={(event) => updateField('confirmPassword', event.target.value)}
+              onChange={event => updateField('confirmPassword', event.target.value)}
               autoComplete="new-password"
               required
               className="bg-bg-canvas"
@@ -165,7 +172,7 @@ export function RegisterForm() {
             <Checkbox
               id="terms"
               checked={form.agreedToTerms}
-              onCheckedChange={(checked) => updateField('agreedToTerms', checked === true)}
+              onCheckedChange={checked => updateField('agreedToTerms', checked === true)}
               required
             />
             <div className="grid gap-1.5 leading-none">
@@ -173,7 +180,8 @@ export function RegisterForm() {
                 htmlFor="terms"
                 className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                {t.auth('agreeToTerms')} {t.auth('termsOfService')} {t.auth('and')} {t.auth('privacyPolicy')}
+                {t.auth('agreeToTerms')} {t.auth('termsOfService')} {t.auth('and')}{' '}
+                {t.auth('privacyPolicy')}
               </label>
             </div>
           </div>
@@ -190,7 +198,7 @@ export function RegisterForm() {
       <CardFooter className="mt-2 flex flex-wrap items-center justify-center gap-1.5 px-0 text-sm text-muted-foreground">
         {t.auth('hasAccount')}
         <Link
-          href="/login"
+          href={returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : '/login'}
           className="font-medium text-primary transition-colors hover:text-primary-deep hover:underline"
         >
           {t.auth('signIn')}

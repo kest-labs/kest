@@ -18,7 +18,7 @@ Authorization: Bearer <token>
 
 ## Overview
 
-Total endpoints: **126**
+Total endpoints: **133**
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ Total endpoints: **126**
 - [Flow](#flow) (15 endpoints)
 - [History](#history) (2 endpoints)
 - [Importer](#importer) (1 endpoints)
-- [Member](#member) (4 endpoints)
+- [Member](#member) (11 endpoints)
 - [Permission](#permission) (9 endpoints)
 - [Project](#project) (9 endpoints)
 - [Request](#request) (7 endpoints)
@@ -2277,14 +2277,21 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/import/postman
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/members` | Require Project Role member | 🔒 |
-| `POST` | `/v1/projects/:id/members` | Create member | 🔒 |
-| `PATCH` | `/v1/projects/:id/members/:uid` | Update member | 🔒 |
-| `DELETE` | `/v1/projects/:id/members/:uid` | Delete member | 🔒 |
+| `GET` | `/v1/projects/:id/members` | List project members | 🔒 |
+| `GET` | `/v1/projects/:id/members/me` | Get current user project role | 🔒 |
+| `POST` | `/v1/projects/:id/members` | Add project member directly | 🔒 |
+| `PATCH` | `/v1/projects/:id/members/:uid` | Update project member role | 🔒 |
+| `DELETE` | `/v1/projects/:id/members/:uid` | Remove project member | 🔒 |
+| `POST` | `/v1/projects/:id/invitations` | Create project invite link | 🔒 |
+| `GET` | `/v1/projects/:id/invitations` | List project invite links | 🔒 |
+| `DELETE` | `/v1/projects/:id/invitations/:inviteId` | Revoke project invite link | 🔒 |
+| `GET` | `/v1/project-invitations/:slug` | Get public project invitation | 🔓 |
+| `POST` | `/v1/project-invitations/:slug/accept` | Accept project invitation | 🔒 |
+| `POST` | `/v1/project-invitations/:slug/reject` | Reject project invitation | 🔒 |
 
 ### GET `/v1/projects/:id/members`
 
-**Require Project Role member**
+**List project members**
 
 | Property | Value |
 |----------|-------|
@@ -2305,9 +2312,9 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
 
 ---
 
-### POST `/v1/projects/:id/members`
+### GET `/v1/projects/:id/members/me`
 
-**Create member**
+**Get current user project role**
 
 | Property | Value |
 |----------|-------|
@@ -2322,19 +2329,70 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/members' \
+curl -X GET 'http://localhost:8025/api/v1/projects/1/members/me' \
   -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### POST `/v1/projects/:id/members`
+
+**Add project member directly**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Request Body
+
+```json
+{
+  "role": "read",
+  "user_id": 2
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `user_id` | `uint` | ✅ | Target user ID |
+| `role` | `string` | ✅ | One of `owner/admin/write/read` |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/projects/1/members' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"read","user_id":2}'
 ```
 
 ---
 
 ### PATCH `/v1/projects/:id/members/:uid`
 
-**Update member**
+**Update project member role**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
+
+#### Request Body
+
+```json
+{
+  "role": "write"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `role` | `string` | ✅ | One of `owner/admin/write/read` |
 
 #### Path Parameters
 
@@ -2347,14 +2405,16 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/members' \
 
 ```bash
 curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/1' \
-  -H 'Authorization: Bearer <token>'
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"write"}'
 ```
 
 ---
 
 ### DELETE `/v1/projects/:id/members/:uid`
 
-**Delete member**
+**Remove project member**
 
 | Property | Value |
 |----------|-------|
@@ -2371,6 +2431,162 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/1' \
 
 ```bash
 curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### POST `/v1/projects/:id/invitations`
+
+**Create project invite link**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Request Body
+
+```json
+{
+  "expires_at": "2026-05-01T00:00:00Z",
+  "max_uses": 1,
+  "role": "read"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `role` | `string` | ✅ | One of `admin/write/read` |
+| `expires_at` | `*time.Time` | ❌ | Expiration time in RFC3339 format |
+| `max_uses` | `*int` | ❌ | `0` means unlimited uses |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"expires_at":"2026-05-01T00:00:00Z","max_uses":1,"role":"read"}'
+```
+
+---
+
+### GET `/v1/projects/:id/invitations`
+
+**List project invite links**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X GET 'http://localhost:8025/api/v1/projects/1/invitations' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### DELETE `/v1/projects/:id/invitations/:inviteId`
+
+**Revoke project invite link**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+| `inviteId` | `integer` | Invitation identifier |
+
+#### Example
+
+```bash
+curl -X DELETE 'http://localhost:8025/api/v1/projects/1/invitations/1' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### GET `/v1/project-invitations/:slug`
+
+**Get public project invitation**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔓 Public |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `slug` | `string` | Invitation slug |
+
+#### Example
+
+```bash
+curl -X GET 'http://localhost:8025/api/v1/project-invitations/pji_example'
+```
+
+---
+
+### POST `/v1/project-invitations/:slug/accept`
+
+**Accept project invitation**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `slug` | `string` | Invitation slug |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/project-invitations/pji_example/accept' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### POST `/v1/project-invitations/:slug/reject`
+
+**Reject project invitation**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `slug` | `string` | Invitation slug |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/project-invitations/pji_example/reject' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -4524,4 +4740,3 @@ curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/members/1' \
 ```
 
 ---
-

@@ -20,6 +20,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/system"
@@ -42,24 +43,25 @@ type Application struct {
 
 // Handlers holds all HTTP handlers for modules.
 type Handlers struct {
-	User        *user.Handler
-	Member      *member.Handler
-	Permission  *permission.Handler
-	Audit       *audit.Handler
-	Project     *project.Handler
-	Collection  *collection.Handler
-	Request     *request.Handler
-	Example     *example.Handler
-	Run         *run.Handler
-	History     *history.Handler
-	Export      *export.Handler
-	Importer    *importer.Handler
-	APISpec     *apispec.Handler
-	Category    *category.Handler
-	Environment *environment.Handler
-	Flow        *flow.Handler
-	TestCase    *testcase.Handler
-	System      *system.Handler
+	User          *user.Handler
+	Member        *member.Handler
+	Permission    *permission.Handler
+	Audit         *audit.Handler
+	Project       *project.Handler
+	ProjectInvite *projectinvite.Handler
+	Collection    *collection.Handler
+	Request       *request.Handler
+	Example       *example.Handler
+	Run           *run.Handler
+	History       *history.Handler
+	Export        *export.Handler
+	Importer      *importer.Handler
+	APISpec       *apispec.Handler
+	Category      *category.Handler
+	Environment   *environment.Handler
+	Flow          *flow.Handler
+	TestCase      *testcase.Handler
+	System        *system.Handler
 }
 
 // Modules returns a list of all active modules
@@ -70,6 +72,7 @@ func (h *Handlers) Modules() []contracts.Module {
 		h.Permission,
 		h.Audit,
 		h.Project,
+		h.ProjectInvite,
 		h.Collection,
 		h.Request,
 		h.Example,

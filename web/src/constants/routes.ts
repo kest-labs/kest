@@ -7,6 +7,7 @@ export const ROUTES = {
     ABOUT: '/about',
     CONTACT: '/contact',
     API_SPEC_SHARE: '/share/api-spec/:slug',
+    PROJECT_INVITE: '/invite/project/:slug',
   },
 
   // 认证相关路由。
@@ -49,18 +50,15 @@ export type ConsoleRoute = (typeof ROUTES.CONSOLE)[ConsoleRoutes];
 
 // 动态路由替换工具。
 // 作用：把 `/users/:id` 这类模板路径安全替换成实际地址。
-export function buildRoute(
-  basePath: string,
-  params?: Record<string, string | number>
-): string {
+export function buildRoute(basePath: string, params?: Record<string, string | number>): string {
   let route = basePath;
-  
+
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       route = route.replace(`:${key}`, String(value));
     });
   }
-  
+
   return route;
 }
 
@@ -135,4 +133,10 @@ export function buildProjectTestCasesRoute(projectId: string | number): string {
 // 作用：为匿名公开接口页生成稳定地址，便于复制外部访问链接。
 export function buildApiSpecShareRoute(slug: string): string {
   return buildRoute(ROUTES.SITE.API_SPEC_SHARE, { slug });
+}
+
+// 项目邀请页路由 helper。
+// 作用：为公开邀请页生成稳定地址，方便成员管理页复制可分享链接。
+export function buildProjectInviteRoute(slug: string): string {
+  return buildRoute(ROUTES.SITE.PROJECT_INVITE, { slug });
 }
