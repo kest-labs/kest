@@ -48,7 +48,7 @@ func resolveConfiguredInvitationBaseURL() string {
 		return ""
 	}
 
-	return normalizeInvitationBaseURL(config.GlobalConfig.App.URL, false)
+	return normalizeInvitationBaseURL(config.GlobalConfig.App.FrontendURL, false)
 }
 
 func normalizeInvitationBaseURL(raw string, allowLoopback bool) string {

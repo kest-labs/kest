@@ -106,6 +106,18 @@ const isLoopbackHostname = (hostname: string) => {
     normalized === '[::1]'
   );
 };
+
+const resolveBrowserInviteBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  if (isLoopbackHostname(window.location.hostname)) {
+    return '';
+  }
+
+  return window.location.origin.replace(/\/+$/, '');
+};
 const ROLE_FILTER_OPTIONS: Array<{ value: 'all' | ProjectMemberRole; label: string }> = [
   { value: 'all', label: 'All roles' },
   { value: 'owner', label: 'Owner' },
@@ -329,23 +341,25 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number }
       return `${configuredInviteBaseUrl}${invitePath}`;
     }
 
-    if (typeof window === 'undefined') {
-      return invitation.invite_url || invitePath;
-    }
-
-    const browserInviteUrl = `${window.location.origin}${invitePath}`;
-    if (!invitation.invite_url) {
-      return browserInviteUrl;
+    const browserInviteBaseUrl = resolveBrowserInviteBaseUrl();
+    if (browserInviteBaseUrl) {
+      return `${browserInviteBaseUrl}${invitePath}`;
     }
 
     try {
-      const resolvedInviteUrl = new URL(invitation.invite_url, window.location.origin);
+      if (!invitation.invite_url) {
+        throw new Error('missing invite_url');
+      }
+
+      const fallbackBaseUrl =
+        typeof window !== 'undefined' ? window.location.origin : 'https://kest.run';
+      const resolvedInviteUrl = new URL(invitation.invite_url, fallbackBaseUrl);
       if (isLoopbackHostname(resolvedInviteUrl.hostname)) {
-        return browserInviteUrl;
+        return invitePath;
       }
       return resolvedInviteUrl.toString();
     } catch {
-      return browserInviteUrl;
+      return invitePath;
     }
   };
 

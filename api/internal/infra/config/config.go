@@ -28,13 +28,14 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Name      string
-	Env       string
-	Debug     bool
-	URL       string
-	Key       string
-	JWTSecret string
-	JWTExpire time.Duration
+	Name        string
+	Env         string
+	Debug       bool
+	URL         string
+	FrontendURL string
+	Key         string
+	JWTSecret   string
+	JWTExpire   time.Duration
 }
 
 type ServerConfig struct {
@@ -151,13 +152,14 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		App: AppConfig{
-			Name:      env.Get("APP_NAME", "Llama GO"),
-			Env:       env.Get("APP_ENV", "development"),
-			Debug:     env.GetBool("APP_DEBUG", true),
-			URL:       env.Get("APP_URL", "http://localhost"),
-			Key:       env.Get("APP_KEY", ""),
-			JWTSecret: env.Get("JWT_SECRET", ""),
-			JWTExpire: time.Duration(expireDays) * 24 * time.Hour,
+			Name:        env.Get("APP_NAME", "Llama GO"),
+			Env:         env.Get("APP_ENV", "development"),
+			Debug:       env.GetBool("APP_DEBUG", true),
+			URL:         env.Get("APP_URL", "http://localhost"),
+			FrontendURL: env.Get("APP_FRONTEND_URL", ""),
+			Key:         env.Get("APP_KEY", ""),
+			JWTSecret:   env.Get("JWT_SECRET", ""),
+			JWTExpire:   time.Duration(expireDays) * 24 * time.Hour,
 		},
 		Server: ServerConfig{
 			Host:         env.Get("SERVER_HOST", ""),

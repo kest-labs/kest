@@ -47,7 +47,7 @@ func TestBuildProjectInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
 	previous := config.GlobalConfig
 	config.GlobalConfig = &config.Config{
 		App: config.AppConfig{
-			URL: "https://api.kest.run",
+			FrontendURL: "https://kest.run",
 		},
 	}
 	defer func() {
@@ -56,8 +56,8 @@ func TestBuildProjectInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
 
 	got := buildProjectInvitationURLForBase("pji_demo", "http://localhost:3000")
 
-	if got != "https://api.kest.run/invite/project/pji_demo" {
-		t.Fatalf("expected configured app URL, got %q", got)
+	if got != "https://kest.run/invite/project/pji_demo" {
+		t.Fatalf("expected configured frontend URL, got %q", got)
 	}
 }
 

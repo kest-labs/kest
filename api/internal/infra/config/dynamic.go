@@ -60,6 +60,7 @@ func (r *Repository) loadFromEnv() {
 	r.Set("app.env", env.Get("APP_ENV", "development"))
 	r.Set("app.debug", env.GetBool("APP_DEBUG", true))
 	r.Set("app.url", env.Get("APP_URL", "http://localhost"))
+	r.Set("app.frontend_url", env.Get("APP_FRONTEND_URL", ""))
 	r.Set("app.key", env.Get("APP_KEY", ""))
 
 	// Server
