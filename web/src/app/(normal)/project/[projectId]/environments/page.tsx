@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { EnvironmentManagementPage } from '@/components/features/project/environment-management-page';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
 interface ProjectEnvironmentsPageProps {
@@ -13,22 +12,18 @@ interface ProjectEnvironmentsPageProps {
 }
 
 // 项目环境管理页面入口。
-// 作用：默认挂载新的 environments 工作区，并通过 `?mode=manage` 保留旧 CRUD 入口。
+// 作用：统一挂载 environments 工作区，兼容旧 `?mode=manage` 链接但不再分叉到独立管理页。
 export default async function ProjectEnvironmentsPage({
   params,
   searchParams,
 }: ProjectEnvironmentsPageProps) {
   const { projectId } = await params;
-  const { item, mode } = await searchParams;
+  const { item } = await searchParams;
   const numericProjectId = Number(projectId);
 
   // 非法项目 ID 直接返回 404，避免把错误参数继续传进受保护页面。
   if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
     notFound();
-  }
-
-  if (mode === 'manage') {
-    return <EnvironmentManagementPage projectId={numericProjectId} />;
   }
 
   const selectedItemId = Number(item);

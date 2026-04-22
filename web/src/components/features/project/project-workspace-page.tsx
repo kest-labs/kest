@@ -6,18 +6,23 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Bot,
+  Boxes,
   Clock3,
   FileClock,
   FileJson2,
   FlaskConical,
   Globe,
   Layers3,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Sparkles,
   Tags,
+  Trash2,
 } from 'lucide-react';
+import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
 import {
   ActionMenu,
   type ActionMenuItem,
@@ -85,12 +90,29 @@ import {
   useRefineApiSpecAIDraft,
 } from '@/hooks/use-api-specs';
 import { useProjectCategories, useProjectCategory } from '@/hooks/use-categories';
-import { useEnvironment, useEnvironments } from '@/hooks/use-environments';
+import { useProjectMemberRole } from '@/hooks/use-members';
+import {
+  useCreateEnvironment,
+  useDeleteEnvironment,
+  useDuplicateEnvironment,
+  useEnvironment,
+  useEnvironments,
+  useUpdateEnvironment,
+} from '@/hooks/use-environments';
 import { useProjectHistories, useProjectHistory } from '@/hooks/use-histories';
-import { useProject } from '@/hooks/use-projects';
+import { useProject, useProjectStats } from '@/hooks/use-projects';
 import type { ApiSpec, CreateApiSpecRequest, HttpMethod } from '@/types/api-spec';
-import type { ProjectEnvironment } from '@/types/environment';
+import type {
+  CreateEnvironmentRequest,
+  DuplicateEnvironmentRequest,
+  ProjectEnvironment,
+  UpdateEnvironmentRequest,
+} from '@/types/environment';
 import type { ProjectHistory } from '@/types/history';
+import {
+  PROJECT_MEMBER_WRITE_ROLES,
+  type ProjectMemberRole,
+} from '@/types/member';
 import { cn, formatDate } from '@/utils';
 
 const MAX_MODULE_ITEMS = 500;
@@ -98,6 +120,7 @@ const EMPTY_SPECS: ApiSpec[] = [];
 const EMPTY_ENVIRONMENTS: ProjectEnvironment[] = [];
 const EMPTY_HISTORIES: ProjectHistory[] = [];
 const SPEC_METHOD_OPTIONS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
+const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 const buildModuleHref = (
   projectId: number,
@@ -120,6 +143,400 @@ const formatJson = (value: unknown) => {
 
   return JSON.stringify(value, null, 2);
 };
+
+type EnvironmentFormMode = 'create' | 'edit';
+
+interface EnvironmentFormDraft {
+  name: string;
+  displayName: string;
+  baseUrl: string;
+  variables: string;
+  headers: string;
+}
+
+interface DuplicateEnvironmentDraft {
+  name: string;
+  overrideVars: string;
+}
+
+const getRoleLabel = (role?: ProjectMemberRole) => {
+  if (!role) {
+    return 'Unknown';
+  }
+
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+const parseObjectJsonInput = <T extends Record<string, unknown> | Record<string, string>>(
+  value: string,
+  label: string
+) => {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return undefined;
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(trimmedValue);
+  } catch {
+    throw new Error(`${label} must be a valid JSON object.`);
+  }
+
+  if (Array.isArray(parsed) || typeof parsed !== 'object' || parsed === null) {
+    throw new Error(`${label} must be a JSON object.`);
+  }
+
+  return parsed as T;
+};
+
+const toStringRecord = (value: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, String(item)])
+  ) as Record<string, string>;
+
+const getEnvironmentFormDraft = (environment?: ProjectEnvironment | null): EnvironmentFormDraft => ({
+  name: environment?.name ?? '',
+  displayName: environment?.display_name ?? '',
+  baseUrl: environment?.base_url ?? '',
+  variables:
+    environment?.variables === undefined ? '' : JSON.stringify(environment.variables, null, 2),
+  headers:
+    environment?.headers === undefined ? '' : JSON.stringify(environment.headers, null, 2),
+});
+
+const getDuplicateEnvironmentDraft = (
+  environment?: ProjectEnvironment | null
+): DuplicateEnvironmentDraft => ({
+  name: environment ? `${environment.name}-copy` : '',
+  overrideVars: '',
+});
+
+function EnvironmentFormDialog({
+  open,
+  mode,
+  environment,
+  isLoadingEnvironment,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  mode: EnvironmentFormMode;
+  environment?: ProjectEnvironment | null;
+  isLoadingEnvironment: boolean;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: CreateEnvironmentRequest | UpdateEnvironmentRequest) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState<EnvironmentFormDraft>(() => getEnvironmentFormDraft(environment));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const updateDraft = <K extends keyof EnvironmentFormDraft>(
+    key: K,
+    value: EnvironmentFormDraft[K]
+  ) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextErrors: Record<string, string> = {};
+    const trimmedName = draft.name.trim();
+    let variables: Record<string, unknown> | undefined;
+    let headers: Record<string, string> | undefined;
+
+    if (!trimmedName) {
+      nextErrors.name = 'Environment name is required.';
+    }
+
+    try {
+      variables = parseObjectJsonInput<Record<string, unknown>>(draft.variables, 'Variables');
+    } catch (error) {
+      nextErrors.variables = error instanceof Error ? error.message : 'Unable to parse variables.';
+    }
+
+    try {
+      const parsedHeaders = parseObjectJsonInput<Record<string, unknown>>(draft.headers, 'Headers');
+      headers = parsedHeaders ? toStringRecord(parsedHeaders) : undefined;
+    } catch (error) {
+      nextErrors.headers = error instanceof Error ? error.message : 'Unable to parse headers.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    await onSubmit({
+      name: trimmedName,
+      display_name: draft.displayName.trim() || undefined,
+      base_url: draft.baseUrl.trim() || undefined,
+      variables,
+      headers,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{mode === 'create' ? 'Create Environment' : 'Edit Environment'}</DialogTitle>
+          <DialogDescription>
+            {mode === 'create'
+              ? 'Create a project-scoped environment with base URL, variables, and headers.'
+              : 'Update the selected project-scoped environment.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody>
+          {mode === 'edit' && isLoadingEnvironment ? (
+            <div className="space-y-3 py-2">
+              <div className="h-10 animate-pulse rounded-xl bg-muted" />
+              <div className="h-10 animate-pulse rounded-xl bg-muted" />
+              <div className="h-40 animate-pulse rounded-xl bg-muted" />
+            </div>
+          ) : mode === 'edit' && !environment ? (
+            <Alert className="mt-2">
+              <AlertTitle>Unable to load environment details</AlertTitle>
+              <AlertDescription>
+                The selected environment details are not available yet. Close this dialog and try again.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form id="environment-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="environment-name">Name</Label>
+                  <Input
+                    id="environment-name"
+                    value={draft.name}
+                    onChange={(event) => updateDraft('name', event.target.value)}
+                    placeholder="production"
+                    errorText={errors.name}
+                    root
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="environment-display-name">Display Name</Label>
+                  <Input
+                    id="environment-display-name"
+                    value={draft.displayName}
+                    onChange={(event) => updateDraft('displayName', event.target.value)}
+                    placeholder="Production"
+                    root
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="environment-base-url">Base URL</Label>
+                <Input
+                  id="environment-base-url"
+                  value={draft.baseUrl}
+                  onChange={(event) => updateDraft('baseUrl', event.target.value)}
+                  placeholder="https://api.example.com"
+                  root
+                />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="environment-variables">Variables JSON</Label>
+                  <Textarea
+                    id="environment-variables"
+                    value={draft.variables}
+                    onChange={(event) => updateDraft('variables', event.target.value)}
+                    rows={14}
+                    placeholder='{"API_URL":"https://api.example.com"}'
+                    errorText={errors.variables}
+                    root
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="environment-headers">Headers JSON</Label>
+                  <Textarea
+                    id="environment-headers"
+                    value={draft.headers}
+                    onChange={(event) => updateDraft('headers', event.target.value)}
+                    rows={14}
+                    placeholder='{"Authorization":"Bearer {{token}}"}'
+                    errorText={errors.headers}
+                    root
+                  />
+                </div>
+              </div>
+            </form>
+          )}
+        </DialogBody>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="environment-form"
+            loading={isSubmitting}
+            disabled={(mode === 'edit' && (isLoadingEnvironment || !environment)) || isSubmitting}
+          >
+            {mode === 'create' ? 'Create Environment' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteEnvironmentDialog({
+  open,
+  environment,
+  isDeleting,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  environment?: ProjectEnvironment | null;
+  isDeleting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => Promise<void>;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Delete Environment</DialogTitle>
+          <DialogDescription>
+            This permanently removes {environment ? `"${environment.name}"` : 'the selected environment'}.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <Alert variant="destructive">
+            <AlertTitle>Irreversible action</AlertTitle>
+            <AlertDescription>
+              The environment will be deleted immediately and cannot be restored.
+            </AlertDescription>
+          </Alert>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" loading={isDeleting} onClick={() => void onConfirm()}>
+            Delete Environment
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DuplicateEnvironmentDialog({
+  open,
+  environment,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  environment?: ProjectEnvironment | null;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: DuplicateEnvironmentRequest) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState<DuplicateEnvironmentDraft>(() =>
+    getDuplicateEnvironmentDraft(environment)
+  );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextErrors: Record<string, string> = {};
+    const trimmedName = draft.name.trim();
+    let overrideVars: Record<string, unknown> | undefined;
+
+    if (!trimmedName) {
+      nextErrors.name = 'New environment name is required.';
+    }
+
+    try {
+      overrideVars = parseObjectJsonInput<Record<string, unknown>>(
+        draft.overrideVars,
+        'Override variables'
+      );
+    } catch (error) {
+      nextErrors.overrideVars =
+        error instanceof Error ? error.message : 'Unable to parse override variables.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    await onSubmit({
+      name: trimmedName,
+      override_vars: overrideVars,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="default">
+        <DialogHeader>
+          <DialogTitle>Duplicate Environment</DialogTitle>
+          <DialogDescription>
+            Create a new environment from the selected one and optionally override variables.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form id="environment-duplicate-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-environment-name">New Environment Name</Label>
+              <Input
+                id="duplicate-environment-name"
+                value={draft.name}
+                onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                placeholder="staging-copy"
+                errorText={errors.name}
+                root
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-environment-override-vars">Override Variables JSON</Label>
+              <Textarea
+                id="duplicate-environment-override-vars"
+                value={draft.overrideVars}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, overrideVars: event.target.value }))
+                }
+                rows={12}
+                placeholder='{"API_URL":"https://staging.example.com"}'
+                errorText={errors.overrideVars}
+                root
+              />
+            </div>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" form="environment-duplicate-form" loading={isSubmitting}>
+            Duplicate Environment
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function ProjectWorkspacePage({
   projectId,
@@ -543,190 +960,625 @@ function EnvironmentsWorkspaceSection({
   projectName: string;
   selectedItemId?: number | null;
 }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [formMode, setFormMode] = useState<EnvironmentFormMode>('create');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectEnvironment | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<ProjectEnvironment | null>(null);
+  const [suppressedSelectedEnvironmentId, setSuppressedSelectedEnvironmentId] = useState<number | null>(
+    null
+  );
   const deferredSearch = useDeferredValue(searchQuery);
+  const normalizedSearch = deferredSearch.trim().toLowerCase();
+  const effectiveSelectedItemId =
+    selectedItemId && selectedItemId === suppressedSelectedEnvironmentId ? null : selectedItemId;
 
+  const projectStatsQuery = useProjectStats(projectId);
+  const memberRoleQuery = useProjectMemberRole(projectId);
   const environmentsQuery = useEnvironments(projectId);
-  const selectedEnvironmentQuery = useEnvironment(projectId, selectedItemId ?? undefined);
+  const selectedEnvironmentQuery = useEnvironment(projectId, effectiveSelectedItemId ?? undefined);
+  const editingEnvironmentQuery = useEnvironment(projectId, editingEnvironmentId ?? undefined);
+  const createEnvironmentMutation = useCreateEnvironment(projectId);
+  const updateEnvironmentMutation = useUpdateEnvironment(projectId);
+  const deleteEnvironmentMutation = useDeleteEnvironment(projectId);
+  const duplicateEnvironmentMutation = useDuplicateEnvironment(projectId);
 
   const environments = environmentsQuery.data?.items ?? EMPTY_ENVIRONMENTS;
   const filteredEnvironments = useMemo(() => {
-    const normalizedQuery = deferredSearch.trim().toLowerCase();
-
-    if (!normalizedQuery) {
+    if (!normalizedSearch) {
       return environments;
     }
 
     return environments.filter((environment) =>
       [environment.name, environment.display_name || '', environment.base_url || '']
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
+        .some((value) => value.toLowerCase().includes(normalizedSearch))
     );
-  }, [deferredSearch, environments]);
+  }, [normalizedSearch, environments]);
 
   const selectedEnvironmentFromList =
-    environments.find((environment) => environment.id === selectedItemId) ?? null;
+    environments.find((environment) => environment.id === effectiveSelectedItemId) ?? null;
   const selectedEnvironment = selectedEnvironmentQuery.data ?? selectedEnvironmentFromList;
-  const fullManagerHref = `${buildProjectEnvironmentsRoute(projectId)}?mode=manage`;
-  const refreshActionItems: ActionMenuItem[] = [
+  const currentRole = memberRoleQuery.data?.role;
+  const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
+  const totalEnvironments =
+    environmentsQuery.data?.total ?? projectStatsQuery.data?.environment_count ?? environments.length;
+  const withBaseUrlCount = environments.filter((environment) => Boolean(environment.base_url?.trim())).length;
+  const withVariablesCount = environments.filter(
+    (environment) => Object.keys(environment.variables || {}).length > 0
+  ).length;
+  const withHeadersCount = environments.filter(
+    (environment) => Object.keys(environment.headers || {}).length > 0
+  ).length;
+  const listPreview =
+    normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
+  const environmentsPath = `/projects/${projectId}/environments`;
+  const activeEnvironmentPath = selectedEnvironment
+    ? `/projects/${projectId}/environments/${selectedEnvironment.id}`
+    : `/projects/${projectId}/environments/:eid`;
+
+  const openCreateDialog = () => {
+    setFormMode('create');
+    setEditingEnvironmentId(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditDialog = (environmentId: number) => {
+    setFormMode('edit');
+    setEditingEnvironmentId(environmentId);
+    setIsFormOpen(true);
+  };
+
+  const handleEnvironmentSubmit = async (
+    payload: CreateEnvironmentRequest | UpdateEnvironmentRequest
+  ) => {
+    try {
+      if (formMode === 'create') {
+        const createdEnvironment = await createEnvironmentMutation.mutateAsync(
+          payload as CreateEnvironmentRequest
+        );
+        setIsFormOpen(false);
+        setEditingEnvironmentId(null);
+        setSearchQuery('');
+        router.replace(buildModuleHref(projectId, 'environments', createdEnvironment.id));
+        return;
+      }
+
+      if (!editingEnvironmentId) {
+        return;
+      }
+
+      const updatedEnvironment = await updateEnvironmentMutation.mutateAsync({
+        environmentId: editingEnvironmentId,
+        data: payload as UpdateEnvironmentRequest,
+      });
+      setIsFormOpen(false);
+      setEditingEnvironmentId(null);
+      router.replace(buildModuleHref(projectId, 'environments', updatedEnvironment.id));
+    } catch {
+      // Global HTTP error handling already surfaces failure feedback.
+    }
+  };
+
+  const handleDeleteEnvironment = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const deletedId = deleteTarget.id;
+    const isDeletingSelectedEnvironment = selectedItemId === deletedId;
+
+    try {
+      if (isDeletingSelectedEnvironment) {
+        setSuppressedSelectedEnvironmentId(deletedId);
+      }
+
+      await deleteEnvironmentMutation.mutateAsync(deletedId);
+      setDeleteTarget(null);
+
+      if (isDeletingSelectedEnvironment) {
+        router.replace(buildProjectEnvironmentsRoute(projectId));
+      }
+    } catch {
+      if (isDeletingSelectedEnvironment) {
+        setSuppressedSelectedEnvironmentId(null);
+      }
+      // Global HTTP error handling already surfaces failure feedback.
+    }
+  };
+
+  const handleDuplicateEnvironment = async (payload: DuplicateEnvironmentRequest) => {
+    if (!duplicateTarget) {
+      return;
+    }
+
+    try {
+      const duplicatedEnvironment = await duplicateEnvironmentMutation.mutateAsync({
+        environmentId: duplicateTarget.id,
+        data: payload,
+      });
+      setDuplicateTarget(null);
+      setSearchQuery('');
+      router.replace(buildModuleHref(projectId, 'environments', duplicatedEnvironment.id));
+    } catch {
+      // Global HTTP error handling already surfaces failure feedback.
+    }
+  };
+
+  const handleRefresh = async () => {
+    const tasks: Array<Promise<unknown>> = [
+      projectStatsQuery.refetch(),
+      memberRoleQuery.refetch(),
+      environmentsQuery.refetch(),
+    ];
+
+    if (effectiveSelectedItemId) {
+      tasks.push(selectedEnvironmentQuery.refetch());
+    }
+
+    await Promise.all(tasks);
+  };
+
+  const isRefreshing =
+    projectStatsQuery.isFetching ||
+    memberRoleQuery.isFetching ||
+    environmentsQuery.isFetching ||
+    selectedEnvironmentQuery.isFetching;
+  const workspaceActionItems: ActionMenuItem[] = [
     {
       key: 'environments-refresh',
-      label:
-        environmentsQuery.isFetching || selectedEnvironmentQuery.isFetching ? 'Refreshing...' : 'Refresh',
+      label: isRefreshing ? 'Refreshing...' : 'Refresh',
       icon: RefreshCw,
-      disabled: environmentsQuery.isFetching || selectedEnvironmentQuery.isFetching,
-      onSelect: () => {
-        void environmentsQuery.refetch();
-
-        if (selectedItemId) {
-          void selectedEnvironmentQuery.refetch();
-        }
-      },
+      disabled: isRefreshing,
+      onSelect: () => void handleRefresh(),
+    },
+    {
+      key: 'environments-api-specs',
+      label: 'API Specs',
+      icon: FileJson2,
+      href: buildProjectApiSpecsRoute(projectId),
+      separatorBefore: selectedEnvironment ? true : undefined,
+    },
+    {
+      key: 'environments-categories',
+      label: 'Categories',
+      icon: Tags,
+      href: buildProjectCategoriesRoute(projectId),
+    },
+    {
+      key: 'environments-test-cases',
+      label: 'Test Cases',
+      icon: FlaskConical,
+      href: buildProjectTestCasesRoute(projectId),
     },
   ];
-  return (
-    <WorkspaceFrame
-      sidebar={
-        <ResourceSidebar
-          module="environments"
-          title="Environments"
-          description="Pick an environment to inspect base URL, headers, and variables."
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder="Filter environments"
-          count={filteredEnvironments.length}
-          loading={environmentsQuery.isLoading}
-          error={environmentsQuery.error}
-          emptyState={
-            <SidebarEmptyState
-              icon={Globe}
-              title="No environments"
-              description="Environment records will appear here once they exist."
-            />
-          }
-        >
-          {filteredEnvironments.map((environment) => (
-            <ResourceListItem
-              key={environment.id}
-              href={buildModuleHref(projectId, 'environments', environment.id)}
-              active={environment.id === selectedEnvironment?.id}
-              title={environment.display_name || environment.name}
-              description={environment.base_url || 'Base URL not configured'}
-              meta={
-                <>
-                  <span>{Object.keys(environment.variables || {}).length} vars</span>
-                  <span>{Object.keys(environment.headers || {}).length} headers</span>
-                </>
-              }
-            />
-          ))}
-        </ResourceSidebar>
-      }
-      content={
-        <ResourceContent
-          projectId={projectId}
-          projectName={projectName}
-          module="environments"
-          currentTitle={selectedEnvironment ? selectedEnvironment.display_name || selectedEnvironment.name : 'Module guide'}
-          description={
-            selectedEnvironment
-              ? 'Environment detail loaded from the selected project.'
-              : 'Select an environment from the middle sidebar to keep the detail surface focused and uncluttered.'
-          }
-          actions={
-            <>
-              <Button asChild variant="outline">
-                <Link href={fullManagerHref}>
-                  Full manager
-                </Link>
-              </Button>
-              <ActionMenu
-                items={refreshActionItems}
-                ariaLabel="Open environment workspace actions"
-                triggerVariant="outline"
-              />
-            </>
-          }
-        >
-          {selectedItemId && selectedEnvironmentQuery.isLoading ? (
-            <DetailSkeleton />
-          ) : selectedItemId && !selectedEnvironment ? (
-            <MissingDetailState
-              moduleLabel="environment"
-              clearHref={buildProjectEnvironmentsRoute(projectId)}
-            />
-          ) : !selectedEnvironment ? (
-            <GuideState
-              icon={Globe}
-              title="Choose an environment"
-              description="No environment detail is shown until you select a concrete item from the second sidebar."
-              actionHref={`${buildProjectEnvironmentsRoute(projectId)}?mode=manage`}
-              actionLabel="Manage environments"
-            />
-          ) : (
-            <div className="space-y-6">
-              <Card className="border-border/60">
-                <CardHeader>
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                          Environment
-                        </Badge>
-                        <Badge variant="outline">{selectedEnvironment.name}</Badge>
-                      </div>
-                      <div>
-                        <CardTitle className="text-2xl tracking-tight">
-                          {selectedEnvironment.display_name || selectedEnvironment.name}
-                        </CardTitle>
-                        <CardDescription className="mt-2">
-                          {selectedEnvironment.base_url || 'Base URL is not configured yet.'}
-                        </CardDescription>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <InfoBadge
-                        label="Variables"
-                        value={Object.keys(selectedEnvironment.variables || {}).length}
-                      />
-                      <InfoBadge
-                        label="Headers"
-                        value={Object.keys(selectedEnvironment.headers || {}).length}
-                      />
+  if (selectedEnvironment) {
+    workspaceActionItems.splice(1, 0, {
+      key: 'environments-duplicate',
+      label: 'Duplicate',
+      icon: Boxes,
+      disabled: !canWrite,
+      onSelect: () => setDuplicateTarget(selectedEnvironment),
+    });
+    workspaceActionItems.splice(2, 0, {
+      key: 'environments-delete',
+      label: 'Delete',
+      icon: Trash2,
+      destructive: true,
+      disabled: !canWrite,
+      onSelect: () => setDeleteTarget(selectedEnvironment),
+    });
+  }
+
+  return (
+    <>
+      <WorkspaceFrame
+        sidebar={
+          <ResourceSidebar
+            module="environments"
+            title="Environments"
+            description="Pick an environment to inspect and manage base URL, headers, and variables."
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Filter environments"
+            count={filteredEnvironments.length}
+            loading={environmentsQuery.isLoading}
+            error={environmentsQuery.error}
+            emptyState={
+              <SidebarEmptyState
+                icon={Globe}
+                title="No environments"
+                description="Create the first environment to define project-scoped runtime settings."
+              />
+            }
+          >
+            {filteredEnvironments.map((environment) => (
+              <ResourceListItem
+                key={environment.id}
+                href={buildModuleHref(projectId, 'environments', environment.id)}
+                active={environment.id === selectedEnvironment?.id}
+                title={environment.display_name || environment.name}
+                description={environment.base_url || 'Base URL not configured'}
+                meta={
+                  <>
+                    <span>{Object.keys(environment.variables || {}).length} vars</span>
+                    <span>{Object.keys(environment.headers || {}).length} headers</span>
+                  </>
+                }
+                actionsMenu={
+                  <ActionMenu
+                    items={[
+                      {
+                        key: `environment-open-${environment.id}`,
+                        label: 'Open',
+                        icon: ArrowRight,
+                        href: buildModuleHref(projectId, 'environments', environment.id),
+                      },
+                      {
+                        key: `environment-edit-${environment.id}`,
+                        label: 'Edit',
+                        icon: Pencil,
+                        disabled: !canWrite,
+                        onSelect: () => openEditDialog(environment.id),
+                      },
+                      {
+                        key: `environment-duplicate-${environment.id}`,
+                        label: 'Duplicate',
+                        icon: Boxes,
+                        disabled: !canWrite,
+                        onSelect: () => setDuplicateTarget(environment),
+                      },
+                      {
+                        key: `environment-delete-${environment.id}`,
+                        label: 'Delete',
+                        icon: Trash2,
+                        destructive: true,
+                        disabled: !canWrite,
+                        onSelect: () => setDeleteTarget(environment),
+                      },
+                    ]}
+                    ariaLabel={`Open actions for ${environment.name}`}
+                    stopPropagation
+                    triggerClassName="h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100"
+                  />
+                }
+              />
+            ))}
+          </ResourceSidebar>
+        }
+        content={
+          <ResourceContent
+            projectId={projectId}
+            projectName={projectName}
+            module="environments"
+            currentTitle={
+              selectedEnvironment
+                ? selectedEnvironment.display_name || selectedEnvironment.name
+                : 'Environment workspace'
+            }
+            description={
+              selectedEnvironment
+                ? 'Environment detail loaded from the selected project.'
+                : 'Create project-scoped environments here, or pick one from the sidebar to inspect and edit it.'
+            }
+            actions={
+              <>
+                {selectedEnvironment ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => openEditDialog(selectedEnvironment.id)}
+                    disabled={!canWrite}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </Button>
+                ) : null}
+                <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
+                  <Plus className="h-4 w-4" />
+                  Create Environment
+                </Button>
+                <ActionMenu
+                  items={workspaceActionItems}
+                  ariaLabel="Open environment workspace actions"
+                  triggerVariant="outline"
+                />
+              </>
+            }
+          >
+            <div className="space-y-6">
+              {!canWrite && memberRoleQuery.isSuccess ? (
+                <Alert>
+                  <ShieldCheck className="h-4 w-4" />
+                  <AlertTitle>Read-only access</AlertTitle>
+                  <AlertDescription>
+                    Your current role is <strong>{getRoleLabel(currentRole)}</strong>. You can inspect
+                    environments, but create, edit, duplicate, and delete actions are disabled.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
+              {environmentsQuery.isLoading || projectStatsQuery.isLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <StatCardSkeleton />
+                  <StatCardSkeleton />
+                  <StatCardSkeleton />
+                  <StatCardSkeleton />
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <StatCard
+                    title="Total environments"
+                    value={totalEnvironments}
+                    description="All project-scoped environment records"
+                    icon={Globe}
+                    variant="primary"
+                  />
+                  <StatCard
+                    title="With base URL"
+                    value={withBaseUrlCount}
+                    description="Environments ready to target a concrete host"
+                    icon={ShieldCheck}
+                    variant="success"
+                  />
+                  <StatCard
+                    title="With variables"
+                    value={withVariablesCount}
+                    description="Environments carrying variables payload"
+                    icon={Boxes}
+                    variant="warning"
+                  />
+                  <StatCard
+                    title="With headers"
+                    value={withHeadersCount}
+                    description={
+                      normalizedSearch
+                        ? `Search filtered by "${normalizedSearch}"`
+                        : 'Environments carrying request headers'
+                    }
+                    icon={Tags}
+                  />
+                </div>
+              )}
+
+              {effectiveSelectedItemId && selectedEnvironmentQuery.isLoading ? (
+                <DetailSkeleton />
+              ) : effectiveSelectedItemId && !selectedEnvironment ? (
+                <MissingDetailState
+                  moduleLabel="environment"
+                  clearHref={buildProjectEnvironmentsRoute(projectId)}
+                />
+              ) : !selectedEnvironment ? (
+                environmentsQuery.isLoading ? (
+                  <DetailSkeleton />
+                ) : environments.length === 0 ? (
+                  <Card className="border-dashed border-border/70">
+                    <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                        <Globe className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-lg font-semibold text-text-main">No environments yet</p>
+                        <p className="max-w-2xl text-sm leading-6 text-text-muted">
+                          Create the first project environment to store base URLs, reusable headers, and
+                          variables for your requests and tests.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
+                          <Plus className="h-4 w-4" />
+                          Create Environment
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link href={buildProjectApiSpecsRoute(projectId)}>
+                            Open API Specs
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-6">
+                    <Card className="border-border/60">
+                      <CardHeader>
+                        <CardTitle>Environment overview</CardTitle>
+                        <CardDescription>
+                          The old standalone manager is collapsed into this content area. Choose an
+                          environment from the sidebar, or create a new one from here.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap gap-3">
+                        <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
+                          <Plus className="h-4 w-4" />
+                          Create Environment
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link href={buildProjectTestCasesRoute(projectId)}>
+                            Open Test Cases
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+                      <Card className="border-border/60">
+                        <CardHeader>
+                          <CardTitle>
+                            {normalizedSearch ? 'Matching environments' : 'Available environments'}
+                          </CardTitle>
+                          <CardDescription>
+                            Quick links for the environments currently visible in the sidebar.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {listPreview.length === 0 ? (
+                            <GuideState
+                              icon={Globe}
+                              title="No matching environments"
+                              description="Try a broader search term or clear the current filter."
+                            />
+                          ) : (
+                            listPreview.map((environment) => (
+                              <Link
+                                key={environment.id}
+                                href={buildModuleHref(projectId, 'environments', environment.id)}
+                                className="block rounded-2xl border border-border/60 bg-background/70 p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-medium text-text-main">
+                                      {environment.display_name || environment.name}
+                                    </p>
+                                    <p className="mt-1 text-xs text-text-muted">
+                                      {environment.base_url || 'Base URL not configured'}
+                                    </p>
+                                  </div>
+                                  <Badge variant="outline">{environment.name}</Badge>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-muted">
+                                  <span>{Object.keys(environment.variables || {}).length} vars</span>
+                                  <span>{Object.keys(environment.headers || {}).length} headers</span>
+                                  <span>{formatDate(environment.updated_at, 'YYYY-MM-DD HH:mm')}</span>
+                                </div>
+                              </Link>
+                            ))
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-border/60">
+                        <CardHeader>
+                          <CardTitle>Environment API surface</CardTitle>
+                          <CardDescription>
+                            Project-scoped endpoints used by this workspace for environment CRUD.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <pre className="overflow-x-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
+                            <code>{`GET ${environmentsPath}
+POST ${environmentsPath}
+GET ${activeEnvironmentPath}
+PATCH ${activeEnvironmentPath}
+DELETE ${activeEnvironmentPath}
+POST ${activeEnvironmentPath}/duplicate`}</code>
+                          </pre>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
-                </CardHeader>
-              </Card>
+                )
+              ) : (
+                <div className="space-y-6">
+                  <Card className="border-border/60">
+                    <CardHeader>
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                              Environment
+                            </Badge>
+                            <Badge variant="outline">{selectedEnvironment.name}</Badge>
+                          </div>
+                          <div>
+                            <CardTitle className="text-2xl tracking-tight">
+                              {selectedEnvironment.display_name || selectedEnvironment.name}
+                            </CardTitle>
+                            <CardDescription className="mt-2">
+                              {selectedEnvironment.base_url || 'Base URL is not configured yet.'}
+                            </CardDescription>
+                          </div>
+                        </div>
 
-              <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle>Environment metadata</CardTitle>
-                    <CardDescription>Core identity and timestamps for this environment.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 md:grid-cols-2">
-                    <DetailField label="System name">{selectedEnvironment.name}</DetailField>
-                    <DetailField label="Display name">
-                      {selectedEnvironment.display_name || 'Not set'}
-                    </DetailField>
-                    <DetailField label="Created">
-                      {formatDate(selectedEnvironment.created_at, 'YYYY-MM-DD HH:mm')}
-                    </DetailField>
-                    <DetailField label="Updated">
-                      {formatDate(selectedEnvironment.updated_at, 'YYYY-MM-DD HH:mm')}
-                    </DetailField>
-                  </CardContent>
-                </Card>
+                        <div className="flex flex-wrap gap-2">
+                          <InfoBadge
+                            label="Variables"
+                            value={Object.keys(selectedEnvironment.variables || {}).length}
+                          />
+                          <InfoBadge
+                            label="Headers"
+                            value={Object.keys(selectedEnvironment.headers || {}).length}
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
 
-                <JsonCard title="Headers" value={selectedEnvironment.headers} />
-              </div>
+                  <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+                    <Card className="border-border/60">
+                      <CardHeader>
+                        <CardTitle>Environment metadata</CardTitle>
+                        <CardDescription>Core identity and timestamps for this environment.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="grid gap-4 md:grid-cols-2">
+                        <DetailField label="System name">{selectedEnvironment.name}</DetailField>
+                        <DetailField label="Display name">
+                          {selectedEnvironment.display_name || 'Not set'}
+                        </DetailField>
+                        <DetailField label="Created">
+                          {formatDate(selectedEnvironment.created_at, 'YYYY-MM-DD HH:mm')}
+                        </DetailField>
+                        <DetailField label="Updated">
+                          {formatDate(selectedEnvironment.updated_at, 'YYYY-MM-DD HH:mm')}
+                        </DetailField>
+                      </CardContent>
+                    </Card>
 
-              <JsonCard title="Variables" value={selectedEnvironment.variables} />
+                    <JsonCard title="Headers" value={selectedEnvironment.headers} />
+                  </div>
+
+                  <JsonCard title="Variables" value={selectedEnvironment.variables} />
+                </div>
+              )}
             </div>
-          )}
-        </ResourceContent>
-      }
-    />
+          </ResourceContent>
+        }
+      />
+
+      <EnvironmentFormDialog
+        key={`${formMode}-${editingEnvironmentQuery.data?.id ?? 'new'}-${isFormOpen ? 'open' : 'closed'}`}
+        open={isFormOpen}
+        mode={formMode}
+        environment={formMode === 'edit' ? editingEnvironmentQuery.data ?? null : null}
+        isLoadingEnvironment={formMode === 'edit' && editingEnvironmentQuery.isLoading}
+        isSubmitting={createEnvironmentMutation.isPending || updateEnvironmentMutation.isPending}
+        onOpenChange={(open) => {
+          setIsFormOpen(open);
+          if (!open) {
+            setEditingEnvironmentId(null);
+          }
+        }}
+        onSubmit={handleEnvironmentSubmit}
+      />
+
+      <DeleteEnvironmentDialog
+        open={Boolean(deleteTarget)}
+        environment={deleteTarget}
+        isDeleting={deleteEnvironmentMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={handleDeleteEnvironment}
+      />
+
+      <DuplicateEnvironmentDialog
+        key={`${duplicateTarget?.id ?? 'none'}-${duplicateTarget ? 'open' : 'closed'}`}
+        open={Boolean(duplicateTarget)}
+        environment={duplicateTarget}
+        isSubmitting={duplicateEnvironmentMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDuplicateTarget(null);
+          }
+        }}
+        onSubmit={handleDuplicateEnvironment}
+      />
+    </>
   );
 }
 
