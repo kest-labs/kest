@@ -10,6 +10,8 @@ NC='\033[0m'
 
 REPO="kest-labs/kest"
 GO_PACKAGE="github.com/$REPO/cli"
+GO_BINARY_NAME="cli"
+BINARY_NAME="kest"
 
 printf "${BLUE}Installing Kest CLI...${NC}\n"
 
@@ -43,15 +45,15 @@ install_from_release() {
 
     printf "Found release: ${GREEN}$LATEST_TAG${NC}\n"
 
-    BINARY_NAME="kest_${OS}_${ARCH}"
+    ARCHIVE_NAME="kest_${OS}_${ARCH}"
     EXT="tar.gz"
     if [[ "$OS" == "windows" ]]; then
         EXT="zip"
     fi
 
-    DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/${BINARY_NAME}.${EXT}"
+    DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/${ARCHIVE_NAME}.${EXT}"
 
-    printf "Downloading ${BINARY_NAME}.${EXT}...\n"
+    printf "Downloading ${ARCHIVE_NAME}.${EXT}...\n"
     if ! curl -fsSL "$DOWNLOAD_URL" -o "kest_download.${EXT}" 2>/dev/null; then
         rm -f "kest_download.${EXT}"
         return 1
@@ -81,7 +83,8 @@ install_from_source() {
     if ! command -v go &> /dev/null; then
         printf "${RED}Error: Go is not installed.${NC}\n"
         printf "Please install Go first: https://go.dev/dl/\n"
-        printf "Then run: ${BLUE}go install $GO_PACKAGE@latest${NC}\n"
+        printf "Or build from source manually:\n"
+        printf "  ${BLUE}git clone https://github.com/$REPO.git && cd kest/cli && go build -o \$HOME/.local/bin/$BINARY_NAME .${NC}\n"
         exit 1
     fi
 
@@ -91,11 +94,18 @@ install_from_source() {
 
     printf "Building from source (${GREEN}$VERSION${NC})...\n"
 
-    GOBIN="$INSTALL_DIR" go install "$GO_PACKAGE@$VERSION"
+    rm -f "$INSTALL_DIR/$BINARY_NAME" "$INSTALL_DIR/$GO_BINARY_NAME"
+    if ! GOBIN="$INSTALL_DIR" go install "$GO_PACKAGE@$VERSION"; then
+        return 1
+    fi
 
-    if [ $? -eq 0 ] && [ -f "$INSTALL_DIR/kest" ]; then
-        chmod +x "$INSTALL_DIR/kest"
-        printf "${GREEN}Kest $VERSION installed to $INSTALL_DIR/kest${NC}\n"
+    if [ -f "$INSTALL_DIR/$GO_BINARY_NAME" ] && [ ! -f "$INSTALL_DIR/$BINARY_NAME" ]; then
+        mv "$INSTALL_DIR/$GO_BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+    fi
+
+    if [ -f "$INSTALL_DIR/$BINARY_NAME" ]; then
+        chmod +x "$INSTALL_DIR/$BINARY_NAME"
+        printf "${GREEN}Kest $VERSION installed to $INSTALL_DIR/$BINARY_NAME${NC}\n"
         return 0
     else
         return 1
@@ -109,7 +119,8 @@ else
     printf "${YELLOW}No pre-built binary available. Building from source...${NC}\n"
     if ! install_from_source; then
         printf "${RED}Error: Installation failed.${NC}\n"
-        printf "Please try manually: ${BLUE}go install $GO_PACKAGE@latest${NC}\n"
+        printf "Please try manually:\n"
+        printf "  ${BLUE}git clone https://github.com/$REPO.git && cd kest/cli && go build -o \$HOME/.local/bin/$BINARY_NAME .${NC}\n"
         exit 1
     fi
 fi

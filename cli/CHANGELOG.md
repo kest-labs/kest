@@ -1,5 +1,18 @@
 # Kest CLI Changelog
 
+## v0.7.4 (2026-04-22)
+
+### New Features
+
+- **Local bridge for Kest Web** — Added `kest bridge` so the web app can execute requests through a loopback-only local HTTP bridge and avoid browser-side CORS limitations.
+- **Auto-allow bridge origins** — In default `auto` CORS mode, the bridge now reflects and remembers caller origins automatically, reducing local setup friction for Kest Web.
+
+### Fixes
+
+- **Fix CLI installation fallback** — The install scripts now handle Go-source fallback correctly by renaming the installed `cli` binary to `kest`.
+- **Fix release workflow Go version** — GitHub release automation now uses Go 1.24.0 to match the CLI module requirement.
+- **Fix stale install docs** — Public CLI docs and CI examples now point to the supported install script or local source build flow instead of stale `cmd/kest` commands.
+
 ## v0.7.3 (2026-02-26)
 
 ### Bug Fixes

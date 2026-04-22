@@ -286,7 +286,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Kest
-        run: go install github.com/kest-labs/kest/cmd/kest@latest
+        run: curl -fsSL https://kest.dev/install.sh | sh
 
       - name: Run API Tests
         run: |

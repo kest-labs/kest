@@ -24,7 +24,13 @@
 curl -fsSL https://kest.dev/install.sh | sh
 ```
 
-Or via Go: `go install github.com/kest-labs/kest/cmd/kest@latest`
+For the latest released CLI, use the install script above. If you need the current repo source instead of the latest release:
+
+```bash
+git clone https://github.com/kest-labs/kest.git
+cd kest/cli
+go build -o ~/.local/bin/kest .
+```
 
 ```bash
 kest init                                                    # Initialize project
