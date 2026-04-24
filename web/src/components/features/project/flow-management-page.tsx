@@ -71,6 +71,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { buildProjectFlowsRoute, buildProjectDetailRoute } from '@/constants/routes';
@@ -126,6 +127,26 @@ type FlowEdgeData = {
   mappings: FlowVariableMappingRule[];
 };
 type FlowCanvasEdge = Edge<FlowEdgeData>;
+type FlowNodeValidationErrors = {
+  name?: string;
+  method?: string;
+  url?: string;
+};
+type FlowValidationState = {
+  message: string | null;
+  flowName?: string;
+  nodeErrors: Record<string, FlowNodeValidationErrors>;
+  edgeErrors: Record<string, string>;
+};
+type FlowValidationMode = 'save' | 'run';
+type FlowValidationTarget =
+  | { kind: 'flow' }
+  | { kind: 'node'; id: string }
+  | { kind: 'edge'; id: string };
+type FlowValidationResult = FlowValidationState & {
+  isValid: boolean;
+  focusTarget?: FlowValidationTarget;
+};
 
 const getStatusBadgeClassName = (status: FlowRunStatus | 'idle') => {
   switch (status) {
@@ -242,6 +263,23 @@ const buildClientKey = () => {
   return `step-${Date.now()}-${Math.round(Math.random() * 1000)}`;
 };
 
+const createEmptyValidationState = (): FlowValidationState => ({
+  message: null,
+  nodeErrors: {},
+  edgeErrors: {},
+});
+
+const getCanvasNodeLabel = (node: FlowCanvasNode, index?: number) => {
+  const name = node.data.name.trim();
+  if (name) {
+    return name;
+  }
+  if (typeof index === 'number') {
+    return `Step ${index + 1}`;
+  }
+  return 'Unnamed step';
+};
+
 const getStepNodeBaseId = (step: FlowStep) => {
   if (typeof step.client_key === 'string') {
     const trimmed = step.client_key.trim();
@@ -298,13 +336,20 @@ const createCanvasNode = (
   };
 };
 
-const createCanvasEdge = (edge: FlowEdge, stepNodeIds: Map<number, string>): FlowCanvasEdge => {
+const createCanvasEdge = (edge: FlowEdge, stepNodeIds: Map<number, string>): FlowCanvasEdge | null => {
+  const source = stepNodeIds.get(edge.source_step_id);
+  const target = stepNodeIds.get(edge.target_step_id);
+
+  if (!source || !target || source === target) {
+    return null;
+  }
+
   const mappings = parseVariableMapping(edge.variable_mapping, edge.variable_mapping_rules);
 
   return {
     id: `edge-${edge.id}`,
-    source: stepNodeIds.get(edge.source_step_id) ?? `step-${edge.source_step_id}`,
-    target: stepNodeIds.get(edge.target_step_id) ?? `step-${edge.target_step_id}`,
+    source,
+    target,
     markerEnd: { type: MarkerType.ArrowClosed, color: 'currentColor' },
     label: buildEdgeLabel(mappings),
     labelStyle: { fontSize: 11, fontWeight: 600 },
@@ -346,9 +391,23 @@ const buildCanvasGraph = (
     return createCanvasNode(step, nodeId, run, liveStepResults);
   });
 
+  const canvasEdges: FlowCanvasEdge[] = [];
+  let droppedInvalidEdgeCount = 0;
+
+  for (const edge of edges) {
+    const canvasEdge = createCanvasEdge(edge, stepNodeIds);
+    if (!canvasEdge) {
+      droppedInvalidEdgeCount += 1;
+      continue;
+    }
+
+    canvasEdges.push(canvasEdge);
+  }
+
   return {
     nodes: canvasNodes,
-    edges: edges.map((edge) => createCanvasEdge(edge, stepNodeIds)),
+    edges: canvasEdges,
+    droppedInvalidEdgeCount,
   };
 };
 
@@ -487,6 +546,147 @@ const serializeFlow = (
     variable_mapping: stringifyVariableMapping(edge.data?.mappings ?? []),
   })),
 });
+
+const validateFlowDraft = (
+  meta: { name: string; description: string },
+  nodes: FlowCanvasNode[],
+  edges: FlowCanvasEdge[],
+  mode: FlowValidationMode
+): FlowValidationResult => {
+  const nodeErrors: Record<string, FlowNodeValidationErrors> = {};
+  const edgeErrors: Record<string, string> = {};
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const inDegree = new Map<string, number>();
+  const adjacency = new Map<string, string[]>();
+  const seenNodeIds = new Set<string>();
+  let flowName: string | undefined;
+  let message: string | null = null;
+  let focusTarget: FlowValidationTarget | undefined;
+
+  const setFirstIssue = (nextMessage: string, target: FlowValidationTarget) => {
+    if (message) {
+      return;
+    }
+
+    message = nextMessage;
+    focusTarget = target;
+  };
+
+  if (!meta.name.trim()) {
+    flowName = 'Flow name is required.';
+    setFirstIssue(
+      mode === 'run'
+        ? 'Name this flow before running it.'
+        : 'Name this flow before saving it.',
+      { kind: 'flow' }
+    );
+  }
+
+  if (mode === 'run' && nodes.length === 0) {
+    setFirstIssue('Add at least one step before running this flow.', { kind: 'flow' });
+  }
+
+  for (const [index, node] of nodes.entries()) {
+    const label = getCanvasNodeLabel(node, index);
+    const errors: FlowNodeValidationErrors = {};
+
+    if (!node.id.trim()) {
+      errors.name = 'Step key is required.';
+    } else if (seenNodeIds.has(node.id)) {
+      errors.name = 'Duplicate step key detected.';
+    } else {
+      seenNodeIds.add(node.id);
+    }
+
+    if (!node.data.name.trim()) {
+      errors.name = errors.name ?? 'Step name is required.';
+    }
+    if (!node.data.method.trim()) {
+      errors.method = 'HTTP method is required.';
+    }
+    if (!node.data.url.trim()) {
+      errors.url = 'Request URL is required.';
+    }
+
+    if (errors.name || errors.method || errors.url) {
+      nodeErrors[node.id] = errors;
+      setFirstIssue(
+        `${label}: ${errors.url ?? errors.method ?? errors.name}`,
+        { kind: 'node', id: node.id }
+      );
+    }
+
+    inDegree.set(node.id, 0);
+    adjacency.set(node.id, []);
+  }
+
+  for (const edge of edges) {
+    let edgeError = '';
+
+    if (!edge.source || !edge.target) {
+      edgeError = 'Connection endpoints are missing.';
+    } else if (edge.source === edge.target) {
+      edgeError = 'A step cannot connect to itself.';
+    } else if (!nodeById.has(edge.source)) {
+      edgeError = 'The upstream step no longer exists.';
+    } else if (!nodeById.has(edge.target)) {
+      edgeError = 'The downstream step no longer exists.';
+    } else if ((edge.data?.mappings ?? []).some((mapping) => !mapping.source.trim() || !mapping.target.trim())) {
+      edgeError = 'Complete or remove empty mapping rows.';
+    }
+
+    if (edgeError) {
+      edgeErrors[edge.id] = edgeError;
+      const sourceName = edge.source && nodeById.has(edge.source)
+        ? getCanvasNodeLabel(nodeById.get(edge.source)!)
+        : 'Unknown source';
+      const targetName = edge.target && nodeById.has(edge.target)
+        ? getCanvasNodeLabel(nodeById.get(edge.target)!)
+        : 'Unknown target';
+      setFirstIssue(`${sourceName} -> ${targetName}: ${edgeError}`, {
+        kind: 'edge',
+        id: edge.id,
+      });
+      continue;
+    }
+
+    adjacency.get(edge.source)?.push(edge.target);
+    inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
+  }
+
+  if (!message && nodes.length > 0) {
+    const queue = Array.from(inDegree.entries())
+      .filter(([, degree]) => degree === 0)
+      .map(([nodeId]) => nodeId);
+    let visited = 0;
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      visited += 1;
+
+      for (const next of adjacency.get(current) ?? []) {
+        const nextDegree = (inDegree.get(next) ?? 0) - 1;
+        inDegree.set(next, nextDegree);
+        if (nextDegree === 0) {
+          queue.push(next);
+        }
+      }
+    }
+
+    if (visited !== nodes.length) {
+      setFirstIssue('Flow edges cannot form cycles.', { kind: 'flow' });
+    }
+  }
+
+  return {
+    isValid: !message,
+    message,
+    flowName,
+    nodeErrors,
+    edgeErrors,
+    focusTarget,
+  };
+};
 
 const buildEdge = (
   source: string,
@@ -684,31 +884,46 @@ function CreateFlowDialog({
 function FlowInspector({
   flowName,
   flowDescription,
+  flowNameError,
   onFlowMetaChange,
   selectedNode,
   selectedEdge,
+  nodeErrors,
+  edgeErrors,
   onNodeChange,
   onEdgeMappingsChange,
   canEdit,
   runs,
+  selectedRun,
+  isRunDetailsLoading,
+  stepOptions,
   selectedRunId,
   onSelectRun,
+  onSelectRunStep,
   selectedStepResult,
 }: {
   flowName: string;
   flowDescription: string;
+  flowNameError?: string;
   onFlowMetaChange: (key: 'name' | 'description', value: string) => void;
   selectedNode: FlowCanvasNode | null;
   selectedEdge: FlowCanvasEdge | null;
+  nodeErrors: Record<string, FlowNodeValidationErrors>;
+  edgeErrors: Record<string, string>;
   onNodeChange: (nodeId: string, patch: Partial<FlowNodeData>) => void;
   onEdgeMappingsChange: (edgeId: string, mappings: FlowVariableMappingRule[]) => void;
   canEdit: boolean;
   runs: FlowRun[];
+  selectedRun: FlowRun | null;
+  isRunDetailsLoading: boolean;
+  stepOptions: Array<{ id: number; name: string }>;
   selectedRunId: number | null;
   onSelectRun: (runId: number) => void;
+  onSelectRunStep: (stepId: number) => void;
   selectedStepResult: FlowStepResult | null;
 }) {
   if (selectedNode) {
+    const selectedNodeErrors = nodeErrors[selectedNode.id] ?? {};
     return (
       <div className="space-y-6">
         <Card className="border-border/60">
@@ -731,6 +946,7 @@ function FlowInspector({
                     value={selectedNode.data.name}
                     disabled={!canEdit}
                     onChange={(event) => onNodeChange(selectedNode.id, { name: event.target.value })}
+                    errorText={selectedNodeErrors.name}
                     root
                   />
                 </div>
@@ -752,6 +968,9 @@ function FlowInspector({
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedNodeErrors.method ? (
+                    <p className="text-xs font-medium text-destructive">{selectedNodeErrors.method}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="step-url">URL</Label>
@@ -760,7 +979,8 @@ function FlowInspector({
                     value={selectedNode.data.url}
                     disabled={!canEdit}
                     onChange={(event) => onNodeChange(selectedNode.id, { url: event.target.value })}
-                    placeholder="/v1/auth/login"
+                    placeholder="/v1/login"
+                    errorText={selectedNodeErrors.url}
                     root
                   />
                 </div>
@@ -819,8 +1039,12 @@ function FlowInspector({
 
         <RunHistoryPanel
           runs={runs}
+          selectedRun={selectedRun}
+          isRunDetailsLoading={isRunDetailsLoading}
+          stepOptions={stepOptions}
           selectedRunId={selectedRunId}
           onSelectRun={onSelectRun}
+          onSelectRunStep={onSelectRunStep}
           selectedStepResult={selectedStepResult}
         />
       </div>
@@ -829,6 +1053,7 @@ function FlowInspector({
 
   if (selectedEdge) {
     const mappings = selectedEdge.data?.mappings ?? [];
+    const selectedEdgeError = edgeErrors[selectedEdge.id];
     return (
       <div className="space-y-6">
         <Card className="border-border/60">
@@ -837,6 +1062,12 @@ function FlowInspector({
             <CardDescription>Move captured variables from the upstream step into the downstream step scope.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedEdgeError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Fix this connection</AlertTitle>
+                <AlertDescription>{selectedEdgeError}</AlertDescription>
+              </Alert>
+            ) : null}
             <Tabs defaultValue="mappings" className="space-y-4">
               <TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="mappings">Mappings</TabsTrigger>
@@ -915,8 +1146,12 @@ function FlowInspector({
 
         <RunHistoryPanel
           runs={runs}
+          selectedRun={selectedRun}
+          isRunDetailsLoading={isRunDetailsLoading}
+          stepOptions={stepOptions}
           selectedRunId={selectedRunId}
           onSelectRun={onSelectRun}
+          onSelectRunStep={onSelectRunStep}
           selectedStepResult={null}
         />
       </div>
@@ -938,6 +1173,7 @@ function FlowInspector({
               value={flowName}
               disabled={!canEdit}
               onChange={(event) => onFlowMetaChange('name', event.target.value)}
+              errorText={flowNameError}
               root
             />
           </div>
@@ -957,8 +1193,12 @@ function FlowInspector({
 
       <RunHistoryPanel
         runs={runs}
+        selectedRun={selectedRun}
+        isRunDetailsLoading={isRunDetailsLoading}
+        stepOptions={stepOptions}
         selectedRunId={selectedRunId}
         onSelectRun={onSelectRun}
+        onSelectRunStep={onSelectRunStep}
         selectedStepResult={null}
       />
     </div>
@@ -967,15 +1207,55 @@ function FlowInspector({
 
 function RunHistoryPanel({
   runs,
+  selectedRun,
+  isRunDetailsLoading,
+  stepOptions,
   selectedRunId,
   onSelectRun,
+  onSelectRunStep,
   selectedStepResult,
 }: {
   runs: FlowRun[];
+  selectedRun: FlowRun | null;
+  isRunDetailsLoading: boolean;
+  stepOptions: Array<{ id: number; name: string }>;
   selectedRunId: number | null;
   onSelectRun: (runId: number) => void;
+  onSelectRunStep: (stepId: number) => void;
   selectedStepResult: FlowStepResult | null;
 }) {
+  const [activeStepId, setActiveStepId] = useState<number | null>(null);
+
+  const stepNameById = useMemo(
+    () => new Map(stepOptions.map((step) => [step.id, step.name])),
+    [stepOptions]
+  );
+
+  useEffect(() => {
+    if (selectedStepResult) {
+      setActiveStepId(selectedStepResult.step_id);
+      return;
+    }
+
+    const stepResults = selectedRun?.step_results ?? [];
+    const defaultStepId =
+      stepResults.find((result) => result.status === 'failed')?.step_id ??
+      stepResults.find((result) => result.status === 'running')?.step_id ??
+      stepResults[0]?.step_id ??
+      null;
+
+    setActiveStepId(defaultStepId);
+  }, [selectedRun?.id, selectedStepResult]);
+
+  const activeRunStepResult =
+    selectedStepResult ??
+    selectedRun?.step_results?.find((result) => result.step_id === activeStepId) ??
+    selectedRun?.step_results?.[0] ??
+    null;
+
+  const completedCount =
+    selectedRun?.step_results?.filter((result) => result.status === 'passed').length ?? 0;
+
   return (
     <div className="space-y-6">
       <Card className="border-border/60">
@@ -1019,31 +1299,122 @@ function RunHistoryPanel({
         </CardContent>
       </Card>
 
-      {selectedStepResult ? (
+      {selectedRun ? (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Step run result</CardTitle>
-            <CardDescription>Latest payload captured for the selected node in the active run.</CardDescription>
+            <CardTitle>Run log</CardTitle>
+            <CardDescription>
+              Inspect each step for run #{selectedRun.id} and jump back to the canvas node when needed.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ResultField label="Status">
-              <Badge variant="outline" className={getStatusBadgeClassName(selectedStepResult.status)}>
-                {getStatusLabel(selectedStepResult.status)}
-              </Badge>
-            </ResultField>
-            <ResultField label="Duration">{selectedStepResult.duration_ms} ms</ResultField>
-            <ResultJsonCard title="Request" value={parseJsonString(selectedStepResult.request)} />
-            <ResultJsonCard title="Response" value={parseJsonString(selectedStepResult.response)} />
-            <ResultJsonCard title="Assert results" value={parseJsonString(selectedStepResult.assert_results)} />
-            <ResultJsonCard
-              title="Captured variables"
-              value={parseJsonString(selectedStepResult.variables_captured)}
-            />
-            {selectedStepResult.error_message ? (
+            <div className="grid gap-3 md:grid-cols-3">
+              <ResultField label="Status">
+                <Badge variant="outline" className={getStatusBadgeClassName(selectedRun.status)}>
+                  {getStatusLabel(selectedRun.status)}
+                </Badge>
+              </ResultField>
+              <ResultField label="Started">
+                {selectedRun.started_at ? formatDate(selectedRun.started_at) : 'Not started'}
+              </ResultField>
+              <ResultField label="Completed Steps">
+                {completedCount} / {selectedRun.step_results?.length ?? 0}
+              </ResultField>
+            </div>
+
+            {isRunDetailsLoading && !selectedRun.step_results?.length ? (
               <Alert>
-                <AlertTitle>Failure detail</AlertTitle>
-                <AlertDescription>{selectedStepResult.error_message}</AlertDescription>
+                <AlertTitle>Loading run details</AlertTitle>
+                <AlertDescription>Fetching step-level request and response logs for this run.</AlertDescription>
               </Alert>
+            ) : null}
+
+            {!isRunDetailsLoading && !selectedRun.step_results?.length ? (
+              <Alert>
+                <AlertTitle>No step logs yet</AlertTitle>
+                <AlertDescription>This run has not produced step-level logs yet.</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {selectedRun.step_results?.length ? (
+              <div className="space-y-3">
+                {selectedRun.step_results.map((result) => {
+                  const isActive = activeRunStepResult?.step_id === result.step_id;
+                  const stepName = stepNameById.get(result.step_id) ?? `Step #${result.step_id}`;
+
+                  return (
+                    <button
+                      key={`${selectedRun.id}-${result.step_id}`}
+                      type="button"
+                      onClick={() => {
+                        setActiveStepId(result.step_id);
+                        onSelectRunStep(result.step_id);
+                      }}
+                      className={cn(
+                        'w-full rounded-2xl border px-4 py-3 text-left transition-colors',
+                        isActive
+                          ? 'border-primary/30 bg-primary/10'
+                          : 'border-border/60 bg-background/60 hover:bg-background'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-text-main">{stepName}</p>
+                          <p className="mt-1 truncate text-xs text-text-muted">
+                            Step ID {result.step_id}
+                            {result.error_message ? ` · ${result.error_message}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-xs text-text-muted">{result.duration_ms} ms</span>
+                          <Badge variant="outline" className={getStatusBadgeClassName(result.status)}>
+                            {getStatusLabel(result.status)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {activeRunStepResult ? (
+              <>
+                <Separator className="my-2" />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-text-main">
+                        {stepNameById.get(activeRunStepResult.step_id) ?? `Step #${activeRunStepResult.step_id}`}
+                      </p>
+                      <p className="mt-1 text-xs text-text-muted">
+                        Detailed request, response, assert results, and captured variables.
+                      </p>
+                    </div>
+                    <Badge variant="outline" className={getStatusBadgeClassName(activeRunStepResult.status)}>
+                      {getStatusLabel(activeRunStepResult.status)}
+                    </Badge>
+                  </div>
+
+                  <ResultField label="Duration">{activeRunStepResult.duration_ms} ms</ResultField>
+                  <ResultJsonCard title="Request" value={parseJsonString(activeRunStepResult.request)} />
+                  <ResultJsonCard title="Response" value={parseJsonString(activeRunStepResult.response)} />
+                  <ResultJsonCard
+                    title="Assert results"
+                    value={parseJsonString(activeRunStepResult.assert_results)}
+                  />
+                  <ResultJsonCard
+                    title="Captured variables"
+                    value={parseJsonString(activeRunStepResult.variables_captured)}
+                  />
+                  {activeRunStepResult.error_message ? (
+                    <Alert>
+                      <AlertTitle>Failure detail</AlertTitle>
+                      <AlertDescription>{activeRunStepResult.error_message}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                </div>
+              </>
             ) : null}
           </CardContent>
         </Card>
@@ -1116,6 +1487,9 @@ export function ProjectFlowManagementPage({
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [liveStepResults, setLiveStepResults] = useState<Record<number, FlowStepResult>>({});
+  const [validationState, setValidationState] = useState<FlowValidationState>(() =>
+    createEmptyValidationState()
+  );
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, FlowCanvasEdge> | null>(
     null
   );
@@ -1172,8 +1546,9 @@ export function ProjectFlowManagementPage({
     setEdges(canvasGraph.edges);
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
-    setDirty(false);
+    setDirty(canvasGraph.droppedInvalidEdgeCount > 0);
     setLiveStepResults({});
+    setValidationState(createEmptyValidationState());
   }, [selectedFlowQuery.data?.updated_at]);
 
   useEffect(() => {
@@ -1188,6 +1563,7 @@ export function ProjectFlowManagementPage({
     if (!selectedFlowId) {
       setSelectedRunId(null);
       setLiveStepResults({});
+      setValidationState(createEmptyValidationState());
     }
   }, [selectedFlowId]);
 
@@ -1199,11 +1575,50 @@ export function ProjectFlowManagementPage({
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId) ?? null;
+  const stepOptions = nodes.flatMap((node) =>
+    node.data.backendStepId
+      ? [{ id: node.data.backendStepId, name: node.data.name || `Step #${node.data.backendStepId}` }]
+      : []
+  );
   const selectedStepResult = selectedNode?.data.backendStepId
     ? liveStepResults[selectedNode.data.backendStepId] ??
       selectedRun?.step_results?.find((item) => item.step_id === selectedNode.data.backendStepId) ??
       null
     : null;
+
+  const clearValidationState = () => {
+    setValidationState(createEmptyValidationState());
+  };
+
+  const focusValidationTarget = (target?: FlowValidationTarget) => {
+    if (!target) {
+      return;
+    }
+
+    setInspectorOpen(true);
+    if (target.kind === 'node') {
+      setSelectedNodeId(target.id);
+      setSelectedEdgeId(null);
+      return;
+    }
+    if (target.kind === 'edge') {
+      setSelectedEdgeId(target.id);
+      setSelectedNodeId(null);
+      return;
+    }
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+  };
+
+  const applyValidationResult = (result: FlowValidationResult) => {
+    setValidationState({
+      message: result.message,
+      flowName: result.flowName,
+      nodeErrors: result.nodeErrors,
+      edgeErrors: result.edgeErrors,
+    });
+    focusValidationTarget(result.focusTarget);
+  };
 
   const navigateToFlow = (flowId: number | null) => {
     setSelectedFlowId(flowId);
@@ -1211,6 +1626,7 @@ export function ProjectFlowManagementPage({
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
     setLiveStepResults({});
+    setValidationState(createEmptyValidationState());
     const baseHref = buildProjectFlowsRoute(projectId);
     router.replace(flowId ? `${baseHref}?item=${flowId}` : baseHref);
   };
@@ -1245,6 +1661,7 @@ export function ProjectFlowManagementPage({
   const handleNodesChange = (changes: NodeChange<FlowCanvasNode>[]) => {
     if (changes.some((change) => change.type !== 'select')) {
       setDirty(true);
+      clearValidationState();
     }
     setNodes((current) => applyNodeChanges(changes, current));
   };
@@ -1252,6 +1669,7 @@ export function ProjectFlowManagementPage({
   const handleEdgesChange = (changes: EdgeChange<FlowCanvasEdge>[]) => {
     if (changes.some((change) => change.type !== 'select')) {
       setDirty(true);
+      clearValidationState();
     }
     setEdges((current) => applyEdgeChanges(changes, current));
   };
@@ -1263,6 +1681,7 @@ export function ProjectFlowManagementPage({
       )
     );
     setDirty(true);
+    clearValidationState();
   };
 
   const handleConnect = (connection: Connection) => {
@@ -1279,6 +1698,7 @@ export function ProjectFlowManagementPage({
 
     setEdges((current) => addEdge(buildEdge(connection.source!, connection.target!), current) as FlowCanvasEdge[]);
     setDirty(true);
+    clearValidationState();
   };
 
   const handleNodeChange = (nodeId: string, patch: Partial<FlowNodeData>) => {
@@ -1296,6 +1716,7 @@ export function ProjectFlowManagementPage({
       )
     );
     setDirty(true);
+    clearValidationState();
   };
 
   const handleEdgeMappingsChange = (edgeId: string, mappings: FlowVariableMappingRule[]) => {
@@ -1314,6 +1735,7 @@ export function ProjectFlowManagementPage({
       )
     );
     setDirty(true);
+    clearValidationState();
   };
 
   const handleFlowMetaChange = (key: 'name' | 'description', value: string) => {
@@ -1322,6 +1744,18 @@ export function ProjectFlowManagementPage({
       [key]: value,
     }));
     setDirty(true);
+    clearValidationState();
+  };
+
+  const handleSelectRunStep = (stepId: number) => {
+    const node = nodes.find((item) => item.data.backendStepId === stepId);
+    if (!node) {
+      return;
+    }
+
+    setSelectedNodeId(node.id);
+    setSelectedEdgeId(null);
+    setInspectorOpen(true);
   };
 
   const handleAddStep = () => {
@@ -1356,6 +1790,7 @@ export function ProjectFlowManagementPage({
     setSelectedEdgeId(null);
     setInspectorOpen(true);
     setDirty(true);
+    clearValidationState();
   };
 
   const saveCurrentFlow = async () => {
@@ -1363,20 +1798,37 @@ export function ProjectFlowManagementPage({
       return null;
     }
 
-    const saved = await saveFlowMutation.mutateAsync({
-      flowId: selectedFlowId,
-      data: serializeFlow(flowMeta, nodes, edges),
-    });
-    skipNextHydrationRef.current = true;
-    setFlowMeta({
-      name: saved.name,
-      description: saved.description,
-    });
-    const mergedGraph = mergeSavedGraphIntoCanvas(nodes, edges, saved, selectedRun, liveStepResults);
-    setNodes(mergedGraph.nodes);
-    setEdges(mergedGraph.edges);
-    setDirty(false);
-    return saved;
+    const validation = validateFlowDraft(flowMeta, nodes, edges, 'save');
+    if (!validation.isValid) {
+      applyValidationResult(validation);
+      return null;
+    }
+
+    clearValidationState();
+
+    try {
+      const saved = await saveFlowMutation.mutateAsync({
+        flowId: selectedFlowId,
+        data: serializeFlow(flowMeta, nodes, edges),
+      });
+      skipNextHydrationRef.current = true;
+      setFlowMeta({
+        name: saved.name,
+        description: saved.description,
+      });
+      const mergedGraph = mergeSavedGraphIntoCanvas(nodes, edges, saved, selectedRun, liveStepResults);
+      setNodes(mergedGraph.nodes);
+      setEdges(mergedGraph.edges);
+      setDirty(false);
+      return saved;
+    } catch (error) {
+      setValidationState((current) => ({
+        ...current,
+        message:
+          error instanceof Error ? error.message : 'Failed to save this flow. Review the current graph and try again.',
+      }));
+      return null;
+    }
   };
 
   const finalizeRun = async (runId: number) => {
@@ -1445,17 +1897,32 @@ export function ProjectFlowManagementPage({
       return;
     }
 
+    const validation = validateFlowDraft(flowMeta, nodes, edges, 'run');
+    if (!validation.isValid) {
+      applyValidationResult(validation);
+      return;
+    }
+
+    clearValidationState();
+
     try {
       if (dirty) {
-        await saveCurrentFlow();
+        const saved = await saveCurrentFlow();
+        if (!saved) {
+          return;
+        }
       }
 
       setLiveStepResults({});
       const run = await runFlowMutation.mutateAsync(selectedFlowId);
       setSelectedRunId(run.id);
       await streamRun(run.id);
-    } catch {
-      // Global error handler surfaces API failure details.
+    } catch (error) {
+      setValidationState((current) => ({
+        ...current,
+        message:
+          error instanceof Error ? error.message : 'Failed to start this flow run. Review the current graph and try again.',
+      }));
     }
   };
 
@@ -1648,6 +2115,15 @@ export function ProjectFlowManagementPage({
         )}
       </div>
 
+      {validationState.message ? (
+        <div className="border-b border-border/60 px-4 py-4 md:px-6">
+          <Alert variant="destructive">
+            <AlertTitle>Fix the flow before continuing</AlertTitle>
+            <AlertDescription>{validationState.message}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.08),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.85),rgba(248,250,252,0.98))]">
           <div className="h-full min-h-[540px] p-4 md:p-6">
@@ -1705,15 +2181,22 @@ export function ProjectFlowManagementPage({
             <FlowInspector
               flowName={flowMeta.name}
               flowDescription={flowMeta.description}
+              flowNameError={validationState.flowName}
               onFlowMetaChange={handleFlowMetaChange}
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
+              nodeErrors={validationState.nodeErrors}
+              edgeErrors={validationState.edgeErrors}
               onNodeChange={handleNodeChange}
               onEdgeMappingsChange={handleEdgeMappingsChange}
               canEdit={canEdit}
               runs={flowRunsQuery.data?.items ?? EMPTY_RUNS}
+              selectedRun={selectedRun}
+              isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
+              stepOptions={stepOptions}
               selectedRunId={effectiveRunId}
               onSelectRun={setSelectedRunId}
+              onSelectRunStep={handleSelectRunStep}
               selectedStepResult={selectedStepResult}
             />
           </div>
@@ -1802,15 +2285,22 @@ export function ProjectFlowManagementPage({
               <FlowInspector
                 flowName={flowMeta.name}
                 flowDescription={flowMeta.description}
+                flowNameError={validationState.flowName}
                 onFlowMetaChange={handleFlowMetaChange}
                 selectedNode={selectedNode}
                 selectedEdge={selectedEdge}
+                nodeErrors={validationState.nodeErrors}
+                edgeErrors={validationState.edgeErrors}
                 onNodeChange={handleNodeChange}
                 onEdgeMappingsChange={handleEdgeMappingsChange}
                 canEdit={canEdit}
                 runs={flowRunsQuery.data?.items ?? EMPTY_RUNS}
+                selectedRun={selectedRun}
+                isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
+                stepOptions={stepOptions}
                 selectedRunId={effectiveRunId}
                 onSelectRun={setSelectedRunId}
+                onSelectRunStep={handleSelectRunStep}
                 selectedStepResult={selectedStepResult}
               />
             </div>

@@ -848,6 +848,7 @@ echo "   ✅ Flow: User Login & Profile (ID: $FLOW1_ID)"
 api PUT "/projects/$PROJECT_ID/flows/$FLOW1_ID" '{
   "steps": [
     {
+      "client_key": "login",
       "name": "Login",
       "sort_order": 0,
       "method": "POST",
@@ -860,6 +861,7 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW1_ID" '{
       "position_y": 50
     },
     {
+      "client_key": "get-profile",
       "name": "Get Profile",
       "sort_order": 1,
       "method": "GET",
@@ -872,6 +874,7 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW1_ID" '{
       "position_y": 250
     },
     {
+      "client_key": "update-profile",
       "name": "Update Profile",
       "sort_order": 2,
       "method": "PUT",
@@ -885,8 +888,8 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW1_ID" '{
     }
   ],
   "edges": [
-    {"source_step_id": 0, "target_step_id": 1},
-    {"source_step_id": 1, "target_step_id": 2}
+    {"source_client_key": "login", "target_client_key": "get-profile"},
+    {"source_client_key": "get-profile", "target_client_key": "update-profile"}
   ]
 }' > /dev/null
 echo "   ✅ Saved 3 steps + 2 edges"
@@ -903,6 +906,7 @@ echo "   ✅ Flow: Project CRUD (ID: $FLOW2_ID)"
 api PUT "/projects/$PROJECT_ID/flows/$FLOW2_ID" '{
   "steps": [
     {
+      "client_key": "login",
       "name": "Login",
       "sort_order": 0,
       "method": "POST",
@@ -915,6 +919,7 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW2_ID" '{
       "position_y": 50
     },
     {
+      "client_key": "create-project",
       "name": "Create Project",
       "sort_order": 1,
       "method": "POST",
@@ -927,6 +932,7 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW2_ID" '{
       "position_y": 250
     },
     {
+      "client_key": "get-project",
       "name": "Get Project",
       "sort_order": 2,
       "method": "GET",
@@ -939,6 +945,7 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW2_ID" '{
       "position_y": 450
     },
     {
+      "client_key": "update-project",
       "name": "Update Project",
       "sort_order": 3,
       "method": "PUT",
@@ -951,6 +958,7 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW2_ID" '{
       "position_y": 650
     },
     {
+      "client_key": "delete-project",
       "name": "Delete Project",
       "sort_order": 4,
       "method": "DELETE",
@@ -964,10 +972,10 @@ api PUT "/projects/$PROJECT_ID/flows/$FLOW2_ID" '{
     }
   ],
   "edges": [
-    {"source_step_id": 0, "target_step_id": 1},
-    {"source_step_id": 1, "target_step_id": 2},
-    {"source_step_id": 2, "target_step_id": 3},
-    {"source_step_id": 3, "target_step_id": 4}
+    {"source_client_key": "login", "target_client_key": "create-project"},
+    {"source_client_key": "create-project", "target_client_key": "get-project"},
+    {"source_client_key": "get-project", "target_client_key": "update-project"},
+    {"source_client_key": "update-project", "target_client_key": "delete-project"}
   ]
 }' > /dev/null
 echo "   ✅ Saved 5 steps + 4 edges"
