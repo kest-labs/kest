@@ -26,6 +26,7 @@ import {
   ArrowRight,
   FileClock,
   FolderGit2,
+  PanelLeft,
   Play,
   Plus,
   RefreshCw,
@@ -1515,6 +1516,7 @@ export function ProjectFlowManagementPage({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedFlowId, setSelectedFlowId] = useState<number | null>(selectedItemId ?? null);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [localRuns, setLocalRuns] = useState<FlowRun[]>([]);
   const [flowMeta, setFlowMeta] = useState({ name: '', description: '' });
   const [dirty, setDirty] = useState(false);
@@ -1560,6 +1562,7 @@ export function ProjectFlowManagementPage({
 
   const canEdit = WRITE_ROLES.includes(memberRoleQuery.data?.role ?? 'read');
   const flows = flowListQuery.data?.items ?? [];
+  const showFlowSidebar = isMobile || !isSidebarCollapsed;
   const filteredFlows = useMemo(() => {
     const keyword = deferredSearch.trim().toLowerCase();
     if (!keyword) {
@@ -2108,10 +2111,25 @@ export function ProjectFlowManagementPage({
               Design request graphs, save them, and stream execution in place.
             </p>
           </div>
-          <Button type="button" size="sm" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
+          <div className="flex items-center gap-2">
+            {!isMobile ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isIcon
+                aria-label="Hide flows sidebar"
+                title="Hide flows sidebar"
+                onClick={() => setIsSidebarCollapsed(true)}
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            ) : null}
+            <Button type="button" size="sm" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </div>
         </div>
 
         <div className="relative">
@@ -2237,7 +2255,9 @@ export function ProjectFlowManagementPage({
         <div className="space-y-2">
           <p className="text-lg font-semibold text-text-main">Select a flow</p>
           <p className="text-sm leading-6 text-text-muted">
-            Use the left sidebar to open an existing flow or create a new one for this project.
+            {showFlowSidebar
+              ? 'Use the left sidebar to open an existing flow or create a new one for this project.'
+              : 'Use "Show Flows" to reopen the sidebar, then open an existing flow or create a new one.'}
           </p>
         </div>
       </CardContent>
@@ -2386,7 +2406,7 @@ export function ProjectFlowManagementPage({
   return (
     <>
       <div className="flex h-full min-h-0 flex-col lg:flex-row lg:overflow-hidden">
-        {flowSidebar}
+        {showFlowSidebar ? flowSidebar : null}
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <div className="space-y-4 border-b border-border/60 bg-bg-surface/70 px-4 py-4 md:px-6">
@@ -2433,6 +2453,12 @@ export function ProjectFlowManagementPage({
                   <RefreshCw className="h-4 w-4" />
                   Refresh
                 </Button>
+                {!isMobile && isSidebarCollapsed ? (
+                  <Button type="button" variant="outline" onClick={() => setIsSidebarCollapsed(false)}>
+                    <PanelLeft className="h-4 w-4" />
+                    Show Flows
+                  </Button>
+                ) : null}
                 <Button type="button" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
                   <Plus className="h-4 w-4" />
                   New Flow
