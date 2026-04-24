@@ -111,6 +111,7 @@ export interface FlowRun {
   flow_id: number;
   status: FlowRunStatus;
   triggered_by: number;
+  execution_mode?: 'server' | 'local';
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;

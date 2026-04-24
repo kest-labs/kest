@@ -89,6 +89,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject } from '@/hooks/use-projects';
 import { flowService } from '@/services/flow';
+import {
+  runLocalFlow,
+  type LocalFlowEdgeDefinition,
+  type LocalFlowStepDefinition,
+} from '@/services/local-flow-runner';
 import type {
   CreateFlowRequest,
   FlowDetail,
@@ -268,6 +273,8 @@ const createEmptyValidationState = (): FlowValidationState => ({
   nodeErrors: {},
   edgeErrors: {},
 });
+
+const buildLocalRunId = () => -Date.now() - Math.round(Math.random() * 1000);
 
 const getCanvasNodeLabel = (node: FlowCanvasNode, index?: number) => {
   const name = node.data.name.trim();
@@ -544,6 +551,30 @@ const serializeFlow = (
     source_client_key: edge.source,
     target_client_key: edge.target,
     variable_mapping: stringifyVariableMapping(edge.data?.mappings ?? []),
+  })),
+});
+
+const buildLocalFlowExecutionGraph = (
+  detail: FlowDetail
+): {
+  steps: LocalFlowStepDefinition[];
+  edges: LocalFlowEdgeDefinition[];
+} => ({
+  steps: detail.steps.map((step) => ({
+    id: step.id,
+    name: step.name.trim(),
+    sort_order: step.sort_order,
+    method: step.method.trim(),
+    url: step.url.trim(),
+    headers: step.headers,
+    body: step.body,
+    captures: step.captures,
+    asserts: step.asserts,
+  })),
+  edges: detail.edges.map((edge) => ({
+    source_step_id: edge.source_step_id,
+    target_step_id: edge.target_step_id,
+    mappings: parseVariableMapping(edge.variable_mapping, edge.variable_mapping_rules),
   })),
 });
 
@@ -1261,7 +1292,7 @@ function RunHistoryPanel({
       <Card className="border-border/60">
         <CardHeader>
           <CardTitle>Run history</CardTitle>
-          <CardDescription>Select a run to overlay status and inspect step results.</CardDescription>
+          <CardDescription>Select a local or server run to overlay status and inspect step results.</CardDescription>
         </CardHeader>
         <CardContent>
           {runs.length === 0 ? (
@@ -1285,7 +1316,9 @@ function RunHistoryPanel({
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-text-main">Run #{run.id}</p>
+                      <p className="text-sm font-medium text-text-main">
+                        {run.execution_mode === 'local' ? 'Local Run' : 'Run'} #{Math.abs(run.id)}
+                      </p>
                       <p className="mt-1 text-xs text-text-muted">{formatDate(run.created_at)}</p>
                     </div>
                     <Badge variant="outline" className={getStatusBadgeClassName(run.status)}>
@@ -1304,7 +1337,8 @@ function RunHistoryPanel({
           <CardHeader>
             <CardTitle>Run log</CardTitle>
             <CardDescription>
-              Inspect each step for run #{selectedRun.id} and jump back to the canvas node when needed.
+              Inspect each step for {selectedRun.execution_mode === 'local' ? 'local run' : 'run'} #
+              {Math.abs(selectedRun.id)} and jump back to the canvas node when needed.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1481,6 +1515,7 @@ export function ProjectFlowManagementPage({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedFlowId, setSelectedFlowId] = useState<number | null>(selectedItemId ?? null);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [localRuns, setLocalRuns] = useState<FlowRun[]>([]);
   const [flowMeta, setFlowMeta] = useState({ name: '', description: '' });
   const [dirty, setDirty] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -1490,12 +1525,14 @@ export function ProjectFlowManagementPage({
   const [validationState, setValidationState] = useState<FlowValidationState>(() =>
     createEmptyValidationState()
   );
+  const [isLocalRunPending, setIsLocalRunPending] = useState(false);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, FlowCanvasEdge> | null>(
     null
   );
   const deferredSearch = useDeferredValue(searchValue);
   const streamAbortRef = useRef<AbortController | null>(null);
   const skipNextHydrationRef = useRef(false);
+  const previousFlowIdRef = useRef<number | null>(selectedItemId ?? null);
 
   const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
   const [edges, setEdges] = useState<FlowCanvasEdge[]>([]);
@@ -1507,10 +1544,19 @@ export function ProjectFlowManagementPage({
   const selectedFlowQuery = useFlow(projectId, selectedFlowId ?? undefined);
   const flowRunsQuery = useFlowRuns(projectId, selectedFlowId ?? undefined);
 
-  const latestRun = flowRunsQuery.data?.items?.[0] ?? null;
+  const backendRuns = flowRunsQuery.data?.items ?? EMPTY_RUNS;
+  const runs = useMemo(() => [...localRuns, ...backendRuns], [backendRuns, localRuns]);
+  const latestRun = runs[0] ?? null;
   const effectiveRunId = selectedRunId ?? latestRun?.id ?? null;
-  const selectedRunQuery = useFlowRun(projectId, selectedFlowId ?? undefined, effectiveRunId ?? undefined);
-  const selectedRun = selectedRunQuery.data ?? latestRun;
+  const selectedLocalRun = effectiveRunId
+    ? localRuns.find((run) => run.id === effectiveRunId) ?? null
+    : null;
+  const selectedRunQuery = useFlowRun(
+    projectId,
+    selectedFlowId ?? undefined,
+    selectedLocalRun ? undefined : effectiveRunId ?? undefined
+  );
+  const selectedRun = selectedLocalRun ?? selectedRunQuery.data ?? latestRun;
 
   const canEdit = WRITE_ROLES.includes(memberRoleQuery.data?.role ?? 'read');
   const flows = flowListQuery.data?.items ?? [];
@@ -1560,8 +1606,21 @@ export function ProjectFlowManagementPage({
   }, [liveStepResults, selectedFlowQuery.data, selectedRun?.id]);
 
   useEffect(() => {
+    if (previousFlowIdRef.current === selectedFlowId) {
+      return;
+    }
+
+    previousFlowIdRef.current = selectedFlowId;
+    setSelectedRunId(null);
+    setLocalRuns([]);
+    setLiveStepResults({});
+    setValidationState(createEmptyValidationState());
+  }, [selectedFlowId]);
+
+  useEffect(() => {
     if (!selectedFlowId) {
       setSelectedRunId(null);
+      setLocalRuns([]);
       setLiveStepResults({});
       setValidationState(createEmptyValidationState());
     }
@@ -1623,6 +1682,7 @@ export function ProjectFlowManagementPage({
   const navigateToFlow = (flowId: number | null) => {
     setSelectedFlowId(flowId);
     setSelectedRunId(null);
+    setLocalRuns([]);
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
     setLiveStepResults({});
@@ -1892,7 +1952,7 @@ export function ProjectFlowManagementPage({
     }
   };
 
-  const handleRun = async () => {
+  const handleRunServer = async () => {
     if (!selectedFlowId) {
       return;
     }
@@ -1926,12 +1986,115 @@ export function ProjectFlowManagementPage({
     }
   };
 
+  const handleRunLocal = async () => {
+    if (!selectedFlowId) {
+      return;
+    }
+
+    const validation = validateFlowDraft(flowMeta, nodes, edges, 'run');
+    if (!validation.isValid) {
+      applyValidationResult(validation);
+      return;
+    }
+
+    clearValidationState();
+    streamAbortRef.current?.abort();
+
+    try {
+      let savedFlow = selectedFlowQuery.data ?? null;
+      if (dirty) {
+        savedFlow = await saveCurrentFlow();
+        if (!savedFlow) {
+          return;
+        }
+      }
+
+      if (!savedFlow) {
+        throw new Error('Load this flow again before starting a local run.');
+      }
+
+      const runId = buildLocalRunId();
+      const startedAt = new Date().toISOString();
+      const localRun: FlowRun = {
+        id: runId,
+        flow_id: selectedFlowId,
+        status: 'running',
+        execution_mode: 'local',
+        triggered_by: 0,
+        started_at: startedAt,
+        finished_at: null,
+        created_at: startedAt,
+        updated_at: startedAt,
+        step_results: [],
+      };
+
+      const graph = buildLocalFlowExecutionGraph(savedFlow);
+      setIsLocalRunPending(true);
+      setSelectedRunId(runId);
+      setLocalRuns((current) => [localRun, ...current.filter((run) => run.id !== runId)]);
+      setLiveStepResults({});
+
+      const completedRun = await runLocalFlow({
+        flowId: selectedFlowId,
+        runId,
+        steps: graph.steps,
+        edges: graph.edges,
+        onStepEvent: (event) => {
+          setLiveStepResults((current) => ({
+            ...current,
+            [event.step_id]: event.data,
+          }));
+
+          setLocalRuns((current) =>
+            current.map((run) => {
+              if (run.id !== runId) {
+                return run;
+              }
+
+              const previousStepResults = run.step_results ?? [];
+              const hasExistingStepResult = previousStepResults.some(
+                (item) => item.step_id === event.step_id
+              );
+              const nextStepResults = hasExistingStepResult
+                ? previousStepResults.map((item) =>
+                    item.step_id === event.step_id ? event.data : item
+                  )
+                : [...previousStepResults, event.data];
+
+              return {
+                ...run,
+                status: event.status === 'running' ? 'running' : run.status,
+                updated_at: new Date().toISOString(),
+                step_results: nextStepResults,
+              };
+            })
+          );
+        },
+      });
+
+      setLocalRuns((current) => [
+        completedRun,
+        ...current.filter((run) => run.id !== runId),
+      ]);
+    } catch (error) {
+      setValidationState((current) => ({
+        ...current,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to start this local flow run. Review the current graph and try again.',
+      }));
+    } finally {
+      setIsLocalRunPending(false);
+    }
+  };
+
   const handleRefresh = () => {
     void Promise.all([
       flowListQuery.refetch(),
       selectedFlowQuery.refetch(),
       flowRunsQuery.refetch(),
-      selectedRunQuery.refetch(),
+      selectedLocalRun || effectiveRunId === null ? Promise.resolve() : selectedRunQuery.refetch(),
     ]);
   };
 
@@ -2086,9 +2249,24 @@ export function ProjectFlowManagementPage({
           <Save className="h-4 w-4" />
           Save
         </Button>
-        <Button type="button" onClick={() => void handleRun()} disabled={!canEdit || !selectedFlowId} loading={runFlowMutation.isPending}>
+        <Button
+          type="button"
+          onClick={() => void handleRunLocal()}
+          disabled={!canEdit || !selectedFlowId}
+          loading={isLocalRunPending}
+        >
           <Play className="h-4 w-4" />
-          Run
+          Run Local
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void handleRunServer()}
+          disabled={!canEdit || !selectedFlowId}
+          loading={runFlowMutation.isPending}
+        >
+          <Play className="h-4 w-4" />
+          Run Server
         </Button>
         <Button type="button" variant="outline" onClick={handleAddStep} disabled={!canEdit || !selectedFlowId}>
           <Plus className="h-4 w-4" />
@@ -2190,7 +2368,7 @@ export function ProjectFlowManagementPage({
               onNodeChange={handleNodeChange}
               onEdgeMappingsChange={handleEdgeMappingsChange}
               canEdit={canEdit}
-              runs={flowRunsQuery.data?.items ?? EMPTY_RUNS}
+              runs={runs}
               selectedRun={selectedRun}
               isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
               stepOptions={stepOptions}
@@ -2294,7 +2472,7 @@ export function ProjectFlowManagementPage({
                 onNodeChange={handleNodeChange}
                 onEdgeMappingsChange={handleEdgeMappingsChange}
                 canEdit={canEdit}
-                runs={flowRunsQuery.data?.items ?? EMPTY_RUNS}
+                runs={runs}
                 selectedRun={selectedRun}
                 isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
                 stepOptions={stepOptions}
