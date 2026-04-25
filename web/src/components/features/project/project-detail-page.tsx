@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
   Copy,
   FileJson2,
   FlaskConical,
@@ -14,18 +17,21 @@ import {
   Key,
   Layers3,
   Pencil,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
   Tags,
   Terminal,
   Trash2,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import {
   DeleteProjectDialog,
   type ProjectFormMode,
@@ -33,13 +39,13 @@ import {
   ProjectStatusBadge,
   resolvePlatformLabel,
 } from '@/components/features/project/project-shared';
-import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
 import { apiExternalBaseUrl, buildApiPath } from '@/config/api';
 import {
   buildProjectApiSpecsRoute,
   buildProjectCategoriesRoute,
   buildProjectCollectionsRoute,
   buildProjectEnvironmentsRoute,
+  buildProjectFlowsRoute,
   buildProjectMembersRoute,
   buildProjectTestCasesRoute,
   ROUTES,
@@ -54,16 +60,265 @@ import {
 import type {
   ApiProject,
   GenerateProjectCliTokenResponse,
+  ProjectStats,
   UpdateProjectRequest,
 } from '@/types/project';
 import { formatDate } from '@/utils';
 
+type StepTone = 'ready' | 'pending' | 'available';
+
+interface WorkflowStep {
+  key: string;
+  title: string;
+  detail: string;
+  state: string;
+  tone: StepTone;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface ProjectNextAction {
+  title: string;
+  description: string;
+  reason: string;
+  primaryLabel: string;
+  primaryHref: string;
+  primaryIcon: LucideIcon;
+  secondaryLabel: string;
+  secondaryHref: string;
+  secondaryIcon: LucideIcon;
+}
+
+const getProjectNextAction = (
+  projectId: number,
+  stats?: ProjectStats | null
+): ProjectNextAction => {
+  if (!stats) {
+    return {
+      title: 'Open the workspace',
+      description: 'Project signals are still loading, so the safest entry is the API workspace.',
+      reason: 'The workspace keeps the core project resources in one place while stats finish loading.',
+      primaryLabel: 'Open API Specs',
+      primaryHref: buildProjectApiSpecsRoute(projectId),
+      primaryIcon: FileJson2,
+      secondaryLabel: 'Quick Request',
+      secondaryHref: `${buildProjectCollectionsRoute(projectId)}?quickRequest=1`,
+      secondaryIcon: FolderOpen,
+    };
+  }
+
+  if (stats.api_spec_count === 0) {
+    return {
+      title: 'Define the first API surface',
+      description: 'Start with one endpoint and turn it into a structured source of truth.',
+      reason: 'Docs, examples, and tests all depend on at least one API spec.',
+      primaryLabel: 'AI Draft API',
+      primaryHref: `${buildProjectApiSpecsRoute(projectId)}?ai=create`,
+      primaryIcon: Sparkles,
+      secondaryLabel: 'Quick Request',
+      secondaryHref: `${buildProjectCollectionsRoute(projectId)}?quickRequest=1`,
+      secondaryIcon: FolderOpen,
+    };
+  }
+
+  if (stats.environment_count === 0) {
+    return {
+      title: 'Add the first runtime target',
+      description: 'Configure a base URL, variables, and headers before execution starts.',
+      reason: 'The API surface exists. One environment unlocks request runs and generated validation.',
+      primaryLabel: 'Configure Environment',
+      primaryHref: buildProjectEnvironmentsRoute(projectId),
+      primaryIcon: Globe,
+      secondaryLabel: 'Review API Specs',
+      secondaryHref: buildProjectApiSpecsRoute(projectId),
+      secondaryIcon: FileJson2,
+    };
+  }
+
+  return {
+    title: 'Generate validation coverage',
+    description: 'Use the existing specs and environment baseline to create runnable tests.',
+    reason: 'The project has both a source of truth and runtime context. The next value is repeatable validation.',
+    primaryLabel: 'Open Test Cases',
+    primaryHref: buildProjectTestCasesRoute(projectId),
+    primaryIcon: FlaskConical,
+    secondaryLabel: 'Quick Request',
+    secondaryHref: `${buildProjectCollectionsRoute(projectId)}?quickRequest=1`,
+    secondaryIcon: FolderOpen,
+  };
+};
+
+const getProjectWorkflowSteps = (projectId: number, stats?: ProjectStats | null): WorkflowStep[] => {
+  const apiSpecCount = stats?.api_spec_count ?? 0;
+  const environmentCount = stats?.environment_count ?? 0;
+  const categoryCount = stats?.category_count ?? 0;
+  const flowCount = stats?.flow_count ?? 0;
+  const hasSpecs = apiSpecCount > 0;
+  const hasEnvironment = environmentCount > 0;
+
+  return [
+    {
+      key: 'api-specs',
+      title: 'API Specs',
+      detail: hasSpecs
+        ? `${apiSpecCount} spec${apiSpecCount === 1 ? '' : 's'} available`
+        : 'Create the first structured endpoint',
+      state: hasSpecs ? 'Ready' : 'Missing',
+      tone: hasSpecs ? 'ready' : 'pending',
+      href: hasSpecs ? buildProjectApiSpecsRoute(projectId) : `${buildProjectApiSpecsRoute(projectId)}?ai=create`,
+      icon: FileJson2,
+    },
+    {
+      key: 'environments',
+      title: 'Environments',
+      detail: hasEnvironment
+        ? `${environmentCount} target${environmentCount === 1 ? '' : 's'} configured`
+        : 'Add a base URL and runtime variables',
+      state: hasEnvironment ? 'Ready' : 'Missing',
+      tone: hasEnvironment ? 'ready' : 'pending',
+      href: buildProjectEnvironmentsRoute(projectId),
+      icon: Globe,
+    },
+    {
+      key: 'test-cases',
+      title: 'Test Cases',
+      detail: hasSpecs ? 'Generate coverage from API specs' : 'Waiting for API specs',
+      state: hasSpecs ? 'Available' : 'Blocked',
+      tone: hasSpecs ? 'available' : 'pending',
+      href: buildProjectTestCasesRoute(projectId),
+      icon: FlaskConical,
+    },
+    {
+      key: 'organize',
+      title: 'Organize',
+      detail:
+        categoryCount > 0 || flowCount > 0
+          ? `${categoryCount} categories, ${flowCount} flows`
+          : 'Optional taxonomy and flows',
+      state: categoryCount > 0 || flowCount > 0 ? 'Active' : 'Optional',
+      tone: categoryCount > 0 || flowCount > 0 ? 'available' : 'pending',
+      href: buildProjectCategoriesRoute(projectId),
+      icon: Layers3,
+    },
+  ];
+};
+
+const getStepBadgeClassName = (tone: StepTone) => {
+  switch (tone) {
+    case 'ready':
+      return 'border-emerald-200 bg-emerald-500/10 text-emerald-700';
+    case 'available':
+      return 'border-sky-200 bg-sky-500/10 text-sky-700';
+    default:
+      return 'border-amber-200 bg-amber-500/10 text-amber-700';
+  }
+};
+
+const getStepIconClassName = (tone: StepTone) => {
+  switch (tone) {
+    case 'ready':
+      return 'bg-emerald-500/10 text-emerald-700';
+    case 'available':
+      return 'bg-sky-500/10 text-sky-700';
+    default:
+      return 'bg-amber-500/10 text-amber-700';
+  }
+};
+
+function MetricTile({
+  title,
+  value,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  description: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-background p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-muted">{title}</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-text-main">{value}</p>
+          <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p>
+        </div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-text-muted">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowStepRow({ step }: { step: WorkflowStep }) {
+  const Icon = step.icon;
+  const StatusIcon = step.tone === 'ready' ? CheckCircle2 : Clock3;
+
+  return (
+    <Link
+      href={step.href}
+      className="flex items-start gap-3 rounded-xl border border-border/60 bg-background p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
+    >
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${getStepIconClassName(step.tone)}`}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-text-main">{step.title}</p>
+          <Badge variant="outline" className={getStepBadgeClassName(step.tone)}>
+            <StatusIcon className="h-3.5 w-3.5" />
+            {step.state}
+          </Badge>
+        </div>
+        <p className="mt-1 text-sm leading-6 text-text-muted">{step.detail}</p>
+      </div>
+    </Link>
+  );
+}
+
+function ModuleShortcut({
+  title,
+  description,
+  href,
+  icon: Icon,
+  actionLabel,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  actionLabel: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex min-h-[150px] flex-col justify-between rounded-xl border border-border/60 bg-background p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
+    >
+      <div className="space-y-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-text-muted group-hover:bg-primary/10 group-hover:text-primary">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-text-main">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-2 text-sm font-medium text-primary">
+        {actionLabel}
+        <ArrowRight className="h-4 w-4" />
+      </div>
+    </Link>
+  );
+}
+
 /**
- * 项目详情页。
- * 作用：
- * 1. 承载单个项目的详情信息和 Project Stats
- * 2. 提供编辑、删除和跳转到环境页、API 规格页、测试用例页的入口
- * 3. 替代列表页原来的 `Selected Project` 侧边面板
+ * Project workspace home.
+ * It turns the project detail route into a task-oriented launch surface:
+ * API Specs -> Environments -> Test Cases -> operational modules.
  */
 export function ProjectDetailPage({ projectId }: { projectId: number }) {
   const router = useRouter();
@@ -81,6 +336,10 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
 
   const project = projectQuery.data;
   const projectStats = projectStatsQuery.data;
+  const nextAction = getProjectNextAction(projectId, projectStats);
+  const workflowSteps = getProjectWorkflowSteps(projectId, projectStats);
+  const PrimaryIcon = nextAction.primaryIcon;
+  const SecondaryIcon = nextAction.secondaryIcon;
   const cliPlatformUrl = (apiExternalBaseUrl || buildApiPath('/')).replace(/\/$/, '');
   const cliConfigCommand =
     generatedCliToken && project
@@ -91,8 +350,8 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
           `  --project-id '${project.id}'`,
         ].join('\n')
       : '';
+  const isProjectLoading = projectQuery.isLoading || projectStatsQuery.isLoading;
 
-  // 项目详情页只支持编辑已有记录，因此固定进入 edit 模式。
   const openEditDialog = () => {
     if (!project) {
       return;
@@ -102,7 +361,6 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
     setIsFormOpen(true);
   };
 
-  // 详情页的表单只承担 PATCH 更新，不复用创建逻辑。
   const handleProjectSubmit = async (payload: UpdateProjectRequest) => {
     if (!project) {
       return;
@@ -119,7 +377,6 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
     }
   };
 
-  // 删除成功后直接返回项目列表，避免停留在已经失效的详情地址。
   const handleDeleteProject = async () => {
     if (!deleteTarget) {
       return;
@@ -162,146 +419,189 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
     }
   };
 
+  const pageActionItems: ActionMenuItem[] = [
+    {
+      key: 'refresh',
+      label: projectQuery.isFetching || projectStatsQuery.isFetching ? 'Refreshing...' : 'Refresh',
+      icon: RefreshCw,
+      disabled: projectQuery.isFetching || projectStatsQuery.isFetching,
+      onSelect: () => {
+        void projectQuery.refetch();
+        void projectStatsQuery.refetch();
+      },
+    },
+    {
+      key: 'edit',
+      label: 'Edit Project',
+      icon: Pencil,
+      disabled: !project,
+      onSelect: openEditDialog,
+    },
+    {
+      key: 'members',
+      label: 'Members',
+      icon: Users,
+      href: buildProjectMembersRoute(projectId),
+    },
+    {
+      key: 'delete',
+      label: 'Delete Project',
+      icon: Trash2,
+      destructive: true,
+      separatorBefore: true,
+      disabled: !project,
+      onSelect: () => setDeleteTarget(project || null),
+    },
+  ];
+
   return (
     <>
       <main className="h-full min-h-0 overflow-y-auto">
-        <div className="space-y-8 p-6 pt-6">
-          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xOCAxOGgyNHYyNEgxOHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-50" />
-            <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-3">
+        <div className="space-y-6 p-4 md:p-6">
+          <section className="rounded-xl border border-border/60 bg-bg-surface p-5 md:p-6">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 space-y-4">
                 <Button
                   asChild
                   variant="link"
-                  className="h-auto px-0 text-sm text-muted-foreground"
+                  className="h-auto px-0 text-sm text-text-muted"
                 >
                   <Link href={ROUTES.CONSOLE.PROJECTS}>
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Projects
+                    Projects
                   </Link>
                 </Button>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
                       {project?.name || `Project #${projectId}`}
                     </h1>
                     <FolderKanban className="h-6 w-6 text-primary" />
                   </div>
-                  <p className="max-w-3xl text-sm text-text-muted">
-                    Use this overview to understand the project scope, decide the next module to
-                    enter, and keep sync and validation tasks tied to the same workspace.
-                  </p>
-                </div>
 
-                {project ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ProjectStatusBadge status={project.status} />
-                    <Badge variant="outline">{resolvePlatformLabel(project.platform)}</Badge>
-                    <Badge variant="outline" className="font-mono">
-                      {project.slug}
-                    </Badge>
-                  </div>
-                ) : null}
+                  {project ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ProjectStatusBadge status={project.status} />
+                      <Badge variant="outline">{resolvePlatformLabel(project.platform)}</Badge>
+                      <Badge variant="outline" className="font-mono">
+                        {project.slug}
+                      </Badge>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="button" variant="outline" onClick={() => void projectQuery.refetch()}>
-                  Refresh Detail
-                </Button>
+              <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" asChild>
-                  <Link href={`${buildProjectApiSpecsRoute(projectId)}?ai=create`}>
-                    <Sparkles className="h-4 w-4" />
-                    AI Draft API
+                  <Link href={nextAction.primaryHref}>
+                    <PrimaryIcon className="h-4 w-4" />
+                    {nextAction.primaryLabel}
                   </Link>
                 </Button>
                 <Button type="button" variant="outline" asChild>
-                  <Link href={buildProjectCollectionsRoute(projectId)}>
-                    <FolderOpen className="h-4 w-4" />
-                    Collections
+                  <Link href={nextAction.secondaryHref}>
+                    <SecondaryIcon className="h-4 w-4" />
+                    {nextAction.secondaryLabel}
                   </Link>
                 </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href={buildProjectEnvironmentsRoute(projectId)}>
-                    <Globe className="h-4 w-4" />
-                    Environments
-                  </Link>
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href={buildProjectCategoriesRoute(projectId)}>
-                    <Tags className="h-4 w-4" />
-                    Categories
-                  </Link>
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href={buildProjectMembersRoute(projectId)}>
-                    <Users className="h-4 w-4" />
-                    Members
-                  </Link>
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href={buildProjectTestCasesRoute(projectId)}>
-                    <FlaskConical className="h-4 w-4" />
-                    Test Cases
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={openEditDialog}
-                  disabled={!project}
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit Project
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setDeleteTarget(project || null)}
-                  disabled={!project}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Project
-                </Button>
+                <ActionMenu
+                  items={pageActionItems}
+                  ariaLabel="Open project actions"
+                  triggerVariant="outline"
+                />
               </div>
             </div>
+          </section>
+
+          {!project && !projectQuery.isLoading ? (
+            <Alert>
+              <AlertTitle>Project not found</AlertTitle>
+              <AlertDescription>
+                The selected project could not be loaded. Check the project ID or your access.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+            <section className="rounded-xl border border-border/60 bg-background p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-3">
+                  <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                    Next step
+                  </Badge>
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight">{nextAction.title}</h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-text-muted">
+                      {nextAction.description}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button asChild>
+                    <Link href={nextAction.primaryHref}>
+                      <PrimaryIcon className="h-4 w-4" />
+                      {nextAction.primaryLabel}
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-sm font-medium text-text-main">Why this action</p>
+                <p className="mt-2 text-sm leading-6 text-text-muted">{nextAction.reason}</p>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-border/60 bg-background p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight">Project flow</h2>
+                  <p className="mt-1 text-sm text-text-muted">
+                    Follow the sequence, or jump directly from any row.
+                  </p>
+                </div>
+                {isProjectLoading ? <Badge variant="outline">Loading</Badge> : null}
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {workflowSteps.map((step) => (
+                  <WorkflowStepRow key={step.key} step={step} />
+                ))}
+              </div>
+            </section>
           </div>
 
-          {projectQuery.isLoading ? (
+          {projectStatsQuery.isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-32 animate-pulse rounded-xl border bg-muted/30" />
+              ))}
             </div>
           ) : projectStats ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <StatCard
+              <MetricTile
                 title="API Specs"
                 value={projectStats.api_spec_count}
-                description="Specifications connected to this project"
+                description="Structured source of truth"
                 icon={FileJson2}
-                variant="primary"
               />
-              <StatCard
-                title="Categories"
-                value={projectStats.category_count}
-                description="Grouping structure available in this project"
-                icon={Tags}
-                variant="success"
-              />
-              <StatCard
+              <MetricTile
                 title="Environments"
                 value={projectStats.environment_count}
-                description="Configured runtime environments"
-                icon={Layers3}
-                variant="warning"
+                description="Runnable targets and variables"
+                icon={Globe}
               />
-              <StatCard
+              <MetricTile
+                title="Categories"
+                value={projectStats.category_count}
+                description="Resource organization"
+                icon={Tags}
+              />
+              <MetricTile
                 title="Members"
                 value={projectStats.member_count}
-                description="Team members with project access"
+                description="People with project access"
                 icon={Users}
               />
             </div>
@@ -309,356 +609,195 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
             <Alert>
               <AlertTitle>Stats unavailable</AlertTitle>
               <AlertDescription>
-                Project stats could not be loaded from GET /v1/projects/:id/stats.
+                Project stats could not be loaded. The workspace actions are still available.
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-            <Card className="border-border/50 shadow-premium">
-              <CardHeader className="border-b bg-muted/20">
-                <CardTitle>Project Overview</CardTitle>
-                <CardDescription>
-                  Keep the project anchored around a simple operating sequence instead of exposing
-                  internal wiring.
-                </CardDescription>
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Workspace modules</h2>
+              <p className="mt-1 text-sm text-text-muted">
+                Primary modules stay close to the workflow. Supporting modules are still one click away.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <ModuleShortcut
+                title="API Specs"
+                description="Design endpoints, review AI drafts, and keep docs tied to the source of truth."
+                href={buildProjectApiSpecsRoute(projectId)}
+                icon={FileJson2}
+                actionLabel="Open specs"
+              />
+              <ModuleShortcut
+                title="Environments"
+                description="Set base URLs, headers, and variables before running requests or tests."
+                href={buildProjectEnvironmentsRoute(projectId)}
+                icon={Globe}
+                actionLabel="Configure"
+              />
+              <ModuleShortcut
+                title="Test Cases"
+                description="Generate and run validation coverage from the API specs already in this project."
+                href={buildProjectTestCasesRoute(projectId)}
+                icon={FlaskConical}
+                actionLabel="Open tests"
+              />
+              <ModuleShortcut
+                title="Collections"
+                description="Send quick requests and keep reusable request groups for manual debugging."
+                href={buildProjectCollectionsRoute(projectId)}
+                icon={FolderOpen}
+                actionLabel="Debug"
+              />
+            </div>
+          </section>
+
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <Card className="border-border/60 shadow-none">
+              <CardHeader>
+                <CardTitle>Project details</CardTitle>
+                <CardDescription>Identity and lifecycle metadata.</CardDescription>
               </CardHeader>
-
-              <CardContent className="space-y-5 pt-6">
-                {!project ? (
-                  <Alert>
-                    <AlertTitle>Project not found</AlertTitle>
-                    <AlertDescription>
-                      The selected project could not be loaded. Check the project ID or your access.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <>
-                    <div className="rounded-2xl border border-primary/10 bg-linear-to-br from-primary/10 via-transparent to-white p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold">{project.name}</h2>
-                            <ProjectStatusBadge status={project.status} />
-                            <Badge variant="outline">
-                              {resolvePlatformLabel(project.platform)}
-                            </Badge>
-                          </div>
-                          <p className="font-mono text-xs text-muted-foreground">{project.slug}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button type="button" size="sm" variant="outline" asChild>
-                            <Link href={buildProjectCollectionsRoute(project.id)}>
-                              <FolderOpen className="h-3.5 w-3.5" />
-                              Open Collections
-                            </Link>
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" asChild>
-                            <Link href={buildProjectEnvironmentsRoute(project.id)}>
-                              <Globe className="h-3.5 w-3.5" />
-                              Open Environments
-                            </Link>
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" asChild>
-                            <Link href={buildProjectCategoriesRoute(project.id)}>
-                              <Tags className="h-3.5 w-3.5" />
-                              Open Categories
-                            </Link>
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" asChild>
-                            <Link href={buildProjectMembersRoute(project.id)}>
-                              <Users className="h-3.5 w-3.5" />
-                              Open Members
-                            </Link>
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" asChild>
-                            <Link href={`${buildProjectApiSpecsRoute(project.id)}?ai=create`}>
-                              <Sparkles className="h-3.5 w-3.5" />
-                              AI Draft API
-                            </Link>
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" asChild>
-                            <Link href={buildProjectTestCasesRoute(project.id)}>
-                              <FlaskConical className="h-3.5 w-3.5" />
-                              Open Test Cases
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl border p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          Project ID
-                        </div>
-                        <div className="mt-2 font-mono text-sm">{project.id}</div>
-                      </div>
-                      <div className="rounded-xl border p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          Platform
-                        </div>
-                        <div className="mt-2 text-sm">{resolvePlatformLabel(project.platform)}</div>
-                      </div>
-                      <div className="rounded-xl border p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          Created At
-                        </div>
-                        <div className="mt-2 text-sm">
-                          {formatDate(project.created_at, 'YYYY-MM-DD HH:mm')}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 xl:grid-cols-3">
-                      <div className="rounded-xl border bg-muted/20 p-4">
-                        <div className="mb-2 text-sm font-medium text-text-main">
-                          1. Define the surface
-                        </div>
-                        <p className="text-sm leading-6 text-text-muted">
-                          Start in API Specs with AI draft so the interface inventory becomes
-                          structured quickly.
-                        </p>
-                      </div>
-                      <div className="rounded-xl border bg-muted/20 p-4">
-                        <div className="mb-2 text-sm font-medium text-text-main">
-                          2. Prepare runtime context
-                        </div>
-                        <p className="text-sm leading-6 text-text-muted">
-                          Use Collections for request drafts and Environments for base URLs,
-                          headers, and variables.
-                        </p>
-                      </div>
-                      <div className="rounded-xl border bg-muted/20 p-4">
-                        <div className="mb-2 text-sm font-medium text-text-main">
-                          3. Move into validation
-                        </div>
-                        <p className="text-sm leading-6 text-text-muted">
-                          Generate or maintain Test Cases after the spec and runtime baseline are
-                          reliable.
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <CardContent className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-border/60 bg-background p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                    Project ID
+                  </p>
+                  <p className="mt-2 font-mono text-sm text-text-main">{project?.id ?? projectId}</p>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-background p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                    Platform
+                  </p>
+                  <p className="mt-2 text-sm text-text-main">
+                    {project ? resolvePlatformLabel(project.platform) : 'Loading'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-background p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                    Created
+                  </p>
+                  <p className="mt-2 text-sm text-text-main">
+                    {project ? formatDate(project.created_at, 'YYYY-MM-DD HH:mm') : 'Loading'}
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
-            <div className="space-y-6">
-              <Card className="border-border/50 shadow-premium">
-                <CardHeader className="border-b bg-muted/20">
-                  <CardTitle>Project Stats</CardTitle>
-                  <CardDescription>
-                    A compact health snapshot for the project surface and team footprint.
-                  </CardDescription>
-                </CardHeader>
+            <Card id="cli-sync" className="border-border/60 shadow-none">
+              <CardHeader>
+                <CardTitle>CLI Sync</CardTitle>
+                <CardDescription>Project-scoped token setup for `kest sync`.</CardDescription>
+              </CardHeader>
 
-                <CardContent className="space-y-4 pt-6">
-                  {projectStatsQuery.isLoading ? (
-                    <div className="space-y-3">
-                      <div className="h-20 animate-pulse rounded-xl bg-muted" />
-                      <div className="h-20 animate-pulse rounded-xl bg-muted" />
-                      <div className="h-20 animate-pulse rounded-xl bg-muted" />
-                    </div>
-                  ) : projectStats ? (
-                    <>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-xl border p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                            API Specs
-                          </div>
-                          <div className="mt-2 text-2xl font-semibold">
-                            {projectStats.api_spec_count}
-                          </div>
-                        </div>
-                        <div className="rounded-xl border p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                            Categories
-                          </div>
-                          <div className="mt-2 text-2xl font-semibold">
-                            {projectStats.category_count}
-                          </div>
-                        </div>
-                        <div className="rounded-xl border p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                            Environments
-                          </div>
-                          <div className="mt-2 text-2xl font-semibold">
-                            {projectStats.environment_count}
-                          </div>
-                        </div>
-                        <div className="rounded-xl border p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                            Members
-                          </div>
-                          <div className="mt-2 text-2xl font-semibold">
-                            {projectStats.member_count}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border p-4">
-                        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                          <ShieldCheck className="h-4 w-4" />
-                          Usage Snapshot
-                        </div>
-                        <div className="space-y-2 text-sm text-muted-foreground">
-                          <div>
-                            Categories:{' '}
-                            <span className="font-medium text-foreground">
-                              {projectStats.category_count}
-                            </span>
-                          </div>
-                          <div>
-                            API specs per member:{' '}
-                            <span className="font-medium text-foreground">
-                              {projectStats.member_count > 0
-                                ? (projectStats.api_spec_count / projectStats.member_count).toFixed(
-                                    1
-                                  )
-                                : '0.0'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <Alert>
-                      <AlertTitle>Stats unavailable</AlertTitle>
-                      <AlertDescription>
-                        The backend did not return project stats for this record.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/50 shadow-premium">
-                <CardHeader className="border-b bg-muted/20">
-                  <CardTitle>CLI Sync</CardTitle>
-                  <CardDescription>
-                    Generate a project-scoped CLI token and wire `kest sync` to this workspace.
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4 pt-6">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                        Platform URL
-                      </div>
-                      <div className="mt-2 break-all font-mono text-xs">{cliPlatformUrl}</div>
-                    </div>
-                    <div className="rounded-xl border p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                        Project Scope
-                      </div>
-                      <div className="mt-2 font-mono text-sm">{project?.id ?? projectId}</div>
-                    </div>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border/60 bg-background p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                      Platform URL
+                    </p>
+                    <p className="mt-2 break-all font-mono text-xs text-text-main">
+                      {cliPlatformUrl}
+                    </p>
                   </div>
+                  <div className="rounded-xl border border-border/60 bg-background p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                      Project Scope
+                    </p>
+                    <p className="mt-2 font-mono text-sm text-text-main">
+                      {project?.id ?? projectId}
+                    </p>
+                  </div>
+                </div>
 
-                  <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void handleGenerateCliToken()}
+                    disabled={!project || generateCliTokenMutation.isPending}
+                  >
+                    <Key className="h-4 w-4" />
+                    {generateCliTokenMutation.isPending ? 'Generating...' : 'Generate Token'}
+                  </Button>
+                  {generatedCliToken ? (
                     <Button
                       type="button"
-                      onClick={() => void handleGenerateCliToken()}
-                      disabled={!project || generateCliTokenMutation.isPending}
+                      variant="outline"
+                      onClick={() => void handleCopyText(cliConfigCommand, 'Copied sync command')}
                     >
-                      <Key className="h-4 w-4" />
-                      {generateCliTokenMutation.isPending ? 'Generating...' : 'Generate CLI Token'}
+                      <Terminal className="h-4 w-4" />
+                      Copy Command
                     </Button>
-                    {generatedCliToken ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void handleCopyText(cliConfigCommand, 'Copied sync command')}
-                      >
-                        <Terminal className="h-4 w-4" />
-                        Copy Sync Command
-                      </Button>
-                    ) : null}
-                  </div>
+                  ) : null}
+                </div>
 
-                  {generatedCliToken ? (
-                    <Alert>
-                      <AlertTitle>Copy this token now</AlertTitle>
-                      <AlertDescription className="space-y-4">
-                        <p>
-                          This is the only time the full CLI token will be shown. It is scoped to
-                          this project.
-                        </p>
-
-                        <div className="rounded-xl border bg-background p-4">
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                              CLI Token
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                void handleCopyText(generatedCliToken.token, 'Copied CLI token')
-                              }
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                              Copy
-                            </Button>
-                          </div>
-                          <code className="block break-all text-xs">{generatedCliToken.token}</code>
+                {generatedCliToken ? (
+                  <Alert>
+                    <ShieldCheck className="h-4 w-4" />
+                    <AlertTitle>Copy this token now</AlertTitle>
+                    <AlertDescription className="space-y-4">
+                      <div className="rounded-xl border bg-background p-4">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                            CLI Token
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              void handleCopyText(generatedCliToken.token, 'Copied CLI token')
+                            }
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
+                          </Button>
                         </div>
+                        <code className="block break-all text-xs">{generatedCliToken.token}</code>
+                      </div>
 
-                        <div className="rounded-xl border bg-background p-4">
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                              Setup Command
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                void handleCopyText(cliConfigCommand, 'Copied sync command')
-                              }
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                              Copy
-                            </Button>
-                          </div>
-                          <pre className="overflow-x-auto whitespace-pre-wrap text-xs">
-                            {cliConfigCommand}
-                          </pre>
-                        </div>
-
-                        <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-                          <div>
-                            Token prefix:{' '}
-                            <span className="font-mono text-foreground">
-                              {generatedCliToken.token_info.token_prefix}
-                            </span>
-                          </div>
-                          <div>
-                            Scopes:{' '}
-                            <span className="font-mono text-foreground">
-                              {generatedCliToken.token_info.scopes.join(', ')}
-                            </span>
-                          </div>
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <Alert>
-                      <AlertTitle>Recommended CLI flow</AlertTitle>
-                      <AlertDescription>
-                        Generate a token here, then run `kest sync config` once in your project. The
-                        CLI writes `platform_url`, `platform_token`, and `platform_project_id` into
-                        `.kest/config.yaml`.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                      <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl border bg-background p-4 text-xs">
+                        {cliConfigCommand}
+                      </pre>
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+              </CardContent>
+            </Card>
           </div>
+
+          <section className="rounded-xl border border-border/60 bg-background p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">Supporting areas</h2>
+                <p className="mt-1 text-sm text-text-muted">
+                  Use these after the core workflow needs team access, taxonomy, or orchestration.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline">
+                  <Link href={buildProjectMembersRoute(projectId)}>
+                    <Users className="h-4 w-4" />
+                    Members
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={buildProjectCategoriesRoute(projectId)}>
+                    <Tags className="h-4 w-4" />
+                    Categories
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={buildProjectFlowsRoute(projectId)}>
+                    <Layers3 className="h-4 w-4" />
+                    Flows
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
 
@@ -669,14 +808,14 @@ export function ProjectDetailPage({ projectId }: { projectId: number }) {
         project={project}
         isSubmitting={updateProjectMutation.isPending}
         onOpenChange={setIsFormOpen}
-        onSubmit={payload => handleProjectSubmit(payload as UpdateProjectRequest)}
+        onSubmit={(payload) => handleProjectSubmit(payload as UpdateProjectRequest)}
       />
 
       <DeleteProjectDialog
         open={Boolean(deleteTarget)}
         project={deleteTarget}
         isDeleting={deleteProjectMutation.isPending}
-        onOpenChange={open => {
+        onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null);
           }
