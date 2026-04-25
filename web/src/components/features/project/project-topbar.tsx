@@ -2,14 +2,11 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Bell,
-  FolderKanban,
   LayoutPanelTop,
   LogOut,
-  Settings,
-  Users,
 } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/common';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,31 +20,6 @@ import {
 import { ROUTES } from '@/constants/routes';
 import { useLogout } from '@/hooks/use-auth';
 import { useAuthStore } from '@/store/auth-store';
-import { cn } from '@/utils';
-
-interface NavItem {
-  href: string;
-  label: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    href: ROUTES.CONSOLE.PROJECTS,
-    label: 'Projects',
-  },
-  {
-    href: ROUTES.CONSOLE.HOME,
-    label: 'Console',
-  },
-  {
-    href: ROUTES.CONSOLE.USERS,
-    label: 'Users',
-  },
-  {
-    href: ROUTES.CONSOLE.SETTINGS,
-    label: 'Settings',
-  },
-];
 
 const buildInitials = (name: string) =>
   name
@@ -58,21 +30,12 @@ const buildInitials = (name: string) =>
     .join('') || 'U';
 
 export function ProjectTopbar() {
-  const pathname = usePathname();
   const router = useRouter();
   const logout = useLogout();
   const user = useAuthStore.use.user();
 
   const displayName = user?.nickname || user?.username || user?.email || 'User';
   const initials = useMemo(() => buildInitials(displayName), [displayName]);
-
-  const isRouteActive = (href: string) => {
-    if (href === ROUTES.CONSOLE.HOME) {
-      return pathname === href;
-    }
-
-    return pathname === href || pathname.startsWith(`${href}/`);
-  };
 
   const handleLogout = () => {
     logout();
@@ -91,23 +54,6 @@ export function ProjectTopbar() {
             <p className="truncate text-xs text-text-muted">Project workspace</p>
           </div>
         </Link>
-
-        <nav className="hidden items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1 lg:flex">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-sm transition-colors',
-                isRouteActive(item.href)
-                  ? 'bg-background text-text-main shadow-sm'
-                  : 'text-text-muted hover:text-text-main'
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
       </div>
 
       <div className="flex items-center gap-2">
@@ -140,24 +86,6 @@ export function ProjectTopbar() {
             <div className="px-2 py-1.5 text-xs font-medium uppercase tracking-wider text-text-muted">
               {displayName}
             </div>
-            <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
-              <Link href={ROUTES.CONSOLE.PROJECTS}>
-                <FolderKanban className="mr-2 h-4 w-4" />
-                Projects
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
-              <Link href={ROUTES.CONSOLE.USERS}>
-                <Users className="mr-2 h-4 w-4" />
-                Users
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
-              <Link href={ROUTES.CONSOLE.SETTINGS}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
             <div className="my-1 h-px bg-border/60" />
             <DropdownMenuItem
               className="cursor-pointer rounded-lg text-destructive focus:bg-destructive/10"

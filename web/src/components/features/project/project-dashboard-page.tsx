@@ -14,7 +14,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
-  FolderKanban,
   Plus,
   Search,
 } from 'lucide-react';
@@ -224,23 +223,6 @@ export function ProjectDashboardPage() {
       <aside className="w-full shrink-0 border-b border-border/60 bg-bg-surface/70 lg:w-[296px] lg:border-b-0 lg:border-r">
         <div className="flex h-full max-h-[42vh] flex-col overflow-hidden lg:max-h-none">
           <div className="space-y-4 p-4">
-            <div className="rounded-2xl border border-primary/10 bg-linear-to-br from-primary/10 via-primary/5 to-transparent p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-                    Project Dashboard
-                  </p>
-                  <h1 className="mt-2 text-xl font-semibold tracking-tight">All projects</h1>
-                  <p className="mt-1 text-sm text-text-muted">
-                    Preview projects here, then enter the scoped workspace when you are ready to work.
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/70 p-3 text-primary shadow-sm">
-                  <FolderKanban className="h-5 w-5" />
-                </div>
-              </div>
-            </div>
-
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
               <Input
