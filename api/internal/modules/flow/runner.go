@@ -393,13 +393,19 @@ func (r *Runner) processCaptures(capturesStr string, statusCode int, respData ma
 			continue
 		}
 
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) != 2 {
+		separatorIndex := strings.Index(line, ":")
+		if equalsIndex := strings.Index(line, "="); equalsIndex != -1 && (separatorIndex == -1 || equalsIndex < separatorIndex) {
+			separatorIndex = equalsIndex
+		}
+		if separatorIndex == -1 {
 			continue
 		}
 
-		varName := strings.TrimSpace(parts[0])
-		jsonPath := strings.TrimSpace(parts[1])
+		varName := strings.TrimSpace(line[:separatorIndex])
+		jsonPath := strings.TrimSpace(line[separatorIndex+1:])
+		if varName == "" || jsonPath == "" {
+			continue
+		}
 
 		// Extract value from response
 		val := r.extractJSONPath(respData, jsonPath)
@@ -419,13 +425,30 @@ func (r *Runner) extractJSONPath(data map[string]any, path string) any {
 		return nil
 	}
 
-	parts := strings.Split(path, ".")
+	normalizedPath := strings.TrimSpace(path)
+	normalizedPath = strings.TrimPrefix(normalizedPath, "body.")
+	normalizedPath = regexp.MustCompile(`\[(\d+)\]`).ReplaceAllString(normalizedPath, ".$1")
+	normalizedPath = strings.TrimPrefix(normalizedPath, ".")
+	if normalizedPath == "" {
+		return data
+	}
+
+	parts := strings.Split(normalizedPath, ".")
 	var current any = data
 
 	for _, part := range parts {
+		if part == "" {
+			continue
+		}
 		switch v := current.(type) {
 		case map[string]any:
 			current = v[part]
+		case []any:
+			index, err := strconv.Atoi(part)
+			if err != nil || index < 0 || index >= len(v) {
+				return nil
+			}
+			current = v[index]
 		default:
 			return nil
 		}

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   ArrowLeft,
-  ArrowRight,
   CheckCircle2,
   Clock3,
   Copy,
@@ -309,7 +308,6 @@ function ModuleShortcut({
       </div>
       <div className="mt-4 flex items-center gap-2 text-sm font-medium text-primary">
         {actionLabel}
-        <ArrowRight className="h-4 w-4" />
       </div>
     </Link>
   );

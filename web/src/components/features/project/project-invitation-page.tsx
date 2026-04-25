@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowRight,
   CheckCircle2,
   Clock3,
   LogIn,
@@ -218,7 +217,6 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                         }}
                         disabled={!canRespond || acceptInvitationMutation.isPending}
                       >
-                        <ArrowRight className="h-4 w-4" />
                         Accept Invitation
                       </Button>
                       <Button

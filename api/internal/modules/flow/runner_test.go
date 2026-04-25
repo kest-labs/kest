@@ -259,3 +259,28 @@ func TestRunnerExecute_KeepsLegacyGlobalVariablesWorking(t *testing.T) {
 	require.NotNil(t, profileResult)
 	assert.Equal(t, RunStatusPassed, profileResult.Status)
 }
+
+func TestRunnerProcessCaptures_SupportsBodyPrefixAndArrayIndexes(t *testing.T) {
+	runner := NewRunner(newRunnerRepoStub(1), "mock://flow")
+	variables := map[string]any{}
+	responseData := map[string]any{
+		"data": map[string]any{
+			"token": "token-123",
+			"items": []any{
+				map[string]any{"id": "item-1"},
+			},
+		},
+	}
+
+	captured := runner.processCaptures(
+		"authToken: body.data.token\nitemId = data.items[0].id",
+		http.StatusOK,
+		responseData,
+		variables,
+	)
+
+	assert.Equal(t, "token-123", captured["authToken"])
+	assert.Equal(t, "item-1", captured["itemId"])
+	assert.Equal(t, "token-123", variables["authToken"])
+	assert.Equal(t, "item-1", variables["itemId"])
+}

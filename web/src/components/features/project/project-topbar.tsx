@@ -51,7 +51,6 @@ export function ProjectTopbar() {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold tracking-tight text-text-main">KEST</p>
-            <p className="truncate text-xs text-text-muted">Project workspace</p>
           </div>
         </Link>
       </div>

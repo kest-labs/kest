@@ -13,7 +13,6 @@ import {
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowRight,
   Plus,
   Search,
 } from 'lucide-react';
@@ -425,7 +424,6 @@ function ProjectDashboardWelcome({
                       {project.slug}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-text-muted" />
                 </button>
               ))
             )}
@@ -558,9 +556,6 @@ function ProjectPreviewPanel({
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                  Selected project
-                </Badge>
                 <ProjectStatusBadge status={projectDetail.status} />
               </div>
               <div>
@@ -599,14 +594,12 @@ function ProjectPreviewPanel({
                 <Button asChild>
                   <Link href={buildProjectCollectionsRoute(project.id)}>
                     Quick Request
-                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
               ) : null}
               <Button asChild variant="outline">
                 <Link href={buildProjectDetailRoute(project.id)}>
                   Open workspace
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -694,7 +687,6 @@ function ProjectPreviewPanel({
                   <Button asChild variant="ghost" className="px-0">
                     <Link href={buildProjectApiSpecsRoute(project.id)}>
                       Open API Specs
-                      <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
@@ -754,7 +746,6 @@ function ProjectPreviewPanel({
                   <Button asChild size="sm">
                     <Link href={buildProjectDetailRoute(project.id)}>
                       Open workspace
-                      <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
@@ -774,13 +765,11 @@ function ProjectPreviewPanel({
                       <Button asChild size="sm">
                         <Link href={buildProjectCollectionsRoute(project.id)}>
                           Quick Request
-                          <ArrowRight className="h-4 w-4" />
                         </Link>
                       </Button>
                       <Button asChild size="sm" variant="outline">
                         <Link href={buildProjectDetailRoute(project.id)}>
                           Open workspace
-                          <ArrowRight className="h-4 w-4" />
                         </Link>
                       </Button>
                       <Button type="button" variant="outline" size="sm" onClick={handleRetryPreview}>
@@ -829,14 +818,12 @@ function ProjectPreviewPanel({
                   <Button asChild>
                     <Link href={nextStep.primaryHref}>
                       {nextStep.primaryLabel}
-                      <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                   {nextStep.secondaryHref && nextStep.secondaryLabel ? (
                     <Button asChild variant="outline">
                       <Link href={nextStep.secondaryHref}>
                         {nextStep.secondaryLabel}
-                        <ArrowRight className="h-4 w-4" />
                       </Link>
                     </Button>
                   ) : null}

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import {
-  ArrowRight,
   Bot,
   Boxes,
   Clock3,
@@ -759,7 +758,6 @@ function ApiSpecsWorkspaceSection({
                       {
                         key: `spec-open-${spec.id}`,
                         label: 'Open',
-                        icon: ArrowRight,
                         href: buildModuleHref(projectId, 'api-specs', spec.id),
                       },
                       {
@@ -1214,7 +1212,6 @@ function EnvironmentsWorkspaceSection({
                       {
                         key: `environment-open-${environment.id}`,
                         label: 'Open',
-                        icon: ArrowRight,
                         href: buildModuleHref(projectId, 'environments', environment.id),
                       },
                       {
@@ -1375,7 +1372,6 @@ function EnvironmentsWorkspaceSection({
                         <Button asChild variant="outline">
                           <Link href={buildProjectApiSpecsRoute(projectId)}>
                             Open API Specs
-                            <ArrowRight className="h-4 w-4" />
                           </Link>
                         </Button>
                       </div>
@@ -1399,7 +1395,6 @@ function EnvironmentsWorkspaceSection({
                         <Button asChild variant="outline">
                           <Link href={buildProjectTestCasesRoute(projectId)}>
                             Open Test Cases
-                            <ArrowRight className="h-4 w-4" />
                           </Link>
                         </Button>
                       </CardContent>
@@ -2373,7 +2368,6 @@ function GuideState({
           <Button asChild variant="outline">
             <Link href={actionHref}>
               {actionLabel}
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         ) : null}
@@ -2421,7 +2415,6 @@ function ApiSpecsGuideState({
             <Button asChild variant="ghost">
               <Link href={managerHref}>
                 Full manager
-                <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>

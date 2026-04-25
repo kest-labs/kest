@@ -10,14 +10,14 @@
  * </Button>
  */
 import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
+import { Slot, Slottable } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2 } from "lucide-react"
 
 import { cn } from "@/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-ring shrink-0 disabled:cursor-not-allowed disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-ring shrink-0 disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -117,23 +117,14 @@ function Button({
       )}
       {...props}
     >
-      <span className={cn(
-        "inline-flex items-center gap-2",
-        isIcon ? "justify-center" : "justify-inherit"
-      )}>
-        {/* Left Slot: Show spinner if loading and position is left */}
-        {iconPosition === "left" && (
-          loading ? spinner : icon
-        )}
+      {/* Left Slot: Show spinner if loading and position is left */}
+      {iconPosition === "left" && (loading ? spinner : icon)}
 
-        {/* Children Slot: Hidden only for isIcon buttons while loading */}
-        {!(isIcon && loading) && children}
+      {/* Children Slot: Hidden only for isIcon buttons while loading */}
+      {!(isIcon && loading) && <Slottable>{children}</Slottable>}
 
-        {/* Right Slot: Show spinner if loading and position is right */}
-        {iconPosition === "right" && (
-          loading ? spinner : icon
-        )}
-      </span>
+      {/* Right Slot: Show spinner if loading and position is right */}
+      {iconPosition === "right" && (loading ? spinner : icon)}
     </Comp>
   )
 }

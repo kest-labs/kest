@@ -9,7 +9,6 @@ import {
   Plus,
   Users,
   Settings,
-  ArrowRight,
   Sparkles
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -213,7 +212,6 @@ export default function ConsolePage() {
           <CardTitle className="text-lg font-semibold">{t('dashboard.workflows.title')}</CardTitle>
           <Button variant="ghost" size="sm" className="gap-2 text-primary hover:bg-primary/10">
             {t('dashboard.activity.viewAll')}
-            <ArrowRight className="h-3 w-3" />
           </Button>
         </CardHeader>
         <CardContent className="p-0">

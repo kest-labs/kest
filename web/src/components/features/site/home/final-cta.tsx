@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { MarketingFinalCtaContent } from './types';
 
@@ -36,7 +35,6 @@ export function FinalCta({ content }: FinalCtaProps) {
               <Button asChild size="2xl" className="rounded-2xl border border-[color:var(--marketing-accent-strong)] bg-[color:var(--marketing-accent)] text-slate-950 hover:bg-[color:var(--marketing-accent-strong)]">
                 <Link href="/register" className="inline-flex items-center gap-2 whitespace-nowrap">
                   <span>{content.primaryCta}</span>
-                  <ArrowRight className="size-4 shrink-0" />
                 </Link>
               </Button>
               <Button

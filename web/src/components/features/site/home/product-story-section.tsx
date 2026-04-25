@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils';
 import { ProductPreviewMockup } from './product-preview-mockup';
@@ -50,7 +50,6 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
             <Button asChild size="xl" className="rounded-2xl bg-slate-950 text-white hover:bg-slate-900">
               <Link href={content.ctaHref} className="inline-flex items-center gap-2 whitespace-nowrap">
                 <span>{content.cta}</span>
-                <ArrowRight className="size-4 shrink-0" />
               </Link>
             </Button>
           </div>

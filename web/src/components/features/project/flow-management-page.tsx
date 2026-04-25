@@ -23,7 +23,6 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import {
-  ArrowRight,
   FileClock,
   FolderGit2,
   PanelLeft,
@@ -32,6 +31,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Share2,
   Trash2,
   Workflow,
 } from 'lucide-react';
@@ -47,6 +47,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogBody,
@@ -73,6 +74,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { buildProjectFlowsRoute, buildProjectDetailRoute } from '@/constants/routes';
@@ -90,6 +99,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject } from '@/hooks/use-projects';
 import { flowService } from '@/services/flow';
+import {
+  extractFlowParameterCandidates,
+  isValidFlowVariableName,
+  mergeCaptureDefinitions,
+  mergeVariableMappings,
+  parseCaptureDefinitions,
+  type FlowParameterSelection,
+} from '@/utils/flow-parameter-handoff';
 import {
   runLocalFlow,
   type LocalFlowEdgeDefinition,
@@ -152,6 +169,15 @@ type FlowValidationTarget =
 type FlowValidationResult = FlowValidationState & {
   isValid: boolean;
   focusTarget?: FlowValidationTarget;
+};
+type FlowParameterTargetOption = {
+  stepId: number;
+  name: string;
+};
+type FlowParameterHandoffPayload = {
+  sourceStepId: number;
+  targetStepId: number;
+  selections: FlowParameterSelection[];
 };
 
 const getStatusBadgeClassName = (status: FlowRunStatus | 'idle') => {
@@ -843,14 +869,6 @@ function CreateFlowDialog({
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!open) {
-      setName('');
-      setDescription('');
-      setError('');
-    }
-  }, [open]);
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedName = name.trim();
@@ -865,8 +883,17 @@ function CreateFlowDialog({
     });
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setName('');
+      setDescription('');
+      setError('');
+    }
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>Create Flow</DialogTitle>
@@ -933,6 +960,8 @@ function FlowInspector({
   onSelectRun,
   onSelectRunStep,
   selectedStepResult,
+  getParameterTargetOptions,
+  onPassParameters,
 }: {
   flowName: string;
   flowDescription: string;
@@ -953,9 +982,12 @@ function FlowInspector({
   onSelectRun: (runId: number) => void;
   onSelectRunStep: (stepId: number) => void;
   selectedStepResult: FlowStepResult | null;
+  getParameterTargetOptions: (sourceStepId: number) => FlowParameterTargetOption[];
+  onPassParameters: (payload: FlowParameterHandoffPayload) => void;
 }) {
   if (selectedNode) {
     const selectedNodeErrors = nodeErrors[selectedNode.id] ?? {};
+    const captureDefinitions = parseCaptureDefinitions(selectedNode.data.captures);
     return (
       <div className="space-y-6">
         <Card className="border-border/60">
@@ -1041,17 +1073,55 @@ function FlowInspector({
                   />
                 </div>
               </TabsContent>
-              <TabsContent value="captures" className="space-y-2">
-                <Label htmlFor="step-captures">Captures DSL</Label>
-                <Textarea
-                  id="step-captures"
-                  value={selectedNode.data.captures}
-                  disabled={!canEdit}
-                  onChange={(event) => onNodeChange(selectedNode.id, { captures: event.target.value })}
-                  placeholder={'token: data.access_token\nuserId: data.user.id'}
-                  rows={12}
-                  root
-                />
+              <TabsContent value="captures" className="space-y-4">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-text-main">Output variables</p>
+                    <p className="mt-1 text-xs leading-5 text-text-muted">
+                      Variables generated from response fields and available to connected downstream steps.
+                    </p>
+                  </div>
+                  {captureDefinitions.length === 0 ? (
+                    <Alert>
+                      <AlertTitle>No output variables</AlertTitle>
+                      <AlertDescription>
+                        Run this step, then use Pass parameters from the response log to create captures.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="space-y-2">
+                      {captureDefinitions.map((capture) => (
+                        <div
+                          key={`${capture.variableName}-${capture.path}`}
+                          className="rounded-2xl border border-border/60 bg-background/70 p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <Badge variant="outline">{capture.variableName}</Badge>
+                            <code className="truncate text-xs text-text-muted">{capture.path}</code>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <details className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-text-main">
+                    Advanced Captures DSL
+                  </summary>
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="step-captures">Captures DSL</Label>
+                    <Textarea
+                      id="step-captures"
+                      value={selectedNode.data.captures}
+                      disabled={!canEdit}
+                      onChange={(event) => onNodeChange(selectedNode.id, { captures: event.target.value })}
+                      placeholder={'token: data.access_token\nuserId: data.user.id'}
+                      rows={12}
+                      root
+                    />
+                  </div>
+                </details>
               </TabsContent>
               <TabsContent value="asserts" className="space-y-2">
                 <Label htmlFor="step-asserts">Asserts DSL</Label>
@@ -1078,6 +1148,9 @@ function FlowInspector({
           onSelectRun={onSelectRun}
           onSelectRunStep={onSelectRunStep}
           selectedStepResult={selectedStepResult}
+          canEdit={canEdit}
+          getParameterTargetOptions={getParameterTargetOptions}
+          onPassParameters={onPassParameters}
         />
       </div>
     );
@@ -1185,6 +1258,9 @@ function FlowInspector({
           onSelectRun={onSelectRun}
           onSelectRunStep={onSelectRunStep}
           selectedStepResult={null}
+          canEdit={canEdit}
+          getParameterTargetOptions={getParameterTargetOptions}
+          onPassParameters={onPassParameters}
         />
       </div>
     );
@@ -1232,6 +1308,9 @@ function FlowInspector({
         onSelectRun={onSelectRun}
         onSelectRunStep={onSelectRunStep}
         selectedStepResult={null}
+        canEdit={canEdit}
+        getParameterTargetOptions={getParameterTargetOptions}
+        onPassParameters={onPassParameters}
       />
     </div>
   );
@@ -1246,6 +1325,9 @@ function RunHistoryPanel({
   onSelectRun,
   onSelectRunStep,
   selectedStepResult,
+  canEdit,
+  getParameterTargetOptions,
+  onPassParameters,
 }: {
   runs: FlowRun[];
   selectedRun: FlowRun | null;
@@ -1255,35 +1337,41 @@ function RunHistoryPanel({
   onSelectRun: (runId: number) => void;
   onSelectRunStep: (stepId: number) => void;
   selectedStepResult: FlowStepResult | null;
+  canEdit: boolean;
+  getParameterTargetOptions: (sourceStepId: number) => FlowParameterTargetOption[];
+  onPassParameters: (payload: FlowParameterHandoffPayload) => void;
 }) {
   const [activeStepId, setActiveStepId] = useState<number | null>(null);
+  const [handoffStepResult, setHandoffStepResult] = useState<FlowStepResult | null>(null);
 
   const stepNameById = useMemo(
     () => new Map(stepOptions.map((step) => [step.id, step.name])),
     [stepOptions]
   );
 
-  useEffect(() => {
-    if (selectedStepResult) {
-      setActiveStepId(selectedStepResult.step_id);
-      return;
-    }
-
+  const defaultStepId = useMemo(() => {
     const stepResults = selectedRun?.step_results ?? [];
-    const defaultStepId =
+    return (
       stepResults.find((result) => result.status === 'failed')?.step_id ??
       stepResults.find((result) => result.status === 'running')?.step_id ??
       stepResults[0]?.step_id ??
-      null;
-
-    setActiveStepId(defaultStepId);
-  }, [selectedRun?.id, selectedStepResult]);
+      null
+    );
+  }, [selectedRun?.step_results]);
 
   const activeRunStepResult =
     selectedStepResult ??
-    selectedRun?.step_results?.find((result) => result.step_id === activeStepId) ??
+    selectedRun?.step_results?.find((result) => result.step_id === (activeStepId ?? defaultStepId)) ??
     selectedRun?.step_results?.[0] ??
     null;
+  const activeParameterCandidates = useMemo(
+    () => extractFlowParameterCandidates(activeRunStepResult?.response),
+    [activeRunStepResult?.response]
+  );
+  const activeTargetOptions = useMemo(
+    () => activeRunStepResult ? getParameterTargetOptions(activeRunStepResult.step_id) : [],
+    [activeRunStepResult, getParameterTargetOptions]
+  );
 
   const completedCount =
     selectedRun?.step_results?.filter((result) => result.status === 'passed').length ?? 0;
@@ -1433,7 +1521,29 @@ function RunHistoryPanel({
 
                   <ResultField label="Duration">{activeRunStepResult.duration_ms} ms</ResultField>
                   <ResultJsonCard title="Request" value={parseJsonString(activeRunStepResult.request)} />
-                  <ResultJsonCard title="Response" value={parseJsonString(activeRunStepResult.response)} />
+                  <ResultJsonCard
+                    title="Response"
+                    value={parseJsonString(activeRunStepResult.response)}
+                    action={
+                      activeParameterCandidates.length > 0 ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!canEdit || activeTargetOptions.length === 0}
+                          title={
+                            activeTargetOptions.length === 0
+                              ? 'No downstream step can receive parameters from this step'
+                              : 'Pass response fields to another step'
+                          }
+                          onClick={() => setHandoffStepResult(activeRunStepResult)}
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Pass parameters
+                        </Button>
+                      ) : null
+                    }
+                  />
                   <ResultJsonCard
                     title="Assert results"
                     value={parseJsonString(activeRunStepResult.assert_results)}
@@ -1454,7 +1564,196 @@ function RunHistoryPanel({
           </CardContent>
         </Card>
       ) : null}
+
+      <FlowParameterHandoffDialog
+        key={handoffStepResult ? `${handoffStepResult.id}-${handoffStepResult.step_id}` : 'closed'}
+        open={handoffStepResult !== null}
+        sourceStepName={
+          handoffStepResult
+            ? stepNameById.get(handoffStepResult.step_id) ?? `Step #${handoffStepResult.step_id}`
+            : ''
+        }
+        candidates={extractFlowParameterCandidates(handoffStepResult?.response)}
+        targetOptions={handoffStepResult ? getParameterTargetOptions(handoffStepResult.step_id) : []}
+        onOpenChange={(open) => {
+          if (!open) {
+            setHandoffStepResult(null);
+          }
+        }}
+        onSubmit={(targetStepId, selections) => {
+          if (!handoffStepResult) {
+            return;
+          }
+          onPassParameters({
+            sourceStepId: handoffStepResult.step_id,
+            targetStepId,
+            selections,
+          });
+          setHandoffStepResult(null);
+        }}
+      />
     </div>
+  );
+}
+
+function FlowParameterHandoffDialog({
+  open,
+  sourceStepName,
+  candidates,
+  targetOptions,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  sourceStepName: string;
+  candidates: ReturnType<typeof extractFlowParameterCandidates>;
+  targetOptions: FlowParameterTargetOption[];
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (targetStepId: number, selections: FlowParameterSelection[]) => void;
+}) {
+  const [targetStepId, setTargetStepId] = useState(
+    targetOptions[0]?.stepId ? String(targetOptions[0].stepId) : ''
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [variableNames, setVariableNames] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      candidates.map((candidate) => [candidate.id, candidate.defaultVariableName])
+    )
+  );
+
+  const selectedCandidates = candidates.filter((candidate) => selectedIds.has(candidate.id));
+  const selectedVariables = selectedCandidates.map((candidate) => ({
+    capturePath: candidate.capturePath,
+    variableName: variableNames[candidate.id]?.trim() ?? '',
+  }));
+  const hasInvalidVariable = selectedVariables.some(
+    (selection) => !isValidFlowVariableName(selection.variableName)
+  );
+  const canSubmit = Boolean(targetStepId) && selectedVariables.length > 0 && !hasInvalidVariable;
+
+  const toggleCandidate = (candidateId: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(candidateId);
+      } else {
+        next.delete(candidateId);
+      }
+      return next;
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="xl">
+        <DialogHeader>
+          <DialogTitle>Pass parameters</DialogTitle>
+          <DialogDescription>
+            Select response fields from {sourceStepName || 'this step'} and expose them to a downstream step.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="handoff-target-step">Target step</Label>
+              <Select value={targetStepId} onValueChange={setTargetStepId}>
+                <SelectTrigger id="handoff-target-step" className="w-full">
+                  <SelectValue placeholder="Select downstream step" />
+                </SelectTrigger>
+                <SelectContent>
+                  {targetOptions.map((option) => (
+                    <SelectItem key={option.stepId} value={String(option.stepId)}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <ResultField label="Selected">{selectedCandidates.length} fields</ResultField>
+          </div>
+
+          {targetOptions.length === 0 ? (
+            <Alert>
+              <AlertTitle>No available target step</AlertTitle>
+              <AlertDescription>
+                Add another step or remove cyclic connections before passing parameters from this response.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="overflow-hidden rounded-2xl border border-border/60">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10" />
+                  <TableHead>Response path</TableHead>
+                  <TableHead className="w-24">Type</TableHead>
+                  <TableHead className="min-w-[180px]">Variable</TableHead>
+                  <TableHead>Preview</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {candidates.map((candidate) => {
+                  const variableName = variableNames[candidate.id] ?? candidate.defaultVariableName;
+                  const isSelected = selectedIds.has(candidate.id);
+                  const isInvalid = isSelected && !isValidFlowVariableName(variableName);
+
+                  return (
+                    <TableRow key={candidate.id} data-state={isSelected ? 'selected' : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => toggleCandidate(candidate.id, checked === true)}
+                          aria-label={`Select ${candidate.displayPath}`}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-[260px]">
+                        <code className="block truncate rounded bg-muted px-2 py-1 text-xs">
+                          {candidate.displayPath}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{candidate.valueType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={variableName}
+                          disabled={!isSelected}
+                          onChange={(event) =>
+                            setVariableNames((current) => ({
+                              ...current,
+                              [candidate.id]: event.target.value,
+                            }))
+                          }
+                          errorText={isInvalid ? 'Use letters, numbers, or underscore.' : undefined}
+                          root
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate text-xs text-text-muted">
+                        {candidate.preview || 'null'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={!canSubmit}
+            onClick={() => onSubmit(Number(targetStepId), selectedVariables)}
+          >
+            <Share2 className="h-4 w-4" />
+            Apply handoff
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1476,14 +1775,19 @@ function ResultField({
 function ResultJsonCard({
   title,
   value,
+  action,
 }: {
   title: string;
   value: unknown;
+  action?: React.ReactNode;
 }) {
   return (
     <Card className="border-border/60">
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>{title}</CardTitle>
+          {action}
+        </div>
       </CardHeader>
       <CardContent>
         <pre className="max-h-[280px] overflow-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
@@ -1797,6 +2101,109 @@ export function ProjectFlowManagementPage({
           : edge
       )
     );
+    setDirty(true);
+    clearValidationState();
+  };
+
+  const getParameterTargetOptions = (sourceStepId: number): FlowParameterTargetOption[] => {
+    const sourceNode = nodes.find((node) => node.data.backendStepId === sourceStepId);
+    if (!sourceNode) {
+      return [];
+    }
+
+    return nodes
+      .filter((node) => node.data.backendStepId && node.data.backendStepId !== sourceStepId)
+      .filter((node) =>
+        !createsCycle(nodes, edges, {
+          source: sourceNode.id,
+          target: node.id,
+          sourceHandle: null,
+          targetHandle: null,
+        })
+      )
+      .map((node) => ({
+        stepId: node.data.backendStepId!,
+        name: node.data.name || `Step #${node.data.backendStepId}`,
+      }));
+  };
+
+  const handlePassParameters = ({
+    sourceStepId,
+    targetStepId,
+    selections,
+  }: FlowParameterHandoffPayload) => {
+    const cleanSelections = selections.filter(
+      (selection) =>
+        selection.capturePath.trim() && isValidFlowVariableName(selection.variableName.trim())
+    );
+    if (cleanSelections.length === 0) {
+      return;
+    }
+
+    const sourceNode = nodes.find((node) => node.data.backendStepId === sourceStepId);
+    const targetNode = nodes.find((node) => node.data.backendStepId === targetStepId);
+    if (!sourceNode || !targetNode) {
+      setValidationState((current) => ({
+        ...current,
+        message: 'Unable to pass parameters because one of the selected steps no longer exists.',
+      }));
+      return;
+    }
+
+    if (
+      !edges.some((edge) => edge.source === sourceNode.id && edge.target === targetNode.id) &&
+      createsCycle(nodes, edges, {
+        source: sourceNode.id,
+        target: targetNode.id,
+        sourceHandle: null,
+        targetHandle: null,
+      })
+    ) {
+      setValidationState((current) => ({
+        ...current,
+        message: 'Unable to pass parameters because this connection would create a cycle.',
+      }));
+      return;
+    }
+
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === sourceNode.id
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                captures: mergeCaptureDefinitions(node.data.captures, cleanSelections),
+              },
+            }
+          : node
+      )
+    );
+
+    setEdges((current) => {
+      const existingEdge = current.find(
+        (edge) => edge.source === sourceNode.id && edge.target === targetNode.id
+      );
+      const nextMappings = mergeVariableMappings(existingEdge?.data?.mappings ?? [], cleanSelections);
+
+      if (existingEdge) {
+        return current.map((edge) =>
+          edge.id === existingEdge.id
+            ? {
+                ...edge,
+                label: buildEdgeLabel(nextMappings),
+                data: {
+                  ...edge.data,
+                  mappings: nextMappings,
+                },
+              }
+            : edge
+        );
+      }
+
+      return [...current, buildEdge(sourceNode.id, targetNode.id, nextMappings)];
+    });
+
     setDirty(true);
     clearValidationState();
   };
@@ -2241,7 +2648,6 @@ export function ProjectFlowManagementPage({
         <Button asChild variant="outline">
           <Link href={buildProjectFlowsRoute(projectId)}>
             Clear selection
-            <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
       </CardContent>
@@ -2396,6 +2802,8 @@ export function ProjectFlowManagementPage({
               onSelectRun={setSelectedRunId}
               onSelectRunStep={handleSelectRunStep}
               selectedStepResult={selectedStepResult}
+              getParameterTargetOptions={getParameterTargetOptions}
+              onPassParameters={handlePassParameters}
             />
           </div>
         </aside>
@@ -2472,6 +2880,7 @@ export function ProjectFlowManagementPage({
       </div>
 
       <CreateFlowDialog
+        key={isCreateOpen ? 'create-flow-open' : 'create-flow-closed'}
         open={isCreateOpen}
         isSubmitting={createFlowMutation.isPending}
         onOpenChange={setIsCreateOpen}
@@ -2506,6 +2915,8 @@ export function ProjectFlowManagementPage({
                 onSelectRun={setSelectedRunId}
                 onSelectRunStep={handleSelectRunStep}
                 selectedStepResult={selectedStepResult}
+                getParameterTargetOptions={getParameterTargetOptions}
+                onPassParameters={handlePassParameters}
               />
             </div>
           </DrawerContent>

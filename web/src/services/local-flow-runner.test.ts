@@ -106,6 +106,74 @@ describe('runLocalFlow', () => {
     expect(run.step_results?.[0].error_message).toContain('unresolved variables: missingToken');
   });
 
+  it('uses generated capture paths and same-name edge mappings from response handoff', async () => {
+    const steps: LocalFlowStepDefinition[] = [
+      {
+        id: 1,
+        name: 'Create token',
+        sort_order: 0,
+        method: 'POST',
+        url: 'http://127.0.0.1:3000/token',
+        headers: '',
+        body: '',
+        captures: 'authToken: data.items[0].token',
+        asserts: 'status == 200',
+      },
+      {
+        id: 2,
+        name: 'Use token',
+        sort_order: 1,
+        method: 'GET',
+        url: 'http://127.0.0.1:3000/profile',
+        headers: '{"Authorization":"Bearer {{authToken}}"}',
+        body: '',
+        captures: '',
+        asserts: 'status == 200',
+      },
+    ];
+
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        status_text: '200 OK',
+        headers: { 'content-type': 'application/json' },
+        body: '{"data":{"items":[{"token":"abc"}]}}',
+        time: 5,
+        size: 36,
+      })
+      .mockImplementationOnce(async (payload) => {
+        expect(payload.headers?.Authorization).toBe('Bearer abc');
+        return {
+          status: 200,
+          status_text: '200 OK',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+          time: 4,
+          size: 2,
+        };
+      });
+
+    const run = await runLocalFlow(
+      {
+        flowId: 10,
+        runId: -4,
+        steps,
+        edges: [
+          {
+            source_step_id: 1,
+            target_step_id: 2,
+            mappings: [{ source: 'authToken', target: 'authToken' }],
+          },
+        ],
+      },
+      execute
+    );
+
+    expect(run.status).toBe('passed');
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
   it('turns local bridge errors into failed step results instead of throwing', async () => {
     const execute = vi.fn().mockRejectedValue(new Error('Local runner unavailable.'));
 
