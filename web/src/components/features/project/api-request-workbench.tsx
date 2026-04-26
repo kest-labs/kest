@@ -186,15 +186,16 @@ interface ImportDialogTarget {
 }
 
 type ImportDialogKind = 'postman' | 'markdown';
+type ProjectTranslationFn = (...args: any[]) => string;
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-const SECTION_ITEMS: Array<{ value: RequestSection; label: string }> = [
-  { value: 'params', label: 'Params' },
-  { value: 'authorization', label: 'Authorization' },
-  { value: 'headers', label: 'Headers' },
-  { value: 'body', label: 'Body' },
-  { value: 'scripts', label: 'Scripts' },
-  { value: 'settings', label: 'Settings' },
-  { value: 'examples', label: 'Examples' },
+const SECTION_ITEMS: RequestSection[] = [
+  'params',
+  'authorization',
+  'headers',
+  'body',
+  'scripts',
+  'settings',
+  'examples',
 ];
 const BODY_MODE_OPTIONS: BodyMode[] = ['json', 'raw', 'form-data'];
 const AUTHORIZATION_OPTIONS: AuthorizationMode[] = ['none', 'bearer', 'basic', 'api-key'];
@@ -210,6 +211,104 @@ const METHOD_BADGE_STYLES: Record<RequestMethod, string> = {
 
 const createLocalId = (prefix: string) =>
   `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
+
+const DEFAULT_REQUEST_TEMPLATE = '{{base_url}}/path';
+
+const getDefaultRequestTitle = (t: ProjectTranslationFn, index: number) =>
+  index === 1
+    ? t('collections.workbench.defaultRequestTitle')
+    : t('collections.workbench.defaultRequestTitleWithIndex', { index });
+
+const getDefaultCollectionName = (t: ProjectTranslationFn, index: number) =>
+  t('collections.workbench.defaultCollectionName', { index });
+
+const getSectionLabel = (t: ProjectTranslationFn, section: RequestSection) =>
+  t(`collections.workbench.sections.${section}`);
+
+const getBodyModeLabel = (
+  t: ProjectTranslationFn,
+  mode: BodyMode | 'text' | 'none' | string | null | undefined
+) => {
+  switch (mode) {
+    case 'json':
+      return t('collections.workbench.bodyModes.json');
+    case 'raw':
+    case 'text':
+      return t('collections.workbench.bodyModes.raw');
+    case 'form-data':
+      return t('collections.workbench.bodyModes.form-data');
+    case 'none':
+    case undefined:
+    case null:
+    default:
+      return mode ? String(mode) : t('collections.workbench.authModes.none');
+  }
+};
+
+const getAuthorizationModeLabel = (
+  t: ProjectTranslationFn,
+  mode: AuthorizationMode | string | null | undefined
+) => {
+  switch (mode) {
+    case 'bearer':
+      return t('collections.workbench.authModes.bearer');
+    case 'basic':
+      return t('collections.workbench.authModes.basic');
+    case 'api-key':
+      return t('collections.workbench.authModes.api-key');
+    case 'none':
+    default:
+      return t('collections.workbench.authModes.none');
+  }
+};
+
+const getApiKeyLocationLabel = (t: ProjectTranslationFn, location?: string | null) => {
+  switch (location) {
+    case 'query':
+      return t('collections.workbench.authLocations.query');
+    case 'cookie':
+      return t('collections.workbench.authLocations.cookie');
+    case 'header':
+    default:
+      return t('collections.workbench.authLocations.header');
+  }
+};
+
+const getAuthCredentialLabel = (t: ProjectTranslationFn, mode: AuthorizationMode) => {
+  switch (mode) {
+    case 'basic':
+      return t('collections.workbench.authorization.usernamePassword');
+    case 'api-key':
+      return t('collections.workbench.authorization.apiKey');
+    case 'bearer':
+    default:
+      return t('collections.workbench.authorization.token');
+  }
+};
+
+const getAuthCredentialPlaceholder = (t: ProjectTranslationFn, mode: AuthorizationMode) => {
+  switch (mode) {
+    case 'basic':
+      return t('collections.workbench.authorization.basicPlaceholder');
+    case 'api-key':
+      return t('collections.workbench.authorization.apiKeyPlaceholder');
+    case 'bearer':
+    default:
+      return t('collections.workbench.authorization.credentialPlaceholder');
+  }
+};
+
+const getExampleResponseValue = (
+  t: ProjectTranslationFn,
+  responseStatus: number,
+  responseTime: number
+) =>
+  responseStatus > 0
+    ? t('collections.workbench.examples.responseCaptured', {
+        status: responseStatus,
+        time: responseTime,
+      })
+    : t('collections.workbench.examples.notCaptured');
 
 const createKeyValueRow = (key = '', value = '', description = ''): KeyValueRow => ({
   id: createLocalId('kv'),
@@ -254,7 +353,6 @@ const resolveNextActiveTabId = (
   );
 };
 
-const DEFAULT_NEW_REQUEST_TITLE = 'New Request';
 const DEFAULT_NEW_REQUEST_URL = '';
 // The API requires a non-empty URL for persisted requests, but the workbench allows blank
 // draft URLs before a request is runnable. We store an `.invalid` placeholder and map it
@@ -353,10 +451,21 @@ const toRequestPageTab = (request: ProjectRequest): RequestPageTab => {
 
 const createRequestPageTab = (
   index: number,
-  overrides: Partial<RequestPageTab> = {}
+  overrides: Partial<RequestPageTab> = {},
+  copy?: {
+    defaultRequestTitle?: string;
+    defaultRequestTitleWithIndex?: string;
+    defaultHeaderDescription?: string;
+    defaultBodyContent?: string;
+    defaultScripts?: string;
+  }
 ): RequestPageTab => ({
   id: overrides.id ?? createLocalId('request-tab'),
-  title: overrides.title ?? (index === 1 ? 'New Request' : `New Request ${index}`),
+  title:
+    overrides.title ??
+    (index === 1
+      ? (copy?.defaultRequestTitle ?? 'New Request')
+      : (copy?.defaultRequestTitleWithIndex ?? `New Request ${index}`)),
   collectionId: overrides.collectionId ?? null,
   method: overrides.method ?? 'GET',
   url: overrides.url ?? DEFAULT_NEW_REQUEST_URL,
@@ -369,13 +478,14 @@ const createRequestPageTab = (
   authorizationValue: overrides.authorizationValue ?? '',
   headersMode: overrides.headersMode ?? 'table',
   headersRows:
-    overrides.headersRows ?? [createKeyValueRow('Accept', 'application/json', 'Default header')],
+    overrides.headersRows ??
+    [createKeyValueRow('Accept', 'application/json', copy?.defaultHeaderDescription ?? 'Default header')],
   headersBulk: overrides.headersBulk ?? 'Accept: application/json',
   bodyMode: overrides.bodyMode ?? 'json',
-  bodyContent: overrides.bodyContent ?? '{\n  "ping": "hello"\n}',
+  bodyContent: overrides.bodyContent ?? (copy?.defaultBodyContent ?? '{\n  "ping": "hello"\n}'),
   scripts:
     overrides.scripts ??
-    "// Inspect the response here\npm.test('status should be 200', () => true);",
+    (copy?.defaultScripts ?? "// Inspect the response here\npm.test('status should be 200', () => true);"),
   settings:
     overrides.settings ?? {
       followRedirects: true,
@@ -431,12 +541,12 @@ const getPersistedTabName = (tab: RequestPageTab) => {
 const byteLength = (value: string) =>
   typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(value).length : value.length;
 
-const encodeBase64 = (value: string) => {
+const encodeBase64 = (value: string, errorMessage: string) => {
   if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
     return window.btoa(value);
   }
 
-  throw new Error('Base64 encoding is not available in this browser context.');
+  throw new Error(errorMessage);
 };
 
 const requestBodyTypeFromMode = (mode: BodyMode, value: string) => {
@@ -589,11 +699,11 @@ const toSaveExampleResponsePayload = (
   };
 };
 
-const maskSecret = (value: string) => {
+const maskSecret = (value: string, emptyLabel: string) => {
   const trimmed = value.trim();
 
   if (!trimmed) {
-    return '(empty)';
+    return emptyLabel;
   }
 
   if (trimmed.length <= 6) {
@@ -610,35 +720,43 @@ const formatExampleKeyValues = (rows: RequestKeyValue[] | undefined, emptyState:
         .join('\n')
     : emptyState;
 
-const formatExampleResponseHeaders = (headers: Record<string, string> | undefined) => {
+const formatExampleResponseHeaders = (
+  headers: Record<string, string> | undefined,
+  emptyState: string
+) => {
   const entries = Object.entries(headers ?? {});
   return entries.length > 0
     ? entries.map(([key, value]) => `${key}: ${value}`).join('\n')
-    : 'No response headers captured.';
+    : emptyState;
 };
 
-const formatExampleAuth = (auth?: RequestAuthConfig | null) => {
+const formatExampleAuth = (t: ProjectTranslationFn, auth?: RequestAuthConfig | null) => {
+  const emptyLabel = t('collections.workbench.examples.emptyValue');
+
   switch (auth?.type) {
     case 'bearer':
-      return auth.bearer?.token ? `Bearer ${maskSecret(auth.bearer.token)}` : 'Bearer token';
+      return auth.bearer?.token
+        ? `Bearer ${maskSecret(auth.bearer.token, emptyLabel)}`
+        : t('collections.workbench.examples.bearerToken');
     case 'basic':
       return auth.basic
-        ? `${auth.basic.username || '(user)'}:${maskSecret(auth.basic.password ?? '')}`
-        : 'Basic auth';
+        ? `${auth.basic.username || t('collections.workbench.examples.defaultUser')}:${maskSecret(auth.basic.password ?? '', emptyLabel)}`
+        : t('collections.workbench.examples.basicAuth');
     case 'api-key':
       return auth.api_key
-        ? `${auth.api_key.key || 'X-API-Key'} (${auth.api_key.in ?? 'header'}): ${maskSecret(
-            auth.api_key.value ?? ''
+        ? `${auth.api_key.key || t('collections.workbench.authorization.defaultApiKeyName')} (${getApiKeyLocationLabel(t, auth.api_key.in ?? auth.api_key.add_to)}): ${maskSecret(
+            auth.api_key.value ?? '',
+            emptyLabel
           )}`
-        : 'API key';
+        : t('collections.workbench.authorization.apiKey');
     default:
-      return 'None';
+      return t('collections.workbench.authModes.none');
   }
 };
 
-const formatExampleTimestamp = (value: string) => {
+const formatExampleTimestamp = (value: string, unknownLabel: string) => {
   if (!value) {
-    return 'Unknown';
+    return unknownLabel;
   }
 
   const parsed = new Date(value);
@@ -728,6 +846,7 @@ const buildRequestRunHistoryPayload = ({
   settings,
   response,
   errorMessage,
+  messages,
 }: {
   request: ProjectRequest;
   executedUrl: string;
@@ -736,6 +855,10 @@ const buildRequestRunHistoryPayload = ({
   settings: RequestPageTab['settings'];
   response?: RunRequestResponse;
   errorMessage?: string;
+  messages: {
+    executed: (requestLabel: string, status?: number) => string;
+    failed: (requestLabel: string, message: string) => string;
+  };
 }): CreateHistoryRequest => {
   const requestLabel =
     request.url === PERSISTED_DRAFT_URL_PLACEHOLDER ? request.name : `${request.method} ${request.url}`;
@@ -746,8 +869,8 @@ const buildRequestRunHistoryPayload = ({
     entity_id: request.id,
     action: succeeded ? 'run' : 'run_failed',
     message: succeeded
-      ? `Executed ${requestLabel}${response ? ` (${response.status})` : ''}`
-      : `Failed to execute ${requestLabel}: ${errorMessage}`,
+      ? messages.executed(requestLabel, response?.status)
+      : messages.failed(requestLabel, errorMessage ?? ''),
     data: {
       request: {
         id: request.id,
@@ -853,20 +976,30 @@ const resolveTemplateValue = (value: string, variables: Record<string, string>) 
 const findUnresolvedTemplateKeys = (value: string) =>
   Array.from(new Set(Array.from(value.matchAll(REQUEST_TEMPLATE_PATTERN)).map((match) => match[1].trim())));
 
-const getMissingVariableMessage = (keys: string[], environment?: ProjectEnvironment | null) => {
+const getMissingVariableMessage = (
+  keys: string[],
+  environment: ProjectEnvironment | null | undefined,
+  t: ProjectTranslationFn
+) => {
   if (keys.length === 0) {
     return null;
   }
 
   if (keys.includes('base_url')) {
     if (!environment) {
-      return 'Select an environment before sending a request that uses {{base_url}}.';
+      return t('collections.workbench.missingBaseUrlNoEnvironment', {
+        template: '{{base_url}}',
+      });
     }
 
-    return `Environment "${environment.display_name || environment.name}" is missing base_url.`;
+    return t('collections.workbench.missingBaseUrlInEnvironment', {
+      name: environment.display_name || environment.name,
+    });
   }
 
-  return `Set environment variables before sending this request: ${keys.join(', ')}.`;
+  return t('collections.workbench.missingVariables', {
+    keys: keys.join(', '),
+  });
 };
 
 const resolveExecutionPathParams = (
@@ -892,7 +1025,8 @@ const applyPathParamsToUrl = (url: string, pathParams: Record<string, string>) =
 
 const buildExecutableRequestUrl = (
   request: ProjectRequest,
-  environment?: ProjectEnvironment | null
+  environment: ProjectEnvironment | null | undefined,
+  t: ProjectTranslationFn
 ) => {
   const variables = buildExecutionVariables(environment);
   const resolvedPathParams = resolveExecutionPathParams(request.path_params ?? {}, variables);
@@ -900,10 +1034,7 @@ const buildExecutableRequestUrl = (
     applyPathParamsToUrl(request.url, resolvedPathParams),
     variables
   );
-  const missingVariableMessage = getMissingVariableMessage(
-    findUnresolvedTemplateKeys(resolvedUrl),
-    environment
-  );
+  const missingVariableMessage = getMissingVariableMessage(findUnresolvedTemplateKeys(resolvedUrl), environment, t);
   if (missingVariableMessage) {
     throw new Error(missingVariableMessage);
   }
@@ -912,9 +1043,7 @@ const buildExecutableRequestUrl = (
   try {
     targetUrl = new URL(resolvedUrl);
   } catch {
-    throw new Error(
-      'The resolved URL is not valid. Select an environment with base_url or use an absolute URL.'
-    );
+    throw new Error(t('collections.invalidResolvedUrl'));
   }
 
   request.query_params
@@ -944,7 +1073,8 @@ const buildExecutableRequestUrl = (
 
 const buildDirectRequestHeaders = (
   request: ProjectRequest,
-  environment?: ProjectEnvironment | null
+  environment: ProjectEnvironment | null | undefined,
+  base64UnavailableMessage: string
 ) => {
   const headers = new Headers();
   const variables = buildExecutionVariables(environment);
@@ -970,7 +1100,8 @@ const buildDirectRequestHeaders = (
     headers.set(
       'Authorization',
       `Basic ${encodeBase64(
-        `${resolveTemplateValue(request.auth.basic.username, variables)}:${resolveTemplateValue(request.auth.basic.password, variables)}`
+        `${resolveTemplateValue(request.auth.basic.username, variables)}:${resolveTemplateValue(request.auth.basic.password, variables)}`,
+        base64UnavailableMessage
       )}`
     );
   }
@@ -1278,6 +1409,7 @@ export function ApiRequestWorkbench({
   projectId: number;
 }) {
   const t = useT('project');
+  const defaultRequestTitle = t('collections.workbench.defaultRequestTitle');
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialState = useMemo(() => getInitialWorkbenchState(), []);
@@ -1349,6 +1481,18 @@ export function ApiRequestWorkbench({
         ? null
         : environments.find((environment) => String(environment.id) === selectedEnvironmentId) ?? null,
     [environments, selectedEnvironmentId]
+  );
+  const createDraftTab = useCallback(
+    (index: number, overrides: Partial<RequestPageTab> = {}) =>
+      createRequestPageTab(index, overrides, {
+        defaultRequestTitle,
+        defaultRequestTitleWithIndex: t('collections.workbench.defaultRequestTitleWithIndex', {
+          index,
+        }),
+        defaultHeaderDescription: t('collections.workbench.editors.defaultHeaderDescription'),
+        defaultScripts: t('collections.workbench.scripts.defaultScript'),
+      }),
+    [defaultRequestTitle, t]
   );
   const serverCollections = useMemo(
     () => flattenCollectionTree(collectionTreeQuery.data ?? []),
@@ -2043,7 +2187,7 @@ export function ApiRequestWorkbench({
     try {
       const collectionNumber = collections.length + 1;
       const createdCollection = await createCollectionMutation.mutateAsync({
-        name: `New Collection ${collectionNumber}`,
+        name: getDefaultCollectionName(t, collectionNumber),
         description: '',
         is_folder: false,
         sort_order: collections.length,
@@ -2321,7 +2465,7 @@ export function ApiRequestWorkbench({
     const duplicatedTab: RequestPageTab = {
       ...activeTab,
       id: createLocalId('request-tab'),
-      title: `${activeTab.title} Copy`,
+      title: t('collections.workbench.copyTitle', { title: activeTab.title }),
       response: createEmptyResponse(),
       isSending: false,
       paramsRows: activeTab.paramsRows.map((row) => ({ ...row, id: createLocalId('kv') })),
@@ -2406,14 +2550,16 @@ export function ApiRequestWorkbench({
       });
 
       if (tabSnapshot.settings.persistCookies) {
-        throw new Error(
-          'Persist cookies is not available in local runner mode. Add a Cookie header explicitly if this request depends on cookies.'
-        );
+        throw new Error(t('collections.workbench.persistCookiesUnavailable'));
       }
 
-      executableUrl = buildExecutableRequestUrl(persistedRequest, selectedEnvironment);
+      executableUrl = buildExecutableRequestUrl(persistedRequest, selectedEnvironment, t);
       executableHeaders = headersToObject(
-        buildDirectRequestHeaders(persistedRequest, selectedEnvironment)
+        buildDirectRequestHeaders(
+          persistedRequest,
+          selectedEnvironment,
+          t('collections.base64Unavailable')
+        )
       );
       executableBody = buildDirectRequestBody(persistedRequest, selectedEnvironment);
       const response = await localRunnerService.execute({
@@ -2440,11 +2586,26 @@ export function ApiRequestWorkbench({
             requestBody: executableBody,
             settings: tabSnapshot.settings,
             response,
+            messages: {
+              executed: (requestLabel, status) =>
+                status
+                  ? t('collections.workbench.historyExecutedWithStatus', {
+                      label: requestLabel,
+                      status,
+                    })
+                  : t('collections.workbench.historyExecuted', { label: requestLabel }),
+              failed: (requestLabel, message) =>
+                t('collections.workbench.historyFailed', {
+                  label: requestLabel,
+                  error: message,
+                }),
+            },
           })
         )
         .catch(() => {});
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to send request.';
+      const message =
+        error instanceof Error ? error.message : t('collections.workbench.unableToSend');
 
       updateTab(tabId, (tab) => ({
         ...tab,
@@ -2457,9 +2618,13 @@ export function ApiRequestWorkbench({
 
       if (persistedRequest) {
         if (!executableUrl) {
-          executableUrl = buildExecutableRequestUrl(persistedRequest, selectedEnvironment);
+          executableUrl = buildExecutableRequestUrl(persistedRequest, selectedEnvironment, t);
           executableHeaders = headersToObject(
-            buildDirectRequestHeaders(persistedRequest, selectedEnvironment)
+            buildDirectRequestHeaders(
+              persistedRequest,
+              selectedEnvironment,
+              t('collections.base64Unavailable')
+            )
           );
           executableBody = buildDirectRequestBody(persistedRequest, selectedEnvironment);
         }
@@ -2473,6 +2638,20 @@ export function ApiRequestWorkbench({
               requestBody: executableBody,
               settings: tabSnapshot.settings,
               errorMessage: message,
+              messages: {
+                executed: (requestLabel, status) =>
+                  status
+                    ? t('collections.workbench.historyExecutedWithStatus', {
+                        label: requestLabel,
+                        status,
+                      })
+                    : t('collections.workbench.historyExecuted', { label: requestLabel }),
+                failed: (requestLabel, errorText) =>
+                  t('collections.workbench.historyFailed', {
+                    label: requestLabel,
+                    error: errorText,
+                  }),
+              },
             })
           )
           .catch(() => {});
@@ -2504,7 +2683,7 @@ export function ApiRequestWorkbench({
   };
 
   const createScratchpadRequest = useCallback(() => {
-    const nextTab = createRequestPageTab(nextTabIndex, {
+    const nextTab = createDraftTab(nextTabIndex, {
       id: createLocalId('request-tab'),
       collectionId: null,
     });
@@ -2515,7 +2694,7 @@ export function ApiRequestWorkbench({
       setActiveTabId(nextTab.id);
       setNextTabIndex((current) => current + 1);
     });
-  }, [nextTabIndex]);
+  }, [createDraftTab, nextTabIndex]);
 
   useEffect(() => {
     if (searchParams.get('quickRequest') !== '1' || quickRequestIntentConsumedRef.current) {
@@ -2623,8 +2802,8 @@ export function ApiRequestWorkbench({
       return;
     }
 
-    const localTab = createRequestPageTab(nextTabIndex, {
-      title: DEFAULT_NEW_REQUEST_TITLE,
+    const localTab = createDraftTab(nextTabIndex, {
+      title: getDefaultRequestTitle(t, nextTabIndex),
       collectionId: collection.id,
       url: DEFAULT_NEW_REQUEST_URL,
     });
@@ -2644,7 +2823,7 @@ export function ApiRequestWorkbench({
           localTab,
           persistedCollectionId,
           collection.requestIds.length,
-          DEFAULT_NEW_REQUEST_TITLE
+          getDefaultRequestTitle(t, nextTabIndex)
         ),
       });
 
@@ -2739,20 +2918,23 @@ export function ApiRequestWorkbench({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                          API Request
+                          {t('collections.workbench.badges.apiRequest')}
                         </Badge>
                         {activeTab.collectionId ? (
                           <Badge variant="secondary">
-                            {collections.find((collection) => collection.id === activeTab.collectionId)?.name || 'Collection'}
+                            {collections.find((collection) => collection.id === activeTab.collectionId)?.name ||
+                              t('collections.workbench.badges.collectionFallback')}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">Quick Request</Badge>
+                          <Badge variant="secondary">
+                            {t('collections.workbench.badges.quickRequest')}
+                          </Badge>
                         )}
                       </div>
                       <div>
                         <CardTitle className="text-xl tracking-tight">{activeTab.title}</CardTitle>
                         <CardDescription className="mt-1">
-                          Execute collection requests through your local Kest runner so local APIs can be tested without browser CORS limits.
+                          {t('collections.workbench.runnerDescription')}
                         </CardDescription>
                       </div>
                     </div>
@@ -2764,8 +2946,8 @@ export function ApiRequestWorkbench({
                         isIcon
                         className="h-10 w-10 rounded-2xl"
                         onClick={handleDuplicateTab}
-                        aria-label="Duplicate tab"
-                        title="Duplicate tab"
+                        aria-label={t('collections.workbench.actions.duplicateTab')}
+                        title={t('collections.workbench.actions.duplicateTab')}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
@@ -2775,8 +2957,8 @@ export function ApiRequestWorkbench({
                         isIcon
                         className="h-10 w-10 rounded-2xl"
                         onClick={handleSaveTab}
-                        aria-label="Save tab"
-                        title="Save tab"
+                        aria-label={t('collections.workbench.actions.saveTab')}
+                        title={t('collections.workbench.actions.saveTab')}
                       >
                         <Save className="h-4 w-4" />
                       </Button>
@@ -2847,19 +3029,19 @@ export function ApiRequestWorkbench({
                   <FolderOpen className="h-6 w-6" />
                 </div>
                 <p className="mt-6 text-2xl font-semibold tracking-tight text-text-main">
-                  Start a request workspace
+                  {t('collections.workbench.empty.workspaceTitle')}
                 </p>
                 <p className="mt-3 text-base leading-7 text-text-muted">
-                  Create a saved collection for reusable requests, or open a quick request for one-off debugging.
+                  {t('collections.workbench.empty.workspaceDescription')}
                 </p>
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                   <Button type="button" onClick={createCollection}>
                     <Plus className="h-4 w-4" />
-                    New Collection
+                    {t('collections.workbench.actions.newCollection')}
                   </Button>
                   <Button type="button" variant="outline" onClick={createScratchpadRequest}>
                     <Plus className="h-4 w-4" />
-                    Quick Request
+                    {t('collections.workbench.actions.quickRequest')}
                   </Button>
                 </div>
               </div>
@@ -2871,7 +3053,7 @@ export function ApiRequestWorkbench({
       <ExampleFormDialog
         key={`${activeTab?.id ?? 'no-request'}-${isExampleDialogOpen ? 'open' : 'closed'}`}
         open={isExampleDialogOpen}
-        requestLabel={activeTab ? getTabSaveLabel(activeTab) : DEFAULT_NEW_REQUEST_TITLE}
+        requestLabel={activeTab ? getTabSaveLabel(activeTab) : defaultRequestTitle}
         capturesResponse={activeResponseCanBeCaptured}
         isSubmitting={createExampleMutation.isPending || saveExampleResponseMutation.isPending}
         onOpenChange={setIsExampleDialogOpen}
@@ -3001,6 +3183,7 @@ function CollectionsSidebar({
   onSelectRequest: (tabId: string, collectionId: string | null) => void;
 }) {
   const [page, setPage] = useState(1);
+  const t = useT('project');
   const isSearchMode = query.trim().length > 0;
   const totalPages = Math.max(
     1,
@@ -3023,9 +3206,11 @@ function CollectionsSidebar({
       <div className="space-y-4 p-4">
         {isEmpty ? (
           <div className="rounded-[24px] border border-dashed border-border/70 bg-white/70 p-4">
-            <p className="text-sm font-semibold text-text-main">Start with a collection or quick request</p>
+            <p className="text-sm font-semibold text-text-main">
+              {t('collections.workbench.empty.sidebarTitle')}
+            </p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
-              Collections hold reusable requests. Quick requests are for one-off experiments that do not need project structure yet.
+              {t('collections.workbench.empty.sidebarDescription')}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button
@@ -3037,7 +3222,7 @@ function CollectionsSidebar({
                 }}
               >
                 <Plus className="h-4 w-4" />
-                New Collection
+                {t('collections.workbench.actions.newCollection')}
               </Button>
               <Button
                 type="button"
@@ -3048,7 +3233,7 @@ function CollectionsSidebar({
                 onClick={onImportRootPostman}
               >
                 <Upload className="h-4 w-4" />
-                Import Postman
+                {t('collections.workbench.actions.importPostman')}
               </Button>
               <Button
                 type="button"
@@ -3059,11 +3244,11 @@ function CollectionsSidebar({
                 onClick={onImportRootMarkdown}
               >
                 <FileText className="h-4 w-4" />
-                Import API Markdown
+                {t('collections.workbench.actions.importMarkdown')}
               </Button>
               <Button type="button" size="sm" variant="outline" onClick={onCreateScratchpadRequest}>
                 <Plus className="h-4 w-4" />
-                Quick Request
+                {t('collections.workbench.actions.quickRequest')}
               </Button>
             </div>
           </div>
@@ -3078,7 +3263,7 @@ function CollectionsSidebar({
                 setPage(1);
                 onQueryChange(event.target.value);
               }}
-              placeholder="Filter collections or requests"
+              placeholder={t('collections.workbench.filterPlaceholder')}
               className="pl-9"
             />
           </div>
@@ -3159,7 +3344,9 @@ function CollectionsSidebar({
                       <p className="truncate text-sm font-medium text-text-main">{collection.name}</p>
                     </div>
                     <p className="mt-0.5 text-[11px] text-text-muted">
-                      {collection.requestIds.length} requests
+                      {t('collections.workbench.requestCount', {
+                        count: collection.requestIds.length,
+                      })}
                     </p>
                   </button>
 
@@ -3205,7 +3392,7 @@ function CollectionsSidebar({
           {scratchpadTabs.length > 0 ? (
             <div className="pt-4">
               <div className="mb-2 px-2 text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
-                Quick Requests
+                {t('collections.workbench.quickRequests')}
               </div>
               <div className="space-y-1.5">
                 {scratchpadTabs.map((tab) => (
@@ -3236,10 +3423,13 @@ function CollectionsSidebar({
             onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
             disabled={!canGoPrev}
           >
-            Previous
+            {t('common.previous')}
           </Button>
           <span className="text-xs font-medium text-text-muted">
-            Page {currentPage} of {totalPages}
+            {t('collections.workbench.pageOf', {
+              page: currentPage,
+              total: totalPages,
+            })}
           </span>
           <Button
             type="button"
@@ -3250,7 +3440,7 @@ function CollectionsSidebar({
             }
             disabled={!canGoNext}
           >
-            Next
+            {t('common.next')}
           </Button>
         </div>
       ) : null}
@@ -3320,6 +3510,8 @@ function RequestItemActionsMenu({
   onDelete: () => void;
   onRename: () => void;
 }) {
+  const t = useT('project');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -3329,21 +3521,25 @@ function RequestItemActionsMenu({
           size="sm"
           isIcon
           className="mr-1 h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/request:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-          aria-label="Open request actions"
+          aria-label={t('collections.workbench.actions.openRequestActions')}
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40 rounded-xl">
         <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
-          {isRenaming ? 'Renaming...' : 'Rename'}
+          {isRenaming
+            ? t('collections.workbench.actions.renaming')
+            : t('collections.workbench.actions.rename')}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" disabled={isDeleting} onSelect={onDelete}>
-          {isDeleting ? 'Deleting...' : 'Delete'}
+          {isDeleting
+            ? t('collections.workbench.actions.deleting')
+            : t('collections.workbench.actions.delete')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Share</DropdownMenuItem>
-        <DropdownMenuItem>Copy link</DropdownMenuItem>
+        <DropdownMenuItem>{t('collections.workbench.actions.share')}</DropdownMenuItem>
+        <DropdownMenuItem>{t('collections.workbench.actions.copyLink')}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -3374,6 +3570,8 @@ function CollectionActionsMenu({
   onRename: () => void;
   onDelete: () => void;
 }) {
+  const t = useT('project');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -3383,29 +3581,35 @@ function CollectionActionsMenu({
           size="sm"
           isIcon
           className="h-8 w-8 rounded-xl opacity-0 transition-opacity group-hover/collection:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-          aria-label="Open collection actions"
+          aria-label={t('collections.workbench.actions.openCollectionActions')}
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44 rounded-xl">
         <DropdownMenuItem disabled={isFolder || isCreatingRequest} onSelect={onCreateRequest}>
-          {isCreatingRequest ? 'Creating...' : 'New request'}
+          {isCreatingRequest
+            ? t('collections.workbench.actions.creating')
+            : t('collections.workbench.actions.newRequest')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={!isFolder || isImportingPostman} onSelect={onImportPostman}>
-          {isImportingPostman ? 'Importing...' : 'Import Postman'}
+          {isImportingPostman
+            ? t('collections.workbench.actions.importing')
+            : t('collections.workbench.actions.importPostman')}
         </DropdownMenuItem>
         <DropdownMenuItem disabled={!isFolder || isImportingMarkdown} onSelect={onImportMarkdown}>
-          {isImportingMarkdown ? 'Importing...' : 'Import API Markdown'}
+          {isImportingMarkdown
+            ? t('collections.workbench.actions.importing')
+            : t('collections.workbench.actions.importMarkdown')}
         </DropdownMenuItem>
-        <DropdownMenuItem>Export</DropdownMenuItem>
+        <DropdownMenuItem>{t('collections.workbench.actions.export')}</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
-          Rename
+          {t('collections.workbench.actions.rename')}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" disabled={isDeleting} onSelect={onDelete}>
-          Delete
+          {t('collections.workbench.actions.delete')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -3431,24 +3635,33 @@ function ImportCollectionDialog({
   onFileChange: (file: File | null) => void;
   onSubmit: () => Promise<void>;
 }) {
+  const t = useT('project');
   const activeKind = kind ?? 'postman';
   const isMarkdownImport = activeKind === 'markdown';
-  const title = isMarkdownImport ? 'Import API Markdown' : 'Import Postman Collection';
+  const title = isMarkdownImport
+    ? t('collections.workbench.importDialog.markdownTitle')
+    : t('collections.workbench.importDialog.postmanTitle');
   const description = isMarkdownImport
     ? targetLabel
-      ? `Upload an API Markdown file and import requests into module collections under "${targetLabel}".`
-      : 'Upload an API Markdown file and import requests into module collections at the project root.'
+      ? t('collections.workbench.importDialog.markdownDescriptionInCollection', {
+          name: targetLabel,
+        })
+      : t('collections.workbench.importDialog.markdownDescriptionRoot')
     : targetLabel
-      ? `Upload a Postman collection JSON file and import all requests into one collection under "${targetLabel}".`
-      : 'Upload a Postman collection JSON file and import all requests into one collection at the project root.';
+      ? t('collections.workbench.importDialog.postmanDescriptionInCollection', {
+          name: targetLabel,
+        })
+      : t('collections.workbench.importDialog.postmanDescriptionRoot');
   const inputId = isMarkdownImport ? 'import-markdown-file' : 'import-postman-file';
   const accept = isMarkdownImport
     ? '.md,.markdown,text/markdown,text/plain'
     : '.json,application/json';
-  const fileLabel = isMarkdownImport ? 'Markdown file' : 'Collection file';
+  const fileLabel = isMarkdownImport
+    ? t('collections.workbench.importDialog.markdownFile')
+    : t('collections.workbench.importDialog.collectionFile');
   const emptyStateLabel = isMarkdownImport
-    ? 'Choose an api.md or module Markdown document to import requests.'
-    : 'Choose a Postman collection export in JSON format.';
+    ? t('collections.workbench.importDialog.markdownEmptyState')
+    : t('collections.workbench.importDialog.postmanEmptyState');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -3471,14 +3684,16 @@ function ImportCollectionDialog({
               />
             </div>
             <p className="text-sm text-text-muted">
-              {file ? `Selected file: ${file.name}` : emptyStateLabel}
+              {file
+                ? t('collections.workbench.importDialog.selectedFile', { name: file.name })
+                : emptyStateLabel}
             </p>
           </div>
         </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="button"
@@ -3486,7 +3701,7 @@ function ImportCollectionDialog({
             disabled={!file}
             onClick={() => void onSubmit()}
           >
-            Import
+            {t('collections.workbench.actions.import')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3509,25 +3724,28 @@ function RenameCollectionDialog({
   onValueChange: (value: string) => void;
   onConfirm: () => Promise<void>;
 }) {
+  const t = useT('project');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Rename Collection</DialogTitle>
+          <DialogTitle>{t('collections.workbench.renameCollectionDialog.title')}</DialogTitle>
           <DialogDescription>
-            Update the collection name and sync it to the backend when a persisted collection ID is
-            available.
+            {t('collections.workbench.renameCollectionDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           <div className="space-y-2">
-            <Label htmlFor="rename-collection-name">Collection name</Label>
+            <Label htmlFor="rename-collection-name">
+              {t('collections.workbench.renameCollectionDialog.label')}
+            </Label>
             <Input
               id="rename-collection-name"
               value={value}
               onChange={(event) => onValueChange(event.target.value)}
-              placeholder="Enter collection name"
+              placeholder={t('collections.workbench.renameCollectionDialog.placeholder')}
               className="rounded-2xl"
             />
           </div>
@@ -3535,7 +3753,7 @@ function RenameCollectionDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="button"
@@ -3543,7 +3761,7 @@ function RenameCollectionDialog({
             disabled={!value.trim()}
             onClick={() => void onConfirm()}
           >
-            Save
+            {t('collections.workbench.actions.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3566,25 +3784,28 @@ function RenameRequestDialog({
   onValueChange: (value: string) => void;
   onConfirm: () => Promise<void>;
 }) {
+  const t = useT('project');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Rename Request</DialogTitle>
+          <DialogTitle>{t('collections.workbench.renameRequestDialog.title')}</DialogTitle>
           <DialogDescription>
-            Update the request name and sync it to the backend when this request already has a
-            persisted ID.
+            {t('collections.workbench.renameRequestDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           <div className="space-y-2">
-            <Label htmlFor="rename-request-name">Request name</Label>
+            <Label htmlFor="rename-request-name">
+              {t('collections.workbench.renameRequestDialog.label')}
+            </Label>
             <Input
               id="rename-request-name"
               value={value}
               onChange={(event) => onValueChange(event.target.value)}
-              placeholder="Enter request name"
+              placeholder={t('collections.workbench.renameRequestDialog.placeholder')}
               className="rounded-2xl"
             />
           </div>
@@ -3592,7 +3813,7 @@ function RenameRequestDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="button"
@@ -3600,7 +3821,7 @@ function RenameRequestDialog({
             disabled={!value.trim()}
             onClick={() => void onConfirm()}
           >
-            Save
+            {t('collections.workbench.actions.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3623,6 +3844,7 @@ function ExampleFormDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (draft: ExampleFormDraft) => Promise<void>;
 }) {
+  const t = useT('project');
   const [draft, setDraft] = useState<ExampleFormDraft>(() => getExampleFormDraft(requestLabel));
   const [error, setError] = useState<string | null>(null);
 
@@ -3630,7 +3852,7 @@ function ExampleFormDialog({
     event.preventDefault();
 
     if (!draft.name.trim()) {
-      setError('Example name is required.');
+      setError(t('collections.workbench.examples.nameRequired'));
       return;
     }
 
@@ -3642,30 +3864,34 @@ function ExampleFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="default">
         <DialogHeader>
-          <DialogTitle>Save Request Example</DialogTitle>
+          <DialogTitle>{t('collections.workbench.examples.saveDialogTitle')}</DialogTitle>
           <DialogDescription>
-            Save the current request snapshot as a reusable example.
+            {t('collections.workbench.examples.saveDialogDescription')}
             {capturesResponse
-              ? ' The latest response will be captured into this example as well.'
-              : ' You can capture a real response later after sending the request.'}
+              ? ` ${t('collections.workbench.examples.saveDialogCapturesResponse')}`
+              : ` ${t('collections.workbench.examples.saveDialogCaptureLater')}`}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <form id="request-example-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="request-example-name">Example name</Label>
+              <Label htmlFor="request-example-name">
+                {t('collections.workbench.examples.nameLabel')}
+              </Label>
               <Input
                 id="request-example-name"
                 value={draft.name}
                 onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-                placeholder="Create user - happy path"
+                placeholder={t('collections.workbench.examples.namePlaceholder')}
                 errorText={error ?? undefined}
                 root
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="request-example-description">Description</Label>
+              <Label htmlFor="request-example-description">
+                {t('common.description')}
+              </Label>
               <Textarea
                 id="request-example-description"
                 value={draft.description}
@@ -3673,15 +3899,17 @@ function ExampleFormDialog({
                   setDraft((current) => ({ ...current, description: event.target.value }))
                 }
                 rows={5}
-                placeholder="What scenario does this example cover?"
+                placeholder={t('collections.workbench.examples.descriptionPlaceholder')}
               />
             </div>
 
             <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-slate-50/80 px-4 py-3">
               <div>
-                <p className="text-sm font-medium text-text-main">Set as default example</p>
+                <p className="text-sm font-medium text-text-main">
+                  {t('collections.workbench.examples.setDefaultTitle')}
+                </p>
                 <p className="mt-1 text-sm text-text-muted">
-                  The default example becomes the primary saved scenario for this request.
+                  {t('collections.workbench.examples.setDefaultDescription')}
                 </p>
               </div>
               <Switch
@@ -3695,10 +3923,10 @@ function ExampleFormDialog({
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="request-example-form" loading={isSubmitting}>
-            Save Example
+            {t('collections.workbench.examples.saveExample')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3721,6 +3949,7 @@ function EditExampleDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (draft: ExampleFormDraft) => Promise<void>;
 }) {
+  const t = useT('project');
   const [draft, setDraft] = useState<ExampleFormDraft>(() =>
     example ? toExampleFormDraft(example) : getExampleFormDraft('')
   );
@@ -3730,7 +3959,7 @@ function EditExampleDialog({
     event.preventDefault();
 
     if (!draft.name.trim()) {
-      setError('Example name is required.');
+      setError(t('collections.workbench.examples.nameRequired'));
       return;
     }
 
@@ -3742,10 +3971,9 @@ function EditExampleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="default">
         <DialogHeader>
-          <DialogTitle>Edit Example</DialogTitle>
+          <DialogTitle>{t('collections.workbench.examples.editDialogTitle')}</DialogTitle>
           <DialogDescription>
-            Update the saved example metadata. The stored request and response snapshots stay attached
-            to this example.
+            {t('collections.workbench.examples.editDialogDescription')}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -3757,26 +3985,30 @@ function EditExampleDialog({
             </div>
           ) : !example ? (
             <div className="rounded-[24px] border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-700">
-              Unable to load this example. Close the dialog and try again.
+              {t('collections.workbench.examples.loadFailed')}
             </div>
           ) : (
             <form id="request-example-edit-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="request-example-edit-name">Example name</Label>
+                <Label htmlFor="request-example-edit-name">
+                  {t('collections.workbench.examples.nameLabel')}
+                </Label>
                 <Input
                   id="request-example-edit-name"
                   value={draft.name}
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, name: event.target.value }))
                   }
-                  placeholder="Create user - happy path"
+                  placeholder={t('collections.workbench.examples.namePlaceholder')}
                   errorText={error ?? undefined}
                   root
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="request-example-edit-description">Description</Label>
+                <Label htmlFor="request-example-edit-description">
+                  {t('common.description')}
+                </Label>
                 <Textarea
                   id="request-example-edit-description"
                   value={draft.description}
@@ -3784,16 +4016,18 @@ function EditExampleDialog({
                     setDraft((current) => ({ ...current, description: event.target.value }))
                   }
                   rows={5}
-                  placeholder="What scenario does this example cover?"
+                  placeholder={t('collections.workbench.examples.descriptionPlaceholder')}
                 />
               </div>
 
               <div className="rounded-[24px] border border-border/60 bg-slate-50/80 p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-text-main">Set as default example</p>
+                    <p className="text-sm font-medium text-text-main">
+                      {t('collections.workbench.examples.setDefaultTitle')}
+                    </p>
                     <p className="mt-1 text-sm text-text-muted">
-                      Mark this example as the primary saved scenario for the request.
+                      {t('collections.workbench.examples.editSetDefaultDescription')}
                     </p>
                   </div>
                   <Switch
@@ -3806,8 +4040,7 @@ function EditExampleDialog({
                 </div>
                 {example.is_default ? (
                   <p className="mt-3 text-xs leading-5 text-text-muted">
-                    This example is already the default. Promote another example if you want to change
-                    the default selection.
+                    {t('collections.workbench.examples.alreadyDefault')}
                   </p>
                 ) : null}
               </div>
@@ -3816,7 +4049,7 @@ function EditExampleDialog({
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
@@ -3824,7 +4057,7 @@ function EditExampleDialog({
             loading={isSubmitting}
             disabled={!example}
           >
-            Save Changes
+            {t('common.saveChanges')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3845,27 +4078,31 @@ function DeleteExampleDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<void>;
 }) {
+  const t = useT('project');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Delete Example</DialogTitle>
+          <DialogTitle>{t('collections.workbench.examples.deleteDialogTitle')}</DialogTitle>
           <DialogDescription>
-            Remove this saved example from the request. This action cannot be undone.
+            {t('collections.workbench.examples.deleteDialogDescription')}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <div className="rounded-[24px] border border-rose-200 bg-rose-50/70 p-4 text-sm leading-6 text-rose-700">
-            <span className="font-medium text-rose-800">{exampleName || 'This example'}</span> will be
-            deleted permanently.
+            <span className="font-medium text-rose-800">
+              {exampleName || t('collections.workbench.examples.thisExample')}
+            </span>{' '}
+            {t('collections.workbench.examples.deleteDialogWarning')}
           </div>
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="button" variant="destructive" loading={isSubmitting} onClick={() => void onConfirm()}>
-            Delete Example
+            {t('collections.workbench.examples.deleteExample')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3894,13 +4131,15 @@ function ExampleDetailDialog({
   onEditExample: (example: RequestExample) => void;
   onDeleteExample: (example: RequestExample) => void;
 }) {
+  const t = useT('project');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Example Details</DialogTitle>
+          <DialogTitle>{t('collections.workbench.examples.detailDialogTitle')}</DialogTitle>
           <DialogDescription>
-            Inspect the saved request and response snapshot behind this example.
+            {t('collections.workbench.examples.detailDialogDescription')}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4 overflow-y-auto">
@@ -3915,7 +4154,7 @@ function ExampleDetailDialog({
             </div>
           ) : isError && !example ? (
             <div className="rounded-[24px] border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-700">
-              Unable to load the latest example details. Close the dialog and try again.
+              {t('collections.workbench.examples.detailLoadFailed')}
             </div>
           ) : example ? (
             <>
@@ -3926,11 +4165,11 @@ function ExampleDetailDialog({
                       <p className="text-lg font-semibold text-text-main">{example.name}</p>
                       {example.is_default ? (
                         <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                          Default
+                          {t('collections.workbench.badges.default')}
                         </Badge>
                       ) : null}
                       <Badge variant="secondary">
-                        {example.method} {example.url || 'No URL'}
+                        {example.method} {example.url || t('collections.workbench.examples.noUrl')}
                       </Badge>
                     </div>
                     {example.description ? (
@@ -3942,59 +4181,91 @@ function ExampleDetailDialog({
                     {isRefreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
                     <span>
                       {isRefreshing
-                        ? 'Refreshing example details...'
-                        : `Updated ${formatExampleTimestamp(example.updated_at)}`}
+                        ? t('collections.workbench.examples.refreshingDetails')
+                        : t('collections.workbench.examples.updatedAt', {
+                            value: formatExampleTimestamp(
+                              example.updated_at,
+                              t('collections.workbench.examples.unknownTime')
+                            ),
+                          })}
                     </span>
                   </div>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <MetricBadge label="Headers" value={`${example.headers?.length ?? 0}`} />
-                  <MetricBadge label="Params" value={`${example.query_params?.length ?? 0}`} />
                   <MetricBadge
-                    label="Body"
-                    value={example.body?.trim() ? example.body_type : 'none'}
+                    label={t('common.headers')}
+                    value={`${example.headers?.length ?? 0}`}
                   />
-                  <MetricBadge label="Auth" value={example.auth?.type ?? 'none'} />
                   <MetricBadge
-                    label="Response"
+                    label={t('collections.workbench.sections.params')}
+                    value={`${example.query_params?.length ?? 0}`}
+                  />
+                  <MetricBadge
+                    label={t('collections.workbench.sections.body')}
                     value={
-                      example.response_status > 0
-                        ? `${example.response_status} / ${example.response_time} ms`
-                        : 'Not captured'
+                      example.body?.trim()
+                        ? getBodyModeLabel(t, example.body_type)
+                        : getBodyModeLabel(t, 'none')
                     }
                   />
-                  <MetricBadge label="Created" value={formatExampleTimestamp(example.created_at)} />
+                  <MetricBadge
+                    label={t('collections.workbench.examples.authMetric')}
+                    value={getAuthorizationModeLabel(t, example.auth?.type ?? 'none')}
+                  />
+                  <MetricBadge
+                    label={t('common.response')}
+                    value={getExampleResponseValue(t, example.response_status, example.response_time)}
+                  />
+                  <MetricBadge
+                    label={t('common.created')}
+                    value={formatExampleTimestamp(
+                      example.created_at,
+                      t('collections.workbench.examples.unknownTime')
+                    )}
+                  />
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <ExampleSnapshotBlock
-                  title="Headers"
-                  value={formatExampleKeyValues(example.headers, 'No headers saved.')}
+                  title={t('common.headers')}
+                  value={formatExampleKeyValues(
+                    example.headers,
+                    t('collections.workbench.examples.noHeadersSaved')
+                  )}
                 />
                 <ExampleSnapshotBlock
-                  title="Query Params"
-                  value={formatExampleKeyValues(example.query_params, 'No query params saved.')}
+                  title={t('collections.workbench.examples.queryParamsTitle')}
+                  value={formatExampleKeyValues(
+                    example.query_params,
+                    t('collections.workbench.examples.noQueryParamsSaved')
+                  )}
                 />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <ExampleSnapshotBlock title="Auth" value={formatExampleAuth(example.auth)} />
                 <ExampleSnapshotBlock
-                  title="Response Headers"
-                  value={formatExampleResponseHeaders(example.response_headers)}
+                  title={t('collections.workbench.examples.authMetric')}
+                  value={formatExampleAuth(t, example.auth)}
+                />
+                <ExampleSnapshotBlock
+                  title={t('collections.workbench.examples.responseHeadersTitle')}
+                  value={formatExampleResponseHeaders(
+                    example.response_headers,
+                    t('collections.workbench.examples.noResponseHeadersCaptured')
+                  )}
                 />
               </div>
 
               <ExampleSnapshotBlock
-                title="Request Body"
-                value={example.body || '(empty body)'}
+                title={t('collections.workbench.examples.requestBodyTitle')}
+                value={example.body || t('collections.workbench.response.emptyBody')}
                 tone={example.body?.trim() ? 'dark' : 'light'}
               />
               <ExampleSnapshotBlock
-                title="Response Body"
-                value={example.response_body || '(empty body)'}
+                title={t('collections.workbench.examples.responseBodyTitle')}
+                value={example.response_body || t('collections.workbench.response.emptyBody')}
                 tone={example.response_body?.trim() ? 'dark' : 'light'}
               />
             </>
@@ -4002,18 +4273,18 @@ function ExampleDetailDialog({
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+            {t('common.close')}
           </Button>
           {example ? (
             <>
               <Button type="button" variant="destructive" onClick={() => onDeleteExample(example)}>
-                Delete
+                {t('common.delete')}
               </Button>
               <Button type="button" variant="outline" onClick={() => onEditExample(example)}>
-                Edit
+                {t('collections.workbench.actions.edit')}
               </Button>
               <Button type="button" onClick={() => onApplyExample(example)}>
-                Apply to Request
+                {t('collections.workbench.actions.applyToRequest')}
               </Button>
             </>
           ) : null}
@@ -4060,15 +4331,17 @@ function ExamplesPanel({
   onSetDefault: (example: RequestExample) => Promise<void>;
   onDeleteExample: (example: RequestExample) => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="space-y-4">
       <Card className="border-border/60 bg-white/85 py-0 shadow-sm">
         <CardHeader className="border-b border-border/60 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Examples</CardTitle>
+              <CardTitle>{t('common.examples')}</CardTitle>
               <CardDescription className="mt-1">
-                Save named request and response snapshots so common scenarios can be replayed quickly.
+                {t('collections.workbench.examples.panelDescription')}
               </CardDescription>
             </div>
 
@@ -4081,11 +4354,11 @@ function ExamplesPanel({
                 disabled={!requestPersisted || isRefreshing}
               >
                 <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
-                Refresh
+                {t('common.refresh')}
               </Button>
               <Button type="button" size="sm" onClick={onCreateExample} disabled={!canCreateExamples}>
                 <Plus className="h-4 w-4" />
-                New Example
+                {t('collections.workbench.examples.newExample')}
               </Button>
             </div>
           </div>
@@ -4093,18 +4366,20 @@ function ExamplesPanel({
         <CardContent className="space-y-4 px-5 py-5">
           {!canCreateExamples ? (
             <div className="rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 p-5">
-              <p className="text-sm font-semibold text-text-main">Examples need a saved collection request</p>
+              <p className="text-sm font-semibold text-text-main">
+                {t('collections.workbench.examples.requiresSavedRequestTitle')}
+              </p>
               <p className="mt-2 text-sm leading-6 text-text-muted">
-                Quick requests are intentionally ephemeral. Move this request into a saved collection first,
-                then save examples from there.
+                {t('collections.workbench.examples.requiresSavedRequestDescription')}
               </p>
             </div>
           ) : !requestPersisted ? (
             <div className="rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 p-5">
-              <p className="text-sm font-semibold text-text-main">This request has not been persisted yet</p>
+              <p className="text-sm font-semibold text-text-main">
+                {t('collections.workbench.examples.requestNotPersistedTitle')}
+              </p>
               <p className="mt-2 text-sm leading-6 text-text-muted">
-                Create the first example and the workbench will save this request into the collection
-                automatically before storing the example.
+                {t('collections.workbench.examples.requestNotPersistedDescription')}
               </p>
             </div>
           ) : null}
@@ -4121,14 +4396,15 @@ function ExamplesPanel({
             </div>
           ) : isError ? (
             <div className="rounded-[24px] border border-rose-200 bg-rose-50/70 p-5 text-sm text-rose-700">
-              Unable to load examples for this request. Try refreshing the panel.
+              {t('collections.workbench.examples.panelLoadFailed')}
             </div>
           ) : examples.length === 0 ? (
             <div className="rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 p-5">
-              <p className="text-sm font-semibold text-text-main">No examples yet</p>
+              <p className="text-sm font-semibold text-text-main">
+                {t('collections.workbench.examples.emptyTitle')}
+              </p>
               <p className="mt-2 text-sm leading-6 text-text-muted">
-                Save the current request as an example to preserve a named scenario and optionally
-                attach the latest real response.
+                {t('collections.workbench.examples.emptyDescription')}
               </p>
             </div>
           ) : (
@@ -4144,11 +4420,11 @@ function ExamplesPanel({
                         <p className="text-sm font-semibold text-text-main">{example.name}</p>
                         {example.is_default ? (
                           <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                            Default
+                            {t('collections.workbench.badges.default')}
                           </Badge>
                         ) : null}
                         <Badge variant="secondary">
-                          {example.method} {example.url || 'No URL'}
+                          {example.method} {example.url || t('collections.workbench.examples.noUrl')}
                         </Badge>
                       </div>
 
@@ -4158,35 +4434,35 @@ function ExamplesPanel({
 
                       <div className="flex flex-wrap gap-2">
                         <MetricBadge
-                          label="Headers"
+                          label={t('common.headers')}
                           value={`${example.headers?.length ?? 0}`}
                         />
                         <MetricBadge
-                          label="Params"
+                          label={t('collections.workbench.sections.params')}
                           value={`${example.query_params?.length ?? 0}`}
                         />
                         <MetricBadge
-                          label="Body"
-                          value={example.body?.trim() ? example.body_type : 'none'}
+                          label={t('collections.workbench.sections.body')}
+                          value={
+                            example.body?.trim()
+                              ? getBodyModeLabel(t, example.body_type)
+                              : getBodyModeLabel(t, 'none')
+                          }
                         />
                         <MetricBadge
-                          label="Response"
-                          value={
-                            example.response_status > 0
-                              ? `${example.response_status} / ${example.response_time} ms`
-                              : 'Not captured'
-                          }
+                          label={t('common.response')}
+                          value={getExampleResponseValue(t, example.response_status, example.response_time)}
                         />
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 xl:max-w-[460px] xl:justify-end">
                       <Button type="button" variant="outline" size="sm" onClick={() => onViewExample(example)}>
-                        View
+                        {t('common.view')}
                       </Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => onApplyExample(example)}>
                         <Copy className="h-4 w-4" />
-                        Apply
+                        {t('collections.workbench.actions.apply')}
                       </Button>
                       <Button
                         type="button"
@@ -4197,7 +4473,7 @@ function ExamplesPanel({
                         loading={savingResponseExampleId === example.id}
                       >
                         <Save className="h-4 w-4" />
-                        Capture Latest Response
+                        {t('collections.workbench.actions.captureLatestResponse')}
                       </Button>
                       <Button
                         type="button"
@@ -4208,24 +4484,31 @@ function ExamplesPanel({
                         loading={defaultingExampleId === example.id}
                       >
                         <Star className="h-4 w-4" />
-                        Set Default
+                        {t('collections.workbench.actions.setDefault')}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="outline" size="sm" isIcon noScale aria-label="More actions">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            isIcon
+                            noScale
+                            aria-label={t('collections.workbench.actions.moreActions')}
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40 rounded-xl">
                           <DropdownMenuItem onSelect={() => onEditExample(example)}>
-                            Edit
+                            {t('collections.workbench.actions.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             variant="destructive"
                             onSelect={() => onDeleteExample(example)}
                           >
-                            Delete
+                            {t('common.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -4278,10 +4561,12 @@ function RequestTabs({
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
 }) {
+  const t = useT('project');
+
   if (tabs.length === 0) {
     return (
       <div className="flex h-10 items-center rounded-xl border border-dashed border-border/60 bg-white/55 px-4 text-sm text-text-muted">
-        No open tabs
+        {t('collections.workbench.empty.noOpenTabs')}
       </div>
     );
   }
@@ -4321,7 +4606,7 @@ function RequestTabs({
                   ? 'opacity-100'
                   : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
               )}
-              aria-label={`Close ${tab.title}`}
+              aria-label={t('collections.workbench.closeTab', { title: tab.title })}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -4343,21 +4628,29 @@ function EnvironmentSwitcher({
   isLoading: boolean;
   onEnvironmentChange: (value: string) => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border/60 bg-white/85 px-2.5 py-1 shadow-sm">
       <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-text-muted">
-        Environment
+        {t('common.environment')}
       </span>
       <Select value={selectedEnvironmentId} onValueChange={onEnvironmentChange}>
         <SelectTrigger
           size="sm"
           className="h-7 min-w-[132px] border-0 bg-transparent px-1.5 text-sm shadow-none"
         >
-          <SelectValue placeholder={isLoading ? 'Loading...' : 'No environment'} />
+          <SelectValue
+            placeholder={
+              isLoading
+                ? t('collections.workbench.loadingEnvironments')
+                : t('collections.workbench.noEnvironment')
+            }
+          />
         </SelectTrigger>
         <SelectContent className="min-w-[132px] rounded-xl">
           <SelectItem value="none" className="py-1 text-xs">
-            No environment
+            {t('collections.workbench.noEnvironment')}
           </SelectItem>
           {environments.map((environment) => (
             <SelectItem
@@ -4389,6 +4682,8 @@ function RequestToolbar({
   onSave: () => void;
   onDuplicate: () => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="rounded-[24px] border border-border/60 bg-slate-50/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
       <div className="grid gap-3 xl:grid-cols-[140px_minmax(0,1fr)_auto]">
@@ -4408,7 +4703,9 @@ function RequestToolbar({
         <Input
           value={tab.url}
           onChange={(event) => onUrlChange(event.target.value)}
-          placeholder="Paste API URL or use {{base_url}}/path"
+          placeholder={t('collections.workbench.urlPlaceholder', {
+            template: DEFAULT_REQUEST_TEMPLATE,
+          })}
           className="h-11 rounded-2xl border-border/70 bg-white px-4 text-sm shadow-none"
         />
 
@@ -4419,8 +4716,8 @@ function RequestToolbar({
             isIcon
             className="h-11 w-11 rounded-2xl"
             onClick={onSave}
-            aria-label="Save tab"
-            title="Save tab"
+            aria-label={t('collections.workbench.actions.saveTab')}
+            title={t('collections.workbench.actions.saveTab')}
           >
             <Save className="h-4 w-4" />
           </Button>
@@ -4430,14 +4727,14 @@ function RequestToolbar({
             isIcon
             className="h-11 w-11 rounded-2xl"
             onClick={onDuplicate}
-            aria-label="Duplicate tab"
-            title="Duplicate tab"
+            aria-label={t('collections.workbench.actions.duplicateTab')}
+            title={t('collections.workbench.actions.duplicateTab')}
           >
             <Copy className="h-4 w-4" />
           </Button>
           <Button type="button" className="h-11 rounded-2xl px-5" onClick={onSend} loading={tab.isSending}>
             <SendHorizonal className="h-4 w-4" />
-            Send
+            {t('collections.workbench.actions.send')}
           </Button>
         </div>
       </div>
@@ -4452,21 +4749,23 @@ function RequestSectionTabs({
   activeSection: RequestSection;
   onSelectSection: (section: RequestSection) => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {SECTION_ITEMS.map((item) => (
         <button
-          key={item.value}
+          key={item}
           type="button"
-          onClick={() => onSelectSection(item.value)}
+          onClick={() => onSelectSection(item)}
           className={cn(
             'rounded-full border px-3 py-2 text-sm font-medium transition-colors',
-            item.value === activeSection
+            item === activeSection
               ? 'border-primary/30 bg-primary/10 text-primary shadow-sm'
               : 'border-border/60 bg-white/70 text-text-muted hover:border-border hover:bg-white hover:text-text-main'
           )}
         >
-          {item.label}
+          {getSectionLabel(t, item)}
         </button>
       ))}
     </div>
@@ -4480,12 +4779,14 @@ function RequestSectionPanel({
   tab: RequestPageTab;
   onTabChange: (updater: (tab: RequestPageTab) => RequestPageTab) => void;
 }) {
+  const t = useT('project');
+
   switch (tab.activeSection) {
     case 'params':
       return (
         <KeyValueEditor
-          title="Query Params"
-          description="Edit structured query parameters or switch to bulk mode for quick pasting."
+          title={t('collections.workbench.queryParamsTitle')}
+          description={t('collections.workbench.queryParamsDescription')}
           mode={tab.paramsMode}
           rows={tab.paramsRows}
           bulkValue={tab.paramsBulk}
@@ -4541,8 +4842,8 @@ function RequestSectionPanel({
     case 'headers':
       return (
         <KeyValueEditor
-          title="Headers"
-          description="Manage request headers with a table view or bulk input."
+          title={t('common.headers')}
+          description={t('collections.workbench.headersDescription')}
           mode={tab.headersMode}
           rows={tab.headersRows}
           bulkValue={tab.headersBulk}
@@ -4646,6 +4947,7 @@ function KeyValueEditor({
   onRowsChange: (rows: KeyValueRow[]) => void;
   onBulkChange: (value: string) => void;
 }) {
+  const t = useT('project');
   const updateRow = (rowId: string, patch: Partial<KeyValueRow>) => {
     onRowsChange(rows.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
   };
@@ -4675,7 +4977,7 @@ function KeyValueEditor({
                   : 'text-text-muted hover:text-text-main'
               )}
             >
-              Table
+              {t('collections.workbench.editors.table')}
             </button>
             <button
               type="button"
@@ -4687,7 +4989,7 @@ function KeyValueEditor({
                   : 'text-text-muted hover:text-text-main'
               )}
             >
-              Bulk Edit
+              {t('collections.workbench.editors.bulkEdit')}
             </button>
           </div>
 
@@ -4698,7 +5000,7 @@ function KeyValueEditor({
             onClick={() => onRowsChange([...rows, createKeyValueRow()])}
           >
             <Plus className="h-4 w-4" />
-            Add row
+            {t('collections.workbench.actions.addRow')}
           </Button>
         </div>
       </div>
@@ -4710,16 +5012,16 @@ function KeyValueEditor({
             onChange={(event) => onBulkChange(event.target.value)}
             rows={10}
             className="min-h-[220px] rounded-2xl font-mono text-sm"
-            placeholder="key: value # description"
+            placeholder={t('collections.workbench.editors.bulkPlaceholder')}
           />
         </div>
       ) : (
         <div className="overflow-x-auto px-5 py-5">
           <div className="min-w-[760px] space-y-3">
             <div className="grid grid-cols-[1.05fr_1.25fr_1fr_56px] gap-3 px-3 text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
-              <span>Key</span>
-              <span>Value</span>
-              <span>Description</span>
+              <span>{t('collections.workbench.editors.key')}</span>
+              <span>{t('collections.workbench.editors.value')}</span>
+              <span>{t('common.description')}</span>
               <span />
             </div>
 
@@ -4728,7 +5030,7 @@ function KeyValueEditor({
                 <Input
                   value={row.key}
                   onChange={(event) => updateRow(row.id, { key: event.target.value })}
-                  placeholder="page"
+                  placeholder={t('collections.workbench.editors.keyPlaceholder')}
                   className="rounded-2xl"
                 />
                 <Input
@@ -4740,7 +5042,7 @@ function KeyValueEditor({
                 <Input
                   value={row.description}
                   onChange={(event) => updateRow(row.id, { description: event.target.value })}
-                  placeholder="Optional note"
+                  placeholder={t('collections.workbench.editors.descriptionPlaceholder')}
                   className="rounded-2xl"
                 />
                 <Button
@@ -4772,16 +5074,20 @@ function AuthorizationPanel({
   onModeChange: (mode: AuthorizationMode) => void;
   onValueChange: (value: string) => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
       <Card className="border-border/60 bg-white/85 py-0 shadow-sm">
         <CardHeader className="border-b border-border/60 py-5">
-          <CardTitle>Authorization</CardTitle>
-          <CardDescription>Choose how this request should authenticate.</CardDescription>
+          <CardTitle>{t('collections.workbench.sections.authorization')}</CardTitle>
+          <CardDescription>{t('collections.workbench.authorization.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-5 py-5">
           <div className="space-y-2">
-            <Label htmlFor="request-auth-mode">Auth type</Label>
+            <Label htmlFor="request-auth-mode">
+              {t('collections.workbench.authorization.typeLabel')}
+            </Label>
             <Select value={mode} onValueChange={(nextValue) => onModeChange(nextValue as AuthorizationMode)}>
               <SelectTrigger id="request-auth-mode" className="rounded-2xl">
                 <SelectValue />
@@ -4789,7 +5095,7 @@ function AuthorizationPanel({
               <SelectContent>
                 {AUTHORIZATION_OPTIONS.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {getAuthorizationModeLabel(t, option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -4800,24 +5106,26 @@ function AuthorizationPanel({
 
       <Card className="border-border/60 bg-white/85 py-0 shadow-sm">
         <CardHeader className="border-b border-border/60 py-5">
-          <CardTitle>Credentials</CardTitle>
-          <CardDescription>Provide the credential value that should be sent with the request.</CardDescription>
+          <CardTitle>{t('collections.workbench.authorization.credentialsTitle')}</CardTitle>
+          <CardDescription>
+            {t('collections.workbench.authorization.credentialsDescription')}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-5 py-5">
           {mode === 'none' ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-slate-50/80 p-5 text-sm text-text-muted">
-              This request currently sends without authentication.
+              {t('collections.workbench.authorization.noneDescription')}
             </div>
           ) : (
             <div className="space-y-2">
               <Label htmlFor="request-auth-value">
-                {mode === 'basic' ? 'Username:Password' : mode === 'api-key' ? 'API key' : 'Token'}
+                {getAuthCredentialLabel(t, mode)}
               </Label>
               <Input
                 id="request-auth-value"
                 value={value}
                 onChange={(event) => onValueChange(event.target.value)}
-                placeholder={mode === 'basic' ? 'user:secret' : 'Paste credential value'}
+                placeholder={getAuthCredentialPlaceholder(t, mode)}
                 className="rounded-2xl"
               />
             </div>
@@ -4839,13 +5147,17 @@ function BodyEditor({
   onModeChange: (mode: BodyMode) => void;
   onValueChange: (value: string) => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="rounded-[24px] border border-border/60 bg-white/85 shadow-sm">
       <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 className="text-base font-semibold text-text-main">Body</h3>
+          <h3 className="text-base font-semibold text-text-main">
+            {t('collections.workbench.sections.body')}
+          </h3>
           <p className="mt-1 text-sm text-text-muted">
-            Choose a body mode and edit the payload in a large code-friendly area.
+            {t('collections.workbench.body.description')}
           </p>
         </div>
 
@@ -4862,7 +5174,7 @@ function BodyEditor({
                   : 'text-text-muted hover:text-text-main'
               )}
             >
-              {option}
+              {getBodyModeLabel(t, option)}
             </button>
           ))}
         </div>
@@ -4874,7 +5186,11 @@ function BodyEditor({
           onChange={(event) => onValueChange(event.target.value)}
           rows={14}
           className="min-h-[280px] rounded-2xl font-mono text-sm"
-          placeholder={mode === 'form-data' ? 'field=value' : '{\n  \n}'}
+          placeholder={
+            mode === 'form-data'
+              ? t('collections.workbench.body.formDataPlaceholder')
+              : '{\n  \n}'
+          }
         />
       </div>
     </div>
@@ -4888,11 +5204,13 @@ function ScriptsPanel({
   value: string;
   onValueChange: (value: string) => void;
 }) {
+  const t = useT('project');
+
   return (
     <Card className="border-border/60 bg-white/85 py-0 shadow-sm">
       <CardHeader className="border-b border-border/60 py-5">
-        <CardTitle>Scripts</CardTitle>
-        <CardDescription>Use this area for pre-request or post-response scripting logic.</CardDescription>
+        <CardTitle>{t('collections.workbench.sections.scripts')}</CardTitle>
+        <CardDescription>{t('collections.workbench.scripts.description')}</CardDescription>
       </CardHeader>
       <CardContent className="px-5 py-5">
         <Textarea
@@ -4900,7 +5218,7 @@ function ScriptsPanel({
           onChange={(event) => onValueChange(event.target.value)}
           rows={14}
           className="min-h-[280px] rounded-2xl font-mono text-sm"
-          placeholder="// Write request scripts here"
+          placeholder={t('collections.workbench.scripts.placeholder')}
         />
       </CardContent>
     </Card>
@@ -4914,6 +5232,7 @@ function SettingsPanel({
   settings: RequestPageTab['settings'];
   onSettingChange: (key: keyof RequestPageTab['settings'], value: boolean) => void;
 }) {
+  const t = useT('project');
   const settingItems: Array<{
     key: keyof RequestPageTab['settings'];
     title: string;
@@ -4921,18 +5240,18 @@ function SettingsPanel({
   }> = [
     {
       key: 'followRedirects',
-      title: 'Follow redirects',
-      description: 'Handled by the local runner. Turn this off to inspect 3xx responses directly.',
+      title: t('collections.workbench.settings.followRedirectsTitle'),
+      description: t('collections.workbench.settings.followRedirectsDescription'),
     },
     {
       key: 'strictTls',
-      title: 'Strict TLS validation',
-      description: 'Keep this on for normal HTTPS. Turn it off only for local self-signed certificates.',
+      title: t('collections.workbench.settings.strictTlsTitle'),
+      description: t('collections.workbench.settings.strictTlsDescription'),
     },
     {
       key: 'persistCookies',
-      title: 'Persist cookies',
-      description: 'Not supported by the local runner. Send Cookie headers explicitly when the target API requires them.',
+      title: t('collections.workbench.settings.persistCookiesTitle'),
+      description: t('collections.workbench.settings.persistCookiesDescription'),
     },
   ];
 
@@ -4971,6 +5290,7 @@ function ResponsePanel({
   canSaveAsExample: boolean;
   isSavingExample: boolean;
 }) {
+  const t = useT('project');
   const responseHeaders = Object.entries(response.headers)
     .map(([key, value]) => `${key}: ${value}`)
     .join('\n');
@@ -4980,9 +5300,9 @@ function ResponsePanel({
       <CardHeader className="gap-4 border-b border-border/60 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle className="text-xl tracking-tight">Response</CardTitle>
+            <CardTitle className="text-xl tracking-tight">{t('common.response')}</CardTitle>
             <CardDescription className="mt-1">
-              Inspect the latest real response payload, headers, timing, and status details.
+              {t('collections.workbench.response.description')}
             </CardDescription>
           </div>
 
@@ -4996,18 +5316,18 @@ function ResponsePanel({
               loading={isSavingExample}
             >
               <Save className="h-4 w-4" />
-              Save as Example
+              {t('collections.workbench.actions.saveAsExample')}
             </Button>
             <MetricBadge
-              label="Status"
+              label={t('common.status')}
               value={response.status !== null ? `${response.status} ${response.statusLabel}`.trim() : '-'}
             />
             <MetricBadge
-              label="Time"
+              label={t('common.duration')}
               value={response.durationMs !== null ? `${response.durationMs} ms` : '-'}
             />
             <MetricBadge
-              label="Size"
+              label={t('collections.workbench.response.size')}
               value={response.sizeBytes !== null ? `${response.sizeBytes} B` : '-'}
             />
           </div>
@@ -5018,21 +5338,27 @@ function ResponsePanel({
         {isSending ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
-            <p className="mt-4 text-sm font-medium text-text-main">Sending request...</p>
+            <p className="mt-4 text-sm font-medium text-text-main">
+              {t('collections.workbench.response.sendingTitle')}
+            </p>
             <p className="mt-1 text-sm text-text-muted">
-              The response panel updates as soon as your local Kest runner finishes the request.
+              {t('collections.workbench.response.sendingDescription')}
             </p>
           </div>
         ) : response.error ? (
           <div className="flex flex-1 flex-col justify-center rounded-[24px] border border-rose-200 bg-rose-50/70 p-6">
-            <p className="text-sm font-semibold text-rose-700">Unable to send request</p>
+            <p className="text-sm font-semibold text-rose-700">
+              {t('collections.workbench.response.errorTitle')}
+            </p>
             <p className="mt-2 text-sm leading-6 text-rose-600">{response.error}</p>
           </div>
         ) : response.status === null ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-slate-50/80 text-center">
-            <p className="text-base font-semibold text-text-main">Click Send to get a response</p>
+            <p className="text-base font-semibold text-text-main">
+              {t('collections.workbench.response.emptyTitle')}
+            </p>
             <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">
-              Once you trigger the request, this panel will render the latest response body, headers, and timing returned by your local runner.
+              {t('collections.workbench.response.emptyDescription')}
             </p>
           </div>
         ) : (
@@ -5040,13 +5366,13 @@ function ResponsePanel({
             {responseHeaders ? (
               <div className="rounded-[24px] border border-border/60 bg-slate-100/90 p-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
-                  Headers
+                  {t('common.headers')}
                 </p>
                 <pre className="overflow-auto text-xs leading-6 text-slate-700">{responseHeaders}</pre>
               </div>
             ) : null}
             <pre className="flex-1 overflow-auto rounded-[24px] border border-border/60 bg-slate-950/95 p-5 text-sm leading-6 text-slate-100">
-              {response.body || '(empty body)'}
+              {response.body || t('collections.workbench.response.emptyBody')}
             </pre>
           </div>
         )}
