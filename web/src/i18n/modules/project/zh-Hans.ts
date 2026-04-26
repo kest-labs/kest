@@ -1430,7 +1430,6 @@ const messages = {
     unsaved: '未保存',
     saved: '已保存',
     validationTitle: '请先修复流程问题',
-    heroEyebrow: 'React Flow 测试流程设计器',
     heroTitleFallback: 'HTTP 测试流程',
     heroDescription: '设计 HTTP 请求图，在边之间传递捕获变量，并且不离开项目工作区就能查看流式执行结果。',
     drawerTitle: '流程检查器',

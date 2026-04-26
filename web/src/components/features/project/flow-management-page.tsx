@@ -2843,12 +2843,9 @@ export function ProjectFlowManagementPage({
 
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                    {t('modules.flows.label')}
-                  </Badge>
-                  <p className="text-sm text-text-muted">{t('flowPage.heroEyebrow')}</p>
-                </div>
+                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                  {t('modules.flows.label')}
+                </Badge>
                 <div>
                   <h2 className="text-2xl font-semibold tracking-tight">
                     {selectedFlowQuery.data?.name || t('flowPage.heroTitleFallback')}

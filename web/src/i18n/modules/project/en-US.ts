@@ -1432,7 +1432,6 @@ const messages: ProjectMessages = {
     unsaved: 'Unsaved',
     saved: 'Saved',
     validationTitle: 'Fix the flow before continuing',
-    heroEyebrow: 'React Flow test flow designer',
     heroTitleFallback: 'HTTP test flows',
     heroDescription: 'Design HTTP request graphs, pass captures across edges, and inspect streamed execution without leaving the project workspace.',
     drawerTitle: 'Flow inspector',
