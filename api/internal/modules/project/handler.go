@@ -43,11 +43,9 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	// Get userID from context (set by Auth middleware)
-	userID, _ := c.Get("userID")
-	uid := uint(0)
-	if userID != nil {
-		uid = userID.(uint)
+	uid, ok := handler.GetUserID(c)
+	if !ok {
+		return
 	}
 
 	project, err := h.service.Create(c.Request.Context(), uid, &req)
