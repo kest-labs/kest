@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -82,6 +83,10 @@ func (h *Handler) GetProfile(c *gin.Context) {
 
 	user, err := h.service.GetProfile(c.Request.Context(), userID)
 	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			response.Unauthorized(c, "Invalid or expired session")
+			return
+		}
 		response.HandleError(c, "Failed to get profile", err)
 		return
 	}
@@ -103,6 +108,10 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	user, err := h.service.UpdateProfile(c.Request.Context(), userID, &req)
 	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			response.Unauthorized(c, "Invalid or expired session")
+			return
+		}
 		response.HandleError(c, "Failed to update profile", err)
 		return
 	}
@@ -123,6 +132,10 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	}
 
 	if err := h.service.ChangePassword(c.Request.Context(), userID, &req); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			response.Unauthorized(c, "Invalid or expired session")
+			return
+		}
 		response.HandleError(c, "Failed to change password", err)
 		return
 	}
@@ -138,6 +151,10 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteAccount(c.Request.Context(), userID); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			response.Unauthorized(c, "Invalid or expired session")
+			return
+		}
 		response.HandleError(c, "Failed to delete account", err)
 		return
 	}

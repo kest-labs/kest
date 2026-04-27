@@ -23,14 +23,45 @@ interface AuthState {
 class SessionRestoreError extends Error {
   status?: number;
   shouldLog: boolean;
+  endpoint?: string;
+  responseBody?: string;
 
-  constructor(message: string, options?: { status?: number; shouldLog?: boolean }) {
+  constructor(
+    message: string,
+    options?: {
+      status?: number;
+      shouldLog?: boolean;
+      endpoint?: string;
+      responseBody?: string;
+    }
+  ) {
     super(message);
     this.name = 'SessionRestoreError';
     this.status = options?.status;
     this.shouldLog = options?.shouldLog ?? true;
+    this.endpoint = options?.endpoint;
+    this.responseBody = options?.responseBody;
   }
 }
+
+const sessionLooksInvalidFromBody = (body: string) => {
+  const normalized = body.toLowerCase();
+  return (
+    normalized.includes('user not found') ||
+    normalized.includes('record not found') ||
+    normalized.includes('invalid or expired') ||
+    normalized.includes('token expired') ||
+    normalized.includes('invalid token')
+  );
+};
+
+const safeReadResponseBody = async (response: Response) => {
+  try {
+    return await response.text();
+  } catch {
+    return '';
+  }
+};
 
 const defaultState = {
   user: null,
@@ -76,6 +107,7 @@ const useAuthStoreBase = create<AuthState>()(
 
       initializeAuth: async () => {
         const { accessToken } = useAuthStoreBase.getState();
+        const profileEndpoint = buildApiUrl('/users/profile');
 
         set({ isLoading: true });
         try {
@@ -88,16 +120,24 @@ const useAuthStoreBase = create<AuthState>()(
 
           // 应用刷新后尝试用本地 token 恢复会话，
           // 以后端 profile 结果作为当前登录态的唯一可信来源。
-          const response = await fetch(buildApiUrl('/users/profile'), {
+          const response = await fetch(profileEndpoint, {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           });
 
           if (!response.ok) {
+            const responseBody = await safeReadResponseBody(response);
+            const looksLikeInvalidSession =
+              response.status === 401 ||
+              response.status === 403 ||
+              sessionLooksInvalidFromBody(responseBody);
+
             throw new SessionRestoreError('Failed to restore session', {
               status: response.status,
-              shouldLog: response.status !== 401 && response.status !== 403,
+              shouldLog: !looksLikeInvalidSession,
+              endpoint: profileEndpoint,
+              responseBody,
             });
           }
 
@@ -115,7 +155,16 @@ const useAuthStoreBase = create<AuthState>()(
           });
         } catch (error) {
           if (!(error instanceof SessionRestoreError) || error.shouldLog) {
-            console.error('Auth initialization failed:', error);
+            if (error instanceof SessionRestoreError) {
+              console.error('Auth initialization failed:', {
+                message: error.message,
+                status: error.status,
+                endpoint: error.endpoint,
+                responseBody: error.responseBody,
+              });
+            } else {
+              console.error('Auth initialization failed:', error);
+            }
           }
           // token 失效或后端不可用时，主动清空本地会话，避免进入假登录状态。
           set({
