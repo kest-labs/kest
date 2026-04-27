@@ -149,12 +149,12 @@ export function CategoryManagementPage({
   // 作用：管理搜索词、分页、选中项和各类弹窗目标。
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
   const [formMode, setFormMode] = useState<CategoryFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
-  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
-  const [defaultParentId, setDefaultParentId] = useState<number | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | string | null>(null);
+  const [defaultParentId, setDefaultParentId] = useState<number | string | null>(null);
 
   const deferredSearch = useDeferredValue(searchQuery);
 
@@ -191,7 +191,10 @@ export function CategoryManagementPage({
     }
 
     return flatCategories.filter((category) => {
-      const parentName = category.parent_name || categoryNameMap.get(category.parent_id ?? -1) || '';
+      const parentName =
+        category.parent_name ||
+        (category.parent_id ? categoryNameMap.get(category.parent_id) : '') ||
+        '';
 
       return [category.name, category.description || '', parentName].some((value) =>
         value.toLowerCase().includes(keyword)
@@ -244,7 +247,7 @@ export function CategoryManagementPage({
 
   // 打开创建弹窗。
   // 作用：支持可选父级预填，快速创建子分类。
-  const openCreateDialog = (parentId?: number | null) => {
+  const openCreateDialog = (parentId?: number | string | null) => {
     setFormMode('create');
     setEditingCategoryId(null);
     setDefaultParentId(parentId ?? null);
@@ -253,7 +256,7 @@ export function CategoryManagementPage({
 
   // 打开编辑弹窗。
   // 作用：切换到 edit 模式并绑定当前分类。
-  const openEditDialog = (categoryId: number) => {
+  const openEditDialog = (categoryId: number | string) => {
     setFormMode('edit');
     setEditingCategoryId(categoryId);
     setDefaultParentId(null);
@@ -320,7 +323,10 @@ export function CategoryManagementPage({
 
   // 同级排序处理器。
   // 作用：根据上移/下移方向生成新的 ID 顺序并提交给后端。
-  const handleMoveCategory = async (categoryId: number, direction: 'up' | 'down') => {
+  const handleMoveCategory = async (
+    categoryId: number | string,
+    direction: 'up' | 'down'
+  ) => {
     const nextOrder = reorderCategoryIdsWithinSiblings(flatCategories, categoryId, direction);
 
     if (!nextOrder) {

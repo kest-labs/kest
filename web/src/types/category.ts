@@ -13,13 +13,13 @@ export interface CategoryPagination {
 // 分类核心实体。
 // 作用：统一描述项目分类的树形节点和详情结构。
 export interface ProjectCategory {
-  id: number;
-  project_id: number;
+  id: number | string;
+  project_id: number | string;
   name: string;
   description?: string;
   color?: string;
   icon?: string;
-  parent_id?: number | null;
+  parent_id?: number | string | null;
   parent_name?: string | null;
   sort_order: number;
   test_cases_count?: number;
@@ -52,7 +52,7 @@ export interface ProjectCategoryListResponse {
 export interface CreateCategoryRequest {
   name: string;
   description?: string;
-  parent_id?: number | null;
+  parent_id?: number | string | null;
   sort_order?: number;
 }
 
@@ -61,12 +61,12 @@ export interface CreateCategoryRequest {
 export interface UpdateCategoryRequest {
   name?: string;
   description?: string;
-  parent_id?: number | null;
+  parent_id?: number | string | null;
   sort_order?: number;
 }
 
 // 分类排序请求体。
 // 作用：把当前展示顺序转换成后端需要的 ID 数组。
 export interface SortCategoriesRequest {
-  category_ids: number[];
+  category_ids: Array<number | string>;
 }

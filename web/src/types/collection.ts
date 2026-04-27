@@ -1,9 +1,9 @@
 export interface ProjectCollection {
-  id: number;
+  id: number | string;
   name: string;
   description: string;
-  project_id: number;
-  parent_id?: number | null;
+  project_id: number | string;
+  parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
   created_at: string;
@@ -29,11 +29,11 @@ export interface ProjectCollectionListResponse {
 }
 
 export interface ProjectCollectionTreeNode {
-  id: number;
+  id: number | string;
   name: string;
   description: string;
-  project_id: number;
-  parent_id?: number | null;
+  project_id: number | string;
+  parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
   children?: ProjectCollectionTreeNode[];
@@ -43,7 +43,7 @@ export interface ProjectCollectionTreeNode {
 export interface CreateCollectionRequest {
   name: string;
   description?: string;
-  parent_id?: number | null;
+  parent_id?: number | string | null;
   is_folder?: boolean;
   sort_order?: number;
 }
@@ -51,6 +51,6 @@ export interface CreateCollectionRequest {
 export interface UpdateCollectionRequest {
   name?: string;
   description?: string;
-  parent_id?: number | null;
+  parent_id?: number | string | null;
   sort_order?: number;
 }

@@ -361,9 +361,15 @@ const PERSISTED_DRAFT_URL_PLACEHOLDER = 'https://placeholder.invalid';
 const WORKBENCH_PAGE_SIZE = 100;
 const SIDEBAR_COLLECTIONS_PAGE_SIZE = 24;
 
+const UUID_LIKE_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const LEGACY_NUMERIC_ID_PATTERN = /^\d+$/;
+
+const isPersistedResourceId = (value: string) =>
+  UUID_LIKE_ID_PATTERN.test(value) || LEGACY_NUMERIC_ID_PATTERN.test(value);
+
 const isPersistedCollectionId = (value: string) => {
-  const numericValue = Number(value);
-  return Number.isInteger(numericValue) && numericValue > 0;
+  return isPersistedResourceId(value);
 };
 
 const getPersistedRequestId = (value: string) => {
@@ -371,8 +377,8 @@ const getPersistedRequestId = (value: string) => {
     return null;
   }
 
-  const numericValue = Number(value.slice('request-'.length));
-  return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : null;
+  const requestId = value.slice('request-'.length).trim();
+  return isPersistedResourceId(requestId) ? requestId : null;
 };
 
 const toRequestMethod = (method: string): RequestMethod =>
@@ -427,7 +433,7 @@ const toRequestPageTab = (request: ProjectRequest): RequestPageTab => {
   const headersRows = toKeyValueRows(request.headers);
   const method = toRequestMethod(request.method);
 
-  return createRequestPageTab(request.id, {
+  return createRequestPageTab(1, {
     id: `request-${request.id}`,
     title: request.name,
     collectionId: String(request.collection_id),
@@ -1152,7 +1158,7 @@ const sortCollectionTreeNodes = (nodes: ProjectCollectionTreeNode[]) => {
       return left.sort_order - right.sort_order;
     }
 
-    return left.id - right.id;
+    return String(left.id).localeCompare(String(right.id));
   });
 
   nodes.forEach((node) => {
@@ -1166,13 +1172,13 @@ const buildCollectionTreeFromList = (
   collections: ProjectCollection[]
 ): ProjectCollectionTreeNode[] => {
   const uniqueCollections = Array.from(
-    new Map(collections.map((collection) => [collection.id, collection])).values()
+    new Map(collections.map((collection) => [String(collection.id), collection])).values()
   );
-  const nodeMap = new Map<number, ProjectCollectionTreeNode>();
+  const nodeMap = new Map<string, ProjectCollectionTreeNode>();
   const rootNodes: ProjectCollectionTreeNode[] = [];
 
   uniqueCollections.forEach((collection) => {
-    nodeMap.set(collection.id, {
+    nodeMap.set(String(collection.id), {
       id: collection.id,
       name: collection.name,
       description: collection.description,
@@ -1185,7 +1191,7 @@ const buildCollectionTreeFromList = (
   });
 
   uniqueCollections.forEach((collection) => {
-    const node = nodeMap.get(collection.id);
+    const node = nodeMap.get(String(collection.id));
     if (!node) {
       return;
     }
@@ -1195,7 +1201,7 @@ const buildCollectionTreeFromList = (
       return;
     }
 
-    const parentNode = nodeMap.get(collection.parent_id);
+    const parentNode = nodeMap.get(String(collection.parent_id));
     if (!parentNode) {
       rootNodes.push(node);
       return;
@@ -1237,7 +1243,7 @@ const fetchAllProjectCollections = async (
 
 const fetchAllCollectionRequests = async (
   projectId: number | string,
-  collectionId: number
+  collectionId: number | string
 ): Promise<ProjectRequest[]> => {
   const items: ProjectRequest[] = [];
   let page = 1;
@@ -1261,7 +1267,7 @@ const fetchAllCollectionRequests = async (
 
 const buildWorkbenchStateFromServer = (
   treeNodes: ProjectCollectionTreeNode[],
-  requestsByCollectionId: Record<number, ProjectRequest[]>
+  requestsByCollectionId: Record<string, ProjectRequest[]>
 ): InitialWorkbenchState => {
   const flattenedCollections = flattenCollectionTree(treeNodes);
   const collections: CollectionNode[] = flattenedCollections.map((collection, index) => ({
@@ -1269,10 +1275,10 @@ const buildWorkbenchStateFromServer = (
     name: collection.name,
     color: COLLECTION_COLORS[index % COLLECTION_COLORS.length],
     isFolder: collection.is_folder,
-    requestIds: (requestsByCollectionId[collection.id] ?? []).map((request) => `request-${request.id}`),
+    requestIds: (requestsByCollectionId[String(collection.id)] ?? []).map((request) => `request-${request.id}`),
   }));
   const tabs = flattenedCollections.flatMap((collection) =>
-    (requestsByCollectionId[collection.id] ?? []).map((request) => toRequestPageTab(request))
+    (requestsByCollectionId[String(collection.id)] ?? []).map((request) => toRequestPageTab(request))
   );
   const firstTab = tabs[0] ?? null;
 
@@ -1441,12 +1447,12 @@ export function ApiRequestWorkbench({
   const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
-  const [viewingExampleId, setViewingExampleId] = useState<number | null>(null);
-  const [editingExampleId, setEditingExampleId] = useState<number | null>(null);
+  const [viewingExampleId, setViewingExampleId] = useState<number | string | null>(null);
+  const [editingExampleId, setEditingExampleId] = useState<number | string | null>(null);
   const [deleteExampleTarget, setDeleteExampleTarget] = useState<RequestExample | null>(null);
-  const [savingResponseExampleId, setSavingResponseExampleId] = useState<number | null>(null);
-  const [defaultingExampleId, setDefaultingExampleId] = useState<number | null>(null);
-  const [deletingExampleId, setDeletingExampleId] = useState<number | null>(null);
+  const [savingResponseExampleId, setSavingResponseExampleId] = useState<number | string | null>(null);
+  const [defaultingExampleId, setDefaultingExampleId] = useState<number | string | null>(null);
+  const [deletingExampleId, setDeletingExampleId] = useState<number | string | null>(null);
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
@@ -1525,7 +1531,7 @@ export function ApiRequestWorkbench({
         })
       );
 
-      return Object.fromEntries(entries) as Record<number, ProjectRequest[]>;
+      return Object.fromEntries(entries) as Record<string, ProjectRequest[]>;
     },
     enabled: collectionTreeQuery.isSuccess && persistedRequestCollectionIds.length > 0,
     staleTime: 60_000,
@@ -1567,7 +1573,7 @@ export function ApiRequestWorkbench({
       return null;
     }
 
-    return Number(activeTab.collectionId);
+    return activeTab.collectionId;
   }, [activeTab?.collectionId]);
   const persistedActiveRequestId = useMemo(
     () => (activeTab ? getPersistedRequestId(activeTab.id) : null),
@@ -1593,7 +1599,7 @@ export function ApiRequestWorkbench({
           return left.sort_order - right.sort_order;
         }
 
-        return left.id - right.id;
+        return String(left.id).localeCompare(String(right.id));
       }),
     [examplesQuery.data]
   );
@@ -1615,7 +1621,7 @@ export function ApiRequestWorkbench({
 
     return (
       exampleDetailQuery.data ??
-      requestExamples.find((example) => example.id === selectedExampleId) ??
+      requestExamples.find((example) => String(example.id) === String(selectedExampleId)) ??
       null
     );
   }, [exampleDetailQuery.data, requestExamples, selectedExampleId]);
@@ -1690,7 +1696,7 @@ export function ApiRequestWorkbench({
         }
       })
     );
-    const requestsByCollectionId = Object.fromEntries(requestEntries) as Record<number, ProjectRequest[]>;
+    const requestsByCollectionId = Object.fromEntries(requestEntries) as Record<string, ProjectRequest[]>;
     const nextState = buildWorkbenchStateFromServer(treeNodes, requestsByCollectionId);
 
     updateCollections((current) => {
@@ -1830,7 +1836,7 @@ export function ApiRequestWorkbench({
 
   const buildCreatePayloadFromTab = (
     tab: RequestPageTab,
-    collectionId: number,
+    collectionId: string,
     sortOrder: number,
     name = tab.title
   ): CreateRequestRequest => {
@@ -1928,13 +1934,12 @@ export function ApiRequestWorkbench({
       requireRunnableUrl?: boolean;
     } = {}
   ) => {
-    const persistedCollectionId = tab.collectionId ? Number(tab.collectionId) : null;
+    const persistedCollectionId =
+      tab.collectionId && isPersistedCollectionId(tab.collectionId)
+        ? tab.collectionId
+        : null;
 
-    if (
-      !persistedCollectionId ||
-      !Number.isInteger(persistedCollectionId) ||
-      persistedCollectionId <= 0
-    ) {
+    if (!persistedCollectionId) {
       throw new Error(t('collections.saveBeforeSend'));
     }
 
@@ -1972,7 +1977,7 @@ export function ApiRequestWorkbench({
       throw new Error(t('collections.saveBeforeExamples'));
     }
 
-    const collectionId = Number(tab.collectionId);
+    const collectionId = tab.collectionId;
     const persistedRequestId = getPersistedRequestId(tab.id);
 
     if (persistedRequestId) {
@@ -2137,7 +2142,7 @@ export function ApiRequestWorkbench({
   };
 
   const handleUpdateExample = async (draft: ExampleFormDraft) => {
-    if (!editingExampleId || !persistedActiveCollectionId || !persistedActiveRequestId) {
+    if (editingExampleId === null || !persistedActiveCollectionId || !persistedActiveRequestId) {
       toast.error(t('collections.selectExampleBeforeEdit'));
       return;
     }
@@ -2271,7 +2276,7 @@ export function ApiRequestWorkbench({
         return;
       }
 
-      payload.parent_id = Number(importDialogTarget.parentCollectionId);
+      payload.parent_id = importDialogTarget.parentCollectionId;
     }
 
     try {
@@ -2326,10 +2331,8 @@ export function ApiRequestWorkbench({
     setDeletingCollectionId(collection.id);
 
     try {
-      const persistedCollectionId = Number(collection.id);
-
-      if (Number.isInteger(persistedCollectionId) && persistedCollectionId > 0) {
-        await deleteCollectionMutation.mutateAsync(persistedCollectionId);
+      if (isPersistedCollectionId(collection.id)) {
+        await deleteCollectionMutation.mutateAsync(collection.id);
       }
 
       removeCollectionFromWorkbench(collection.id);
@@ -2384,11 +2387,9 @@ export function ApiRequestWorkbench({
     setRenamingCollectionId(targetCollection.id);
 
     try {
-      const persistedCollectionId = Number(targetCollection.id);
-
-      if (Number.isInteger(persistedCollectionId) && persistedCollectionId > 0) {
+      if (isPersistedCollectionId(targetCollection.id)) {
         await updateCollectionMutation.mutateAsync({
-          collectionId: persistedCollectionId,
+          collectionId: targetCollection.id,
           data: { name: nextName },
         });
       }
@@ -2742,16 +2743,12 @@ export function ApiRequestWorkbench({
 
     try {
       const persistedCollectionId = targetRequest.collectionId
-        ? Number(targetRequest.collectionId)
+        && isPersistedCollectionId(targetRequest.collectionId)
+        ? targetRequest.collectionId
         : null;
       const persistedRequestId = getPersistedRequestId(targetRequest.id);
 
-      if (
-        persistedCollectionId &&
-        Number.isInteger(persistedCollectionId) &&
-        persistedCollectionId > 0 &&
-        persistedRequestId
-      ) {
+      if (persistedCollectionId && persistedRequestId) {
         await updateRequestMutation.mutateAsync({
           collectionId: persistedCollectionId,
           requestId: persistedRequestId,
@@ -2775,15 +2772,13 @@ export function ApiRequestWorkbench({
     setDeletingRequestTabId(request.id);
 
     try {
-      const persistedCollectionId = request.collectionId ? Number(request.collectionId) : null;
+      const persistedCollectionId =
+        request.collectionId && isPersistedCollectionId(request.collectionId)
+          ? request.collectionId
+          : null;
       const persistedRequestId = getPersistedRequestId(request.id);
 
-      if (
-        persistedCollectionId &&
-        Number.isInteger(persistedCollectionId) &&
-        persistedCollectionId > 0 &&
-        persistedRequestId
-      ) {
+      if (persistedCollectionId && persistedRequestId) {
         await deleteRequestMutation.mutateAsync({
           collectionId: persistedCollectionId,
           requestId: persistedRequestId,
@@ -2816,7 +2811,7 @@ export function ApiRequestWorkbench({
     setCreatingRequestCollectionId(collection.id);
 
     try {
-      const persistedCollectionId = Number(collection.id);
+      const persistedCollectionId = collection.id;
       const createdRequest = await createRequestMutation.mutateAsync({
         collectionId: persistedCollectionId,
         data: buildCreatePayloadFromTab(
@@ -4320,8 +4315,8 @@ function ExamplesPanel({
   isLoading: boolean;
   isError: boolean;
   isRefreshing: boolean;
-  savingResponseExampleId: number | null;
-  defaultingExampleId: number | null;
+  savingResponseExampleId: number | string | null;
+  defaultingExampleId: number | string | null;
   onCreateExample: () => void;
   onRefresh: () => void;
   onViewExample: (example: RequestExample) => void;
@@ -4470,7 +4465,10 @@ function ExamplesPanel({
                         size="sm"
                         onClick={() => void onSaveLatestResponse(example)}
                         disabled={!hasCapturableResponse}
-                        loading={savingResponseExampleId === example.id}
+                        loading={
+                          savingResponseExampleId !== null &&
+                          String(savingResponseExampleId) === String(example.id)
+                        }
                       >
                         <Save className="h-4 w-4" />
                         {t('collections.workbench.actions.captureLatestResponse')}
@@ -4481,7 +4479,10 @@ function ExamplesPanel({
                         size="sm"
                         onClick={() => void onSetDefault(example)}
                         disabled={example.is_default}
-                        loading={defaultingExampleId === example.id}
+                        loading={
+                          defaultingExampleId !== null &&
+                          String(defaultingExampleId) === String(example.id)
+                        }
                       >
                         <Star className="h-4 w-4" />
                         {t('collections.workbench.actions.setDefault')}

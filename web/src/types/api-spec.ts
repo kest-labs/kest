@@ -149,7 +149,7 @@ export interface ImportApiSpecsResponse {
 }
 
 export interface BatchGenDocRequest {
-  category_id?: number;
+  category_id?: number | string;
   lang?: ApiSpecLanguage;
   force?: boolean;
 }

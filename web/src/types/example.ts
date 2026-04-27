@@ -3,8 +3,8 @@ import type { RequestAuthConfig, RequestKeyValue } from '@/types/request';
 export type RequestExampleBodyType = 'none' | 'json' | 'form-data' | 'text';
 
 export interface RequestExample {
-  id: number;
-  request_id: number;
+  id: number | string;
+  request_id: number | string;
   name: string;
   description: string;
   url: string;

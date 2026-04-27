@@ -2,10 +2,10 @@
 // 作用：统一约束项目历史记录列表、详情和查询参数的数据结构。
 
 export interface ProjectHistory {
-  id: number;
+  id: number | string;
   entity_type: string;
-  entity_id: number;
-  project_id: number;
+  entity_id: number | string;
+  project_id: number | string;
   user_id: number;
   action: string;
   data?: Record<string, unknown> | null;
@@ -16,7 +16,7 @@ export interface ProjectHistory {
 
 export interface CreateHistoryRequest {
   entity_type: string;
-  entity_id: number;
+  entity_id: number | string;
   action: string;
   data: Record<string, unknown>;
   diff?: Record<string, unknown>;
@@ -35,7 +35,7 @@ export interface HistoryListParams {
   page?: number;
   pageSize?: number;
   entityType?: string;
-  entityId?: number;
+  entityId?: number | string;
 }
 
 export interface HistoryListResponse {

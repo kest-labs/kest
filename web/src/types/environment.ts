@@ -2,8 +2,8 @@
 // 作用：统一约束环境列表、详情、表单请求和复制环境请求的数据结构。
 
 export interface ProjectEnvironment {
-  id: number;
-  project_id: number;
+  id: number | string;
+  project_id: number | string;
   name: string;
   display_name?: string;
   base_url?: string;

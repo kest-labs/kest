@@ -582,7 +582,7 @@ function SpecFormDialog({
       return;
     }
 
-    const categoryId = draft.categoryId ? Number(draft.categoryId) : undefined;
+    const categoryId = draft.categoryId.trim() || undefined;
     const tags = normalizeTags(draft.tags);
 
     if (mode === 'create') {
@@ -1161,7 +1161,7 @@ function BatchGenDocDialog({
             loading={isSubmitting}
             onClick={() =>
               void onSubmit({
-                category_id: draft.categoryId ? Number(draft.categoryId) : undefined,
+                category_id: draft.categoryId.trim() || undefined,
                 lang: draft.lang,
                 force: draft.force,
               })

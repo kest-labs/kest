@@ -27,10 +27,10 @@ export const collectionKeys = {
 
 const removeCollectionNodeFromTree = (
   nodes: ProjectCollectionTreeNode[],
-  collectionId: number
+  collectionId: number | string
 ): ProjectCollectionTreeNode[] =>
   nodes.reduce<ProjectCollectionTreeNode[]>((accumulator, node) => {
-    if (node.id === collectionId) {
+    if (String(node.id) === String(collectionId)) {
       return accumulator;
     }
 
@@ -53,14 +53,14 @@ const removeCollectionNodeFromTree = (
 const isWorkbenchRequestsQueryForCollection = (
   queryKey: readonly unknown[],
   projectId: number | string,
-  collectionId: number
+  collectionId: number | string
 ) =>
   queryKey[0] === 'collections' &&
   queryKey[1] === 'project' &&
   queryKey[2] === projectId &&
   queryKey[3] === 'workbench-requests' &&
   Array.isArray(queryKey[4]) &&
-  queryKey[4].includes(collectionId);
+  queryKey[4].map((item) => String(item)).includes(String(collectionId));
 
 export function useProjectCollectionTree(projectId?: number | string) {
   return useQuery({
@@ -106,35 +106,31 @@ export function useDeleteCollection(projectId: number | string) {
     mutationFn: (collectionId: number | string) =>
       collectionService.delete(projectId, collectionId),
     onSuccess: async (_, collectionId) => {
-      const numericCollectionId = Number(collectionId);
-
-      if (Number.isInteger(numericCollectionId) && numericCollectionId > 0) {
-        queryClient.setQueryData<ProjectCollectionTreeNode[] | undefined>(
-          collectionKeys.tree(projectId),
-          (current) =>
-            current
-              ? removeCollectionNodeFromTree(current, numericCollectionId)
-              : current
-        );
-        queryClient.setQueryData<ProjectCollectionTreeNode[] | undefined>(
-          collectionKeys.workbenchTree(projectId),
-          (current) =>
-            current
-              ? removeCollectionNodeFromTree(current, numericCollectionId)
-              : current
-        );
-        queryClient.removeQueries({
-          queryKey: requestKeys.collection(projectId, collectionId),
-        });
-        queryClient.removeQueries({
-          predicate: (query) =>
-            isWorkbenchRequestsQueryForCollection(
-              query.queryKey,
-              projectId,
-              numericCollectionId
-            ),
-        });
-      }
+      queryClient.setQueryData<ProjectCollectionTreeNode[] | undefined>(
+        collectionKeys.tree(projectId),
+        (current) =>
+          current
+            ? removeCollectionNodeFromTree(current, collectionId)
+            : current
+      );
+      queryClient.setQueryData<ProjectCollectionTreeNode[] | undefined>(
+        collectionKeys.workbenchTree(projectId),
+        (current) =>
+          current
+            ? removeCollectionNodeFromTree(current, collectionId)
+            : current
+      );
+      queryClient.removeQueries({
+        queryKey: requestKeys.collection(projectId, collectionId),
+      });
+      queryClient.removeQueries({
+        predicate: (query) =>
+          isWorkbenchRequestsQueryForCollection(
+            query.queryKey,
+            projectId,
+            collectionId
+          ),
+      });
 
       queryClient.invalidateQueries({ queryKey: collectionKeys.list(projectId) });
       queryClient.invalidateQueries({ queryKey: collectionKeys.tree(projectId) });

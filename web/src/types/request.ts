@@ -42,8 +42,8 @@ export interface RequestAuthConfig {
 }
 
 export interface ProjectRequest {
-  id: number;
-  collection_id: number;
+  id: number | string;
+  collection_id: number | string;
   name: string;
   description: string;
   method: string;
@@ -81,7 +81,7 @@ export interface RequestListResponse {
 }
 
 export interface CreateRequestRequest {
-  collection_id: number;
+  collection_id?: number | string;
   name: string;
   description?: string;
   method: string;
@@ -114,7 +114,7 @@ export interface UpdateRequestRequest {
 }
 
 export interface RunRequestRequest {
-  environment_id?: number;
+  environment_id?: number | string;
   variables?: Record<string, string>;
 }
 

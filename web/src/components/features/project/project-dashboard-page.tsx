@@ -59,9 +59,13 @@ const getProjectCreatedAt = (project: ApiProject) => project.created_at || '';
 const sortProjectsByCreatedAtDesc = (left: ApiProject, right: ApiProject) =>
   getProjectCreatedAt(right).localeCompare(getProjectCreatedAt(left));
 
-const parseProjectId = (value: string | null) => {
-  const numericValue = Number(value);
-  return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : null;
+const normalizeProjectId = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
 };
 
 const formatProjectTimestamp = (value?: string | null) => {
@@ -76,7 +80,7 @@ const formatProjectTimestamp = (value?: string | null) => {
 const buildDashboardHref = (
   pathname: string,
   searchParams: URLSearchParams,
-  previewProjectId?: number | null
+  previewProjectId?: string | number | null
 ) => {
   const nextParams = new URLSearchParams(searchParams.toString());
 
@@ -113,7 +117,7 @@ export function ProjectDashboardPage() {
   const updateProjectMutation = useUpdateProject();
 
   const projects = projectsQuery.data?.items ?? EMPTY_PROJECTS;
-  const previewProjectId = parseProjectId(searchParams.get('preview'));
+  const previewProjectId = normalizeProjectId(searchParams.get('preview'));
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = deferredSearch.trim().toLowerCase();
@@ -133,7 +137,7 @@ export function ProjectDashboardPage() {
 
   const selectedProject =
     previewProjectId !== null
-      ? projects.find((project) => project.id === previewProjectId) ?? null
+      ? projects.find((project) => normalizeProjectId(project.id) === previewProjectId) ?? null
       : null;
   const fallbackProject = useMemo(
     () => [...projects].sort(sortProjectsByCreatedAtDesc)[0] ?? null,
@@ -157,7 +161,7 @@ export function ProjectDashboardPage() {
     });
   }, [queryClient]);
 
-  const navigateToPreview = useCallback((projectId?: number | null) => {
+  const navigateToPreview = useCallback((projectId?: string | number | null) => {
     if (projectId) {
       prefetchProjectPreview(projectId);
     }
@@ -368,7 +372,7 @@ function ProjectDashboardWelcome({
   onCreateProject,
 }: {
   projects: ApiProject[];
-  onOpenProject: (projectId?: number | null) => void;
+  onOpenProject: (projectId?: string | number | null) => void;
   onCreateProject: () => void;
 }) {
   const t = useT('project');

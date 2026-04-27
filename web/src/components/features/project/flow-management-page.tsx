@@ -1838,7 +1838,7 @@ export function ProjectFlowManagementPage({
   const [selectedFlowId, setSelectedFlowId] = useState<number | null>(() =>
     toPositiveIntId(selectedItemId)
   );
-  const [selectedRunEnvironmentId, setSelectedRunEnvironmentId] = useState<number | null>(null);
+  const [selectedRunEnvironmentId, setSelectedRunEnvironmentId] = useState<number | string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [localRuns, setLocalRuns] = useState<FlowRun[]>([]);
@@ -2733,8 +2733,7 @@ export function ProjectFlowManagementPage({
               setSelectedRunEnvironmentId(null);
               return;
             }
-            const nextEnvironmentId = Number(value);
-            setSelectedRunEnvironmentId(Number.isNaN(nextEnvironmentId) ? null : nextEnvironmentId);
+            setSelectedRunEnvironmentId(value);
           }}
           disabled={environmentsQuery.isLoading}
         >

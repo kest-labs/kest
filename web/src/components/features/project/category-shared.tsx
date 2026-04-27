@@ -47,7 +47,7 @@ interface CategoryFormDraft {
 // 作用：根据分类详情和默认父级生成弹窗初始值。
 const getCategoryFormDraft = (
   category?: ProjectCategory | null,
-  defaultParentId?: number | null
+  defaultParentId?: number | string | null
 ): CategoryFormDraft => ({
   name: category?.name ?? '',
   description: category?.description ?? '',
@@ -74,8 +74,8 @@ export function CategoryFormDialog({
   mode: CategoryFormMode;
   category?: ProjectCategory | null;
   categories: ProjectCategory[];
-  defaultParentId?: number | null;
-  invalidParentIds?: number[];
+  defaultParentId?: number | string | null;
+  invalidParentIds?: Array<number | string>;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateCategoryRequest | UpdateCategoryRequest) => Promise<void>;
@@ -112,8 +112,8 @@ function CategoryFormDialogBody({
   mode: CategoryFormMode;
   category?: ProjectCategory | null;
   categories: ProjectCategory[];
-  defaultParentId?: number | null;
-  invalidParentIds?: number[];
+  defaultParentId?: number | string | null;
+  invalidParentIds?: Array<number | string>;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateCategoryRequest | UpdateCategoryRequest) => Promise<void>;
@@ -123,6 +123,7 @@ function CategoryFormDialogBody({
     getCategoryFormDraft(category, defaultParentId)
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const normalizedInvalidParentIds = invalidParentIds.map((id) => String(id));
 
   // 父分类下拉选项。
   // 作用：把树形分类结构转换成可选择的扁平下拉项。
@@ -162,10 +163,9 @@ function CategoryFormDialogBody({
       }
     }
 
-    const parentId =
-      draft.parentId === 'none' ? null : Number.isNaN(Number(draft.parentId)) ? null : Number(draft.parentId);
+    const parentId = draft.parentId === 'none' ? null : draft.parentId.trim() || null;
 
-    if (parentId !== null && invalidParentIds.includes(parentId)) {
+    if (parentId !== null && normalizedInvalidParentIds.includes(parentId)) {
       nextErrors.parentId = t('categoryForm.invalidLoop');
     }
 
@@ -238,7 +238,7 @@ function CategoryFormDialogBody({
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      disabled={invalidParentIds.includes(Number(option.value))}
+                      disabled={normalizedInvalidParentIds.includes(option.value)}
                     >
                       {option.label}
                     </SelectItem>

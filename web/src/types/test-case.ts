@@ -19,8 +19,8 @@ export interface ExtractVariable {
 }
 
 export interface ProjectTestCase {
-  id: number;
-  api_spec_id: number;
+  id: number | string;
+  api_spec_id: number | string;
   method?: string;
   path?: string;
   name: string;
@@ -50,7 +50,7 @@ export interface TestCaseListParams {
   projectId: number | string;
   page?: number;
   pageSize?: number;
-  apiSpecId?: number;
+  apiSpecId?: number | string;
   env?: string;
   keyword?: string;
 }
@@ -61,7 +61,7 @@ export interface TestCaseListResponse {
 }
 
 export interface CreateTestCaseRequest {
-  api_spec_id: number;
+  api_spec_id: number | string;
   name: string;
   description?: string;
   env?: string;
@@ -94,11 +94,11 @@ export interface DuplicateTestCaseRequest {
 }
 
 export interface CreateTestCaseFromSpecRequest {
-  api_spec_id: number;
+  api_spec_id: number | string;
   name: string;
   env?: string;
   use_example?: boolean;
-  example_id?: number;
+  example_id?: number | string;
 }
 
 export interface RunRequestInfo {
@@ -125,13 +125,13 @@ export interface AssertionResult {
 }
 
 export interface RunTestCaseRequest {
-  env_id?: number;
+  env_id?: number | string;
   global_vars?: Record<string, unknown>;
   variable_keys?: Record<string, string>;
 }
 
 export interface RunTestCaseResponse {
-  test_case_id: number;
+  test_case_id: number | string;
   status: TestRunStatus;
   message?: string;
   duration_ms: number;
@@ -142,8 +142,8 @@ export interface RunTestCaseResponse {
 }
 
 export interface TestCaseRun {
-  id: number;
-  test_case_id: number;
+  id: number | string;
+  test_case_id: number | string;
   status: TestRunStatus;
   duration_ms: number;
   request?: RunRequestInfo;

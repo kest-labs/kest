@@ -629,11 +629,11 @@ export function EnvironmentManagementPage({
   const i18n = useT();
   const t = i18n.project;
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<number | null>(null);
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<number | string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [formMode, setFormMode] = useState<EnvironmentFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
+  const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectEnvironment | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<ProjectEnvironment | null>(null);
 
@@ -710,7 +710,7 @@ export function EnvironmentManagementPage({
   };
 
   // 编辑弹窗复用共享表单逻辑，这里只负责切换到 edit 模式并记录环境 ID。
-  const openEditDialog = (environmentId: number) => {
+  const openEditDialog = (environmentId: number | string) => {
     setFormMode('edit');
     setEditingEnvironmentId(environmentId);
     setIsFormOpen(true);

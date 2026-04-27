@@ -43,7 +43,7 @@ export const buildCategoryOptions = (categories: ProjectCategory[] | undefined):
 // 作用：在树结构里递归定位指定 ID 的分类。
 export const findProjectCategory = (
   categories: ProjectCategory[] | undefined,
-  categoryId?: number | null
+  categoryId?: number | string | null
 ): ProjectCategory | null => {
   if (!categories || categoryId === undefined || categoryId === null) {
     return null;
@@ -68,8 +68,8 @@ export const findProjectCategory = (
 // 作用：为编辑表单中的“父分类循环引用校验”提供禁用 ID 列表。
 export const collectCategoryDescendantIds = (
   categories: ProjectCategory[] | undefined,
-  categoryId?: number | null
-): number[] => {
+  categoryId?: number | string | null
+): Array<number | string> => {
   const category = findProjectCategory(categories, categoryId);
 
   if (!category?.children?.length) {
@@ -86,7 +86,7 @@ export const collectCategoryDescendantIds = (
 // 作用：仅在当前分类的兄弟节点范围内计算上移/下移后的排序结果。
 export const reorderCategoryIdsWithinSiblings = (
   categories: FlatProjectCategory[],
-  categoryId: number,
+  categoryId: number | string,
   direction: 'up' | 'down'
 ) => {
   const currentIndex = categories.findIndex((category) => category.id === categoryId);

@@ -1002,10 +1002,10 @@ function EnvironmentsWorkspaceSection({
   const [searchQuery, setSearchQuery] = useState('');
   const [formMode, setFormMode] = useState<EnvironmentFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
+  const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectEnvironment | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<ProjectEnvironment | null>(null);
-  const [suppressedSelectedEnvironmentId, setSuppressedSelectedEnvironmentId] = useState<number | null>(
+  const [suppressedSelectedEnvironmentId, setSuppressedSelectedEnvironmentId] = useState<number | string | null>(
     null
   );
   const deferredSearch = useDeferredValue(searchQuery);
@@ -1062,7 +1062,7 @@ function EnvironmentsWorkspaceSection({
     setIsFormOpen(true);
   };
 
-  const openEditDialog = (environmentId: number) => {
+  const openEditDialog = (environmentId: number | string) => {
     setFormMode('edit');
     setEditingEnvironmentId(environmentId);
     setIsFormOpen(true);
@@ -2685,7 +2685,7 @@ function CreateApiSpecDialogBody({
       method: draft.method,
       path: trimmedPath,
       version: trimmedVersion,
-      category_id: draft.categoryId ? Number(draft.categoryId) : undefined,
+      category_id: draft.categoryId.trim() || undefined,
       summary: trimmedSummary || undefined,
       description: trimmedDescription || undefined,
       tags: normalizeTags(draft.tags),

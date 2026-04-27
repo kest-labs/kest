@@ -534,7 +534,7 @@ function TestCaseFormDialog({
 
     if (mode === 'create') {
       await onSubmit({
-        api_spec_id: Number(draft.apiSpecId),
+        api_spec_id: draft.apiSpecId,
         name: trimmedName,
         description: draft.description.trim() || undefined,
         env: trimmedEnv || undefined,
@@ -896,7 +896,7 @@ function CreateFromSpecDialog({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const selectedSpecId = draft.apiSpecId ? Number(draft.apiSpecId) : undefined;
+  const selectedSpecId = draft.apiSpecId ? draft.apiSpecId : undefined;
   const specExamplesQuery = useApiSpecExamples(
     projectId,
     draft.useExample ? selectedSpecId : undefined
@@ -931,12 +931,12 @@ function CreateFromSpecDialog({
     }
 
     await onSubmit({
-      api_spec_id: Number(draft.apiSpecId),
+      api_spec_id: draft.apiSpecId,
       name: trimmedName,
       env: trimmedEnv || undefined,
       use_example: draft.useExample,
       example_id:
-        draft.useExample && draft.exampleId !== 'auto' ? Number(draft.exampleId) : undefined,
+        draft.useExample && draft.exampleId !== 'auto' ? draft.exampleId : undefined,
     });
   };
 
@@ -976,7 +976,7 @@ function CreateFromSpecDialog({
                       value !== 'none' && !current.name.trim()
                         ? getDefaultFromSpecName(
                             t,
-                            apiSpecs.find((spec) => spec.id === Number(value)) ?? null
+                            apiSpecs.find((spec) => String(spec.id) === value) ?? null
                           )
                         : current.name,
                   }))
@@ -1161,7 +1161,7 @@ function RunTestCaseDialog({
     }
 
     await onSubmit({
-      env_id: draft.envId !== 'none' ? Number(draft.envId) : undefined,
+      env_id: draft.envId !== 'none' ? draft.envId : undefined,
       global_vars: globalVars,
       variable_keys: variableKeys,
     });
@@ -1319,8 +1319,8 @@ function RunDetailDialog({
 }: {
   open: boolean;
   projectId: number | string;
-  testCaseId?: number | null;
-  runId?: number | null;
+  testCaseId?: number | string | null;
+  runId?: number | string | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useT('project');
@@ -1499,18 +1499,18 @@ export function TestCaseManagementPage({
   const [keyword, setKeyword] = useState('');
   const [apiSpecFilter, setApiSpecFilter] = useState('all');
   const [envFilter, setEnvFilter] = useState('all');
-  const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | null>(null);
+  const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [historyStatus, setHistoryStatus] = useState<HistoryFilterStatus>('all');
   const [historyPage, setHistoryPage] = useState(1);
   const [formMode, setFormMode] = useState<TestCaseFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formTargetId, setFormTargetId] = useState<number | null>(null);
+  const [formTargetId, setFormTargetId] = useState<number | string | null>(null);
   const [isFromSpecOpen, setIsFromSpecOpen] = useState(Boolean(autoOpenFromSpecSpecId));
   const [duplicateTarget, setDuplicateTarget] = useState<ProjectTestCase | null>(null);
   const [runTarget, setRunTarget] = useState<ProjectTestCase | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectTestCase | null>(null);
-  const [runDetailId, setRunDetailId] = useState<number | null>(null);
+  const [runDetailId, setRunDetailId] = useState<number | string | null>(null);
   const [latestRunResult, setLatestRunResult] = useState<RunTestCaseResponse | null>(null);
 
   const deferredKeyword = useDeferredValue(keyword.trim());
@@ -1528,7 +1528,7 @@ export function TestCaseManagementPage({
     projectId,
     page,
     pageSize: PAGE_SIZE,
-    apiSpecId: apiSpecFilter !== 'all' ? Number(apiSpecFilter) : undefined,
+    apiSpecId: apiSpecFilter !== 'all' ? apiSpecFilter : undefined,
     env: envFilter !== 'all' ? envFilter : undefined,
     keyword: deferredKeyword || undefined,
   });
@@ -1626,7 +1626,7 @@ export function TestCaseManagementPage({
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
   };
 
-  const selectTestCase = (testCaseId: number) => {
+  const selectTestCase = (testCaseId: number | string) => {
     setSelectedTestCaseId(testCaseId);
     setDetailTab('overview');
     setHistoryStatus('all');
