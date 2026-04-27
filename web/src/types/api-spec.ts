@@ -38,8 +38,8 @@ export interface ResponseSpec {
 // 单个 request/response 示例。
 // 作用：承载 examples 接口返回和示例创建后的回显数据。
 export interface ApiSpecExample {
-  id: number;
-  api_spec_id: number;
+  id: number | string;
+  api_spec_id: number | string;
   name: string;
   request_headers?: Record<string, string>;
   request_body?: unknown;
@@ -52,9 +52,9 @@ export interface ApiSpecExample {
 // API 规格核心实体。
 // 作用：统一描述列表、详情、full 接口共用的数据主体。
 export interface ApiSpec {
-  id: number;
-  project_id: number;
-  category_id?: number | null;
+  id: number | string;
+  project_id: number | string;
+  category_id?: number | string | null;
   method: HttpMethod;
   path: string;
   summary: string;
@@ -92,7 +92,7 @@ export interface ApiSpecListMeta {
 // API 规格列表查询参数。
 // 作用：约束 page、pageSize、keyword、method、version、tag 这些筛选项。
 export interface ApiSpecListParams {
-  projectId: number;
+  projectId: number | string;
   page?: number;
   pageSize?: number;
   version?: string;
@@ -107,7 +107,7 @@ export interface ApiSpecListResponse {
 }
 
 export interface CreateApiSpecRequest {
-  category_id?: number;
+  category_id?: number | string;
   method: HttpMethod;
   path: string;
   summary?: string;
@@ -125,7 +125,7 @@ export interface CreateApiSpecRequest {
 }
 
 export interface UpdateApiSpecRequest {
-  category_id?: number;
+  category_id?: number | string;
   path?: string;
   summary?: string;
   description?: string;
@@ -179,9 +179,9 @@ export interface ApiSpecExamplesResponse {
 }
 
 export interface ApiSpecShare {
-  id: number;
-  project_id: number;
-  api_spec_id: number;
+  id: number | string;
+  project_id: number | string;
+  api_spec_id: number | string;
   slug: string;
   created_by: number;
   created_at: string;
@@ -216,7 +216,7 @@ export interface ApiSpecAIDraftFieldInsight {
 }
 
 export interface ApiSpecAIDraftReference {
-  id: number;
+  id: number | string;
   method: HttpMethod;
   path: string;
   summary: string;
@@ -237,7 +237,7 @@ export interface ApiSpecAIDraftConventions {
 }
 
 export interface ApiSpecAIDraftSpec {
-  category_id?: number | null;
+  category_id?: number | string | null;
   method: HttpMethod;
   path: string;
   summary: string;
@@ -254,9 +254,9 @@ export interface CreateApiSpecAIDraftRequest {
   intent: string;
   method?: HttpMethod;
   path?: string;
-  category_id?: number;
+  category_id?: number | string;
   use_project_conventions?: boolean;
-  reference_spec_ids?: number[];
+  reference_spec_ids?: Array<number | string>;
   lang?: ApiSpecLanguage;
 }
 
@@ -275,10 +275,10 @@ export interface AcceptApiSpecAIDraftRequest {
 }
 
 export interface ApiSpecAIDraft {
-  id: number;
-  project_id: number;
+  id: number | string;
+  project_id: number | string;
   created_by: number;
-  accepted_spec_id?: number | null;
+  accepted_spec_id?: number | string | null;
   status: string;
   intent: string;
   seed_input: CreateApiSpecAIDraftRequest;
@@ -293,7 +293,7 @@ export interface ApiSpecAIDraft {
 }
 
 export interface AcceptApiSpecAIDraftResponse {
-  draft_id: number;
+  draft_id: number | string;
   spec: ApiSpec;
   generated_test?: string;
   warnings?: string[];

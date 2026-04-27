@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
   Boxes,
@@ -434,6 +435,7 @@ function TestCaseFormDialog({
   onSubmit: (payload: CreateTestCaseRequest | UpdateTestCaseRequest) => Promise<void>;
 }) {
   const t = useT('project');
+  const rawT = useTranslations('project');
   const [draft, setDraft] = useState<TestCaseFormDraft>(() => getTestCaseFormDraft(testCase));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -665,7 +667,7 @@ function TestCaseFormDialog({
                     id="test-case-headers"
                     value={draft.headers}
                     onChange={(event) => updateDraft('headers', event.target.value)}
-                    placeholder={t('testCasesPage.headersJsonPlaceholder')}
+                    placeholder={rawT.raw('testCasesPage.headersJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.headers}
                     root
@@ -678,7 +680,7 @@ function TestCaseFormDialog({
                     id="test-case-query-params"
                     value={draft.queryParams}
                     onChange={(event) => updateDraft('queryParams', event.target.value)}
-                    placeholder={t('testCasesPage.queryParamsJsonPlaceholder')}
+                    placeholder={rawT.raw('testCasesPage.queryParamsJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.queryParams}
                     root
@@ -693,7 +695,7 @@ function TestCaseFormDialog({
                     id="test-case-path-params"
                     value={draft.pathParams}
                     onChange={(event) => updateDraft('pathParams', event.target.value)}
-                    placeholder={t('testCasesPage.pathParamsJsonPlaceholder')}
+                    placeholder={rawT.raw('testCasesPage.pathParamsJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.pathParams}
                     root
@@ -706,7 +708,7 @@ function TestCaseFormDialog({
                     id="test-case-request-body"
                     value={draft.requestBody}
                     onChange={(event) => updateDraft('requestBody', event.target.value)}
-                    placeholder={t('testCasesPage.requestBodyJsonPlaceholder')}
+                    placeholder={rawT.raw('testCasesPage.requestBodyJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.requestBody}
                     root
@@ -747,7 +749,7 @@ function TestCaseFormDialog({
                     id="test-case-assertions"
                     value={draft.assertions}
                     onChange={(event) => updateDraft('assertions', event.target.value)}
-                    placeholder={t('testCasesPage.assertionsJsonPlaceholder')}
+                    placeholder={rawT.raw('testCasesPage.assertionsJsonPlaceholder')}
                     className="min-h-32 font-mono text-xs"
                     errorText={errors.assertions}
                     root
@@ -760,7 +762,7 @@ function TestCaseFormDialog({
                     id="test-case-extract-vars"
                     value={draft.extractVars}
                     onChange={(event) => updateDraft('extractVars', event.target.value)}
-                    placeholder={t('testCasesPage.extractVarsJsonPlaceholder')}
+                    placeholder={rawT.raw('testCasesPage.extractVarsJsonPlaceholder')}
                     className="min-h-32 font-mono text-xs"
                     errorText={errors.extractVars}
                     root
@@ -876,9 +878,9 @@ function CreateFromSpecDialog({
   onSubmit,
 }: {
   open: boolean;
-  projectId: number;
+  projectId: number | string;
   apiSpecs: ApiSpec[];
-  initialSpecId?: number | null;
+  initialSpecId?: string | number | null;
   flowSource?: 'ai' | null;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1117,6 +1119,7 @@ function RunTestCaseDialog({
   onSubmit: (payload: RunTestCaseRequest) => Promise<void>;
 }) {
   const t = useT('project');
+  const rawT = useTranslations('project');
   const [draft, setDraft] = useState<RunDraft>(() => getRunDraft());
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -1215,7 +1218,7 @@ function RunTestCaseDialog({
                   id="run-test-case-global-vars"
                   value={draft.globalVars}
                   onChange={(event) => setDraft((current) => ({ ...current, globalVars: event.target.value }))}
-                  placeholder={t('testCasesPage.globalVarsJsonPlaceholder')}
+                  placeholder={rawT.raw('testCasesPage.globalVarsJsonPlaceholder')}
                   className="min-h-32 font-mono text-xs"
                   errorText={errors.globalVars}
                   root
@@ -1230,7 +1233,7 @@ function RunTestCaseDialog({
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, variableKeys: event.target.value }))
                   }
-                  placeholder={t('testCasesPage.variableKeysJsonPlaceholder')}
+                  placeholder={rawT.raw('testCasesPage.variableKeysJsonPlaceholder')}
                   className="min-h-32 font-mono text-xs"
                   errorText={errors.variableKeys}
                   root
@@ -1315,7 +1318,7 @@ function RunDetailDialog({
   onOpenChange,
 }: {
   open: boolean;
-  projectId: number;
+  projectId: number | string;
   testCaseId?: number | null;
   runId?: number | null;
   onOpenChange: (open: boolean) => void;
@@ -1484,8 +1487,8 @@ export function TestCaseManagementPage({
   autoOpenFromSpecSpecId = null,
   flowSource = null,
 }: {
-  projectId: number;
-  autoOpenFromSpecSpecId?: number | null;
+  projectId: number | string;
+  autoOpenFromSpecSpecId?: string | number | null;
   flowSource?: 'ai' | null;
 }) {
   const t = useT('project');

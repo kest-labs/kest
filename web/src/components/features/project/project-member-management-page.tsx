@@ -236,7 +236,7 @@ function MembersTableSkeleton() {
   );
 }
 
-export function ProjectMemberManagementPage({ projectId }: { projectId: number }) {
+export function ProjectMemberManagementPage({ projectId }: { projectId: number | string }) {
   const i18n = useT();
   const t = i18n.project;
   const [searchQuery, setSearchQuery] = useState('');

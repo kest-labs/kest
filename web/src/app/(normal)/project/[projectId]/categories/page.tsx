@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { CategoryManagementPage } from '@/components/features/project/category-management-page';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
@@ -20,24 +19,18 @@ export default async function ProjectCategoriesPage({
 }: ProjectCategoriesPageProps) {
   const { projectId } = await params;
   const { item, mode } = await searchParams;
-  const numericProjectId = Number(projectId);
-
-  // 非法项目 ID 直接返回 404，避免把错误参数继续传入受保护页面。
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
 
   if (mode === 'manage') {
-    return <CategoryManagementPage projectId={numericProjectId} />;
+    return <CategoryManagementPage projectId={projectId} />;
   }
 
-  const selectedItemId = Number(item);
+  const selectedItemId = item?.trim() ? item : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={numericProjectId}
+      projectId={projectId}
       module="categories"
-      selectedItemId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      selectedItemId={selectedItemId}
     />
   );
 }

@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { TestCaseManagementPage } from '@/components/features/project/test-case-management-page';
 
 interface ProjectTestCasesPageProps {
@@ -19,17 +18,12 @@ export default async function ProjectTestCasesPage({
 }: ProjectTestCasesPageProps) {
   const { projectId } = await params;
   const { fromSpec, source } = await searchParams;
-  const numericProjectId = Number(projectId);
-  const numericSpecId = Number(fromSpec);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
+  const selectedSpecId = fromSpec?.trim() ? fromSpec : null;
 
   return (
     <TestCaseManagementPage
-      projectId={numericProjectId}
-      autoOpenFromSpecSpecId={Number.isInteger(numericSpecId) && numericSpecId > 0 ? numericSpecId : null}
+      projectId={projectId}
+      autoOpenFromSpecSpecId={selectedSpecId}
       flowSource={source === 'ai' ? 'ai' : null}
     />
   );

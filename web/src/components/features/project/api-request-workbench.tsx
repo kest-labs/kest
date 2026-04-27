@@ -1210,7 +1210,7 @@ const buildCollectionTreeFromList = (
 };
 
 const fetchAllProjectCollections = async (
-  projectId: number
+  projectId: number | string
 ): Promise<ProjectCollectionTreeNode[]> => {
   const items: ProjectCollection[] = [];
   let page = 1;
@@ -1236,7 +1236,7 @@ const fetchAllProjectCollections = async (
 };
 
 const fetchAllCollectionRequests = async (
-  projectId: number,
+  projectId: number | string,
   collectionId: number
 ): Promise<ProjectRequest[]> => {
   const items: ProjectRequest[] = [];
@@ -1406,7 +1406,7 @@ const getInitialWorkbenchState = (): InitialWorkbenchState => {
 export function ApiRequestWorkbench({
   projectId,
 }: {
-  projectId: number;
+  projectId: number | string;
 }) {
   const t = useT('project');
   const defaultRequestTitle = t('collections.workbench.defaultRequestTitle');
@@ -1465,7 +1465,7 @@ export function ApiRequestWorkbench({
   const collectionTreeQuery = useQuery({
     queryKey: collectionKeys.workbenchTree(projectId),
     queryFn: () => fetchAllProjectCollections(projectId),
-    enabled: Number.isInteger(projectId) && projectId > 0,
+    enabled: Boolean(projectId),
     staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   });

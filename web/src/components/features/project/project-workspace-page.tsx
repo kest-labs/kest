@@ -125,9 +125,9 @@ const SPEC_METHOD_OPTIONS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATC
 const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 const buildModuleHref = (
-  projectId: number,
+  projectId: number | string,
   module: ProjectWorkspaceModule,
-  itemId?: number | null
+  itemId?: string | number | null
 ) => {
   const baseRoute = buildProjectWorkspaceRoute(projectId, module);
 
@@ -574,9 +574,9 @@ export function ProjectWorkspacePage({
   selectedItemId,
   autoOpenAICreate = false,
 }: {
-  projectId: number;
+  projectId: number | string;
   module: ProjectWorkspaceModule;
-  selectedItemId?: number | null;
+  selectedItemId?: string | number | null;
   autoOpenAICreate?: boolean;
 }) {
   const t = useT('project');
@@ -638,9 +638,9 @@ function ApiSpecsWorkspaceSection({
   selectedItemId,
   autoOpenAICreate,
 }: {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
-  selectedItemId?: number | null;
+  selectedItemId?: string | number | null;
   autoOpenAICreate?: boolean;
 }) {
   const t = useT('project');
@@ -983,7 +983,7 @@ function ApiSpecsWorkspaceSection({
 function CollectionsWorkspaceSection({
   projectId,
 }: {
-  projectId: number;
+  projectId: number | string;
 }) {
   return <ApiRequestWorkbench projectId={projectId} />;
 }
@@ -993,9 +993,9 @@ function EnvironmentsWorkspaceSection({
   projectName,
   selectedItemId,
 }: {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
-  selectedItemId?: number | null;
+  selectedItemId?: string | number | null;
 }) {
   const t = useT('project');
   const router = useRouter();
@@ -1619,9 +1619,9 @@ function CategoriesWorkspaceSection({
   projectName,
   selectedItemId,
 }: {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
-  selectedItemId?: number | null;
+  selectedItemId?: string | number | null;
 }) {
   const t = useT('project');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1839,9 +1839,9 @@ function HistoryWorkspaceSection({
   projectName,
   selectedItemId,
 }: {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
-  selectedItemId?: number | null;
+  selectedItemId?: string | number | null;
 }) {
   const t = useT('project');
   const [searchQuery, setSearchQuery] = useState('');
@@ -2088,7 +2088,7 @@ function PlaceholderWorkspaceSection({
   projectName,
   module,
 }: {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
   module: ProjectWorkspaceModule;
 }) {
@@ -2308,7 +2308,7 @@ function ResourceContent({
   actions,
   children,
 }: {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
   module: ProjectWorkspaceModule;
   currentTitle: string;

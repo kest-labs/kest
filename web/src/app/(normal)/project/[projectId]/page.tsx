@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectDetailPage } from '@/components/features/project/project-detail-page';
 
 interface ProjectDetailRoutePageProps {
@@ -15,11 +14,5 @@ export default async function ProjectDetailRoutePage({
   params,
 }: ProjectDetailRoutePageProps) {
   const { projectId } = await params;
-  const numericProjectId = Number(projectId);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
-
-  return <ProjectDetailPage projectId={numericProjectId} />;
+  return <ProjectDetailPage projectId={projectId} />;
 }

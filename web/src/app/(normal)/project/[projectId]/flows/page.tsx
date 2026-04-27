@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
 interface ProjectFlowsPageProps {
@@ -18,19 +17,13 @@ export default async function ProjectFlowsPage({
 }: ProjectFlowsPageProps) {
   const { projectId } = await params;
   const { item } = await searchParams;
-  const numericProjectId = Number(projectId);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
-
-  const selectedItemId = Number(item);
+  const selectedItemId = item?.trim() ? item : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={numericProjectId}
+      projectId={projectId}
       module="flows"
-      selectedItemId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      selectedItemId={selectedItemId}
     />
   );
 }

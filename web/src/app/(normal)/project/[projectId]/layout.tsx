@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectWorkspaceLayout } from '@/components/features/project/project-workspace-layout';
 
 interface ProjectWorkspaceRouteLayoutProps {
@@ -15,11 +14,5 @@ export default async function ProjectWorkspaceRouteLayout({
   params,
 }: ProjectWorkspaceRouteLayoutProps) {
   const { projectId } = await params;
-  const numericProjectId = Number(projectId);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
-
-  return <ProjectWorkspaceLayout projectId={numericProjectId}>{children}</ProjectWorkspaceLayout>;
+  return <ProjectWorkspaceLayout projectId={projectId}>{children}</ProjectWorkspaceLayout>;
 }

@@ -19,12 +19,13 @@ package handler
 import (
 	"strconv"
 
-	"github.com/kest-labs/kest/api/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kest-labs/kest/api/pkg/response"
 )
 
-// ParseID extracts and validates a UUID parameter from the URL.
+// ParseID extracts and validates an ID parameter from the URL.
+// It accepts UUIDs and legacy numeric IDs.
 // Returns empty string and false if invalid, automatically sends error response.
 //
 // Example:
@@ -35,11 +36,17 @@ import (
 //	}
 func ParseID(c *gin.Context, param string) (string, bool) {
 	idStr := c.Param(param)
-	if _, err := uuid.Parse(idStr); err != nil {
-		response.BadRequest(c, "Invalid ID format", err)
-		return "", false
+
+	if _, err := uuid.Parse(idStr); err == nil {
+		return idStr, true
 	}
-	return idStr, true
+
+	if _, err := strconv.ParseUint(idStr, 10, 64); err == nil {
+		return idStr, true
+	}
+
+	response.BadRequest(c, "Invalid ID format")
+	return "", false
 }
 
 // ParseUintID extracts and validates an unsigned integer ID parameter from the URL.

@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectMemberManagementPage } from '@/components/features/project/project-member-management-page';
 
 interface ProjectMembersPageProps {
@@ -13,11 +12,5 @@ export default async function ProjectMembersPage({
   params,
 }: ProjectMembersPageProps) {
   const { projectId } = await params;
-  const numericProjectId = Number(projectId);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
-
-  return <ProjectMemberManagementPage projectId={numericProjectId} />;
+  return <ProjectMemberManagementPage projectId={projectId} />;
 }

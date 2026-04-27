@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
 interface ProjectHistoriesPageProps {
@@ -18,18 +17,13 @@ export default async function ProjectHistoriesPage({
 }: ProjectHistoriesPageProps) {
   const { projectId } = await params;
   const { item } = await searchParams;
-  const numericProjectId = Number(projectId);
-  const selectedItemId = Number(item);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
+  const selectedItemId = item?.trim() ? item : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={numericProjectId}
+      projectId={projectId}
       module="histories"
-      selectedItemId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      selectedItemId={selectedItemId}
     />
   );
 }

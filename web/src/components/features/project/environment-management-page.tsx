@@ -624,7 +624,7 @@ function DuplicateEnvironmentDialog({
 export function EnvironmentManagementPage({
   projectId,
 }: {
-  projectId: number;
+  projectId: number | string;
 }) {
   const i18n = useT();
   const t = i18n.project;

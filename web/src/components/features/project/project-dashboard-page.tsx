@@ -90,7 +90,7 @@ const buildDashboardHref = (
   return queryString ? `${pathname}?${queryString}` : pathname;
 };
 
-const buildQuickRequestHref = (projectId: number) =>
+const buildQuickRequestHref = (projectId: number | string) =>
   `${buildProjectCollectionsRoute(projectId)}?quickRequest=1`;
 
 export function ProjectDashboardPage() {
@@ -140,7 +140,7 @@ export function ProjectDashboardPage() {
     [projects]
   );
 
-  const prefetchProjectPreview = useCallback((projectId: number) => {
+  const prefetchProjectPreview = useCallback((projectId: number | string) => {
     void queryClient.prefetchQuery({
       queryKey: projectKeys.projectStats(projectId),
       queryFn: () => projectService.getStats(projectId),
@@ -851,7 +851,7 @@ function resolveDashboardNextStep({
   environmentCount,
 }: {
   t: ProjectT;
-  projectId: number;
+  projectId: number | string;
   apiSpecCount: number;
   environmentCount: number;
 }) {

@@ -441,6 +441,14 @@ func (rt *Route) WhereUUID(params ...string) *Route {
 	return rt
 }
 
+// WhereUUIDOrNumber constrains parameter to UUID format or legacy numeric IDs
+func (rt *Route) WhereUUIDOrNumber(params ...string) *Route {
+	for _, param := range params {
+		rt.Where(param, `^(\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$`)
+	}
+	return rt
+}
+
 // WhereIn constrains parameter to specific values
 func (rt *Route) WhereIn(param string, values ...string) *Route {
 	pattern := "^(" + strings.Join(values, "|") + ")$"

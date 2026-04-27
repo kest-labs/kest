@@ -18,7 +18,7 @@ export function ProjectWorkspaceLayout({
   projectId,
   children,
 }: {
-  projectId: number;
+  projectId: number | string;
   children: React.ReactNode;
 }) {
   const t = useT('project');

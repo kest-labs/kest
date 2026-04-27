@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
 interface ProjectCollectionsPageProps {
@@ -13,11 +12,5 @@ export default async function ProjectCollectionsPage({
   params,
 }: ProjectCollectionsPageProps) {
   const { projectId } = await params;
-  const numericProjectId = Number(projectId);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
-
-  return <ProjectWorkspacePage projectId={numericProjectId} module="collections" />;
+  return <ProjectWorkspacePage projectId={projectId} module="collections" />;
 }

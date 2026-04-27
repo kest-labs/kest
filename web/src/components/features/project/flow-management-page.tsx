@@ -133,6 +133,17 @@ const EMPTY_RUNS: FlowRun[] = [];
 const FLOW_METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 const RUN_ENVIRONMENT_DEFAULT_VALUE = '__flow-run-environment-default__';
 
+const toPositiveIntId = (value: string | number | null | undefined): number | null => {
+  if (typeof value === 'number') {
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
+};
+
 type FlowNodeData = {
   backendStepId?: number;
   clientKey: string;
@@ -1806,8 +1817,8 @@ export function ProjectFlowManagementPage({
   projectId,
   selectedItemId,
 }: {
-  projectId: number;
-  selectedItemId?: number | null;
+  projectId: number | string;
+  selectedItemId?: string | number | null;
 }) {
   const t = useT('project');
   const router = useRouter();
@@ -1824,7 +1835,9 @@ export function ProjectFlowManagementPage({
 
   const [searchValue, setSearchValue] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedFlowId, setSelectedFlowId] = useState<number | null>(selectedItemId ?? null);
+  const [selectedFlowId, setSelectedFlowId] = useState<number | null>(() =>
+    toPositiveIntId(selectedItemId)
+  );
   const [selectedRunEnvironmentId, setSelectedRunEnvironmentId] = useState<number | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1845,13 +1858,13 @@ export function ProjectFlowManagementPage({
   const deferredSearch = useDeferredValue(searchValue);
   const streamAbortRef = useRef<AbortController | null>(null);
   const skipNextHydrationRef = useRef(false);
-  const previousFlowIdRef = useRef<number | null>(selectedItemId ?? null);
+  const previousFlowIdRef = useRef<number | null>(toPositiveIntId(selectedItemId));
 
   const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
   const [edges, setEdges] = useState<FlowCanvasEdge[]>([]);
 
   useEffect(() => {
-    setSelectedFlowId(selectedItemId ?? null);
+    setSelectedFlowId(toPositiveIntId(selectedItemId));
   }, [selectedItemId]);
 
   const selectedFlowQuery = useFlow(projectId, selectedFlowId ?? undefined);

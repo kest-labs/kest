@@ -132,21 +132,21 @@ const normalizeTags = (value: string) =>
 interface ApiSpecAICreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: number;
+  projectId: number | string;
   categories: CategoryOption[];
   isSubmittingDraft: boolean;
   isSubmittingRefine: boolean;
   isSubmittingAccept: boolean;
   onCreateDraft: (payload: CreateApiSpecAIDraftRequest) => Promise<ApiSpecAIDraft>;
   onRefineDraft: (
-    draftId: number,
+    draftId: number | string,
     payload: RefineApiSpecAIDraftRequest
   ) => Promise<ApiSpecAIDraft>;
   onAcceptDraft: (
-    draftId: number,
+    draftId: number | string,
     payload: AcceptApiSpecAIDraftRequest
   ) => Promise<AcceptApiSpecAIDraftResponse>;
-  onAccepted: (result: { specId: number; continueToTests: boolean }) => void;
+  onAccepted: (result: { specId: number | string; continueToTests: boolean }) => void;
 }
 
 export function ApiSpecAICreateDialog({
@@ -198,7 +198,7 @@ function ApiSpecAICreateDialogContent({
     const responses = parseJsonField<Record<string, ResponseSpec>>(editableDraft.responses, 'Responses', 'object');
 
     return {
-      category_id: editableDraft.categoryId ? Number(editableDraft.categoryId) : undefined,
+      category_id: editableDraft.categoryId || undefined,
       method: editableDraft.method,
       path: editableDraft.path.trim(),
       summary: editableDraft.summary.trim(),
@@ -224,7 +224,7 @@ function ApiSpecAICreateDialogContent({
       intent: intent.trim(),
       method: seedMethod,
       path: seedPath.trim() || undefined,
-      category_id: seedCategoryId ? Number(seedCategoryId) : undefined,
+      category_id: seedCategoryId || undefined,
       use_project_conventions: useProjectConventions,
       lang,
     });

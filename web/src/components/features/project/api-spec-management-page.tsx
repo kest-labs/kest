@@ -1461,8 +1461,8 @@ export function ApiSpecManagementPage({
   projectId,
   initialSpecId = null,
 }: {
-  projectId: number;
-  initialSpecId?: number | null;
+  projectId: number | string;
+  initialSpecId?: string | number | null;
 }) {
   const t = useT('project');
   const router = useRouter();
@@ -1471,13 +1471,13 @@ export function ApiSpecManagementPage({
   const [method, setMethod] = useState<'all' | HttpMethod>('all');
   const [version, setVersion] = useState('');
   const [tag, setTag] = useState('');
-  const [selectedSpecId, setSelectedSpecId] = useState<number | null>(initialSpecId);
+  const [selectedSpecId, setSelectedSpecId] = useState<string | number | null>(initialSpecId);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [generatedTestLanguage, setGeneratedTestLanguage] = useState<ApiSpecLanguage>('en');
   const [formMode, setFormMode] = useState<SpecFormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAICreateOpen, setIsAICreateOpen] = useState(false);
-  const [editingSpecId, setEditingSpecId] = useState<number | null>(null);
+  const [editingSpecId, setEditingSpecId] = useState<string | number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApiSpec | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -1578,7 +1578,7 @@ export function ApiSpecManagementPage({
     setIsAICreateOpen(true);
   };
 
-  const openEditDialog = (specId: number) => {
+  const openEditDialog = (specId: string | number) => {
     setSelectedSpecId(specId);
     setFormMode('edit');
     setEditingSpecId(specId);
@@ -1755,7 +1755,7 @@ export function ApiSpecManagementPage({
   ) => createAIDraftMutation.mutateAsync(payload);
 
   const handleRefineAIDraft = async (
-    draftId: number,
+    draftId: number | string,
     payload: Parameters<typeof refineAIDraftMutation.mutateAsync>[0]['data']
   ) =>
     refineAIDraftMutation.mutateAsync({
@@ -1764,7 +1764,7 @@ export function ApiSpecManagementPage({
     });
 
   const handleAcceptAIDraft = async (
-    draftId: number,
+    draftId: number | string,
     payload: Parameters<typeof acceptAIDraftMutation.mutateAsync>[0]['data']
   ) =>
     acceptAIDraftMutation.mutateAsync({

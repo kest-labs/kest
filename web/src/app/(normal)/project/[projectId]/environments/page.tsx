@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
 interface ProjectEnvironmentsPageProps {
@@ -19,20 +18,13 @@ export default async function ProjectEnvironmentsPage({
 }: ProjectEnvironmentsPageProps) {
   const { projectId } = await params;
   const { item } = await searchParams;
-  const numericProjectId = Number(projectId);
-
-  // 非法项目 ID 直接返回 404，避免把错误参数继续传进受保护页面。
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
-
-  const selectedItemId = Number(item);
+  const selectedItemId = item?.trim() ? item : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={numericProjectId}
+      projectId={projectId}
       module="environments"
-      selectedItemId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      selectedItemId={selectedItemId}
     />
   );
 }

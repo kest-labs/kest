@@ -92,7 +92,7 @@ interface ProjectNextAction {
 
 const getProjectNextAction = (
   t: ScopedTranslations<'project'>,
-  projectId: number,
+  projectId: number | string,
   stats?: ProjectStats | null
 ): ProjectNextAction => {
   if (!stats) {
@@ -152,7 +152,7 @@ const getProjectNextAction = (
 
 const getProjectWorkflowSteps = (
   t: ScopedTranslations<'project'>,
-  projectId: number,
+  projectId: number | string,
   stats?: ProjectStats | null
 ): WorkflowStep[] => {
   const apiSpecCount = stats?.api_spec_count ?? 0;
@@ -333,7 +333,7 @@ function ModuleShortcut({
  * It turns the project detail route into a task-oriented launch surface:
  * API Specs -> Environments -> Test Cases -> operational modules.
  */
-export function ProjectDetailPage({ projectId }: { projectId: number }) {
+export function ProjectDetailPage({ projectId }: { projectId: number | string }) {
   const i18n = useT();
   const t = i18n.project;
   const router = useRouter();

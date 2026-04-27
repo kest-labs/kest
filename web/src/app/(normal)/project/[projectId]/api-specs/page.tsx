@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { ApiSpecManagementPage } from '@/components/features/project/api-spec-management-page';
 import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
 
@@ -21,27 +20,22 @@ export default async function ProjectApiSpecsPage({
 }: ProjectApiSpecsPageProps) {
   const { projectId } = await params;
   const { item, mode, ai } = await searchParams;
-  const numericProjectId = Number(projectId);
-  const selectedItemId = Number(item);
-
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
-    notFound();
-  }
+  const selectedItemId = item?.trim() ? item : null;
 
   if (mode === 'manage') {
     return (
       <ApiSpecManagementPage
-        projectId={numericProjectId}
-        initialSpecId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+        projectId={projectId}
+        initialSpecId={selectedItemId}
       />
     );
   }
 
   return (
     <ProjectWorkspacePage
-      projectId={numericProjectId}
+      projectId={projectId}
       module="api-specs"
-      selectedItemId={Number.isInteger(selectedItemId) && selectedItemId > 0 ? selectedItemId : null}
+      selectedItemId={selectedItemId}
       autoOpenAICreate={ai === 'create'}
     />
   );
