@@ -6,17 +6,18 @@ name: kest
 services:
   api:
     build:
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile
     ports:
-      - 8025
+      - 5119
     env:
       GIN_MODE: release
-      JWT_EXPIRATION: 24h
-    # Environment variables to be set in Zeabur dashboard:
-    # - DB_HOST (from PostgreSQL service)
-    # - DB_PORT
-    # - DB_NAME
-    # - DB_USER
-    # - DB_PASSWORD
+      SERVER_PORT: "5119"
+      JWT_EXPIRE_DAYS: "1"
+      CORS_ALLOW_ORIGINS: https://kest.app,https://www.kest.app
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DATABASE}
+      DB_USERNAME: ${POSTGRES_USERNAME}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+    # Required secret to set in Zeabur dashboard:
     # - JWT_SECRET (generate a secure random string)
-    # - ALLOWED_ORIGINS

@@ -16,11 +16,11 @@ FROM go-deps AS builder
 WORKDIR /build
 COPY api/ ./
 
-# Use cmd/server for pure API server (no frontend embed)
+# Use cmd/api for pure API server (no frontend embed)
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w" \
     -o kest-api \
-    ./cmd/server
+    ./cmd/api
 
 # Stage 3: Runtime (minimal)
 FROM alpine:latest

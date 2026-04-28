@@ -163,7 +163,7 @@ func Load() (*Config, error) {
 		},
 		Server: ServerConfig{
 			Host:         env.Get("SERVER_HOST", ""),
-			Port:         env.GetInt("SERVER_PORT", 5119), // KEST signature port: E(5) + S(19)
+			Port:         resolveServerPort(),
 			Mode:         env.Get("GIN_MODE", "debug"),
 			ReadTimeout:  env.GetInt("SERVER_READ_TIMEOUT", 60),
 			WriteTimeout: env.GetInt("SERVER_WRITE_TIMEOUT", 60),
@@ -249,6 +249,14 @@ func Load() (*Config, error) {
 
 	GlobalConfig = cfg
 	return cfg, nil
+}
+
+func resolveServerPort() int {
+	// Cloud platforms often inject PORT. Keep SERVER_PORT as fallback for existing deployments.
+	if port := env.GetInt("PORT", 0); port > 0 {
+		return port
+	}
+	return env.GetInt("SERVER_PORT", 5119) // KEST signature port: E(5) + S(19)
 }
 
 // MustLoad loads configuration or panics
