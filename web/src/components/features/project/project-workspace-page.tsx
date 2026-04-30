@@ -22,10 +22,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
-import {
-  ActionMenu,
-  type ActionMenuItem,
-} from '@/components/features/project/action-menu';
+import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -110,10 +107,7 @@ import type {
   UpdateEnvironmentRequest,
 } from '@/types/environment';
 import type { ProjectHistory } from '@/types/history';
-import {
-  PROJECT_MEMBER_WRITE_ROLES,
-  type ProjectMemberRole,
-} from '@/types/member';
+import { PROJECT_MEMBER_WRITE_ROLES, type ProjectMemberRole } from '@/types/member';
 import { useT } from '@/i18n/client';
 import { cn, formatDate } from '@/utils';
 
@@ -121,7 +115,15 @@ const MAX_MODULE_ITEMS = 500;
 const EMPTY_SPECS: ApiSpec[] = [];
 const EMPTY_ENVIRONMENTS: ProjectEnvironment[] = [];
 const EMPTY_HISTORIES: ProjectHistory[] = [];
-const SPEC_METHOD_OPTIONS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
+const SPEC_METHOD_OPTIONS: HttpMethod[] = [
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+  'HEAD',
+  'OPTIONS',
+];
 const WRITE_ROLES = PROJECT_MEMBER_WRITE_ROLES;
 
 const buildModuleHref = (
@@ -162,6 +164,105 @@ const getHistoryNestedRecord = (value: unknown) => {
   return value as Record<string, unknown>;
 };
 
+const getHistoryNestedList = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is Record<string, unknown> => !!getHistoryNestedRecord(item));
+};
+
+const getHistoryString = (value: unknown) =>
+  typeof value === 'string' && value.trim() ? value.trim() : null;
+
+const getHistoryNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const getHistoryBoolean = (value: unknown) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    if (value === 'true') {
+      return true;
+    }
+    if (value === 'false') {
+      return false;
+    }
+  }
+  return null;
+};
+
+const formatHistoryDuration = (value: unknown) => {
+  const duration = getHistoryNumber(value);
+  return duration === null ? null : `${duration}ms`;
+};
+
+const getCLIRequestRecord = (history?: ProjectHistory | null) => {
+  if (history?.entity_type !== 'cli_request') {
+    return null;
+  }
+  return getHistoryNestedRecord(getHistoryDataRecord(history)?.request);
+};
+
+const getCLIRequestResponseRecord = (history?: ProjectHistory | null) => {
+  if (history?.entity_type !== 'cli_request') {
+    return null;
+  }
+  return getHistoryNestedRecord(getHistoryDataRecord(history)?.response);
+};
+
+const getCLIRunRecord = (history?: ProjectHistory | null) => {
+  if (history?.entity_type !== 'cli_run') {
+    return null;
+  }
+  return getHistoryNestedRecord(getHistoryDataRecord(history)?.run);
+};
+
+const getCLIRunResults = (history?: ProjectHistory | null) =>
+  history?.entity_type === 'cli_run'
+    ? getHistoryNestedList(getHistoryDataRecord(history)?.results)
+    : [];
+
+const getCLIRunLogRecord = (history?: ProjectHistory | null) =>
+  history?.entity_type === 'cli_run'
+    ? getHistoryNestedRecord(getHistoryDataRecord(history)?.log)
+    : null;
+
+const getHistoryRequestTitle = (history?: ProjectHistory | null) => {
+  const requestRecord = getCLIRequestRecord(history);
+  if (!requestRecord) {
+    return null;
+  }
+
+  const method = getHistoryString(requestRecord.method) ?? 'REQUEST';
+  const path = getHistoryString(requestRecord.path);
+  const url = getHistoryString(requestRecord.url);
+  return [method.toUpperCase(), path || url || `record #${history?.entity_id}`]
+    .filter(Boolean)
+    .join(' ');
+};
+
+const getHistoryRequestStatus = (history?: ProjectHistory | null) =>
+  getHistoryNumber(getCLIRequestResponseRecord(history)?.status);
+
+const getHistoryRequestDuration = (history?: ProjectHistory | null) =>
+  formatHistoryDuration(getCLIRequestResponseRecord(history)?.duration_ms);
+
+const getHistoryRunSourceName = (history?: ProjectHistory | null) =>
+  getHistoryString(getCLIRunRecord(history)?.source_name);
+
+const getHistoryRunStepCount = (history?: ProjectHistory | null) =>
+  getHistoryNumber(getCLIRunRecord(history)?.total_steps);
+
 const getHistoryFlowName = (history?: ProjectHistory | null) => {
   const flowRecord = getHistoryNestedRecord(getHistoryDataRecord(history)?.flow);
   const flowName = flowRecord?.name;
@@ -181,10 +282,17 @@ const getHistoryExecutionMode = (history?: ProjectHistory | null) => {
 };
 
 const getHistoryPrimaryTitle = (history: ProjectHistory) =>
-  getHistoryFlowName(history) ?? `${history.entity_type} #${history.entity_id}`;
+  getHistoryRequestTitle(history) ??
+  getHistoryRunSourceName(history) ??
+  getHistoryFlowName(history) ??
+  `${history.entity_type} #${history.entity_id}`;
 
 const getHistoryFallbackDescription = (history: ProjectHistory) =>
-  `${history.action} recorded for ${history.entity_type} #${history.entity_id}`;
+  history.entity_type === 'cli_request'
+    ? `${history.action} recorded for CLI request #${history.entity_id}`
+    : history.entity_type === 'cli_run'
+      ? `${history.action} recorded for CLI run ${getHistoryRunSourceName(history) ?? `#${history.entity_id}`}`
+      : `${history.action} recorded for ${history.entity_type} #${history.entity_id}`;
 
 type EnvironmentFormMode = 'create' | 'edit';
 
@@ -239,18 +347,20 @@ const parseObjectJsonInput = <T extends Record<string, unknown> | Record<string,
 };
 
 const toStringRecord = (value: Record<string, unknown>) =>
-  Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [key, String(item)])
-  ) as Record<string, string>;
+  Object.fromEntries(Object.entries(value).map(([key, item]) => [key, String(item)])) as Record<
+    string,
+    string
+  >;
 
-const getEnvironmentFormDraft = (environment?: ProjectEnvironment | null): EnvironmentFormDraft => ({
+const getEnvironmentFormDraft = (
+  environment?: ProjectEnvironment | null
+): EnvironmentFormDraft => ({
   name: environment?.name ?? '',
   displayName: environment?.display_name ?? '',
   baseUrl: environment?.base_url ?? '',
   variables:
     environment?.variables === undefined ? '' : JSON.stringify(environment.variables, null, 2),
-  headers:
-    environment?.headers === undefined ? '' : JSON.stringify(environment.headers, null, 2),
+  headers: environment?.headers === undefined ? '' : JSON.stringify(environment.headers, null, 2),
 });
 
 const getDuplicateEnvironmentDraft = (
@@ -278,14 +388,16 @@ function EnvironmentFormDialog({
   onSubmit: (payload: CreateEnvironmentRequest | UpdateEnvironmentRequest) => Promise<void>;
 }) {
   const t = useT('project');
-  const [draft, setDraft] = useState<EnvironmentFormDraft>(() => getEnvironmentFormDraft(environment));
+  const [draft, setDraft] = useState<EnvironmentFormDraft>(() =>
+    getEnvironmentFormDraft(environment)
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const updateDraft = <K extends keyof EnvironmentFormDraft>(
     key: K,
     value: EnvironmentFormDraft[K]
   ) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft(current => ({ ...current, [key]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -310,7 +422,10 @@ function EnvironmentFormDialog({
         }
       );
     } catch (error) {
-      nextErrors.variables = error instanceof Error ? error.message : t('common.parseFailed', { label: t('common.variablesJson') });
+      nextErrors.variables =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('common.variablesJson') });
     }
 
     try {
@@ -324,7 +439,10 @@ function EnvironmentFormDialog({
       );
       headers = parsedHeaders ? toStringRecord(parsedHeaders) : undefined;
     } catch (error) {
-      nextErrors.headers = error instanceof Error ? error.message : t('common.parseFailed', { label: t('common.headersJson') });
+      nextErrors.headers =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('common.headersJson') });
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -345,7 +463,11 @@ function EnvironmentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? t('environments.createDialogTitle') : t('environments.editDialogTitle')}</DialogTitle>
+          <DialogTitle>
+            {mode === 'create'
+              ? t('environments.createDialogTitle')
+              : t('environments.editDialogTitle')}
+          </DialogTitle>
           <DialogDescription>
             {mode === 'create'
               ? t('environments.createDialogDescription')
@@ -375,7 +497,7 @@ function EnvironmentFormDialog({
                   <Input
                     id="environment-name"
                     value={draft.name}
-                    onChange={(event) => updateDraft('name', event.target.value)}
+                    onChange={event => updateDraft('name', event.target.value)}
                     placeholder="production"
                     errorText={errors.name}
                     root
@@ -387,7 +509,7 @@ function EnvironmentFormDialog({
                   <Input
                     id="environment-display-name"
                     value={draft.displayName}
-                    onChange={(event) => updateDraft('displayName', event.target.value)}
+                    onChange={event => updateDraft('displayName', event.target.value)}
                     placeholder="Production"
                     root
                   />
@@ -399,7 +521,7 @@ function EnvironmentFormDialog({
                 <Input
                   id="environment-base-url"
                   value={draft.baseUrl}
-                  onChange={(event) => updateDraft('baseUrl', event.target.value)}
+                  onChange={event => updateDraft('baseUrl', event.target.value)}
                   placeholder="https://api.example.com"
                   root
                 />
@@ -411,7 +533,7 @@ function EnvironmentFormDialog({
                   <Textarea
                     id="environment-variables"
                     value={draft.variables}
-                    onChange={(event) => updateDraft('variables', event.target.value)}
+                    onChange={event => updateDraft('variables', event.target.value)}
                     rows={14}
                     placeholder='{"API_URL":"https://api.example.com"}'
                     errorText={errors.variables}
@@ -424,7 +546,7 @@ function EnvironmentFormDialog({
                   <Textarea
                     id="environment-headers"
                     value={draft.headers}
-                    onChange={(event) => updateDraft('headers', event.target.value)}
+                    onChange={event => updateDraft('headers', event.target.value)}
                     rows={14}
                     placeholder='{"Authorization":"Bearer {{token}}"}'
                     errorText={errors.headers}
@@ -483,16 +605,19 @@ function DeleteEnvironmentDialog({
         <DialogBody>
           <Alert variant="destructive">
             <AlertTitle>{t('common.irreversibleAction')}</AlertTitle>
-            <AlertDescription>
-              {t('environments.deleteWarning')}
-            </AlertDescription>
+            <AlertDescription>{t('environments.deleteWarning')}</AlertDescription>
           </Alert>
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button type="button" variant="destructive" loading={isDeleting} onClick={() => void onConfirm()}>
+          <Button
+            type="button"
+            variant="destructive"
+            loading={isDeleting}
+            onClick={() => void onConfirm()}
+          >
             {t('environments.deleteDialogTitle')}
           </Button>
         </DialogFooter>
@@ -536,13 +661,17 @@ function DuplicateEnvironmentDialog({
         draft.overrideVars,
         t('common.overrideVariablesJson'),
         {
-          invalidJson: t('common.jsonMustBeValidObject', { label: t('common.overrideVariablesJson') }),
+          invalidJson: t('common.jsonMustBeValidObject', {
+            label: t('common.overrideVariablesJson'),
+          }),
           invalidObject: t('common.jsonMustBeObject', { label: t('common.overrideVariablesJson') }),
         }
       );
     } catch (error) {
       nextErrors.overrideVars =
-        error instanceof Error ? error.message : t('common.parseFailed', { label: t('common.overrideVariablesJson') });
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('common.overrideVariablesJson') });
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -561,18 +690,18 @@ function DuplicateEnvironmentDialog({
       <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>{t('environments.duplicateDialogTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('environments.duplicateDialogDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('environments.duplicateDialogDescription')}</DialogDescription>
         </DialogHeader>
         <DialogBody>
           <form id="environment-duplicate-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="duplicate-environment-name">{t('environments.newEnvironmentName')}</Label>
+              <Label htmlFor="duplicate-environment-name">
+                {t('environments.newEnvironmentName')}
+              </Label>
               <Input
                 id="duplicate-environment-name"
                 value={draft.name}
-                onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}
                 placeholder="staging-copy"
                 errorText={errors.name}
                 root
@@ -580,12 +709,14 @@ function DuplicateEnvironmentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="duplicate-environment-override-vars">{t('common.overrideVariablesJson')}</Label>
+              <Label htmlFor="duplicate-environment-override-vars">
+                {t('common.overrideVariablesJson')}
+              </Label>
               <Textarea
                 id="duplicate-environment-override-vars"
                 value={draft.overrideVars}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, overrideVars: event.target.value }))
+                onChange={event =>
+                  setDraft(current => ({ ...current, overrideVars: event.target.value }))
                 }
                 rows={12}
                 placeholder='{"API_URL":"https://staging.example.com"}'
@@ -717,14 +848,14 @@ function ApiSpecsWorkspaceSection({
       return specs;
     }
 
-    return specs.filter((spec) =>
+    return specs.filter(spec =>
       [spec.method, spec.path, spec.summary, spec.description, spec.version]
         .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
+        .some(value => value.toLowerCase().includes(normalizedQuery))
     );
   }, [deferredSearch, specs]);
 
-  const selectedSpecFromList = specs.find((spec) => spec.id === selectedItemId) ?? null;
+  const selectedSpecFromList = specs.find(spec => spec.id === selectedItemId) ?? null;
   const selectedSpec = selectedSpecQuery.data ?? selectedSpecFromList;
   const docPreview =
     selectedSpec?.doc_markdown_en ||
@@ -759,7 +890,9 @@ function ApiSpecsWorkspaceSection({
 
     if (!open && autoOpenAICreate) {
       router.replace(
-        selectedItemId ? buildModuleHref(projectId, 'api-specs', selectedItemId) : buildProjectApiSpecsRoute(projectId)
+        selectedItemId
+          ? buildModuleHref(projectId, 'api-specs', selectedItemId)
+          : buildProjectApiSpecsRoute(projectId)
       );
     }
   };
@@ -814,7 +947,7 @@ function ApiSpecsWorkspaceSection({
               />
             }
           >
-            {filteredSpecs.map((spec) => (
+            {filteredSpecs.map(spec => (
               <ResourceListItem
                 key={spec.id}
                 href={buildModuleHref(projectId, 'api-specs', spec.id)}
@@ -824,7 +957,9 @@ function ApiSpecsWorkspaceSection({
                 meta={
                   <>
                     <Badge variant="outline">{spec.version}</Badge>
-                    <span>{t('common.examples')}: {spec.examples?.length ?? 0}</span>
+                    <span>
+                      {t('common.examples')}: {spec.examples?.length ?? 0}
+                    </span>
                   </>
                 }
                 actionsMenu={
@@ -856,7 +991,9 @@ function ApiSpecsWorkspaceSection({
             projectId={projectId}
             projectName={projectName}
             module="api-specs"
-            currentTitle={selectedSpec ? `${selectedSpec.method} ${selectedSpec.path}` : t('common.moduleGuide')}
+            currentTitle={
+              selectedSpec ? `${selectedSpec.method} ${selectedSpec.path}` : t('common.moduleGuide')
+            }
             description={
               selectedSpec
                 ? t('apiSpecs.currentDescriptionWithSelection')
@@ -879,7 +1016,10 @@ function ApiSpecsWorkspaceSection({
             {selectedItemId && selectedSpecQuery.isLoading ? (
               <DetailSkeleton />
             ) : selectedItemId && !selectedSpec ? (
-              <MissingDetailState moduleLabel={t('apiSpecs.title')} clearHref={buildProjectApiSpecsRoute(projectId)} />
+              <MissingDetailState
+                moduleLabel={t('apiSpecs.title')}
+                clearHref={buildProjectApiSpecsRoute(projectId)}
+              />
             ) : !selectedSpec ? (
               <ApiSpecsGuideState
                 onOpenAICreate={() => setIsAICreateOpen(true)}
@@ -894,7 +1034,10 @@ function ApiSpecsWorkspaceSection({
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                          <Badge
+                            variant="outline"
+                            className="border-primary/20 bg-primary/10 text-primary"
+                          >
                             {selectedSpec.method}
                           </Badge>
                           <Badge variant="outline">{selectedSpec.version}</Badge>
@@ -905,17 +1048,34 @@ function ApiSpecsWorkspaceSection({
                           )}
                         </div>
                         <div>
-                          <CardTitle className="text-2xl tracking-tight">{selectedSpec.path}</CardTitle>
+                          <CardTitle className="text-2xl tracking-tight">
+                            {selectedSpec.path}
+                          </CardTitle>
                           <CardDescription className="mt-2 max-w-4xl leading-6">
-                            {selectedSpec.summary || selectedSpec.description || t('apiSpecs.noSpecDescription')}
+                            {selectedSpec.summary ||
+                              selectedSpec.description ||
+                              t('apiSpecs.noSpecDescription')}
                           </CardDescription>
                         </div>
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        <InfoBadge label={t('common.category')} value={selectedSpec.category_id ? `#${selectedSpec.category_id}` : t('common.unassigned')} />
-                        <InfoBadge label={t('common.examples')} value={selectedSpec.examples?.length ?? 0} />
-                        <InfoBadge label={t('common.responses')} value={Object.keys(selectedSpec.responses || {}).length} />
+                        <InfoBadge
+                          label={t('common.category')}
+                          value={
+                            selectedSpec.category_id
+                              ? `#${selectedSpec.category_id}`
+                              : t('common.unassigned')
+                          }
+                        />
+                        <InfoBadge
+                          label={t('common.examples')}
+                          value={selectedSpec.examples?.length ?? 0}
+                        />
+                        <InfoBadge
+                          label={t('common.responses')}
+                          value={Object.keys(selectedSpec.responses || {}).length}
+                        />
                       </div>
                     </div>
                   </CardHeader>
@@ -928,15 +1088,21 @@ function ApiSpecsWorkspaceSection({
                       <CardDescription>{t('apiSpecs.specSummaryDescription')}</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4 md:grid-cols-2">
-                      <DetailField label={t('common.created')}>{formatDate(selectedSpec.created_at, 'YYYY-MM-DD HH:mm')}</DetailField>
-                      <DetailField label={t('common.updated')}>{formatDate(selectedSpec.updated_at, 'YYYY-MM-DD HH:mm')}</DetailField>
+                      <DetailField label={t('common.created')}>
+                        {formatDate(selectedSpec.created_at, 'YYYY-MM-DD HH:mm')}
+                      </DetailField>
+                      <DetailField label={t('common.updated')}>
+                        {formatDate(selectedSpec.updated_at, 'YYYY-MM-DD HH:mm')}
+                      </DetailField>
                       <DetailField label={t('common.requestParameters')}>
                         {selectedSpec.parameters?.length ?? 0}
                       </DetailField>
                       <DetailField label={t('common.requestBody')}>
                         {selectedSpec.request_body ? t('common.available') : t('common.notDefined')}
                       </DetailField>
-                      <DetailField label={t('common.docSource')}>{selectedSpec.doc_source || t('common.unknown')}</DetailField>
+                      <DetailField label={t('common.docSource')}>
+                        {selectedSpec.doc_source || t('common.unknown')}
+                      </DetailField>
                       <DetailField label={t('common.tags')}>
                         {(selectedSpec.tags?.length ?? 0) > 0
                           ? selectedSpec.tags.join(', ')
@@ -969,7 +1135,10 @@ function ApiSpecsWorkspaceSection({
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-2">
-                  <JsonCard title={t('common.requestBodySchema')} value={selectedSpec.request_body} />
+                  <JsonCard
+                    title={t('common.requestBodySchema')}
+                    value={selectedSpec.request_body}
+                  />
                   <JsonCard title={t('common.responses')} value={selectedSpec.responses} />
                   <JsonCard title={t('common.parameters')} value={selectedSpec.parameters} />
                   <JsonCard title={t('common.examples')} value={selectedSpec.examples} />
@@ -995,7 +1164,7 @@ function ApiSpecsWorkspaceSection({
         isSubmittingDraft={createAIDraftMutation.isPending}
         isSubmittingRefine={refineAIDraftMutation.isPending}
         isSubmittingAccept={acceptAIDraftMutation.isPending}
-        onCreateDraft={(payload) => createAIDraftMutation.mutateAsync(payload)}
+        onCreateDraft={payload => createAIDraftMutation.mutateAsync(payload)}
         onRefineDraft={(draftId, payload) =>
           refineAIDraftMutation.mutateAsync({
             draftId,
@@ -1023,11 +1192,7 @@ function ApiSpecsWorkspaceSection({
   );
 }
 
-function CollectionsWorkspaceSection({
-  projectId,
-}: {
-  projectId: number | string;
-}) {
+function CollectionsWorkspaceSection({ projectId }: { projectId: number | string }) {
   return <ApiRequestWorkbench projectId={projectId} />;
 }
 
@@ -1048,9 +1213,9 @@ function EnvironmentsWorkspaceSection({
   const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectEnvironment | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<ProjectEnvironment | null>(null);
-  const [suppressedSelectedEnvironmentId, setSuppressedSelectedEnvironmentId] = useState<number | string | null>(
-    null
-  );
+  const [suppressedSelectedEnvironmentId, setSuppressedSelectedEnvironmentId] = useState<
+    number | string | null
+  >(null);
   const deferredSearch = useDeferredValue(searchQuery);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
   const effectiveSelectedItemId =
@@ -1072,25 +1237,30 @@ function EnvironmentsWorkspaceSection({
       return environments;
     }
 
-    return environments.filter((environment) =>
-      [environment.name, environment.display_name || '', environment.base_url || '']
-        .some((value) => value.toLowerCase().includes(normalizedSearch))
+    return environments.filter(environment =>
+      [environment.name, environment.display_name || '', environment.base_url || ''].some(value =>
+        value.toLowerCase().includes(normalizedSearch)
+      )
     );
   }, [normalizedSearch, environments]);
 
   const selectedEnvironmentFromList =
-    environments.find((environment) => environment.id === effectiveSelectedItemId) ?? null;
+    environments.find(environment => environment.id === effectiveSelectedItemId) ?? null;
   const selectedEnvironment = selectedEnvironmentQuery.data ?? selectedEnvironmentFromList;
   const currentRole = memberRoleQuery.data?.role;
   const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
   const totalEnvironments =
-    environmentsQuery.data?.total ?? projectStatsQuery.data?.environment_count ?? environments.length;
-  const withBaseUrlCount = environments.filter((environment) => Boolean(environment.base_url?.trim())).length;
+    environmentsQuery.data?.total ??
+    projectStatsQuery.data?.environment_count ??
+    environments.length;
+  const withBaseUrlCount = environments.filter(environment =>
+    Boolean(environment.base_url?.trim())
+  ).length;
   const withVariablesCount = environments.filter(
-    (environment) => Object.keys(environment.variables || {}).length > 0
+    environment => Object.keys(environment.variables || {}).length > 0
   ).length;
   const withHeadersCount = environments.filter(
-    (environment) => Object.keys(environment.headers || {}).length > 0
+    environment => Object.keys(environment.headers || {}).length > 0
   ).length;
   const listPreview =
     normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
@@ -1275,7 +1445,7 @@ function EnvironmentsWorkspaceSection({
               />
             }
           >
-            {filteredEnvironments.map((environment) => (
+            {filteredEnvironments.map(environment => (
               <ResourceListItem
                 key={environment.id}
                 href={buildModuleHref(projectId, 'environments', environment.id)}
@@ -1284,8 +1454,16 @@ function EnvironmentsWorkspaceSection({
                 description={environment.base_url || t('environments.baseUrlNotConfigured')}
                 meta={
                   <>
-                    <span>{t('environments.vars', { count: Object.keys(environment.variables || {}).length })}</span>
-                    <span>{t('environments.headers', { count: Object.keys(environment.headers || {}).length })}</span>
+                    <span>
+                      {t('environments.vars', {
+                        count: Object.keys(environment.variables || {}).length,
+                      })}
+                    </span>
+                    <span>
+                      {t('environments.headers', {
+                        count: Object.keys(environment.headers || {}).length,
+                      })}
+                    </span>
                   </>
                 }
                 actionsMenu={
@@ -1439,7 +1617,9 @@ function EnvironmentsWorkspaceSection({
                         <Globe className="h-6 w-6" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-lg font-semibold text-text-main">{t('environments.noEnvironmentsYet')}</p>
+                        <p className="text-lg font-semibold text-text-main">
+                          {t('environments.noEnvironmentsYet')}
+                        </p>
                         <p className="max-w-2xl text-sm leading-6 text-text-muted">
                           {t('environments.noEnvironmentsYetDescription')}
                         </p>
@@ -1462,9 +1642,7 @@ function EnvironmentsWorkspaceSection({
                     <Card className="border-border/60">
                       <CardHeader>
                         <CardTitle>{t('environments.overview')}</CardTitle>
-                        <CardDescription>
-                          {t('environments.overviewDescription')}
-                        </CardDescription>
+                        <CardDescription>{t('environments.overviewDescription')}</CardDescription>
                       </CardHeader>
                       <CardContent className="flex flex-wrap gap-3">
                         <Button type="button" onClick={openCreateDialog} disabled={!canWrite}>
@@ -1483,11 +1661,11 @@ function EnvironmentsWorkspaceSection({
                       <Card className="border-border/60">
                         <CardHeader>
                           <CardTitle>
-                            {normalizedSearch ? t('environments.matchingEnvironments') : t('environments.availableEnvironments')}
+                            {normalizedSearch
+                              ? t('environments.matchingEnvironments')
+                              : t('environments.availableEnvironments')}
                           </CardTitle>
-                          <CardDescription>
-                            {t('environments.visibleQuickLinks')}
-                          </CardDescription>
+                          <CardDescription>{t('environments.visibleQuickLinks')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
                           {listPreview.length === 0 ? (
@@ -1497,7 +1675,7 @@ function EnvironmentsWorkspaceSection({
                               description={t('environments.noMatchingDescription')}
                             />
                           ) : (
-                            listPreview.map((environment) => (
+                            listPreview.map(environment => (
                               <Link
                                 key={environment.id}
                                 href={buildModuleHref(projectId, 'environments', environment.id)}
@@ -1509,15 +1687,26 @@ function EnvironmentsWorkspaceSection({
                                       {environment.display_name || environment.name}
                                     </p>
                                     <p className="mt-1 text-xs text-text-muted">
-                                      {environment.base_url || t('environments.baseUrlNotConfigured')}
+                                      {environment.base_url ||
+                                        t('environments.baseUrlNotConfigured')}
                                     </p>
                                   </div>
                                   <Badge variant="outline">{environment.name}</Badge>
                                 </div>
                                 <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-muted">
-                                  <span>{t('environments.vars', { count: Object.keys(environment.variables || {}).length })}</span>
-                                  <span>{t('environments.headers', { count: Object.keys(environment.headers || {}).length })}</span>
-                                  <span>{formatDate(environment.updated_at, 'YYYY-MM-DD HH:mm')}</span>
+                                  <span>
+                                    {t('environments.vars', {
+                                      count: Object.keys(environment.variables || {}).length,
+                                    })}
+                                  </span>
+                                  <span>
+                                    {t('environments.headers', {
+                                      count: Object.keys(environment.headers || {}).length,
+                                    })}
+                                  </span>
+                                  <span>
+                                    {formatDate(environment.updated_at, 'YYYY-MM-DD HH:mm')}
+                                  </span>
                                 </div>
                               </Link>
                             ))
@@ -1553,7 +1742,10 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
                       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                         <div className="space-y-3">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                            <Badge
+                              variant="outline"
+                              className="border-primary/20 bg-primary/10 text-primary"
+                            >
                               {t('modules.environments.label')}
                             </Badge>
                             <Badge variant="outline">{selectedEnvironment.name}</Badge>
@@ -1589,7 +1781,9 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
                         <CardDescription>{t('environments.metadataDescription')}</CardDescription>
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2">
-                        <DetailField label={t('environments.systemName')}>{selectedEnvironment.name}</DetailField>
+                        <DetailField label={t('environments.systemName')}>
+                          {selectedEnvironment.name}
+                        </DetailField>
                         <DetailField label={t('common.displayName')}>
                           {selectedEnvironment.display_name || t('common.notSet')}
                         </DetailField>
@@ -1605,7 +1799,10 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
                     <JsonCard title={t('common.headersJson')} value={selectedEnvironment.headers} />
                   </div>
 
-                  <JsonCard title={t('common.variablesJson')} value={selectedEnvironment.variables} />
+                  <JsonCard
+                    title={t('common.variablesJson')}
+                    value={selectedEnvironment.variables}
+                  />
                 </div>
               )}
             </div>
@@ -1617,10 +1814,10 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
         key={`${formMode}-${editingEnvironmentQuery.data?.id ?? 'new'}-${isFormOpen ? 'open' : 'closed'}`}
         open={isFormOpen}
         mode={formMode}
-        environment={formMode === 'edit' ? editingEnvironmentQuery.data ?? null : null}
+        environment={formMode === 'edit' ? (editingEnvironmentQuery.data ?? null) : null}
         isLoadingEnvironment={formMode === 'edit' && editingEnvironmentQuery.isLoading}
         isSubmitting={createEnvironmentMutation.isPending || updateEnvironmentMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           setIsFormOpen(open);
           if (!open) {
             setEditingEnvironmentId(null);
@@ -1633,7 +1830,7 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
         open={Boolean(deleteTarget)}
         environment={deleteTarget}
         isDeleting={deleteEnvironmentMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDeleteTarget(null);
           }
@@ -1646,7 +1843,7 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
         open={Boolean(duplicateTarget)}
         environment={duplicateTarget}
         isSubmitting={duplicateEnvironmentMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDuplicateTarget(null);
           }
@@ -1684,22 +1881,29 @@ function CategoriesWorkspaceSection({
       return flatCategories;
     }
 
-    return flatCategories.filter((category) =>
-      [category.name, category.description || '', category.parent_name || '']
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
+    return flatCategories.filter(category =>
+      [category.name, category.description || '', category.parent_name || ''].some(value =>
+        value.toLowerCase().includes(normalizedQuery)
+      )
     );
   }, [deferredSearch, flatCategories]);
 
   const selectedCategoryFromList =
-    flatCategories.find((category) => category.id === selectedItemId) ?? null;
+    flatCategories.find(category => category.id === selectedItemId) ?? null;
   const selectedCategory = selectedCategoryQuery.data ?? selectedCategoryFromList;
-  const selectedCategoryTreeNode = findProjectCategory(categoriesQuery.data?.items, selectedCategory?.id);
+  const selectedCategoryTreeNode = findProjectCategory(
+    categoriesQuery.data?.items,
+    selectedCategory?.id
+  );
   const childCategories = selectedCategoryTreeNode?.children ?? [];
   const fullManagerHref = `${buildProjectCategoriesRoute(projectId)}?mode=manage`;
   const refreshActionItems: ActionMenuItem[] = [
     {
       key: 'categories-refresh',
-      label: categoriesQuery.isFetching || selectedCategoryQuery.isFetching ? t('common.refreshing') : t('common.refresh'),
+      label:
+        categoriesQuery.isFetching || selectedCategoryQuery.isFetching
+          ? t('common.refreshing')
+          : t('common.refresh'),
       icon: RefreshCw,
       disabled: categoriesQuery.isFetching || selectedCategoryQuery.isFetching,
       onSelect: () => {
@@ -1732,7 +1936,7 @@ function CategoriesWorkspaceSection({
             />
           }
         >
-          {filteredCategories.map((category) => (
+          {filteredCategories.map(category => (
             <ResourceListItem
               key={category.id}
               href={buildModuleHref(projectId, 'categories', category.id)}
@@ -1742,8 +1946,14 @@ function CategoriesWorkspaceSection({
               indentLevel={Math.min(category.depth, 4)}
               meta={
                 <>
-                  <span>{t('categories.sortOrder')} {category.sort_order}</span>
-                  {category.test_cases_count ? <span>{t('categories.tests')}: {category.test_cases_count}</span> : null}
+                  <span>
+                    {t('categories.sortOrder')} {category.sort_order}
+                  </span>
+                  {category.test_cases_count ? (
+                    <span>
+                      {t('categories.tests')}: {category.test_cases_count}
+                    </span>
+                  ) : null}
                 </>
               }
             />
@@ -1764,9 +1974,7 @@ function CategoriesWorkspaceSection({
           actions={
             <>
               <Button asChild variant="outline">
-                <Link href={fullManagerHref}>
-                  {t('common.fullManager')}
-                </Link>
+                <Link href={fullManagerHref}>{t('common.fullManager')}</Link>
               </Button>
               <ActionMenu
                 items={refreshActionItems}
@@ -1779,7 +1987,10 @@ function CategoriesWorkspaceSection({
           {selectedItemId && selectedCategoryQuery.isLoading ? (
             <DetailSkeleton />
           ) : selectedItemId && !selectedCategory ? (
-            <MissingDetailState moduleLabel={t('modules.categories.label').toLowerCase()} clearHref={buildProjectCategoriesRoute(projectId)} />
+            <MissingDetailState
+              moduleLabel={t('modules.categories.label').toLowerCase()}
+              clearHref={buildProjectCategoriesRoute(projectId)}
+            />
           ) : !selectedCategory ? (
             <GuideState
               icon={Tags}
@@ -1795,17 +2006,24 @@ function CategoriesWorkspaceSection({
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                        <Badge
+                          variant="outline"
+                          className="border-primary/20 bg-primary/10 text-primary"
+                        >
                           {t('common.category')}
                         </Badge>
                         {selectedCategory.parent_id ? (
-                          <Badge variant="outline">{t('categories.parent')} #{selectedCategory.parent_id}</Badge>
+                          <Badge variant="outline">
+                            {t('categories.parent')} #{selectedCategory.parent_id}
+                          </Badge>
                         ) : (
                           <Badge variant="secondary">{t('common.root')}</Badge>
                         )}
                       </div>
                       <div>
-                        <CardTitle className="text-2xl tracking-tight">{selectedCategory.name}</CardTitle>
+                        <CardTitle className="text-2xl tracking-tight">
+                          {selectedCategory.name}
+                        </CardTitle>
                         <CardDescription className="mt-2 max-w-3xl leading-6">
                           {selectedCategory.description || t('common.noDescriptionProvided')}
                         </CardDescription>
@@ -1814,8 +2032,14 @@ function CategoriesWorkspaceSection({
 
                     <div className="flex flex-wrap gap-2">
                       <InfoBadge label={t('categories.children')} value={childCategories.length} />
-                      <InfoBadge label={t('categories.sortOrder')} value={selectedCategory.sort_order} />
-                      <InfoBadge label={t('categories.tests')} value={selectedCategory.test_cases_count ?? 0} />
+                      <InfoBadge
+                        label={t('categories.sortOrder')}
+                        value={selectedCategory.sort_order}
+                      />
+                      <InfoBadge
+                        label={t('categories.tests')}
+                        value={selectedCategory.test_cases_count ?? 0}
+                      />
                     </div>
                   </div>
                 </CardHeader>
@@ -1829,7 +2053,10 @@ function CategoriesWorkspaceSection({
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
                     <DetailField label={t('categories.parent')}>
-                      {selectedCategory.parent_name || (selectedCategory.parent_id ? `#${selectedCategory.parent_id}` : t('common.rootCategory'))}
+                      {selectedCategory.parent_name ||
+                        (selectedCategory.parent_id
+                          ? `#${selectedCategory.parent_id}`
+                          : t('common.rootCategory'))}
                     </DetailField>
                     <DetailField label={t('common.created')}>
                       {formatDate(selectedCategory.created_at, 'YYYY-MM-DD HH:mm')}
@@ -1837,7 +2064,9 @@ function CategoriesWorkspaceSection({
                     <DetailField label={t('common.updated')}>
                       {formatDate(selectedCategory.updated_at, 'YYYY-MM-DD HH:mm')}
                     </DetailField>
-                    <DetailField label={t('common.projectId')}>{selectedCategory.project_id}</DetailField>
+                    <DetailField label={t('common.projectId')}>
+                      {selectedCategory.project_id}
+                    </DetailField>
                   </CardContent>
                 </Card>
 
@@ -1854,7 +2083,7 @@ function CategoriesWorkspaceSection({
                         description={t('categories.noChildCategoriesDescription')}
                       />
                     ) : (
-                      childCategories.map((child) => (
+                      childCategories.map(child => (
                         <div
                           key={child.id}
                           className="rounded-2xl border border-border/60 bg-background/70 p-4"
@@ -1890,7 +2119,9 @@ function HistoryWorkspaceSection({
 }) {
   const t = useT('project');
   const [searchQuery, setSearchQuery] = useState('');
-  const [entityTypeFilter, setEntityTypeFilter] = useState(initialEntityTypeFilter?.trim() || 'all');
+  const [entityTypeFilter, setEntityTypeFilter] = useState(
+    initialEntityTypeFilter?.trim() || 'all'
+  );
   const deferredSearch = useDeferredValue(searchQuery);
 
   useEffect(() => {
@@ -1907,7 +2138,7 @@ function HistoryWorkspaceSection({
 
   const histories = historiesQuery.data?.items ?? EMPTY_HISTORIES;
   const entityTypeOptions = useMemo(
-    () => Array.from(new Set(histories.map((history) => history.entity_type).filter(Boolean))).sort(),
+    () => Array.from(new Set(histories.map(history => history.entity_type).filter(Boolean))).sort(),
     [histories]
   );
   const filteredHistories = useMemo(() => {
@@ -1917,7 +2148,7 @@ function HistoryWorkspaceSection({
       return histories;
     }
 
-    return histories.filter((history) =>
+    return histories.filter(history =>
       [
         history.message || '',
         history.action,
@@ -1925,17 +2156,25 @@ function HistoryWorkspaceSection({
         String(history.id),
         String(history.entity_id),
         String(history.user_id),
-      ].some((value) => value.toLowerCase().includes(normalizedQuery))
+      ].some(value => value.toLowerCase().includes(normalizedQuery))
     );
   }, [deferredSearch, histories]);
 
-  const selectedHistoryFromList = histories.find((history) => history.id === selectedItemId) ?? null;
+  const selectedHistoryFromList = histories.find(history => history.id === selectedItemId) ?? null;
   const selectedHistory = selectedHistoryQuery.data ?? selectedHistoryFromList;
+  const selectedCLIRequest = getCLIRequestRecord(selectedHistory);
+  const selectedCLIRequestResponse = getCLIRequestResponseRecord(selectedHistory);
+  const selectedCLIRun = getCLIRunRecord(selectedHistory);
+  const selectedCLIRunResults = getCLIRunResults(selectedHistory);
+  const selectedCLIRunLog = getCLIRunLogRecord(selectedHistory);
   const isFiltered = entityTypeFilter !== 'all' || deferredSearch.trim().length > 0;
   const refreshActionItems: ActionMenuItem[] = [
     {
       key: 'histories-refresh',
-      label: historiesQuery.isFetching || selectedHistoryQuery.isFetching ? t('common.refreshing') : t('common.refresh'),
+      label:
+        historiesQuery.isFetching || selectedHistoryQuery.isFetching
+          ? t('common.refreshing')
+          : t('common.refresh'),
       icon: RefreshCw,
       disabled: historiesQuery.isFetching || selectedHistoryQuery.isFetching,
       onSelect: () => {
@@ -1968,7 +2207,7 @@ function HistoryWorkspaceSection({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('history.allEntityTypes')}</SelectItem>
-                {entityTypeOptions.map((entityType) => (
+                {entityTypeOptions.map(entityType => (
                   <SelectItem key={entityType} value={entityType}>
                     {entityType}
                   </SelectItem>
@@ -1981,32 +2220,47 @@ function HistoryWorkspaceSection({
               icon={FileClock}
               title={isFiltered ? t('history.noMatchingHistory') : t('history.noHistoryYet')}
               description={
-                isFiltered
-                  ? t('history.noMatchingDescription')
-                  : t('history.emptyDescription')
+                isFiltered ? t('history.noMatchingDescription') : t('history.emptyDescription')
               }
             />
           }
         >
-          {filteredHistories.map((history) => (
+          {filteredHistories.map(history => (
             <ResourceListItem
               key={history.id}
               href={buildModuleHref(projectId, 'histories', history.id)}
               active={history.id === selectedHistory?.id}
               title={getHistoryPrimaryTitle(history)}
-              description={
-                history.message || getHistoryFallbackDescription(history)
-              }
+              description={history.message || getHistoryFallbackDescription(history)}
               meta={
                 <>
                   <Badge variant="outline">{history.action}</Badge>
-                  {getHistoryRunStatus(history) ? (
+                  {history.entity_type === 'cli_request' &&
+                  getHistoryRequestStatus(history) !== null ? (
+                    <Badge variant="secondary">{getHistoryRequestStatus(history)}</Badge>
+                  ) : null}
+                  {history.entity_type === 'cli_run' && getHistoryRunStatus(history) ? (
                     <Badge variant="secondary">{getHistoryRunStatus(history)}</Badge>
+                  ) : null}
+                  {history.entity_type !== 'cli_request' &&
+                  history.entity_type !== 'cli_run' &&
+                  getHistoryRunStatus(history) ? (
+                    <Badge variant="secondary">{getHistoryRunStatus(history)}</Badge>
+                  ) : null}
+                  {history.entity_type === 'cli_request' && getHistoryRequestDuration(history) ? (
+                    <span>{getHistoryRequestDuration(history)}</span>
+                  ) : null}
+                  {history.entity_type === 'cli_run' && getHistoryRunStepCount(history) !== null ? (
+                    <span>
+                      {getHistoryRunStepCount(history)} {t('history.totalSteps').toLowerCase()}
+                    </span>
                   ) : null}
                   {getHistoryExecutionMode(history) ? (
                     <span>{getHistoryExecutionMode(history)}</span>
                   ) : null}
-                  <span>{t('history.user')} #{history.user_id}</span>
+                  <span>
+                    {t('history.user')} #{history.user_id}
+                  </span>
                   <span>{formatDate(history.created_at, 'YYYY-MM-DD HH:mm')}</span>
                 </>
               }
@@ -2020,9 +2274,7 @@ function HistoryWorkspaceSection({
           projectName={projectName}
           module="histories"
           currentTitle={
-            selectedHistory
-              ? getHistoryPrimaryTitle(selectedHistory)
-              : t('history.projectHistory')
+            selectedHistory ? getHistoryPrimaryTitle(selectedHistory) : t('history.projectHistory')
           }
           description={
             selectedHistory
@@ -2069,14 +2321,26 @@ function HistoryWorkspaceSection({
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                        <Badge
+                          variant="outline"
+                          className="border-primary/20 bg-primary/10 text-primary"
+                        >
                           {selectedHistory.entity_type}
                         </Badge>
                         <Badge variant="outline">{selectedHistory.action}</Badge>
-                        {getHistoryRunStatus(selectedHistory) ? (
+                        {selectedHistory.entity_type === 'cli_request' &&
+                        getHistoryRequestStatus(selectedHistory) !== null ? (
+                          <Badge variant="secondary">
+                            {getHistoryRequestStatus(selectedHistory)}
+                          </Badge>
+                        ) : null}
+                        {selectedHistory.entity_type !== 'cli_request' &&
+                        getHistoryRunStatus(selectedHistory) ? (
                           <Badge variant="secondary">{getHistoryRunStatus(selectedHistory)}</Badge>
                         ) : null}
-                        <Badge variant="secondary">{t('history.recordNumber', { id: selectedHistory.id })}</Badge>
+                        <Badge variant="secondary">
+                          {t('history.recordNumber', { id: selectedHistory.id })}
+                        </Badge>
                       </div>
                       <div>
                         <CardTitle className="text-2xl tracking-tight">
@@ -2090,6 +2354,9 @@ function HistoryWorkspaceSection({
 
                     <div className="flex flex-wrap gap-2">
                       <InfoBadge label={t('history.user')} value={`#${selectedHistory.user_id}`} />
+                      {selectedHistory.source ? (
+                        <InfoBadge label={t('history.syncSource')} value={selectedHistory.source} />
+                      ) : null}
                       <InfoBadge
                         label={t('common.created')}
                         value={formatDate(selectedHistory.created_at, 'YYYY-MM-DD HH:mm')}
@@ -2107,11 +2374,23 @@ function HistoryWorkspaceSection({
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
                     <DetailField label={t('history.recordId')}>{selectedHistory.id}</DetailField>
-                    <DetailField label={t('common.projectId')}>{selectedHistory.project_id}</DetailField>
-                    <DetailField label={t('history.entityType')}>{selectedHistory.entity_type}</DetailField>
-                    <DetailField label={t('history.entityId')}>{selectedHistory.entity_id}</DetailField>
+                    <DetailField label={t('common.projectId')}>
+                      {selectedHistory.project_id}
+                    </DetailField>
+                    <DetailField label={t('history.entityType')}>
+                      {selectedHistory.entity_type}
+                    </DetailField>
+                    <DetailField label={t('history.entityId')}>
+                      {selectedHistory.entity_id}
+                    </DetailField>
                     <DetailField label={t('history.action')}>{selectedHistory.action}</DetailField>
                     <DetailField label={t('history.userId')}>{selectedHistory.user_id}</DetailField>
+                    <DetailField label={t('history.syncSource')}>
+                      {selectedHistory.source || t('common.unknown')}
+                    </DetailField>
+                    <DetailField label={t('history.sourceEventId')}>
+                      {selectedHistory.source_event_id || t('common.unknown')}
+                    </DetailField>
                   </CardContent>
                 </Card>
 
@@ -2127,6 +2406,167 @@ function HistoryWorkspaceSection({
                   </CardContent>
                 </Card>
               </div>
+
+              {selectedCLIRequest && selectedCLIRequestResponse ? (
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <Card className="border-border/60">
+                    <CardHeader>
+                      <CardTitle>{t('common.request')}</CardTitle>
+                      <CardDescription>{t('history.cliRequestDescription')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <DetailField label={t('common.method')}>
+                          {getHistoryString(selectedCLIRequest.method) || t('common.unknown')}
+                        </DetailField>
+                        <DetailField label={t('common.environment')}>
+                          {getHistoryString(selectedCLIRequest.environment) || t('common.unknown')}
+                        </DetailField>
+                        <DetailField label={t('common.url')}>
+                          {getHistoryString(selectedCLIRequest.url) || t('common.unknown')}
+                        </DetailField>
+                        <DetailField label={t('history.transport')}>
+                          {getHistoryString(selectedCLIRequest.transport) || t('common.unknown')}
+                        </DetailField>
+                      </div>
+                      <pre className="max-h-[280px] overflow-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
+                        {formatJson(selectedCLIRequest.headers)}
+                      </pre>
+                      <pre className="max-h-[280px] overflow-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
+                        {typeof selectedCLIRequest.body === 'string'
+                          ? selectedCLIRequest.body
+                          : formatJson(selectedCLIRequest.body)}
+                      </pre>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-border/60">
+                    <CardHeader>
+                      <CardTitle>{t('common.response')}</CardTitle>
+                      <CardDescription>{t('history.cliResponseDescription')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <DetailField label={t('common.httpStatus')}>
+                          {getHistoryNumber(selectedCLIRequestResponse.status) ??
+                            t('common.unknown')}
+                        </DetailField>
+                        <DetailField label={t('common.duration')}>
+                          {formatHistoryDuration(selectedCLIRequestResponse.duration_ms) ||
+                            t('common.unknown')}
+                        </DetailField>
+                      </div>
+                      <pre className="max-h-[280px] overflow-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
+                        {formatJson(selectedCLIRequestResponse.headers)}
+                      </pre>
+                      <pre className="max-h-[280px] overflow-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
+                        {typeof selectedCLIRequestResponse.body === 'string'
+                          ? selectedCLIRequestResponse.body
+                          : formatJson(selectedCLIRequestResponse.body)}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : null}
+
+              {selectedCLIRun ? (
+                <>
+                  <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                    <Card className="border-border/60">
+                      <CardHeader>
+                        <CardTitle>{t('history.cliRunSummary')}</CardTitle>
+                        <CardDescription>{t('history.cliRunSummaryDescription')}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="grid gap-4 md:grid-cols-2">
+                        <DetailField label={t('history.runFile')}>
+                          {getHistoryString(selectedCLIRun.source_name) || t('common.unknown')}
+                        </DetailField>
+                        <DetailField label={t('common.status')}>
+                          {getHistoryString(selectedCLIRun.status) || t('common.unknown')}
+                        </DetailField>
+                        <DetailField label={t('history.totalSteps')}>
+                          {getHistoryNumber(selectedCLIRun.total_steps) ?? 0}
+                        </DetailField>
+                        <DetailField label={t('history.passedSteps')}>
+                          {getHistoryNumber(selectedCLIRun.passed_steps) ?? 0}
+                        </DetailField>
+                        <DetailField label={t('history.failedSteps')}>
+                          {getHistoryNumber(selectedCLIRun.failed_steps) ?? 0}
+                        </DetailField>
+                        <DetailField label={t('common.duration')}>
+                          {formatHistoryDuration(selectedCLIRun.total_duration_ms) ||
+                            t('common.unknown')}
+                        </DetailField>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-border/60">
+                      <CardHeader>
+                        <CardTitle>{t('history.logExcerpt')}</CardTitle>
+                        <CardDescription>{t('history.logExcerptDescription')}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <pre className="max-h-[340px] overflow-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-xs leading-6 text-text-muted">
+                          {getHistoryString(selectedCLIRunLog?.excerpt) ||
+                            t('history.noLogExcerpt')}
+                        </pre>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card className="border-border/60">
+                    <CardHeader>
+                      <CardTitle>{t('history.stepResults')}</CardTitle>
+                      <CardDescription>{t('history.stepResultsDescription')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedCLIRunResults.length === 0 ? (
+                        <div className="rounded-2xl border border-border/60 bg-background/70 p-4 text-sm text-text-muted">
+                          {t('history.noStepResults')}
+                        </div>
+                      ) : (
+                        selectedCLIRunResults.map((result, index) => (
+                          <div
+                            key={`${selectedHistory.id}-${index}`}
+                            className="rounded-2xl border border-border/60 bg-background/70 p-4"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline">
+                                {getHistoryString(result.method) ||
+                                  getHistoryString(result.name) ||
+                                  `Step ${index + 1}`}
+                              </Badge>
+                              {getHistoryBoolean(result.success) !== null ? (
+                                <Badge variant="secondary">
+                                  {getHistoryBoolean(result.success) ? 'passed' : 'failed'}
+                                </Badge>
+                              ) : null}
+                              {getHistoryNumber(result.status) !== null ? (
+                                <Badge variant="secondary">{getHistoryNumber(result.status)}</Badge>
+                              ) : null}
+                              {formatHistoryDuration(result.duration_ms) ? (
+                                <span className="text-xs text-text-muted">
+                                  {formatHistoryDuration(result.duration_ms)}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-3 text-sm font-medium text-text-main">
+                              {getHistoryString(result.url) ||
+                                getHistoryString(result.name) ||
+                                t('history.noStepLabel')}
+                            </p>
+                            {getHistoryString(result.error) ? (
+                              <p className="mt-2 text-xs leading-6 text-destructive">
+                                {getHistoryString(result.error)}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              ) : null}
 
               <div className="grid gap-6 xl:grid-cols-2">
                 <JsonCard title={t('history.snapshotData')} value={selectedHistory.data} />
@@ -2170,7 +2610,9 @@ function PlaceholderWorkspaceSection({
             <SidebarEmptyState
               icon={moduleMeta.icon}
               title={t('workspace.placeholderTitle', { module: moduleLabel })}
-              description={t('workspace.placeholderSidebarDescription', { module: moduleLabel.toLowerCase() })}
+              description={t('workspace.placeholderSidebarDescription', {
+                module: moduleLabel.toLowerCase(),
+              })}
             />
           }
         />
@@ -2181,7 +2623,9 @@ function PlaceholderWorkspaceSection({
           projectName={projectName}
           module={module}
           currentTitle={t('workspace.placeholderTitle', { module: moduleLabel })}
-          description={t('workspace.placeholderContentDescription', { module: moduleLabel.toLowerCase() })}
+          description={t('workspace.placeholderContentDescription', {
+            module: moduleLabel.toLowerCase(),
+          })}
           actions={
             isHistoryModule ? (
               <Button asChild variant="outline">
@@ -2279,7 +2723,7 @@ function ResourceSidebar({
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
             <Input
               value={searchValue}
-              onChange={(event) => onSearchChange(event.target.value)}
+              onChange={event => onSearchChange(event.target.value)}
               placeholder={searchPlaceholder}
               className="pl-9"
             />
@@ -2303,9 +2747,7 @@ function ResourceSidebar({
         ) : error ? (
           <Alert>
             <AlertTitle>{t('workspace.unableToLoadModuleList')}</AlertTitle>
-            <AlertDescription>
-              {t('workspace.unableToLoadModuleListDescription')}
-            </AlertDescription>
+            <AlertDescription>{t('workspace.unableToLoadModuleListDescription')}</AlertDescription>
           </Alert>
         ) : count === 0 ? (
           emptyState
@@ -2348,7 +2790,9 @@ function ResourceListItem({
         <Link href={href} className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-text-main">{title}</p>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">{description}</p>
-          {meta ? <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">{meta}</div> : null}
+          {meta ? (
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">{meta}</div>
+          ) : null}
         </Link>
         {actionsMenu ? <div className="shrink-0">{actionsMenu}</div> : null}
       </div>
@@ -2465,9 +2909,7 @@ function GuideState({
         </div>
         {actionHref && actionLabel ? (
           <Button asChild variant="outline">
-            <Link href={actionHref}>
-              {actionLabel}
-            </Link>
+            <Link href={actionHref}>{actionLabel}</Link>
           </Button>
         ) : null}
       </CardContent>
@@ -2513,16 +2955,16 @@ function ApiSpecsGuideState({
               {t('apiSpecs.addSpecManually')}
             </Button>
             <Button asChild variant="ghost">
-              <Link href={managerHref}>
-                {t('common.fullManager')}
-              </Link>
+              <Link href={managerHref}>{t('common.fullManager')}</Link>
             </Button>
           </div>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="rounded-2xl border border-border/60 bg-background/70 p-5">
-            <p className="text-sm font-semibold text-text-main">{t('apiSpecs.captureIntentTitle')}</p>
+            <p className="text-sm font-semibold text-text-main">
+              {t('apiSpecs.captureIntentTitle')}
+            </p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               {t('apiSpecs.captureIntentDescription')}
             </p>
@@ -2534,7 +2976,9 @@ function ApiSpecsGuideState({
             </p>
           </div>
           <div className="rounded-2xl border border-border/60 bg-background/70 p-5">
-            <p className="text-sm font-semibold text-text-main">{t('apiSpecs.moveToTestingTitle')}</p>
+            <p className="text-sm font-semibold text-text-main">
+              {t('apiSpecs.moveToTestingTitle')}
+            </p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               {t('apiSpecs.moveToTestingDescription')}
             </p>
@@ -2571,13 +3015,7 @@ function MissingDetailState({
   );
 }
 
-function DetailField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">{label}</p>
@@ -2586,13 +3024,7 @@ function DetailField({
   );
 }
 
-function InfoBadge({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoBadge({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/70 px-3 py-2 text-sm">
       <span className="text-text-muted">{label}: </span>
@@ -2601,13 +3033,7 @@ function InfoBadge({
   );
 }
 
-function JsonCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: unknown;
-}) {
+function JsonCard({ title, value }: { title: string; value: unknown }) {
   return (
     <Card className="min-w-0 border-border/60">
       <CardHeader>
@@ -2663,7 +3089,7 @@ const getCreateApiSpecDraft = (): CreateApiSpecDraft => ({
 const normalizeTags = (value: string) =>
   value
     .split(',')
-    .map((tag) => tag.trim())
+    .map(tag => tag.trim())
     .filter(Boolean);
 
 function CreateApiSpecDialog({
@@ -2713,7 +3139,7 @@ function CreateApiSpecDialogBody({
     key: K,
     value: CreateApiSpecDraft[K]
   ) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft(current => ({ ...current, [key]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2755,9 +3181,7 @@ function CreateApiSpecDialogBody({
     <DialogContent size="default">
       <DialogHeader>
         <DialogTitle>{t('apiSpecs.createDialogTitle')}</DialogTitle>
-        <DialogDescription>
-          {t('apiSpecs.createDialogDescription')}
-        </DialogDescription>
+        <DialogDescription>{t('apiSpecs.createDialogDescription')}</DialogDescription>
       </DialogHeader>
 
       <DialogBody>
@@ -2767,13 +3191,13 @@ function CreateApiSpecDialogBody({
               <Label htmlFor="workspace-spec-method">{t('common.method')}</Label>
               <Select
                 value={draft.method}
-                onValueChange={(value) => updateDraft('method', value as HttpMethod)}
+                onValueChange={value => updateDraft('method', value as HttpMethod)}
               >
                 <SelectTrigger id="workspace-spec-method" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SPEC_METHOD_OPTIONS.map((method) => (
+                  {SPEC_METHOD_OPTIONS.map(method => (
                     <SelectItem key={method} value={method}>
                       {method}
                     </SelectItem>
@@ -2787,7 +3211,7 @@ function CreateApiSpecDialogBody({
               <Input
                 id="workspace-spec-path"
                 value={draft.path}
-                onChange={(event) => updateDraft('path', event.target.value)}
+                onChange={event => updateDraft('path', event.target.value)}
                 placeholder="/api/v1/orders"
                 errorText={errors.path}
                 root
@@ -2799,7 +3223,7 @@ function CreateApiSpecDialogBody({
               <Input
                 id="workspace-spec-version"
                 value={draft.version}
-                onChange={(event) => updateDraft('version', event.target.value)}
+                onChange={event => updateDraft('version', event.target.value)}
                 placeholder="1.0.0"
                 errorText={errors.version}
                 root
@@ -2812,14 +3236,14 @@ function CreateApiSpecDialogBody({
               <Label htmlFor="workspace-spec-category">{t('common.category')}</Label>
               <Select
                 value={draft.categoryId || 'none'}
-                onValueChange={(value) => updateDraft('categoryId', value === 'none' ? '' : value)}
+                onValueChange={value => updateDraft('categoryId', value === 'none' ? '' : value)}
               >
                 <SelectTrigger id="workspace-spec-category" className="w-full">
                   <SelectValue placeholder={t('apiSpecs.selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('common.notSet')}</SelectItem>
-                  {categories.map((category) => (
+                  {categories.map(category => (
                     <SelectItem key={category.value} value={category.value}>
                       {category.label}
                     </SelectItem>
@@ -2833,7 +3257,7 @@ function CreateApiSpecDialogBody({
               <Input
                 id="workspace-spec-tags"
                 value={draft.tags}
-                onChange={(event) => updateDraft('tags', event.target.value)}
+                onChange={event => updateDraft('tags', event.target.value)}
                 placeholder="auth, user, public"
                 root
               />
@@ -2845,7 +3269,7 @@ function CreateApiSpecDialogBody({
             <Input
               id="workspace-spec-summary"
               value={draft.summary}
-              onChange={(event) => updateDraft('summary', event.target.value)}
+              onChange={event => updateDraft('summary', event.target.value)}
               placeholder={t('apiSpecs.shortSummaryPlaceholder')}
               root
             />
@@ -2856,7 +3280,7 @@ function CreateApiSpecDialogBody({
             <Textarea
               id="workspace-spec-description"
               value={draft.description}
-              onChange={(event) => updateDraft('description', event.target.value)}
+              onChange={event => updateDraft('description', event.target.value)}
               placeholder={t('apiSpecs.descriptionPlaceholder')}
               rows={6}
               root
@@ -2866,14 +3290,12 @@ function CreateApiSpecDialogBody({
           <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/70 px-4 py-3">
             <div className="space-y-1">
               <Label htmlFor="workspace-spec-public">{t('apiSpecs.publicSpec')}</Label>
-              <p className="text-xs text-text-muted">
-                {t('apiSpecs.publicSpecDescription')}
-              </p>
+              <p className="text-xs text-text-muted">{t('apiSpecs.publicSpecDescription')}</p>
             </div>
             <Switch
               id="workspace-spec-public"
               checked={draft.isPublic}
-              onCheckedChange={(checked) => updateDraft('isPublic', checked)}
+              onCheckedChange={checked => updateDraft('isPublic', checked)}
             />
           </div>
         </form>

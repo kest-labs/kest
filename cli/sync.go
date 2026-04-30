@@ -11,18 +11,20 @@ import (
 
 	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	syncPushProjectID string
-	syncPushAPIURL    string
-	syncPushToken     string
-	syncDryRun        bool
-	syncConfigAPIURL  string
-	syncConfigToken   string
-	syncConfigProject string
+	syncPushProjectID     string
+	syncPushAPIURL        string
+	syncPushToken         string
+	syncDryRun            bool
+	syncConfigAPIURL      string
+	syncConfigToken       string
+	syncConfigProject     string
+	syncConfigAutoHistory bool
 )
 
 var syncCmd = &cobra.Command{
@@ -47,7 +49,7 @@ var syncConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Configure Kest Platform connection",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runSyncConfig()
+		return runSyncConfig(cmd)
 	},
 }
 
@@ -65,6 +67,7 @@ func init() {
 	syncConfigCmd.Flags().StringVar(&syncConfigAPIURL, "platform-url", "", "Platform API URL (for example: https://api.kest.dev/v1)")
 	syncConfigCmd.Flags().StringVar(&syncConfigToken, "platform-token", "", "Project-scoped CLI token")
 	syncConfigCmd.Flags().StringVar(&syncConfigProject, "project-id", "", "Default platform project ID")
+	syncConfigCmd.Flags().BoolVar(&syncConfigAutoHistory, "auto-sync-history", false, "Enable automatic CLI history sync to the platform")
 }
 
 // APISpecSync represents an API spec for syncing
@@ -168,7 +171,12 @@ func runSyncPush() error {
 	}
 	defer store.Close()
 
-	records, err := store.GetAllRecords()
+	localProjectID := strings.TrimSpace(conf.ProjectID)
+	if localProjectID == "" {
+		return fmt.Errorf("sync push must be run inside a Kest project so local history can be scoped correctly")
+	}
+
+	records, err := store.GetRecordsByProject(localProjectID, 5000)
 	if err != nil {
 		return fmt.Errorf("failed to load history: %w", err)
 	}
@@ -224,7 +232,6 @@ func analyzeRecords(records []storage.Record) []APISpecSync {
 		example := Example{
 			Name:           fmt.Sprintf("Example %d", len(spec.Examples)+1),
 			ResponseStatus: record.ResponseStatus,
-			ResponseBody:   record.ResponseBody,
 			DurationMs:     int64(record.DurationMs),
 		}
 
@@ -232,14 +239,15 @@ func analyzeRecords(records []storage.Record) []APISpecSync {
 		if len(record.RequestHeaders) > 0 && string(record.RequestHeaders) != "null" && string(record.RequestHeaders) != "" {
 			var headers map[string]string
 			if err := json.Unmarshal([]byte(record.RequestHeaders), &headers); err == nil {
-				example.RequestHeaders = headers
+				example.RequestHeaders = platformsync.SanitizeStringMap(headers)
 			}
 		}
 
 		// Add request body
 		if record.RequestBody != "" {
-			example.RequestBody = record.RequestBody
+			example.RequestBody, _ = platformsync.SanitizeBody(record.RequestBody)
 		}
+		example.ResponseBody, _ = platformsync.SanitizeBody(record.ResponseBody)
 
 		spec.Examples = append(spec.Examples, example)
 
@@ -416,13 +424,13 @@ func parseSyncResponse(body []byte) (SyncResponse, error) {
 	return syncResp, nil
 }
 
-func runSyncConfig() error {
+func runSyncConfig(cmd *cobra.Command) error {
 	conf, err := config.LoadConfig()
 	if err != nil {
 		conf = &config.Config{}
 	}
 
-	if syncConfigAPIURL != "" || syncConfigToken != "" || syncConfigProject != "" {
+	if syncConfigAPIURL != "" || syncConfigToken != "" || syncConfigProject != "" || cmdFlagChanged(cmd, "auto-sync-history") {
 		if syncConfigAPIURL != "" {
 			conf.PlatformURL = syncConfigAPIURL
 		}
@@ -431,6 +439,9 @@ func runSyncConfig() error {
 		}
 		if syncConfigProject != "" {
 			conf.PlatformProjectID = syncConfigProject
+		}
+		if cmdFlagChanged(cmd, "auto-sync-history") {
+			conf.PlatformAutoSyncHistory = syncConfigAutoHistory
 		}
 	} else {
 		// Interactive configuration
@@ -457,6 +468,16 @@ func runSyncConfig() error {
 		if projectID != "" {
 			conf.PlatformProjectID = projectID
 		}
+
+		fmt.Print("Enable automatic history sync (true/false): ")
+		var autoHistory string
+		fmt.Scanln(&autoHistory)
+		switch strings.ToLower(strings.TrimSpace(autoHistory)) {
+		case "true", "t", "yes", "y", "1":
+			conf.PlatformAutoSyncHistory = true
+		case "false", "f", "no", "n", "0":
+			conf.PlatformAutoSyncHistory = false
+		}
 	}
 
 	// Save config
@@ -473,6 +494,11 @@ func runSyncConfig() error {
 	fmt.Println("\n💡 Now you can run: kest sync push")
 
 	return nil
+}
+
+func cmdFlagChanged(cmd *cobra.Command, name string) bool {
+	flag := cmd.Flags().Lookup(name)
+	return flag != nil && flag.Changed
 }
 
 func buildSpecSyncEndpoint(apiURL, projectID string) string {

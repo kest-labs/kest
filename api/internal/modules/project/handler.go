@@ -17,6 +17,7 @@ type Handler struct {
 	service       Service
 	memberService member.Service
 	specSyncer    SpecSyncer
+	historySyncer CLIHistorySyncer
 }
 
 // Name returns the module name
@@ -34,6 +35,10 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 
 func (h *Handler) SetSpecSyncer(syncer SpecSyncer) {
 	h.specSyncer = syncer
+}
+
+func (h *Handler) SetHistorySyncer(syncer CLIHistorySyncer) {
+	h.historySyncer = syncer
 }
 
 // Create handles POST /projects
@@ -231,4 +236,63 @@ func (h *Handler) SyncSpecsFromCLI(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+// SyncHistoryFromCLI handles POST /projects/:id/cli/history-sync
+func (h *Handler) SyncHistoryFromCLI(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	if h.historySyncer == nil {
+		response.Error(c, http.StatusServiceUnavailable, "CLI history sync is not configured")
+		return
+	}
+
+	var req CLIHistorySyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	if req.ProjectID != nil && *req.ProjectID != projectID {
+		response.BadRequest(c, "project_id in body must match URL project id")
+		return
+	}
+
+	createdBy, ok := getCLITokenCreatedBy(c)
+	if !ok {
+		response.Unauthorized(c)
+		return
+	}
+
+	result, err := h.historySyncer.SyncHistoryFromCLI(c.Request.Context(), projectID, createdBy, &req)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func getCLITokenCreatedBy(c *gin.Context) (uint, bool) {
+	value, exists := c.Get("cliTokenCreatedBy")
+	if !exists {
+		return 0, false
+	}
+
+	switch typed := value.(type) {
+	case uint:
+		return typed, true
+	case int:
+		return uint(typed), true
+	case int64:
+		return uint(typed), true
+	case uint64:
+		return uint(typed), true
+	case float64:
+		return uint(typed), true
+	default:
+		return 0, false
+	}
 }

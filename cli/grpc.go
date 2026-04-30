@@ -7,6 +7,7 @@ import (
 	"github.com/kest-labs/kest/cli/internal/client"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -68,8 +69,17 @@ var grpcCmd = &cobra.Command{
 				DurationMs:     resp.Duration.Milliseconds(),
 				Project:        projectID,
 				Environment:    env,
+				CreatedAt:      time.Now().UTC(),
 			}
-			_, _ = store.SaveRecord(record)
+			recordID, _ := store.SaveRecord(record)
+			record.ID = recordID
+			if recordID > 0 {
+				if err := platformsync.QueueRequestHistory(conf, store, record, "grpc"); err != nil {
+					logger.LogToSession("history auto-sync enqueue failed for gRPC record %d: %v", recordID, err)
+				} else {
+					platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
+				}
+			}
 		}
 
 		if grpcVerbose {

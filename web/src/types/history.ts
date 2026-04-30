@@ -7,6 +7,8 @@ export interface ProjectHistory {
   entity_id: number | string;
   project_id: number | string;
   user_id: number;
+  source?: string;
+  source_event_id?: string;
   action: string;
   data?: Record<string, unknown> | null;
   diff?: Record<string, unknown> | null;

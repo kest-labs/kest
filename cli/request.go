@@ -16,6 +16,7 @@ import (
 	"github.com/kest-labs/kest/cli/internal/client"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/kest-labs/kest/cli/internal/summary"
 	"github.com/kest-labs/kest/cli/internal/variable"
@@ -24,24 +25,25 @@ import (
 )
 
 type RequestOptions struct {
-	Method       string
-	URL          string
-	Data         string
-	Headers      []string
-	Queries      []string
-	Captures     []string
-	Asserts      []string
-	SoftAsserts  []string
-	Verbose      bool
-	DebugVars    bool
-	Stream       bool
-	NoRecord     bool
-	MaxDuration  int      // Max response time in milliseconds (--max-time)
-	Retry        int      // Number of retries (0 = no retry)
-	RetryWait    int      // Delay between retries in milliseconds (--retry-delay)
-	StrictVars   bool     // Fail early when required variables are missing
-	SilentOutput bool     // Suppress PrintResponse box (used by flow runner)
-	Forms        []string // -F/--form fields: "fieldname=value" or "fieldname=@filepath"
+	Method          string
+	URL             string
+	Data            string
+	Headers         []string
+	Queries         []string
+	Captures        []string
+	Asserts         []string
+	SoftAsserts     []string
+	Verbose         bool
+	DebugVars       bool
+	Stream          bool
+	NoRecord        bool
+	MaxDuration     int      // Max response time in milliseconds (--max-time)
+	Retry           int      // Number of retries (0 = no retry)
+	RetryWait       int      // Delay between retries in milliseconds (--retry-delay)
+	StrictVars      bool     // Fail early when required variables are missing
+	SilentOutput    bool     // Suppress PrintResponse box (used by flow runner)
+	Forms           []string // -F/--form fields: "fieldname=value" or "fieldname=@filepath"
+	SkipHistorySync bool     // Skip platform history sync (used by aggregate run commands)
 }
 
 var (
@@ -543,7 +545,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		u, _ := url.Parse(finalURL)
 		queryJSON, _ := json.Marshal(u.Query())
 
-		recordID, _ = store.SaveRecord(&storage.Record{
+		record := &storage.Record{
 			Method:          strings.ToUpper(method),
 			URL:             finalURL,
 			BaseURL:         env.BaseURL,
@@ -557,7 +559,17 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			DurationMs:      resp.Duration.Milliseconds(),
 			Environment:     conf.ActiveEnv,
 			Project:         conf.ProjectID,
-		})
+			CreatedAt:       startTime.UTC(),
+		}
+		recordID, _ = store.SaveRecord(record)
+		record.ID = recordID
+		if recordID > 0 && !opts.SkipHistorySync {
+			if err := platformsync.QueueRequestHistory(conf, store, record, method); err != nil {
+				logger.LogToSession("history auto-sync enqueue failed for record %d: %v", recordID, err)
+			} else {
+				platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
+			}
+		}
 	}
 
 	result.Success = true

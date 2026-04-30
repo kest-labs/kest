@@ -48,5 +48,9 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			Name("projects.cli.spec_sync").
 			WhereUUIDOrNumber("id").
 			Middleware(middleware.RequireProjectCLIToken(h.service, CLITokenScopeSpecWrite))
+		cli.POST("/projects/:id/cli/history-sync", h.SyncHistoryFromCLI).
+			Name("projects.cli.history_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireProjectCLIToken(h.service, CLITokenScopeRunWrite))
 	})
 }

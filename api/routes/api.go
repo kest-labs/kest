@@ -23,6 +23,9 @@ func RegisterAPI(r *router.Router, handlers *app.Handlers) {
 	if handlers.Project != nil && handlers.APISpec != nil {
 		handlers.Project.SetSpecSyncer(handlers.APISpec)
 	}
+	if handlers.Project != nil && handlers.History != nil {
+		handlers.Project.SetHistorySyncer(handlers.History)
+	}
 
 	// 2. Register Module Routes
 	for _, m := range handlers.Modules() {

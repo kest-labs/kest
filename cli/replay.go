@@ -8,6 +8,7 @@ import (
 
 	"github.com/kest-labs/kest/cli/internal/client"
 	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/kest-labs/kest/cli/internal/variable"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -68,7 +69,7 @@ var replayCmd = &cobra.Command{
 		// Save new record, preserving origin metadata from the original record
 		headerJSON, _ := json.Marshal(headers)
 		respHeaderJSON, _ := json.Marshal(resp.Headers)
-		newID, _ := store.SaveRecord(&storage.Record{
+		record := &storage.Record{
 			Method:          oldRecord.Method,
 			URL:             oldRecord.URL,
 			BaseURL:         oldRecord.BaseURL,
@@ -81,11 +82,21 @@ var replayCmd = &cobra.Command{
 			DurationMs:      resp.Duration.Milliseconds(),
 			Environment:     oldRecord.Environment,
 			Project:         oldRecord.Project,
-		})
+			CreatedAt:       time.Now().UTC(),
+		}
+		newID, _ := store.SaveRecord(record)
+		record.ID = newID
+		conf := loadConfigWarn()
+		if newID > 0 {
+			if err := platformsync.QueueRequestHistory(conf, store, record, "replay"); err != nil {
+				// Keep replay non-fatal when platform sync is unavailable.
+			} else {
+				platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
+			}
+		}
 
 		// Load variables
 		var vars map[string]string
-		conf := loadConfigWarn()
 		if conf != nil {
 			vars, _ = store.GetVariables(conf.ProjectID, conf.ActiveEnv)
 		}

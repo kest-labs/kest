@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
 
@@ -65,6 +66,20 @@ type Variable struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type SyncOutboxItem struct {
+	ID                int64     `json:"id"`
+	SyncKind          string    `json:"sync_kind"`
+	Project           string    `json:"project"`
+	PlatformProjectID string    `json:"platform_project_id"`
+	SourceEventID     string    `json:"source_event_id"`
+	EntryPayload      string    `json:"entry_payload"`
+	Attempts          int       `json:"attempts"`
+	LastError         string    `json:"last_error"`
+	NextAttemptAt     time.Time `json:"next_attempt_at"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
 func (s *Store) Init() error {
 	query := `
 	CREATE TABLE IF NOT EXISTS records (
@@ -92,10 +107,30 @@ func (s *Store) Init() error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		PRIMARY KEY (name, environment, project)
 	);
+	CREATE TABLE IF NOT EXISTS sync_meta (
+		key TEXT PRIMARY KEY,
+		value TEXT NOT NULL,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS sync_outbox (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		sync_kind TEXT NOT NULL,
+		project VARCHAR(100) NOT NULL,
+		platform_project_id TEXT NOT NULL,
+		source_event_id TEXT NOT NULL UNIQUE,
+		entry_payload TEXT NOT NULL,
+		attempts INTEGER NOT NULL DEFAULT 0,
+		last_error TEXT,
+		next_attempt_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
 	CREATE INDEX IF NOT EXISTS idx_records_url ON records(url);
 	CREATE INDEX IF NOT EXISTS idx_records_status ON records(response_status);
 	CREATE INDEX IF NOT EXISTS idx_records_created ON records(created_at);
 	CREATE INDEX IF NOT EXISTS idx_records_method ON records(method);
+	CREATE INDEX IF NOT EXISTS idx_sync_outbox_due
+		ON sync_outbox(sync_kind, project, platform_project_id, next_attempt_at, id);
 	`
 	_, err := s.db.Exec(query)
 	return err
@@ -138,6 +173,48 @@ func (s *Store) GetAllRecords(limit ...int) ([]Record, error) {
 		r.ResponseHeaders = json.RawMessage(responseHeaders)
 		records = append(records, r)
 	}
+	return records, nil
+}
+
+func (s *Store) GetRecordsByProject(project string, limit int) ([]Record, error) {
+	if project == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 5000
+	}
+
+	query := `
+	SELECT id, method, url, base_url, path, query_params, request_headers, request_body,
+	       response_status, response_headers, response_body, duration_ms, environment, project, created_at
+	FROM records
+	WHERE project = ?
+	ORDER BY created_at DESC
+	LIMIT ?
+	`
+	rows, err := s.db.Query(query, project, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []Record
+	for rows.Next() {
+		var r Record
+		var queryParams, requestHeaders, responseHeaders []byte
+		err := rows.Scan(
+			&r.ID, &r.Method, &r.URL, &r.BaseURL, &r.Path, &queryParams, &requestHeaders, &r.RequestBody,
+			&r.ResponseStatus, &responseHeaders, &r.ResponseBody, &r.DurationMs, &r.Environment, &r.Project, &r.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		r.QueryParams = json.RawMessage(queryParams)
+		r.RequestHeaders = json.RawMessage(requestHeaders)
+		r.ResponseHeaders = json.RawMessage(responseHeaders)
+		records = append(records, r)
+	}
+
 	return records, nil
 }
 
@@ -225,6 +302,127 @@ func (s *Store) SaveVariable(v *Variable) error {
 	`
 	_, err := s.db.Exec(query, v.Name, v.Value, v.Environment, v.Project)
 	return err
+}
+
+func (s *Store) GetOrCreateClientID() (string, error) {
+	const query = `SELECT value FROM sync_meta WHERE key = 'client_id'`
+
+	var existing string
+	err := s.db.QueryRow(query).Scan(&existing)
+	switch {
+	case err == nil && existing != "":
+		return existing, nil
+	case err != nil && err != sql.ErrNoRows:
+		return "", err
+	}
+
+	clientID := uuid.NewString()
+	_, err = s.db.Exec(
+		`INSERT INTO sync_meta (key, value, updated_at)
+		 VALUES ('client_id', ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+		clientID,
+	)
+	if err != nil {
+		return "", err
+	}
+	return clientID, nil
+}
+
+func (s *Store) EnqueueSyncOutbox(item *SyncOutboxItem) error {
+	if item == nil {
+		return nil
+	}
+
+	_, err := s.db.Exec(
+		`INSERT INTO sync_outbox (
+			sync_kind, project, platform_project_id, source_event_id, entry_payload,
+			attempts, last_error, next_attempt_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT(source_event_id) DO NOTHING`,
+		item.SyncKind,
+		item.Project,
+		item.PlatformProjectID,
+		item.SourceEventID,
+		item.EntryPayload,
+		item.Attempts,
+		item.LastError,
+		sqliteTimestamp(item.NextAttemptAt),
+	)
+	return err
+}
+
+func (s *Store) ListDueSyncOutbox(syncKind, project, platformProjectID string, limit int) ([]SyncOutboxItem, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	rows, err := s.db.Query(
+		`SELECT id, sync_kind, project, platform_project_id, source_event_id, entry_payload,
+		        attempts, COALESCE(last_error, ''), next_attempt_at, created_at, updated_at
+		   FROM sync_outbox
+		  WHERE sync_kind = ?
+		    AND project = ?
+		    AND platform_project_id = ?
+		    AND datetime(next_attempt_at) <= CURRENT_TIMESTAMP
+		  ORDER BY id ASC
+		  LIMIT ?`,
+		syncKind,
+		project,
+		platformProjectID,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []SyncOutboxItem
+	for rows.Next() {
+		var item SyncOutboxItem
+		if err := rows.Scan(
+			&item.ID,
+			&item.SyncKind,
+			&item.Project,
+			&item.PlatformProjectID,
+			&item.SourceEventID,
+			&item.EntryPayload,
+			&item.Attempts,
+			&item.LastError,
+			&item.NextAttemptAt,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (s *Store) DeleteSyncOutbox(id int64) error {
+	_, err := s.db.Exec(`DELETE FROM sync_outbox WHERE id = ?`, id)
+	return err
+}
+
+func (s *Store) MarkSyncOutboxFailed(id int64, attempts int, lastError string, nextAttemptAt time.Time) error {
+	_, err := s.db.Exec(
+		`UPDATE sync_outbox
+		    SET attempts = ?, last_error = ?, next_attempt_at = ?, updated_at = CURRENT_TIMESTAMP
+		  WHERE id = ?`,
+		attempts,
+		lastError,
+		sqliteTimestamp(nextAttemptAt),
+		id,
+	)
+	return err
+}
+
+func sqliteTimestamp(value time.Time) string {
+	if value.IsZero() {
+		value = time.Now().UTC()
+	}
+	return value.UTC().Format("2006-01-02 15:04:05")
 }
 
 func (s *Store) GetVariables(project, environment string) (map[string]string, error) {

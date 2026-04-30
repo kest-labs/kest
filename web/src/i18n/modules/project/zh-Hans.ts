@@ -199,9 +199,11 @@ const messages = {
     placeholderContentDescription: '新的信息架构已经包含 {module}，但 API 层仍在准备中。',
     moduleNotConnected: '{module} 尚未连接',
     placeholderDescription: '该模块被有意保留为占位，以便在后端支持完成前先保持工作区层级完整。',
-    historyPlaceholderDescription: '当前前端尚未挂载历史数据。在接入完成前，现有测试用例路由仍作为旧版操作界面保留。',
+    historyPlaceholderDescription:
+      '当前前端尚未挂载历史数据。在接入完成前，现有测试用例路由仍作为旧版操作界面保留。',
     notFoundTitle: '未找到 {moduleLabel}',
-    missingDetailDescription: '选中的 {moduleLabel} 无法解析。它可能已被删除，或当前 item id 已不再有效。',
+    missingDetailDescription:
+      '选中的 {moduleLabel} 无法解析。它可能已被删除，或当前 item id 已不再有效。',
   },
   apiSpecs: {
     title: 'API 规格',
@@ -281,10 +283,12 @@ const messages = {
     withHeadersDescription: '携带请求头的环境',
     searchFilteredBy: '按 "{query}" 筛选',
     noEnvironmentsYet: '暂无环境',
-    noEnvironmentsYetDescription: '创建第一个项目环境，用于为请求和测试存储 base URL、可复用 headers 与 variables。',
+    noEnvironmentsYetDescription:
+      '创建第一个项目环境，用于为请求和测试存储 base URL、可复用 headers 与 variables。',
     openApiSpecs: '打开 API 规格',
     overview: '环境概览',
-    overviewDescription: '旧的独立管理页已合并到当前内容区。请从侧边栏选择环境，或在这里创建新环境。',
+    overviewDescription:
+      '旧的独立管理页已合并到当前内容区。请从侧边栏选择环境，或在这里创建新环境。',
     openTestCases: '打开测试用例',
     matchingEnvironments: '匹配的环境',
     availableEnvironments: '可用环境',
@@ -356,11 +360,29 @@ const messages = {
     entityType: '实体类型',
     entityId: '实体 ID',
     action: '操作',
+    syncSource: '同步来源',
+    sourceEventId: '来源事件 ID',
     user: '用户',
     userId: '用户 ID',
     recordedNote: '记录备注',
     recordedNoteDescription: '附加到该历史记录的可选消息。',
     noMessageRecorded: '暂无记录消息。',
+    cliRequestDescription: '由 CLI 上传的脱敏请求详情。',
+    cliResponseDescription: '由 CLI 捕获并上传的脱敏响应快照。',
+    transport: '传输方式',
+    cliRunSummary: 'CLI 运行摘要',
+    cliRunSummaryDescription: '单次 kest run 执行的聚合结果。',
+    runFile: '运行文件',
+    totalSteps: '总步骤数',
+    passedSteps: '通过步骤数',
+    failedSteps: '失败步骤数',
+    logExcerpt: '日志摘录',
+    logExcerptDescription: '来自 CLI 会话日志的脱敏摘录。',
+    noLogExcerpt: '这次运行没有上传日志摘录。',
+    stepResults: '步骤结果',
+    stepResultsDescription: 'CLI run 上报的逐步执行结果。',
+    noStepResults: '这次运行没有上传步骤结果。',
+    noStepLabel: '未命名步骤',
     snapshotData: '快照数据',
     diff: 'Diff',
     recordNumber: '记录 #{id}',
@@ -389,9 +411,11 @@ const messages = {
       missingBaseUrlNoEnvironment: '发送使用 {template} 的请求前，请先选择环境。',
       missingBaseUrlInEnvironment: '环境 “{name}” 缺少 base_url。',
       missingVariables: '发送该请求前，请先设置这些环境变量：{keys}。',
-      persistCookiesUnavailable: '本地 runner 模式不支持持久化 cookies。如果该请求依赖 cookie，请显式添加 Cookie header。',
+      persistCookiesUnavailable:
+        '本地 runner 模式不支持持久化 cookies。如果该请求依赖 cookie，请显式添加 Cookie header。',
       unableToSend: '无法发送请求。',
-      runnerDescription: '通过本地 Kest runner 执行集合请求，这样本地 API 也能绕过浏览器 CORS 限制进行测试。',
+      runnerDescription:
+        '通过本地 Kest runner 执行集合请求，这样本地 API 也能绕过浏览器 CORS 限制进行测试。',
       filterPlaceholder: '筛选集合或请求',
       requestCount: '{count} 个请求',
       quickRequests: '快速请求',
@@ -451,18 +475,23 @@ const messages = {
       },
       empty: {
         sidebarTitle: '先从集合或快速请求开始',
-        sidebarDescription: '集合用于承载可复用的请求。快速请求适合一次性实验，暂时不需要项目结构。',
+        sidebarDescription:
+          '集合用于承载可复用的请求。快速请求适合一次性实验，暂时不需要项目结构。',
         workspaceTitle: '开始一个请求工作区',
-        workspaceDescription: '创建一个已保存集合来承载可复用请求，或打开一个快速请求处理一次性调试。',
+        workspaceDescription:
+          '创建一个已保存集合来承载可复用请求，或打开一个快速请求处理一次性调试。',
         noOpenTabs: '当前没有打开的标签页',
       },
       importDialog: {
         markdownTitle: '导入 API Markdown',
         postmanTitle: '导入 Postman 集合',
-        markdownDescriptionInCollection: '上传 API Markdown 文件，并把请求导入到 “{name}” 下的模块集合。',
+        markdownDescriptionInCollection:
+          '上传 API Markdown 文件，并把请求导入到 “{name}” 下的模块集合。',
         markdownDescriptionRoot: '上传 API Markdown 文件，并把请求导入到项目根目录下的模块集合。',
-        postmanDescriptionInCollection: '上传 Postman 集合 JSON 文件，并把全部请求导入到 “{name}” 下的一个集合中。',
-        postmanDescriptionRoot: '上传 Postman 集合 JSON 文件，并把全部请求导入到项目根目录下的一个集合中。',
+        postmanDescriptionInCollection:
+          '上传 Postman 集合 JSON 文件，并把全部请求导入到 “{name}” 下的一个集合中。',
+        postmanDescriptionRoot:
+          '上传 Postman 集合 JSON 文件，并把全部请求导入到项目根目录下的一个集合中。',
         markdownFile: 'Markdown 文件',
         collectionFile: '集合文件',
         markdownEmptyState: '选择一个 api.md 或模块 Markdown 文档来导入请求。',
@@ -528,7 +557,7 @@ const messages = {
       scripts: {
         description: '在这里编写请求前或响应后的脚本逻辑。',
         placeholder: '// 在这里编写请求脚本',
-        defaultScript: '// 在这里检查响应\npm.test(\'status should be 200\', () => true);',
+        defaultScript: "// 在这里检查响应\npm.test('status should be 200', () => true);",
       },
       settings: {
         followRedirectsTitle: '跟随重定向',
@@ -536,7 +565,8 @@ const messages = {
         strictTlsTitle: '严格 TLS 校验',
         strictTlsDescription: '正常 HTTPS 场景建议保持开启。只有本地自签名证书时才关闭。',
         persistCookiesTitle: '持久化 Cookies',
-        persistCookiesDescription: '本地 runner 不支持。目标 API 需要 cookie 时，请显式发送 Cookie header。',
+        persistCookiesDescription:
+          '本地 runner 不支持。目标 API 需要 cookie 时，请显式发送 Cookie header。',
       },
       examples: {
         nameRequired: '示例名称是必填项。',
@@ -580,9 +610,11 @@ const messages = {
         panelDescription: '保存具名请求与响应快照，让常见场景能够被快速重放。',
         newExample: '新建示例',
         requiresSavedRequestTitle: '示例需要已保存的集合请求',
-        requiresSavedRequestDescription: '快速请求本来就是临时性的。请先把该请求放进已保存集合，再从那里保存示例。',
+        requiresSavedRequestDescription:
+          '快速请求本来就是临时性的。请先把该请求放进已保存集合，再从那里保存示例。',
         requestNotPersistedTitle: '该请求尚未持久化',
-        requestNotPersistedDescription: '创建第一个示例时，工作台会先自动把该请求保存到集合中，再存储示例。',
+        requestNotPersistedDescription:
+          '创建第一个示例时，工作台会先自动把该请求保存到集合中，再存储示例。',
         panelLoadFailed: '无法加载该请求的示例。请尝试刷新面板。',
         emptyTitle: '还没有示例',
         emptyDescription: '把当前请求保存为示例，以便保留一个具名场景，并可选附带最新真实响应。',
@@ -598,7 +630,8 @@ const messages = {
         sendingDescription: '本地 Kest runner 完成请求后，响应面板会立即更新。',
         errorTitle: '无法发送请求',
         emptyTitle: '点击发送以获取响应',
-        emptyDescription: '触发请求后，这个面板会渲染本地 runner 返回的最新响应 body、headers 和耗时。',
+        emptyDescription:
+          '触发请求后，这个面板会渲染本地 runner 返回的最新响应 body、headers 和耗时。',
         emptyBody: '（空 body）',
       },
     },
@@ -698,7 +731,8 @@ const messages = {
     deleteWarningTitle: '不可逆操作',
     deleteWarningDescription: '当前后端会立即删除该分类，并把子分类从父节点上解绑。',
     deleteScopeTitle: '删除范围',
-    deleteScopeDescription: 'Markdown 文档中描述的 `move_to` 迁移能力当前后端路由未开放，所以这里保持保守的删除流程。',
+    deleteScopeDescription:
+      'Markdown 文档中描述的 `move_to` 迁移能力当前后端路由未开放，所以这里保持保守的删除流程。',
     deleteButton: '删除分类',
   },
   invitation: {
@@ -734,7 +768,8 @@ const messages = {
     addMember: '添加成员',
     openMemberActions: '打开成员管理操作',
     readOnlyTitle: '成员只读访问',
-    readOnlyDescription: '你当前的角色是 {role}。可以查看成员列表，但只有 admin 和 owner 可以新增、更新或移除成员。',
+    readOnlyDescription:
+      '你当前的角色是 {role}。可以查看成员列表，但只有 admin 和 owner 可以新增、更新或移除成员。',
     totalMembers: '成员总数',
     totalMembersDescription: '所有具备项目访问权限的用户',
     adminsOwners: '管理员与所有者',
@@ -767,7 +802,8 @@ const messages = {
     filterByRole: '按角色筛选',
     allRoles: '全部角色',
     membersLoadFailedTitle: '无法加载成员',
-    membersLoadFailedDescription: '项目成员页无法加载数据。请重试，或确认当前用户仍对该项目有访问权限。',
+    membersLoadFailedDescription:
+      '项目成员页无法加载数据。请重试，或确认当前用户仍对该项目有访问权限。',
     user: '用户',
     joined: '加入时间',
     updated: '更新时间',
@@ -810,7 +846,8 @@ const messages = {
     revokeAccessDescription: '{username} 在此操作完成后将无法继续访问项目资源。',
     removeMember: '移除成员',
     revokeInviteDialogTitle: '撤销邀请链接',
-    revokeInviteDialogDescription: '立即撤销所选邀请链接。已有成员会保留访问权限，但该链接不能再被接受。',
+    revokeInviteDialogDescription:
+      '立即撤销所选邀请链接。已有成员会保留访问权限，但该链接不能再被接受。',
     revokeInviteTitle: '链接访问会立即被禁用',
     invitationSummary: '{role} 邀请',
     unlimitedUses: '无限次使用',
@@ -821,7 +858,8 @@ const messages = {
   },
   projectsPage: {
     title: '项目工作区',
-    description: '已登录用户可以通过 {projectsPath} 创建、查看、更新和删除项目，并跳转到各项目的概览、环境、API 规格与测试用例页面。',
+    description:
+      '已登录用户可以通过 {projectsPath} 创建、查看、更新和删除项目，并跳转到各项目的概览、环境、API 规格与测试用例页面。',
     createProject: '创建项目',
     openPageActions: '打开项目页面操作',
     totalProjects: '项目总数',
@@ -864,9 +902,11 @@ const messages = {
     preview: '预览',
     startHere: '从这里开始',
     heroTitle: '先创建项目，再选择启动方式',
-    heroDescription: '第一个项目创建后，仪表盘会立即打开它的预览，并把你引导到 AI API 设计或快速请求入口。',
+    heroDescription:
+      '第一个项目创建后，仪表盘会立即打开它的预览，并把你引导到 AI API 设计或快速请求入口。',
     createFirstProjectTitle: '创建第一个项目',
-    createFirstProjectDescription: '至少有一个项目之后，仪表盘才会真正有用。随后它会自动打开最新项目，并给出下一步建议。',
+    createFirstProjectDescription:
+      '至少有一个项目之后，仪表盘才会真正有用。随后它会自动打开最新项目，并给出下一步建议。',
     noProjectsYetTitle: '还没有项目',
     noProjectsYetDescription: '使用创建按钮，为仪表盘补上第一个项目。',
     twoWaysTitle: '两种开始方式',
@@ -874,9 +914,11 @@ const messages = {
     aiStartTitle: '1. 用 AI 设计',
     aiStartDescription: '用 AI Draft API 把产品意图转换成结构化端点，开始建立事实来源。',
     quickRequestTitle: '2. 快速请求',
-    quickRequestDescription: '如果你已经知道端点，直接打开请求工作台立即发起探测，再把结果回填成结构化资产。',
+    quickRequestDescription:
+      '如果你已经知道端点，直接打开请求工作台立即发起探测，再把结果回填成结构化资产。',
     previewSummaryFailed: '部分项目信号加载失败。你可以重试当前预览，或直接进入工作区。',
-    previewSummarySlow: '项目状态加载比平时更慢。可以先用快速请求，或先进入工作区，等待更完整的预览补齐。',
+    previewSummarySlow:
+      '项目状态加载比平时更慢。可以先用快速请求，或先进入工作区，等待更完整的预览补齐。',
     previewSummaryLoading: '正在加载项目状态，以便下一步建议基于真实项目数据。',
     slugLabel: 'Slug：{value}',
     teamMembers: '{count} 名团队成员',
@@ -893,10 +935,12 @@ const messages = {
     moveNowRefineLater: '先推进，再细化',
     loadingNextStep: '正在加载下一步',
     previewNeedsAttentionDescription: '预览数据成功加载之前，仪表盘无法推荐下一步动作。',
-    moveNowRefineLaterDescription: '完整预览仍在加载。与其等待仪表盘，不如先用快速请求或直接进入工作区。',
+    moveNowRefineLaterDescription:
+      '完整预览仍在加载。与其等待仪表盘，不如先用快速请求或直接进入工作区。',
     recommendationLoadingDescription: '正在等待项目就绪状态，这样推荐结果就不会靠猜。',
     recommendationUnavailableTitle: '当前无法推荐',
-    recommendationUnavailableDescription: '重试预览，或者如果你已经知道下一步，也可以直接进入工作区继续。',
+    recommendationUnavailableDescription:
+      '重试预览，或者如果你已经知道下一步，也可以直接进入工作区继续。',
     recommendationSlowDescription: '推荐结果加载偏慢，不要把用户阻塞在仪表盘上。',
     whyNow: '为什么现在做',
     unlockTitle: '要解锁这一步',
@@ -916,15 +960,19 @@ const messages = {
     noApiSpecSummary: '当前还没有任何 API 规格。先从 AI 草稿开始，再考虑次级操作面。',
     noApiSpecTitle: '定义第一个 API 表面',
     noApiSpecDescription: '先描述一个端点，生成第一个规格，再回来继续补运行配置。',
-    noApiSpecReason: '在至少有一个具体接口之前，环境和验证都不会真正有用。如果你只是想快速探测端点，直接用快速请求即可。',
+    noApiSpecReason:
+      '在至少有一个具体接口之前，环境和验证都不会真正有用。如果你只是想快速探测端点，直接用快速请求即可。',
     firstEnvironmentSummary: '当前项目已经有 {count} 个 API 规格，但执行层还没有运行目标。',
     firstEnvironmentTitle: '添加第一个环境',
     firstEnvironmentDescription: '先补一个开发或 staging 目标，让请求和测试有真实落点。',
-    firstEnvironmentReason: '接口表面已经定义好了。只要一个环境，就能解锁请求、示例和第一批测试执行。',
-    coverageSummary: '当前项目已有 {apiSpecCount} 个 API 规格和 {environmentCount} 个运行环境。下一步应该进入验证，而不是继续扩展仪表盘。',
+    firstEnvironmentReason:
+      '接口表面已经定义好了。只要一个环境，就能解锁请求、示例和第一批测试执行。',
+    coverageSummary:
+      '当前项目已有 {apiSpecCount} 个 API 规格和 {environmentCount} 个运行环境。下一步应该进入验证，而不是继续扩展仪表盘。',
     coverageTitle: '生成验证覆盖',
     coverageDescription: '基于现有规格生成测试用例，把快速请求保留给一次性调试场景。',
-    coverageReason: '规格和环境基线已经存在。真正的下一步价值来自可运行覆盖，而快速请求仍然可以用于临时检查。',
+    coverageReason:
+      '规格和环境基线已经存在。真正的下一步价值来自可运行覆盖，而快速请求仍然可以用于临时检查。',
     apiSourceLabel: 'API 事实来源',
     runtimeSetupLabel: '运行配置',
     executionTargetLabel: '执行目标',
@@ -939,13 +987,15 @@ const messages = {
   apiSpecsPage: {
     backToProjects: '返回项目列表',
     title: 'API 规格管理',
-    description: '管理项目 {projectName} 的 API 规格、示例、AI 文档和测试生成流程，对应后端入口为 {path}。',
+    description:
+      '管理项目 {projectName} 的 API 规格、示例、AI 文档和测试生成流程，对应后端入口为 {path}。',
     countSpecs: '{count} 个规格',
     countCategories: '{count} 个分类',
     countMembers: '{count} 个成员',
     openManagementActions: '打开 API 规格管理操作',
     readOnlyTitle: '只读访问',
-    readOnlyDescription: '当前角色是 {role}。可以查看与导出 API 规格，但不能创建、编辑、删除、导入或触发 AI 生成。',
+    readOnlyDescription:
+      '当前角色是 {role}。可以查看与导出 API 规格，但不能创建、编辑、删除、导入或触发 AI 生成。',
     totalSpecs: '规格总数',
     totalSpecsDescription: '项目 slug：{slug}',
     publicOnPage: '当前页公开规格',
@@ -995,13 +1045,17 @@ const messages = {
     specLoadFailedDescription: '当前规格详情仍在加载中。请关闭弹窗后重试。',
     editDialogTitle: '编辑 API 规格',
     editDialogDescription: '通过 PATCH /v1/projects/:id/api-specs/:sid 更新当前 API 规格。',
-    editReadonlyNotice: '当前 PATCH 接口还不支持修改 `method` 和 `version`，所以编辑模式下这两个字段保持只读。',
+    editReadonlyNotice:
+      '当前 PATCH 接口还不支持修改 `method` 和 `version`，所以编辑模式下这两个字段保持只读。',
     requestBodyJsonLabel: '请求体 JSON',
-    requestBodyJsonPlaceholder: '{"required": true, "content_type": "application/json", "schema": {"type": "object"}}',
+    requestBodyJsonPlaceholder:
+      '{"required": true, "content_type": "application/json", "schema": {"type": "object"}}',
     parametersJsonLabel: '参数 JSON',
-    parametersJsonPlaceholder: '[{"name": "Authorization", "in": "header", "required": true, "schema": {"type": "string"}}]',
+    parametersJsonPlaceholder:
+      '[{"name": "Authorization", "in": "header", "required": true, "schema": {"type": "string"}}]',
     responsesJsonLabel: '响应 JSON',
-    responsesJsonPlaceholder: '{"200": {"description": "Success", "content_type": "application/json", "schema": {"type": "object"}}}',
+    responsesJsonPlaceholder:
+      '{"200": {"description": "Success", "content_type": "application/json", "schema": {"type": "object"}}}',
     requestBodyEmpty: '当前 API 规格还没有定义请求体 Schema。',
     parametersEmpty: '当前 API 规格还没有定义参数。',
     responsesEmpty: '当前 API 规格还没有定义响应。',
@@ -1034,7 +1088,8 @@ const messages = {
     zhNotGenerated: 'ZH 未生成',
     enNotGenerated: 'EN 未生成',
     importTitle: '导入 API 规格',
-    importDescription: '提交完整的 `{ specs: [...] }` JSON payload，后端会按 `method + path` 执行 upsert。',
+    importDescription:
+      '提交完整的 `{ specs: [...] }` JSON payload，后端会按 `method + path` 执行 upsert。',
     importPayloadLabel: '导入 Payload',
     importPayloadMissingSpecs: '导入 payload 必须包含 `specs` 数组。',
     importPayloadInvalid: '导入 payload 无法解析。',
@@ -1058,7 +1113,8 @@ const messages = {
     aiGenerateDocButton: '生成文档',
     aiGenerateTestButton: '生成测试',
     exampleCreateTitle: '创建 API 示例',
-    exampleCreateDescription: '通过 POST /v1/projects/:id/api-specs/:sid/examples 新增请求/响应示例。',
+    exampleCreateDescription:
+      '通过 POST /v1/projects/:id/api-specs/:sid/examples 新增请求/响应示例。',
     exampleNameLabel: '示例名称',
     exampleNamePlaceholder: '登录成功',
     exampleResponseStatusLabel: '响应状态码',
@@ -1078,16 +1134,19 @@ const messages = {
   testCasesPage: {
     title: '测试用例',
     backToProjectOverview: '返回项目概览',
-    description: '通过 {listPath} 管理项目级测试用例，使用 {runPath} 运行，并通过 {historyPath} 查看历史记录。',
+    description:
+      '通过 {listPath} 管理项目级测试用例，使用 {runPath} 运行，并通过 {historyPath} 查看历史记录。',
     totalCount: '{count} 个测试用例',
     projectBadge: '项目：{name}',
     create: '新建测试用例',
     generateFromSpec: '从规格生成',
     openManagementActions: '打开测试用例管理操作',
     readOnlyTitle: '只读访问',
-    readOnlyDescription: '你可以查看测试用例和运行历史，但创建、编辑、复制、删除和执行测试都需要写权限。',
+    readOnlyDescription:
+      '你可以查看测试用例和运行历史，但创建、编辑、复制、删除和执行测试都需要写权限。',
     noApiSpecsTitle: '没有可用的 API 规格',
-    noApiSpecsDescription: '测试用例生成依赖已有 API 规格。请先用 AI 草稿或手动创建规格，再回来生成覆盖。',
+    noApiSpecsDescription:
+      '测试用例生成依赖已有 API 规格。请先用 AI 草稿或手动创建规格，再回来生成覆盖。',
     aiDraftSpecButton: 'AI 草稿 API 规格',
     aiSpecReadyTitle: 'AI 规格已可进入验证',
     aiSpecReadyDescription: '继续流程，从 {spec} 生成第一个测试用例。',
@@ -1145,7 +1204,8 @@ const messages = {
     pathParamsEmpty: '当前没有配置路径参数。',
     requestBodyEmpty: '当前没有配置请求体。',
     latestAdHocRun: '最近一次即时运行',
-    latestAdHocRunDescription: '这个结果直接来自最近一次运行接口返回。因为后端异步持久化历史记录，它可能会稍后才出现在历史列表中。',
+    latestAdHocRunDescription:
+      '这个结果直接来自最近一次运行接口返回。因为后端异步持久化历史记录，它可能会稍后才出现在历史列表中。',
     noRequestPayloadReturned: '没有返回请求 payload。',
     noResponsePayloadReturned: '没有返回响应 payload。',
     totalRuns: '共 {count} 次运行',
@@ -1188,7 +1248,8 @@ const messages = {
     extractVarsJsonLabel: 'Extract Vars JSON',
     extractVarsJsonPlaceholder: '[{"name":"user_id","source":"body","path":"$.id"}]',
     duplicateDialogTitle: '复制测试用例',
-    duplicateDialogDescription: '通过 POST /v1/projects/:id/test-cases/:tcid/duplicate 复制当前测试用例。',
+    duplicateDialogDescription:
+      '通过 POST /v1/projects/:id/test-cases/:tcid/duplicate 复制当前测试用例。',
     duplicateSourceLabel: '来源：',
     unknownTestCase: '未知测试用例',
     duplicateName: '{name} 副本',
@@ -1198,16 +1259,19 @@ const messages = {
     fromSpecDialogTitle: '从 API 规格创建测试用例',
     fromSpecDialogDescription: '把已有 API 规格直接转换成第一个可运行测试用例，无需手动重建请求。',
     continueFromAiTitle: '继续处理 AI 生成的规格',
-    continueFromAiDescription: '新规格 {spec} 刚刚创建完成。现在就生成它的第一个测试用例，保持编写流程连续。',
+    continueFromAiDescription:
+      '新规格 {spec} 刚刚创建完成。现在就生成它的第一个测试用例，保持编写流程连续。',
     testCaseNameLabel: '测试用例名称',
     fromSpecNamePlaceholder: '创建用户烟雾测试',
     useApiExample: '使用 API 示例',
-    useApiExampleDescription: '如果所选 API 规格已经有示例，可直接用请求和响应示例数据来初始化测试用例。',
+    useApiExampleDescription:
+      '如果所选 API 规格已经有示例，可直接用请求和响应示例数据来初始化测试用例。',
     useFirstExample: '自动使用第一个示例',
     exampleOption: '{name}（HTTP {status}）',
     loadingExamples: '正在加载示例...',
     runDialogTitle: '运行测试用例',
-    runDialogDescription: '通过 POST /v1/projects/:id/test-cases/:tcid/run 运行当前测试用例，并按需覆盖环境或变量。',
+    runDialogDescription:
+      '通过 POST /v1/projects/:id/test-cases/:tcid/run 运行当前测试用例，并按需覆盖环境或变量。',
     overrideEnvironment: '覆盖环境',
     useTestCaseEnv: '使用测试用例环境',
     globalVarsJsonLabel: 'Global Vars JSON',
@@ -1219,7 +1283,8 @@ const messages = {
     deleteTargetDescription: '你即将删除 {name}。',
     deleteFallbackTarget: '这个测试用例',
     runDetailDialogTitle: '运行详情',
-    runDetailDialogDescription: '查看 GET /v1/projects/:id/test-cases/:tcid/runs/:rid 返回的完整请求、响应和断言结果。',
+    runDetailDialogDescription:
+      '查看 GET /v1/projects/:id/test-cases/:tcid/runs/:rid 返回的完整请求、响应和断言结果。',
     runDetailLoadFailedTitle: '无法加载运行详情',
     runDetailLoadFailedDescription: '当前运行详情无法加载。请稍后重试。',
     durationMs: '{value} ms',
@@ -1251,7 +1316,8 @@ const messages = {
   categoriesPage: {
     backToProjectOverview: '返回项目概览',
     title: '分类',
-    description: '管理项目 {projectName} 的分类层级，并将其复用到 API 规格等模块中，对应后端入口为 {path}。',
+    description:
+      '管理项目 {projectName} 的分类层级，并将其复用到 API 规格等模块中，对应后端入口为 {path}。',
     countCategories: '{count} 个分类',
     countSpecs: '{count} 个规格',
     selectableParents: '{count} 个可选父分类',
@@ -1271,7 +1337,8 @@ const messages = {
     withDescriptionDescription: '可复用的已文档化分类',
     withDescriptionFilteredDescription: '筛选结果：{count}',
     registryTitle: '分类注册表',
-    registryDescription: '层级来自 {path}，并在前端渲染为本地树快照，以保证层级感知的排序和选择稳定。',
+    registryDescription:
+      '层级来自 {path}，并在前端渲染为本地树快照，以保证层级感知的排序和选择稳定。',
     visibleSummary: '可见 {visible} / 总计 {total}',
     searchPlaceholder: '按分类名称、描述或父分类搜索',
     sortingDisabled: '启用本地搜索筛选时会禁用排序。',
@@ -1312,7 +1379,8 @@ const messages = {
     childSpecs: 'API 规格',
     noChildren: '当前选中节点下没有子分类。',
     workspaceBehaviorTitle: '工作区行为',
-    workspaceBehaviorDescription: '该工作区会始终加载完整分类树，以保持搜索、排序和父子详情在编辑过程中的一致性。删除动作仍然保持保守，不会自动重分配。',
+    workspaceBehaviorDescription:
+      '该工作区会始终加载完整分类树，以保持搜索、排序和父子详情在编辑过程中的一致性。删除动作仍然保持保守，不会自动重分配。',
     connectedEndpointsTitle: '已连接 API 端点',
     connectedEndpointsDescription: '当前前端工作区中挂载的分类端点。',
     pageSummary: '第 {page} / {pages} 页',
@@ -1439,7 +1507,8 @@ const messages = {
     historyFailed: '流程 {name} 执行失败',
     historyCanceled: '流程 {name} 已取消',
     heroTitleFallback: 'HTTP 测试流程',
-    heroDescription: '设计 HTTP 请求图，在边之间传递捕获变量，并且不离开项目工作区就能查看流式执行结果。',
+    heroDescription:
+      '设计 HTTP 请求图，在边之间传递捕获变量，并且不离开项目工作区就能查看流式执行结果。',
     drawerTitle: '流程检查器',
     drawerDescription: '查看当前选中的节点、边或运行历史。',
   },

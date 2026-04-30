@@ -9,18 +9,20 @@ import (
 
 // HistoryPO is the database model for version history
 type HistoryPO struct {
-	ID string           `gorm:"primaryKey" json:"id"`
-	EntityType   string         `gorm:"size:50;not null;index" json:"entity_type"` // e.g., "collection", "request"
-	EntityID string           `gorm:"not null;index" json:"entity_id"`
-	ProjectID string           `gorm:"not null;index" json:"project_id"`
-	UserID uint           `gorm:"not null" json:"user_id"` // who made the change
-	Action       string         `gorm:"size:20;not null" json:"action"` // "create", "update", "delete", "move"
-	Data         string         `gorm:"type:text" json:"data"`          // JSON snapshot of the entity at this version
-	Diff         string         `gorm:"type:text" json:"diff"`          // JSON describing what changed (optional)
-	Message      string         `gorm:"size:255" json:"message"`        // Optional commit message
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	ID            string         `gorm:"primaryKey" json:"id"`
+	EntityType    string         `gorm:"size:50;not null;index" json:"entity_type"` // e.g., "collection", "request"
+	EntityID      string         `gorm:"not null;index" json:"entity_id"`
+	ProjectID     string         `gorm:"not null;index;uniqueIndex:idx_history_project_source_event,priority:1" json:"project_id"`
+	UserID        uint           `gorm:"not null" json:"user_id"` // who made the change
+	Source        string         `gorm:"size:32;not null;default:web;index;uniqueIndex:idx_history_project_source_event,priority:2" json:"source"`
+	SourceEventID string         `gorm:"size:191;not null;index;uniqueIndex:idx_history_project_source_event,priority:3" json:"source_event_id"`
+	Action        string         `gorm:"size:20;not null" json:"action"` // "create", "update", "delete", "move"
+	Data          string         `gorm:"type:text" json:"data"`          // JSON snapshot of the entity at this version
+	Diff          string         `gorm:"type:text" json:"diff"`          // JSON describing what changed (optional)
+	Message       string         `gorm:"size:255" json:"message"`        // Optional commit message
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (HistoryPO) TableName() string {
@@ -29,16 +31,18 @@ func (HistoryPO) TableName() string {
 
 // History represents the domain model
 type History struct {
-	ID string                   `json:"id"`
-	EntityType string                 `json:"entity_type"`
-	EntityID string                   `json:"entity_id"`
-	ProjectID string                   `json:"project_id"`
-	UserID uint                   `json:"user_id"`
-	Action     string                 `json:"action"`
-	Data       map[string]interface{} `json:"data"`
-	Diff       map[string]interface{} `json:"diff,omitempty"`
-	Message    string                 `json:"message"`
-	CreatedAt  time.Time              `json:"created_at"`
+	ID            string                 `json:"id"`
+	EntityType    string                 `json:"entity_type"`
+	EntityID      string                 `json:"entity_id"`
+	ProjectID     string                 `json:"project_id"`
+	UserID        uint                   `json:"user_id"`
+	Source        string                 `json:"source"`
+	SourceEventID string                 `json:"source_event_id"`
+	Action        string                 `json:"action"`
+	Data          map[string]interface{} `json:"data"`
+	Diff          map[string]interface{} `json:"diff,omitempty"`
+	Message       string                 `json:"message"`
+	CreatedAt     time.Time              `json:"created_at"`
 }
 
 func (po *HistoryPO) toDomain() *History {
@@ -55,16 +59,18 @@ func (po *HistoryPO) toDomain() *History {
 	}
 
 	return &History{
-		ID:         po.ID,
-		EntityType: po.EntityType,
-		EntityID:   po.EntityID,
-		ProjectID:  po.ProjectID,
-		UserID:     po.UserID,
-		Action:     po.Action,
-		Data:       data,
-		Diff:       diff,
-		Message:    po.Message,
-		CreatedAt:  po.CreatedAt,
+		ID:            po.ID,
+		EntityType:    po.EntityType,
+		EntityID:      po.EntityID,
+		ProjectID:     po.ProjectID,
+		UserID:        po.UserID,
+		Source:        po.Source,
+		SourceEventID: po.SourceEventID,
+		Action:        po.Action,
+		Data:          data,
+		Diff:          diff,
+		Message:       po.Message,
+		CreatedAt:     po.CreatedAt,
 	}
 }
 
@@ -86,15 +92,18 @@ func newHistoryPO(h *History) *HistoryPO {
 	}
 
 	return &HistoryPO{
-		ID:         h.ID,
-		EntityType: h.EntityType,
-		EntityID:   h.EntityID,
-		ProjectID:  h.ProjectID,
-		UserID:     h.UserID,
-		Action:     h.Action,
-		Data:       dataStr,
-		Diff:       diffStr,
-		Message:    h.Message,
+		ID:            h.ID,
+		EntityType:    h.EntityType,
+		EntityID:      h.EntityID,
+		ProjectID:     h.ProjectID,
+		UserID:        h.UserID,
+		Source:        h.Source,
+		SourceEventID: h.SourceEventID,
+		Action:        h.Action,
+		Data:          dataStr,
+		Diff:          diffStr,
+		Message:       h.Message,
+		CreatedAt:     h.CreatedAt,
 	}
 }
 

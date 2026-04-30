@@ -7,6 +7,8 @@ import (
 	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
+	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -92,5 +94,14 @@ func init() {
 				fmt.Fprintf(os.Stderr, "⚠️  Warning: local bridge auto-start failed: %v\n", err)
 			}
 		}
+
+		conf := loadConfigWarn()
+		store, err := storage.NewStore()
+		if err != nil {
+			logger.LogToSession("history auto-sync preflight skipped: %v", err)
+			return
+		}
+		defer store.Close()
+		platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
 	}
 }

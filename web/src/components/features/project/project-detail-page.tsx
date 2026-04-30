@@ -171,7 +171,9 @@ const getProjectWorkflowSteps = (
         : t('projectDetail.workflowApiSpecsDetailMissing'),
       state: hasSpecs ? t('projectDetail.ready') : t('projectDetail.missing'),
       tone: hasSpecs ? 'ready' : 'pending',
-      href: hasSpecs ? buildProjectApiSpecsRoute(projectId) : `${buildProjectApiSpecsRoute(projectId)}?ai=create`,
+      href: hasSpecs
+        ? buildProjectApiSpecsRoute(projectId)
+        : `${buildProjectApiSpecsRoute(projectId)}?ai=create`,
       icon: FileJson2,
     },
     {
@@ -362,7 +364,8 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           'kest sync config \\',
           `  --platform-url '${cliPlatformUrl}' \\`,
           `  --platform-token '${generatedCliToken.token}' \\`,
-          `  --project-id '${project.id}'`,
+          `  --project-id '${project.id}' \\`,
+          '  --auto-sync-history',
         ].join('\n')
       : '';
   const isProjectLoading = projectQuery.isLoading || projectStatsQuery.isLoading;
@@ -425,7 +428,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
         id: project.id,
         data: {
           name: `${project.name} CLI sync`,
-          scopes: ['spec:write'],
+          scopes: ['spec:write', 'run:write'],
         },
       });
       setGeneratedCliToken(token);
@@ -479,11 +482,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           <section className="rounded-xl border border-border/60 bg-bg-surface p-5 md:p-6">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0 space-y-4">
-                <Button
-                  asChild
-                  variant="link"
-                  className="h-auto px-0 text-sm text-text-muted"
-                >
+                <Button asChild variant="link" className="h-auto px-0 text-sm text-text-muted">
                   <Link href={ROUTES.CONSOLE.PROJECTS}>
                     <ArrowLeft className="h-4 w-4" />
                     {t('projectDetail.projects')}
@@ -537,9 +536,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           {!project && !projectQuery.isLoading ? (
             <Alert>
               <AlertTitle>{t('projectDetail.projectNotFoundTitle')}</AlertTitle>
-              <AlertDescription>
-                {t('projectDetail.projectNotFoundDescription')}
-              </AlertDescription>
+              <AlertDescription>{t('projectDetail.projectNotFoundDescription')}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -568,7 +565,9 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
               </div>
 
               <div className="mt-5 rounded-xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-sm font-medium text-text-main">{t('projectDetail.whyThisAction')}</p>
+                <p className="text-sm font-medium text-text-main">
+                  {t('projectDetail.whyThisAction')}
+                </p>
                 <p className="mt-2 text-sm leading-6 text-text-muted">{nextAction.reason}</p>
               </div>
             </section>
@@ -576,16 +575,20 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
             <section className="rounded-xl border border-border/60 bg-background p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold tracking-tight">{t('projectDetail.projectFlow')}</h2>
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    {t('projectDetail.projectFlow')}
+                  </h2>
                   <p className="mt-1 text-sm text-text-muted">
                     {t('projectDetail.projectFlowDescription')}
                   </p>
                 </div>
-                {isProjectLoading ? <Badge variant="outline">{t('projectDetail.loading')}</Badge> : null}
+                {isProjectLoading ? (
+                  <Badge variant="outline">{t('projectDetail.loading')}</Badge>
+                ) : null}
               </div>
 
               <div className="mt-4 space-y-3">
-                {workflowSteps.map((step) => (
+                {workflowSteps.map(step => (
                   <WorkflowStepRow key={step.key} step={step} />
                 ))}
               </div>
@@ -628,15 +631,15 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           ) : (
             <Alert>
               <AlertTitle>{t('projectDetail.statsUnavailableTitle')}</AlertTitle>
-              <AlertDescription>
-                {t('projectDetail.statsUnavailableDescription')}
-              </AlertDescription>
+              <AlertDescription>{t('projectDetail.statsUnavailableDescription')}</AlertDescription>
             </Alert>
           )}
 
           <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">{t('projectDetail.workspaceModules')}</h2>
+              <h2 className="text-lg font-semibold tracking-tight">
+                {t('projectDetail.workspaceModules')}
+              </h2>
               <p className="mt-1 text-sm text-text-muted">
                 {t('projectDetail.workspaceModulesDescription')}
               </p>
@@ -685,7 +688,9 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                     {t('common.projectId')}
                   </p>
-                  <p className="mt-2 font-mono text-sm text-text-main">{project?.id ?? projectId}</p>
+                  <p className="mt-2 font-mono text-sm text-text-main">
+                    {project?.id ?? projectId}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-border/60 bg-background p-4">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
@@ -702,7 +707,9 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     {t('common.created')}
                   </p>
                   <p className="mt-2 text-sm text-text-main">
-                    {project ? formatDate(project.created_at, 'YYYY-MM-DD HH:mm') : i18n.common('loading')}
+                    {project
+                      ? formatDate(project.created_at, 'YYYY-MM-DD HH:mm')
+                      : i18n.common('loading')}
                   </p>
                 </div>
               </CardContent>
@@ -749,7 +756,9 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => void handleCopyText(cliConfigCommand, t('projectDetail.copiedSyncCommand'))}
+                      onClick={() =>
+                        void handleCopyText(cliConfigCommand, t('projectDetail.copiedSyncCommand'))
+                      }
                     >
                       <Terminal className="h-4 w-4" />
                       {t('projectDetail.copyCommand')}
@@ -772,7 +781,10 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                             size="sm"
                             variant="ghost"
                             onClick={() =>
-                              void handleCopyText(generatedCliToken.token, t('projectDetail.copiedCliToken'))
+                              void handleCopyText(
+                                generatedCliToken.token,
+                                t('projectDetail.copiedCliToken')
+                              )
                             }
                           >
                             <Copy className="h-3.5 w-3.5" />
@@ -795,7 +807,9 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           <section className="rounded-xl border border-border/60 bg-background p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">{t('projectDetail.supportingAreas')}</h2>
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {t('projectDetail.supportingAreas')}
+                </h2>
                 <p className="mt-1 text-sm text-text-muted">
                   {t('projectDetail.supportingAreasDescription')}
                 </p>
@@ -832,14 +846,14 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
         project={project}
         isSubmitting={updateProjectMutation.isPending}
         onOpenChange={setIsFormOpen}
-        onSubmit={(payload) => handleProjectSubmit(payload as UpdateProjectRequest)}
+        onSubmit={payload => handleProjectSubmit(payload as UpdateProjectRequest)}
       />
 
       <DeleteProjectDialog
         open={Boolean(deleteTarget)}
         project={deleteTarget}
         isDeleting={deleteProjectMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDeleteTarget(null);
           }

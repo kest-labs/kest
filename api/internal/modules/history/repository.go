@@ -11,6 +11,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, history *History) error
 	GetByID(ctx context.Context, id string) (*History, error)
+	GetBySourceEvent(ctx context.Context, projectID, source, sourceEventID string) (*History, error)
 	ListByEntity(ctx context.Context, projectID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error)
 }
 
@@ -36,6 +37,19 @@ func (r *repository) Create(ctx context.Context, history *History) error {
 func (r *repository) GetByID(ctx context.Context, id string) (*History, error) {
 	var po HistoryPO
 	if err := r.db.WithContext(ctx).First(&po, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return po.toDomain(), nil
+}
+
+func (r *repository) GetBySourceEvent(ctx context.Context, projectID, source, sourceEventID string) (*History, error) {
+	var po HistoryPO
+	if err := r.db.WithContext(ctx).
+		Where("project_id = ? AND source = ? AND source_event_id = ?", projectID, source, sourceEventID).
+		First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kest-labs/kest/cli/internal/logger"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/report"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/kest-labs/kest/cli/internal/summary"
@@ -193,6 +194,7 @@ func runScenario(filePath string) error {
 	}
 
 	reportErr := maybeGenerateRunReport(filePath, summ, logPath)
+	maybeQueueRunHistory(filePath, summ, logPath)
 	if summ.FailedTests > 0 {
 		if reportErr != nil {
 			return fmt.Errorf("test suite failed (also failed to generate HTML report: %w)", reportErr)
@@ -228,6 +230,7 @@ func executeMultiLineBlock(raw string, lineNum int, showOutput bool, verbose boo
 	result.URL = opts.URL
 	opts.Verbose = verbose
 	opts.DebugVars = runDebugVars
+	opts.SkipHistorySync = true
 
 	// Capture output if parallel — use devnull to avoid race on os.Stdout
 	var devNull *os.File
@@ -303,18 +306,19 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 	}
 
 	res, err := ExecuteRequest(RequestOptions{
-		Method:      method,
-		URL:         url,
-		Data:        data,
-		Headers:     headers,
-		Queries:     queries,
-		Captures:    captures,
-		Asserts:     asserts,
-		Verbose:     verbose,
-		NoRecord:    noRec,
-		MaxDuration: maxDuration,
-		Retry:       retry,
-		RetryWait:   retryWait,
+		Method:          method,
+		URL:             url,
+		Data:            data,
+		Headers:         headers,
+		Queries:         queries,
+		Captures:        captures,
+		Asserts:         asserts,
+		Verbose:         verbose,
+		NoRecord:        noRec,
+		MaxDuration:     maxDuration,
+		Retry:           retry,
+		RetryWait:       retryWait,
+		SkipHistorySync: true,
 	})
 	result = res
 	result.Name = fmt.Sprintf("Line %d", lineNum)
@@ -436,6 +440,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		opts.DebugVars = runDebugVars
 		opts.StrictVars = true
 		opts.SilentOutput = true
+		opts.SkipHistorySync = true
 		if step.Retry > 0 {
 			opts.Retry = step.Retry
 		}
@@ -528,6 +533,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 	}
 
 	reportErr := maybeGenerateRunReport(filePath, summ, logPath)
+	maybeQueueRunHistory(filePath, summ, logPath)
 	if summ.FailedTests > 0 {
 		if reportErr != nil {
 			return fmt.Errorf("test suite failed (also failed to generate HTML report: %w)", reportErr)
@@ -718,6 +724,26 @@ func maybeGenerateRunReport(filePath string, summ *summary.Summary, logPath stri
 
 	fmt.Println("   Opened in your default browser.")
 	return nil
+}
+
+func maybeQueueRunHistory(filePath string, summ *summary.Summary, logPath string) {
+	conf := loadConfigWarn()
+	if !platformsync.HistoryAutoSyncEnabled(conf) {
+		return
+	}
+
+	store, err := storage.NewStore()
+	if err != nil {
+		logger.LogToSession("history auto-sync run summary skipped: %v", err)
+		return
+	}
+	defer store.Close()
+
+	if err := platformsync.QueueRunHistory(conf, store, filePath, summ, logPath); err != nil {
+		logger.LogToSession("history auto-sync run summary enqueue failed: %v", err)
+		return
+	}
+	platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
 }
 
 func validateFlowStepVariables(step FlowStep, captureOrigins map[string]string, failedSteps map[string]bool) error {

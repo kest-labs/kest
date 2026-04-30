@@ -5,7 +5,8 @@ const messages: ProjectMessages = {
     apiSpecs: {
       label: 'API Specs',
       shortLabel: 'Specs',
-      description: 'Describe and curate the API surface, with AI-assisted drafting as the default entry.',
+      description:
+        'Describe and curate the API surface, with AI-assisted drafting as the default entry.',
     },
     environments: {
       label: 'Environments',
@@ -20,17 +21,20 @@ const messages: ProjectMessages = {
     collections: {
       label: 'Collections',
       shortLabel: 'Collections',
-      description: 'Use scratchpads and reusable request groups for manual debugging and local execution.',
+      description:
+        'Use scratchpads and reusable request groups for manual debugging and local execution.',
     },
     categories: {
       label: 'Categories',
       shortLabel: 'Categories',
-      description: 'Group growing resources by domain, owner, or area once the surface becomes large.',
+      description:
+        'Group growing resources by domain, owner, or area once the surface becomes large.',
     },
     members: {
       label: 'Members',
       shortLabel: 'Members',
-      description: 'Manage project access, operational roles, and who can change project resources.',
+      description:
+        'Manage project access, operational roles, and who can change project resources.',
     },
     histories: {
       label: 'History',
@@ -195,15 +199,21 @@ const messages: ProjectMessages = {
   },
   workspace: {
     unableToLoadModuleList: 'Unable to load module list',
-    unableToLoadModuleListDescription: 'The second sidebar could not load its project-scoped items.',
+    unableToLoadModuleListDescription:
+      'The second sidebar could not load its project-scoped items.',
     placeholderTitle: '{module} placeholder',
-    placeholderSidebarDescription: 'The {module} integration is not wired yet, so the second sidebar intentionally stays empty.',
-    placeholderContentDescription: 'The new information architecture already includes {module}, even though the API layer is still pending.',
+    placeholderSidebarDescription:
+      'The {module} integration is not wired yet, so the second sidebar intentionally stays empty.',
+    placeholderContentDescription:
+      'The new information architecture already includes {module}, even though the API layer is still pending.',
     moduleNotConnected: '{module} is not connected yet',
-    placeholderDescription: 'This module is intentionally scaffolded as a placeholder so the workspace hierarchy is complete before backend support arrives.',
-    historyPlaceholderDescription: 'History data is not mounted in the current frontend. Until that lands, the existing test case route remains accessible as a legacy operational surface.',
+    placeholderDescription:
+      'This module is intentionally scaffolded as a placeholder so the workspace hierarchy is complete before backend support arrives.',
+    historyPlaceholderDescription:
+      'History data is not mounted in the current frontend. Until that lands, the existing test case route remains accessible as a legacy operational surface.',
     notFoundTitle: '{moduleLabel} not found',
-    missingDetailDescription: 'The selected {moduleLabel} could not be resolved. It may have been removed or the current item id is no longer valid.',
+    missingDetailDescription:
+      'The selected {moduleLabel} could not be resolved. It may have been removed or the current item id is no longer valid.',
   },
   apiSpecs: {
     title: 'API Specs',
@@ -217,26 +227,33 @@ const messages: ProjectMessages = {
     addSpecManually: 'Add Spec Manually',
     openInFullManager: 'Open in full manager',
     currentDescriptionWithSelection: 'Spec detail loaded from the current project-scoped API.',
-    currentDescriptionEmpty: 'API Specs is the default project workspace module. Choose a spec in the middle sidebar to inspect its content.',
+    currentDescriptionEmpty:
+      'API Specs is the default project workspace module. Choose a spec in the middle sidebar to inspect its content.',
     noSpecDescription: 'No description provided for this spec.',
     specSummary: 'Spec summary',
     specSummaryDescription: 'Core metadata for the selected API spec.',
     documentationSnapshot: 'Documentation snapshot',
     documentationSnapshotDescription: 'Latest markdown fragment stored for this API spec.',
     documentationNotGenerated: 'Documentation not generated',
-    documentationNotGeneratedDescription: 'No markdown documentation is attached to the selected spec yet.',
+    documentationNotGeneratedDescription:
+      'No markdown documentation is attached to the selected spec yet.',
     guideTitle: 'Describe the API, let AI draft the spec',
-    guideDescription: 'Keep the primary flow simple: describe the endpoint in plain language, review the draft, then move the spec into test coverage.',
+    guideDescription:
+      'Keep the primary flow simple: describe the endpoint in plain language, review the draft, then move the spec into test coverage.',
     describeWithAi: 'Describe with AI',
     captureIntentTitle: '1. Capture intent',
-    captureIntentDescription: 'Start from a sentence, method, and path instead of a long manual form.',
+    captureIntentDescription:
+      'Start from a sentence, method, and path instead of a long manual form.',
     reviewDraftTitle: '2. Review the draft',
-    reviewDraftDescription: 'AI uses project conventions to propose parameters, request body, and responses.',
+    reviewDraftDescription:
+      'AI uses project conventions to propose parameters, request body, and responses.',
     moveToTestingTitle: '3. Move into testing',
-    moveToTestingDescription: 'Once the spec exists, switch to test cases and generate coverage from the same source of truth.',
+    moveToTestingDescription:
+      'Once the spec exists, switch to test cases and generate coverage from the same source of truth.',
     openTestCases: 'Open Test Cases',
     createDialogTitle: 'Create API Spec',
-    createDialogDescription: 'Add a new API spec directly from the workspace sidebar without leaving the current layout.',
+    createDialogDescription:
+      'Add a new API spec directly from the workspace sidebar without leaving the current layout.',
     selectCategory: 'Select category',
     publicSpec: 'Public spec',
     publicSpecDescription: 'Control whether this spec is exposed as a public-facing definition.',
@@ -254,21 +271,26 @@ const messages: ProjectMessages = {
     headers: '{count} headers',
     workspaceTitle: 'Environment workspace',
     currentDescriptionWithSelection: 'Environment detail loaded from the selected project.',
-    currentDescriptionEmpty: 'Create project-scoped environments here, or pick one from the sidebar to inspect and edit it.',
-    readOnlyDescription: 'Your current role is {role}. You can inspect environment configuration, but cannot create, edit, duplicate, or delete it.',
+    currentDescriptionEmpty:
+      'Create project-scoped environments here, or pick one from the sidebar to inspect and edit it.',
+    readOnlyDescription:
+      'Your current role is {role}. You can inspect environment configuration, but cannot create, edit, duplicate, or delete it.',
     createDialogTitle: 'Create Environment',
     editDialogTitle: 'Edit Environment',
-    createDialogDescription: 'Create a project-scoped environment with base URL, variables, and headers.',
+    createDialogDescription:
+      'Create a project-scoped environment with base URL, variables, and headers.',
     editDialogDescription: 'Update the selected project-scoped environment.',
     unableToLoadDetails: 'Unable to load environment details',
-    unableToLoadDetailsDescription: 'The selected environment details are not available yet. Close this dialog and try again.',
+    unableToLoadDetailsDescription:
+      'The selected environment details are not available yet. Close this dialog and try again.',
     createButton: 'Create Environment',
     saveButton: 'Save Changes',
     deleteDialogTitle: 'Delete Environment',
     deleteDialogDescription: 'This permanently removes {name}.',
     deleteWarning: 'The environment will be deleted immediately and cannot be restored.',
     duplicateDialogTitle: 'Duplicate Environment',
-    duplicateDialogDescription: 'Create a new environment from the selected one and optionally override variables.',
+    duplicateDialogDescription:
+      'Create a new environment from the selected one and optionally override variables.',
     newEnvironmentName: 'New Environment Name',
     nameRequired: 'Environment name is required.',
     newNameRequired: 'New environment name is required.',
@@ -283,10 +305,12 @@ const messages: ProjectMessages = {
     withHeadersDescription: 'Environments carrying request headers',
     searchFilteredBy: 'Search filtered by "{query}"',
     noEnvironmentsYet: 'No environments yet',
-    noEnvironmentsYetDescription: 'Create the first project environment to store base URLs, reusable headers, and variables for your requests and tests.',
+    noEnvironmentsYetDescription:
+      'Create the first project environment to store base URLs, reusable headers, and variables for your requests and tests.',
     openApiSpecs: 'Open API Specs',
     overview: 'Environment overview',
-    overviewDescription: 'The old standalone manager is collapsed into this content area. Choose an environment from the sidebar, or create a new one from here.',
+    overviewDescription:
+      'The old standalone manager is collapsed into this content area. Choose an environment from the sidebar, or create a new one from here.',
     openTestCases: 'Open Test Cases',
     matchingEnvironments: 'Matching environments',
     availableEnvironments: 'Available environments',
@@ -301,10 +325,12 @@ const messages: ProjectMessages = {
     systemName: 'System name',
     openManagementActions: 'Open environment management actions',
     listTitle: 'Environment list',
-    listDescription: 'The backend currently returns the full list with no pagination. This page applies local filtering only.',
+    listDescription:
+      'The backend currently returns the full list with no pagination. This page applies local filtering only.',
     selectedTitle: 'Selected environment',
     selectEnvironmentTitle: 'No environment selected',
-    selectEnvironmentDescription: 'Choose an environment from the list to inspect its details, variables, and headers.',
+    selectEnvironmentDescription:
+      'Choose an environment from the list to inspect its details, variables, and headers.',
     environmentId: 'Environment ID',
     openSelectedActions: 'Open selected environment actions',
     reportedByStats: 'Reported by project stats: {count}',
@@ -318,7 +344,8 @@ const messages: ProjectMessages = {
     emptyDescription: 'Create categories to organize API specs and test assets by domain.',
     manageCategories: 'Manage categories',
     chooseCategory: 'Choose a category',
-    chooseCategoryDescription: 'Categories only render in the content area after a concrete category is selected.',
+    chooseCategoryDescription:
+      'Categories only render in the content area after a concrete category is selected.',
     noMatchingTitle: 'No matching categories',
     noMatchingDescription: 'Try a different keyword or clear the current filters.',
     categoryMetadata: 'Category metadata',
@@ -326,7 +353,8 @@ const messages: ProjectMessages = {
     childCategories: 'Child categories',
     childCategoriesDescription: 'Direct descendants of the selected category.',
     noChildCategories: 'No child categories',
-    noChildCategoriesDescription: 'This category currently acts as a leaf node in the project hierarchy.',
+    noChildCategoriesDescription:
+      'This category currently acts as a leaf node in the project hierarchy.',
     parent: 'Parent',
     children: 'Children',
     sortOrder: 'Sort order',
@@ -343,14 +371,18 @@ const messages: ProjectMessages = {
     noMatchingDescription: 'Try a different keyword or entity type filter.',
     emptyDescription: 'History records will appear here once project activity is being recorded.',
     projectHistory: 'Project history',
-    currentDescriptionWithSelection: 'History detail loaded from the selected project-scoped record.',
-    currentDescriptionEmpty: 'Select a history record in the sidebar to inspect its snapshot and recorded diff.',
+    currentDescriptionWithSelection:
+      'History detail loaded from the selected project-scoped record.',
+    currentDescriptionEmpty:
+      'Select a history record in the sidebar to inspect its snapshot and recorded diff.',
     noMatchingRecord: 'No matching history record',
     noHistoryRecorded: 'No history recorded',
-    noMatchingRecordDescription: 'No history records matched the current filters. Clear the filter or try a broader search.',
+    noMatchingRecordDescription:
+      'No history records matched the current filters. Clear the filter or try a broader search.',
     noHistoryRecordedDescription: 'This project does not have any persisted history records yet.',
     chooseRecord: 'Choose a history record',
-    chooseRecordDescription: 'The content area stays focused on a single history record. Pick one from the sidebar to inspect the stored snapshot and diff.',
+    chooseRecordDescription:
+      'The content area stays focused on a single history record. Pick one from the sidebar to inspect the stored snapshot and diff.',
     noMessageForEntry: 'No message was recorded for this history entry.',
     metadata: 'History metadata',
     metadataDescription: 'Core fields captured for the selected history record.',
@@ -358,11 +390,29 @@ const messages: ProjectMessages = {
     entityType: 'Entity type',
     entityId: 'Entity ID',
     action: 'Action',
+    syncSource: 'Sync source',
+    sourceEventId: 'Source event ID',
     user: 'User',
     userId: 'User ID',
     recordedNote: 'Recorded note',
     recordedNoteDescription: 'Optional message attached to this history entry.',
     noMessageRecorded: 'No message recorded.',
+    cliRequestDescription: 'Sanitized request details uploaded from the CLI.',
+    cliResponseDescription: 'Sanitized response snapshot captured by the CLI.',
+    transport: 'Transport',
+    cliRunSummary: 'CLI run summary',
+    cliRunSummaryDescription: 'Aggregated result for a single kest run execution.',
+    runFile: 'Run file',
+    totalSteps: 'Total steps',
+    passedSteps: 'Passed steps',
+    failedSteps: 'Failed steps',
+    logExcerpt: 'Log excerpt',
+    logExcerptDescription: 'Sanitized excerpt from the CLI session log.',
+    noLogExcerpt: 'No log excerpt was uploaded for this run.',
+    stepResults: 'Step results',
+    stepResultsDescription: 'Per-step outcomes reported by the CLI run.',
+    noStepResults: 'No step results were uploaded for this run.',
+    noStepLabel: 'Unnamed step',
     snapshotData: 'Snapshot data',
     diff: 'Diff',
     recordNumber: 'Record #{id}',
@@ -378,7 +428,8 @@ const messages: ProjectMessages = {
     saveTargetBeforeImport: 'Save the target collection before importing into it.',
     chooseMarkdownFile: 'Choose an API Markdown file before importing.',
     choosePostmanFile: 'Choose a Postman collection file before importing.',
-    invalidResolvedUrl: 'The resolved URL is not valid. Select an environment with base_url or use an absolute URL.',
+    invalidResolvedUrl:
+      'The resolved URL is not valid. Select an environment with base_url or use an absolute URL.',
     base64Unavailable: 'Base64 encoding is not available in this browser context.',
     workbench: {
       defaultRequestTitle: 'New Request',
@@ -388,12 +439,15 @@ const messages: ProjectMessages = {
       historyExecuted: 'Executed {label}',
       historyExecutedWithStatus: 'Executed {label} ({status})',
       historyFailed: 'Failed to execute {label}: {error}',
-      missingBaseUrlNoEnvironment: 'Select an environment before sending a request that uses {template}.',
+      missingBaseUrlNoEnvironment:
+        'Select an environment before sending a request that uses {template}.',
       missingBaseUrlInEnvironment: 'Environment "{name}" is missing base_url.',
       missingVariables: 'Set environment variables before sending this request: {keys}.',
-      persistCookiesUnavailable: 'Persist cookies is not available in local runner mode. Add a Cookie header explicitly if this request depends on cookies.',
+      persistCookiesUnavailable:
+        'Persist cookies is not available in local runner mode. Add a Cookie header explicitly if this request depends on cookies.',
       unableToSend: 'Unable to send request.',
-      runnerDescription: 'Execute collection requests through your local Kest runner so local APIs can be tested without browser CORS limits.',
+      runnerDescription:
+        'Execute collection requests through your local Kest runner so local APIs can be tested without browser CORS limits.',
       filterPlaceholder: 'Filter collections or requests',
       requestCount: '{count} requests',
       quickRequests: 'Quick Requests',
@@ -403,7 +457,8 @@ const messages: ProjectMessages = {
       noEnvironment: 'No environment',
       urlPlaceholder: 'Paste API URL or use {template}',
       queryParamsTitle: 'Query Params',
-      queryParamsDescription: 'Edit structured query parameters or switch to bulk mode for quick pasting.',
+      queryParamsDescription:
+        'Edit structured query parameters or switch to bulk mode for quick pasting.',
       headersDescription: 'Manage request headers with a table view or bulk input.',
       badges: {
         apiRequest: 'API Request',
@@ -453,18 +508,24 @@ const messages: ProjectMessages = {
       },
       empty: {
         sidebarTitle: 'Start with a collection or quick request',
-        sidebarDescription: 'Collections hold reusable requests. Quick requests are for one-off experiments that do not need project structure yet.',
+        sidebarDescription:
+          'Collections hold reusable requests. Quick requests are for one-off experiments that do not need project structure yet.',
         workspaceTitle: 'Start a request workspace',
-        workspaceDescription: 'Create a saved collection for reusable requests, or open a quick request for one-off debugging.',
+        workspaceDescription:
+          'Create a saved collection for reusable requests, or open a quick request for one-off debugging.',
         noOpenTabs: 'No open tabs',
       },
       importDialog: {
         markdownTitle: 'Import API Markdown',
         postmanTitle: 'Import Postman Collection',
-        markdownDescriptionInCollection: 'Upload an API Markdown file and import requests into module collections under "{name}".',
-        markdownDescriptionRoot: 'Upload an API Markdown file and import requests into module collections at the project root.',
-        postmanDescriptionInCollection: 'Upload a Postman collection JSON file and import all requests into one collection under "{name}".',
-        postmanDescriptionRoot: 'Upload a Postman collection JSON file and import all requests into one collection at the project root.',
+        markdownDescriptionInCollection:
+          'Upload an API Markdown file and import requests into module collections under "{name}".',
+        markdownDescriptionRoot:
+          'Upload an API Markdown file and import requests into module collections at the project root.',
+        postmanDescriptionInCollection:
+          'Upload a Postman collection JSON file and import all requests into one collection under "{name}".',
+        postmanDescriptionRoot:
+          'Upload a Postman collection JSON file and import all requests into one collection at the project root.',
         markdownFile: 'Markdown file',
         collectionFile: 'Collection file',
         markdownEmptyState: 'Choose an api.md or module Markdown document to import requests.',
@@ -473,13 +534,15 @@ const messages: ProjectMessages = {
       },
       renameCollectionDialog: {
         title: 'Rename Collection',
-        description: 'Update the collection name and sync it to the backend when a persisted collection ID is available.',
+        description:
+          'Update the collection name and sync it to the backend when a persisted collection ID is available.',
         label: 'Collection name',
         placeholder: 'Enter collection name',
       },
       renameRequestDialog: {
         title: 'Rename Request',
-        description: 'Update the request name and sync it to the backend when this request already has a persisted ID.',
+        description:
+          'Update the request name and sync it to the backend when this request already has a persisted ID.',
         label: 'Request name',
         placeholder: 'Enter request name',
       },
@@ -508,7 +571,8 @@ const messages: ProjectMessages = {
         description: 'Choose how this request should authenticate.',
         typeLabel: 'Auth type',
         credentialsTitle: 'Credentials',
-        credentialsDescription: 'Provide the credential value that should be sent with the request.',
+        credentialsDescription:
+          'Provide the credential value that should be sent with the request.',
         noneDescription: 'This request currently sends without authentication.',
         usernamePassword: 'Username:Password',
         apiKey: 'API key',
@@ -530,41 +594,52 @@ const messages: ProjectMessages = {
       scripts: {
         description: 'Use this area for pre-request or post-response scripting logic.',
         placeholder: '// Write request scripts here',
-        defaultScript: '// Inspect the response here\npm.test(\'status should be 200\', () => true);',
+        defaultScript: "// Inspect the response here\npm.test('status should be 200', () => true);",
       },
       settings: {
         followRedirectsTitle: 'Follow redirects',
-        followRedirectsDescription: 'Handled by the local runner. Turn this off to inspect 3xx responses directly.',
+        followRedirectsDescription:
+          'Handled by the local runner. Turn this off to inspect 3xx responses directly.',
         strictTlsTitle: 'Strict TLS validation',
-        strictTlsDescription: 'Keep this on for normal HTTPS. Turn it off only for local self-signed certificates.',
+        strictTlsDescription:
+          'Keep this on for normal HTTPS. Turn it off only for local self-signed certificates.',
         persistCookiesTitle: 'Persist cookies',
-        persistCookiesDescription: 'Not supported by the local runner. Send Cookie headers explicitly when the target API requires them.',
+        persistCookiesDescription:
+          'Not supported by the local runner. Send Cookie headers explicitly when the target API requires them.',
       },
       examples: {
         nameRequired: 'Example name is required.',
         saveDialogTitle: 'Save Request Example',
         saveDialogDescription: 'Save the current request snapshot as a reusable example.',
-        saveDialogCapturesResponse: 'The latest response will be captured into this example as well.',
+        saveDialogCapturesResponse:
+          'The latest response will be captured into this example as well.',
         saveDialogCaptureLater: 'You can capture a real response later after sending the request.',
         nameLabel: 'Example name',
         namePlaceholder: 'Create user - happy path',
         descriptionPlaceholder: 'What scenario does this example cover?',
         setDefaultTitle: 'Set as default example',
-        setDefaultDescription: 'The default example becomes the primary saved scenario for this request.',
+        setDefaultDescription:
+          'The default example becomes the primary saved scenario for this request.',
         saveExample: 'Save Example',
         editDialogTitle: 'Edit Example',
-        editDialogDescription: 'Update the saved example metadata. The stored request and response snapshots stay attached to this example.',
+        editDialogDescription:
+          'Update the saved example metadata. The stored request and response snapshots stay attached to this example.',
         loadFailed: 'Unable to load this example. Close the dialog and try again.',
-        editSetDefaultDescription: 'Mark this example as the primary saved scenario for the request.',
-        alreadyDefault: 'This example is already the default. Promote another example if you want to change the default selection.',
+        editSetDefaultDescription:
+          'Mark this example as the primary saved scenario for the request.',
+        alreadyDefault:
+          'This example is already the default. Promote another example if you want to change the default selection.',
         deleteDialogTitle: 'Delete Example',
-        deleteDialogDescription: 'Remove this saved example from the request. This action cannot be undone.',
+        deleteDialogDescription:
+          'Remove this saved example from the request. This action cannot be undone.',
         thisExample: 'This example',
         deleteDialogWarning: 'will be deleted permanently.',
         deleteExample: 'Delete Example',
         detailDialogTitle: 'Example Details',
-        detailDialogDescription: 'Inspect the saved request and response snapshot behind this example.',
-        detailLoadFailed: 'Unable to load the latest example details. Close the dialog and try again.',
+        detailDialogDescription:
+          'Inspect the saved request and response snapshot behind this example.',
+        detailLoadFailed:
+          'Unable to load the latest example details. Close the dialog and try again.',
         noUrl: 'No URL',
         refreshingDetails: 'Refreshing example details...',
         updatedAt: 'Updated {value}',
@@ -579,28 +654,35 @@ const messages: ProjectMessages = {
         noResponseHeadersCaptured: 'No response headers captured.',
         requestBodyTitle: 'Request Body',
         responseBodyTitle: 'Response Body',
-        panelDescription: 'Save named request and response snapshots so common scenarios can be replayed quickly.',
+        panelDescription:
+          'Save named request and response snapshots so common scenarios can be replayed quickly.',
         newExample: 'New Example',
         requiresSavedRequestTitle: 'Examples need a saved collection request',
-        requiresSavedRequestDescription: 'Quick requests are intentionally ephemeral. Move this request into a saved collection first, then save examples from there.',
+        requiresSavedRequestDescription:
+          'Quick requests are intentionally ephemeral. Move this request into a saved collection first, then save examples from there.',
         requestNotPersistedTitle: 'This request has not been persisted yet',
-        requestNotPersistedDescription: 'Create the first example and the workbench will save this request into the collection automatically before storing the example.',
+        requestNotPersistedDescription:
+          'Create the first example and the workbench will save this request into the collection automatically before storing the example.',
         panelLoadFailed: 'Unable to load examples for this request. Try refreshing the panel.',
         emptyTitle: 'No examples yet',
-        emptyDescription: 'Save the current request as an example to preserve a named scenario and optionally attach the latest real response.',
+        emptyDescription:
+          'Save the current request as an example to preserve a named scenario and optionally attach the latest real response.',
         emptyValue: '(empty)',
         defaultUser: '(user)',
         bearerToken: 'Bearer token',
         basicAuth: 'Basic auth',
       },
       response: {
-        description: 'Inspect the latest real response payload, headers, timing, and status details.',
+        description:
+          'Inspect the latest real response payload, headers, timing, and status details.',
         size: 'Size',
         sendingTitle: 'Sending request...',
-        sendingDescription: 'The response panel updates as soon as your local Kest runner finishes the request.',
+        sendingDescription:
+          'The response panel updates as soon as your local Kest runner finishes the request.',
         errorTitle: 'Unable to send request',
         emptyTitle: 'Click Send to get a response',
-        emptyDescription: 'Once you trigger the request, this panel will render the latest response body, headers, and timing returned by your local runner.',
+        emptyDescription:
+          'Once you trigger the request, this panel will render the latest response body, headers, and timing returned by your local runner.',
         emptyBody: '(empty body)',
       },
     },
@@ -670,7 +752,8 @@ const messages: ProjectMessages = {
     deleteDescriptionWithName: 'This will permanently delete "{name}".',
     deleteDescriptionFallback: 'This will permanently delete the selected project.',
     deleteWarningTitle: 'Irreversible action',
-    deleteWarningDescription: 'The backend deletes the project record immediately through DELETE /v1/projects/:id.',
+    deleteWarningDescription:
+      'The backend deletes the project record immediately through DELETE /v1/projects/:id.',
     deleteButton: 'Delete Project',
   },
   categoryForm: {
@@ -698,20 +781,24 @@ const messages: ProjectMessages = {
     deleteDescriptionWithName: 'This will permanently delete "{name}".',
     deleteDescriptionFallback: 'This will permanently delete the selected category.',
     deleteWarningTitle: 'Irreversible action',
-    deleteWarningDescription: 'The current backend deletes the category immediately, and child categories are detached from their parent.',
+    deleteWarningDescription:
+      'The current backend deletes the category immediately, and child categories are detached from their parent.',
     deleteScopeTitle: 'Deletion scope',
-    deleteScopeDescription: 'The `move_to` reassignment option described in the markdown doc is not exposed by the current backend route, so this dialog keeps the delete flow conservative.',
+    deleteScopeDescription:
+      'The `move_to` reassignment option described in the markdown doc is not exposed by the current backend route, so this dialog keeps the delete flow conservative.',
     deleteButton: 'Delete Category',
   },
   invitation: {
     title: 'Project Invitation',
-    description: 'Review the invitation details, then accept the requested role to join the project.',
+    description:
+      'Review the invitation details, then accept the requested role to join the project.',
     statusActive: 'Active',
     statusExpired: 'Expired',
     statusRevoked: 'Revoked',
     statusUsedUp: 'Used up',
     unavailableTitle: 'Invitation unavailable',
-    unavailableDescription: 'This invite link could not be loaded. It may have been revoked, deleted, or malformed.',
+    unavailableDescription:
+      'This invite link could not be loaded. It may have been revoked, deleted, or malformed.',
     projectLabel: 'Project',
     invitationPath: 'Invitation path',
     roleLabel: 'Role',
@@ -720,9 +807,11 @@ const messages: ProjectMessages = {
     never: 'Never',
     unlimited: 'Unlimited',
     loginRequiredTitle: 'Login required',
-    loginRequiredDescription: 'Sign in or create an account first, then return here to accept or reject this invitation.',
+    loginRequiredDescription:
+      'Sign in or create an account first, then return here to accept or reject this invitation.',
     rejectedTitle: 'Invitation rejected',
-    rejectedDescription: 'You declined this invite. You can keep the page open for reference, but the link has not been accepted.',
+    rejectedDescription:
+      'You declined this invite. You can keep the page open for reference, but the link has not been accepted.',
     loginToContinue: 'Login to Continue',
     createAccount: 'Create Account',
     accept: 'Accept Invitation',
@@ -730,13 +819,15 @@ const messages: ProjectMessages = {
   },
   membersPage: {
     title: 'Members',
-    description: 'Manage project access through {membersPath} and resolve the current user role through {membersMePath}.',
+    description:
+      'Manage project access through {membersPath} and resolve the current user role through {membersMePath}.',
     memberCount: '{count} members',
     generateInviteLink: 'Generate Invite Link',
     addMember: 'Add Member',
     openMemberActions: 'Open member management actions',
     readOnlyTitle: 'Read-only member access',
-    readOnlyDescription: 'Your current role is {role}. You can view the member list, but only admin and owner can add, update, or remove members.',
+    readOnlyDescription:
+      'Your current role is {role}. You can view the member list, but only admin and owner can add, update, or remove members.',
     totalMembers: 'Total Members',
     totalMembersDescription: 'All users with project access',
     adminsOwners: 'Admins & Owners',
@@ -746,12 +837,15 @@ const messages: ProjectMessages = {
     readers: 'Readers',
     readersDescription: 'Browse-only project access',
     inviteLinks: 'Invite Links',
-    inviteLinksDescription: 'Generate role-scoped invite links through {path} and manage their lifecycle before sharing externally.',
+    inviteLinksDescription:
+      'Generate role-scoped invite links through {path} and manage their lifecycle before sharing externally.',
     newInviteLink: 'New Invite Link',
     inviteAccessRequiredTitle: 'Invite management requires admin access',
-    inviteAccessRequiredDescription: 'Invite links can be listed, generated, copied, and revoked only by admin or owner members.',
+    inviteAccessRequiredDescription:
+      'Invite links can be listed, generated, copied, and revoked only by admin or owner members.',
     inviteLoadFailedTitle: 'Unable to load invite links',
-    inviteLoadFailedDescription: 'Refresh the page or confirm the current user still has permission to manage invitations for this project.',
+    inviteLoadFailedDescription:
+      'Refresh the page or confirm the current user still has permission to manage invitations for this project.',
     inviteRole: 'Role',
     inviteStatus: 'Status',
     inviteRemaining: 'Remaining',
@@ -764,12 +858,14 @@ const messages: ProjectMessages = {
     revokeLink: 'Revoke Link',
     noInviteLinks: 'No invite links have been generated for this project yet.',
     projectMembers: 'Project Members',
-    projectMembersDescription: 'Search by username or email, then adjust operational roles for non-owner members.',
+    projectMembersDescription:
+      'Search by username or email, then adjust operational roles for non-owner members.',
     filterPlaceholder: 'Filter by username or email',
     filterByRole: 'Filter by role',
     allRoles: 'All roles',
     membersLoadFailedTitle: 'Unable to load members',
-    membersLoadFailedDescription: 'The project members page could not load its data. Retry the request or confirm the current user still has access to this project.',
+    membersLoadFailedDescription:
+      'The project members page could not load its data. Retry the request or confirm the current user still has access to this project.',
     user: 'User',
     joined: 'Joined',
     updated: 'Updated',
@@ -781,7 +877,8 @@ const messages: ProjectMessages = {
     protected: 'Protected',
     noMembersMatch: 'No members match the current filter.',
     inviteDialogTitle: 'Generate Invite Link',
-    inviteDialogDescription: 'Create a shareable project invite that grants a predefined role after the invited user logs in.',
+    inviteDialogDescription:
+      'Create a shareable project invite that grants a predefined role after the invited user logs in.',
     inviteDialogErrorTitle: 'Cannot generate invite link',
     selectRole: 'Select role',
     maxUses: 'Max uses',
@@ -791,7 +888,8 @@ const messages: ProjectMessages = {
     inviteGenerated: 'Invite link generated',
     close: 'Close',
     addMemberDialogTitle: 'Add Member',
-    addMemberDialogDescription: 'Search existing users, then grant them project access with an assignable role.',
+    addMemberDialogDescription:
+      'Search existing users, then grant them project access with an assignable role.',
     addMemberDialogErrorTitle: 'Cannot add member',
     findUser: 'Find user',
     searchUserPlaceholder: 'Search by username or email',
@@ -799,7 +897,8 @@ const messages: ProjectMessages = {
     searching: 'Searching…',
     availableCount: '{count} available',
     startTyping: 'Start typing to search existing users.',
-    noEligibleUsers: 'No eligible users matched this query. Matching users who are already project members are hidden.',
+    noEligibleUsers:
+      'No eligible users matched this query. Matching users who are already project members are hidden.',
     selected: 'Selected',
     select: 'Select',
     selectedUser: 'Selected user',
@@ -809,10 +908,12 @@ const messages: ProjectMessages = {
     removeMemberDialogTitle: 'Remove Member',
     removeMemberDialogDescription: 'Remove {username} from this project.',
     revokeAccessTitle: 'Access will be revoked immediately',
-    revokeAccessDescription: '{username} will no longer be able to access project resources after this action completes.',
+    revokeAccessDescription:
+      '{username} will no longer be able to access project resources after this action completes.',
     removeMember: 'Remove Member',
     revokeInviteDialogTitle: 'Revoke Invite Link',
-    revokeInviteDialogDescription: 'Revoke the selected invite link immediately. Existing members keep their access, but the link can no longer be accepted.',
+    revokeInviteDialogDescription:
+      'Revoke the selected invite link immediately. Existing members keep their access, but the link can no longer be accepted.',
     revokeInviteTitle: 'Link access will be disabled immediately',
     invitationSummary: '{role} invitation',
     unlimitedUses: 'Unlimited uses',
@@ -823,7 +924,8 @@ const messages: ProjectMessages = {
   },
   projectsPage: {
     title: 'Project Workspace',
-    description: 'Logged-in users can create, inspect, update, and delete projects through {projectsPath} and jump to dedicated overview, environment, API specification, and test case pages for each project.',
+    description:
+      'Logged-in users can create, inspect, update, and delete projects through {projectsPath} and jump to dedicated overview, environment, API specification, and test case pages for each project.',
     createProject: 'Create Project',
     openPageActions: 'Open project page actions',
     totalProjects: 'Total Projects',
@@ -840,7 +942,8 @@ const messages: ProjectMessages = {
     cardDescriptionFallback: 'Connected to GET {path}',
     localRefresh: 'Refreshing…',
     filterPlaceholder: 'Filter current page by name, slug, or platform',
-    localFilterNote: 'Project detail and stats have moved to separate pages. The list page now keeps only overview entry points and CRUD actions.',
+    localFilterNote:
+      'Project detail and stats have moved to separate pages. The list page now keeps only overview entry points and CRUD actions.',
     tableName: 'Name',
     tableSlug: 'Slug',
     tablePlatform: 'Platform',
@@ -859,26 +962,35 @@ const messages: ProjectMessages = {
     projectsLabel: 'Projects',
     loadFailedTitle: 'Unable to load projects',
     loadFailedDescription: 'The dashboard could not load the project list from the current API.',
-    noProjectsYet: 'No projects are available yet. Create the first project to populate the dashboard.',
+    noProjectsYet:
+      'No projects are available yet. Create the first project to populate the dashboard.',
     noProjectsMatched: 'No projects match the current search keyword.',
     selected: 'Selected',
     createdAt: 'Created {value}',
     preview: 'Preview',
     startHere: 'Start here',
     heroTitle: 'Create a project, then choose how you want to start',
-    heroDescription: 'After the first project exists, the dashboard immediately opens its preview and points you to either AI-assisted API design or a quick request surface.',
+    heroDescription:
+      'After the first project exists, the dashboard immediately opens its preview and points you to either AI-assisted API design or a quick request surface.',
     createFirstProjectTitle: 'Create the first project',
-    createFirstProjectDescription: 'The dashboard becomes useful after one project exists. Then it auto-opens the latest project and shows the next recommended action.',
+    createFirstProjectDescription:
+      'The dashboard becomes useful after one project exists. Then it auto-opens the latest project and shows the next recommended action.',
     noProjectsYetTitle: 'No projects yet',
-    noProjectsYetDescription: 'Use the create action to seed the dashboard with your first project.',
+    noProjectsYetDescription:
+      'Use the create action to seed the dashboard with your first project.',
     twoWaysTitle: 'Two ways to start',
-    twoWaysDescription: 'Once a project exists, keep the first decision small: either model the API or probe it.',
+    twoWaysDescription:
+      'Once a project exists, keep the first decision small: either model the API or probe it.',
     aiStartTitle: '1. Design with AI',
-    aiStartDescription: 'Use AI Draft API to turn product intent into a structured endpoint and start building the source of truth.',
+    aiStartDescription:
+      'Use AI Draft API to turn product intent into a structured endpoint and start building the source of truth.',
     quickRequestTitle: '2. Quick Request',
-    quickRequestDescription: 'If you already know the endpoint, open the request workbench and send a probe immediately, then save it back into structured assets.',
-    previewSummaryFailed: 'Some project signals failed to load. Retry this preview or open the workspace directly.',
-    previewSummarySlow: 'Loading project status is taking longer than usual. Use Quick Request or open the workspace while the richer preview catches up.',
+    quickRequestDescription:
+      'If you already know the endpoint, open the request workbench and send a probe immediately, then save it back into structured assets.',
+    previewSummaryFailed:
+      'Some project signals failed to load. Retry this preview or open the workspace directly.',
+    previewSummarySlow:
+      'Loading project status is taking longer than usual. Use Quick Request or open the workspace while the richer preview catches up.',
     previewSummaryLoading: 'Loading project status so the next step reflects real project data.',
     slugLabel: 'Slug: {value}',
     teamMembers: '{count} team members',
@@ -886,7 +998,8 @@ const messages: ProjectMessages = {
     progressTitle: 'Progress',
     progressDescription: 'Three checks are enough to understand project readiness.',
     readinessLoadFailedTitle: 'Unable to load project readiness',
-    readinessLoadFailedDescription: 'The preview could not determine whether the project is ready for setup or testing.',
+    readinessLoadFailedDescription:
+      'The preview could not determine whether the project is ready for setup or testing.',
     retryPreview: 'Retry preview',
     stillLoadingReadiness: 'Still loading readiness signals.',
     recentApiSpecsTitle: 'Recent API specs',
@@ -894,43 +1007,61 @@ const messages: ProjectMessages = {
     previewNeedsAttention: 'Preview needs attention',
     moveNowRefineLater: 'Move now, refine later',
     loadingNextStep: 'Loading next step',
-    previewNeedsAttentionDescription: 'The dashboard cannot recommend the next step until the preview data loads successfully.',
-    moveNowRefineLaterDescription: 'The rich preview is still loading. Use a quick request or enter the workspace instead of waiting on the dashboard.',
-    recommendationLoadingDescription: 'Waiting for project readiness so this recommendation is not guessed.',
+    previewNeedsAttentionDescription:
+      'The dashboard cannot recommend the next step until the preview data loads successfully.',
+    moveNowRefineLaterDescription:
+      'The rich preview is still loading. Use a quick request or enter the workspace instead of waiting on the dashboard.',
+    recommendationLoadingDescription:
+      'Waiting for project readiness so this recommendation is not guessed.',
     recommendationUnavailableTitle: 'Recommendation unavailable',
-    recommendationUnavailableDescription: 'Retry the preview, or continue in the workspace if you already know the next action.',
-    recommendationSlowDescription: 'Recommendation is taking longer than usual. Do not block the user on the dashboard.',
+    recommendationUnavailableDescription:
+      'Retry the preview, or continue in the workspace if you already know the next action.',
+    recommendationSlowDescription:
+      'Recommendation is taking longer than usual. Do not block the user on the dashboard.',
     whyNow: 'Why now',
     unlockTitle: 'To unlock this step',
     sourceOfTruthLabel: 'Source of truth',
     sourceOfTruthReadyValue: '{count} specs ready',
     sourceOfTruthReadyDetail: 'The interface inventory exists and can drive docs and tests.',
-    sourceOfTruthMissingDetail: 'Start in API Specs so the project has a stable interface inventory.',
+    sourceOfTruthMissingDetail:
+      'Start in API Specs so the project has a stable interface inventory.',
     runtimeContextLabel: 'Runtime context',
     runtimeContextReadyValue: '{count} environments configured',
     runtimeContextReadyDetail: 'Base URLs, headers, and variables are ready for execution.',
-    runtimeContextMissingDetail: 'Add one environment before running requests against real targets.',
+    runtimeContextMissingDetail:
+      'Add one environment before running requests against real targets.',
     validationLabel: 'Validation',
     validationReadyValue: 'Ready to generate',
     validationPendingValue: 'Waiting on setup',
     validationReadyDetail: 'Move into Test Cases when you want the first runnable coverage.',
-    validationPendingDetail: 'Test generation becomes useful after the spec and environment baseline exist.',
-    noApiSpecSummary: 'No API spec exists yet. Start with AI Draft before setting up secondary surfaces.',
+    validationPendingDetail:
+      'Test generation becomes useful after the spec and environment baseline exist.',
+    noApiSpecSummary:
+      'No API spec exists yet. Start with AI Draft before setting up secondary surfaces.',
     noApiSpecTitle: 'Define the first API surface',
-    noApiSpecDescription: 'Describe one endpoint, create the first spec, then come back for runtime setup.',
-    noApiSpecReason: 'The project needs one concrete interface before environments or validation become useful. If you just need to probe an endpoint, use Quick Request instead of reshaping the dashboard.',
-    firstEnvironmentSummary: 'This project already has {count} API specs, but execution still has no runtime target.',
+    noApiSpecDescription:
+      'Describe one endpoint, create the first spec, then come back for runtime setup.',
+    noApiSpecReason:
+      'The project needs one concrete interface before environments or validation become useful. If you just need to probe an endpoint, use Quick Request instead of reshaping the dashboard.',
+    firstEnvironmentSummary:
+      'This project already has {count} API specs, but execution still has no runtime target.',
     firstEnvironmentTitle: 'Add the first environment',
-    firstEnvironmentDescription: 'Add one development or staging target so requests and tests can run somewhere real.',
-    firstEnvironmentReason: 'You already defined the surface. One environment unlocks requests, examples, and the first test runs.',
-    coverageSummary: 'The project has {apiSpecCount} API specs and {environmentCount} runtime environments. Move into validation instead of adding more dashboard detail.',
+    firstEnvironmentDescription:
+      'Add one development or staging target so requests and tests can run somewhere real.',
+    firstEnvironmentReason:
+      'You already defined the surface. One environment unlocks requests, examples, and the first test runs.',
+    coverageSummary:
+      'The project has {apiSpecCount} API specs and {environmentCount} runtime environments. Move into validation instead of adding more dashboard detail.',
     coverageTitle: 'Generate validation coverage',
-    coverageDescription: 'Generate test cases from the existing specs, then use Quick Request only for one-off debugging.',
-    coverageReason: 'The spec and environment baseline exists. The next real value comes from runnable coverage, while Quick Request stays available for ad hoc inspection.',
+    coverageDescription:
+      'Generate test cases from the existing specs, then use Quick Request only for one-off debugging.',
+    coverageReason:
+      'The spec and environment baseline exists. The next real value comes from runnable coverage, while Quick Request stays available for ad hoc inspection.',
     apiSourceLabel: 'API source of truth',
     runtimeSetupLabel: 'Runtime setup',
     executionTargetLabel: 'Execution target',
-    apiSourceMissingDetail: 'No API spec exists yet, so documentation and tests have nothing stable to build from.',
+    apiSourceMissingDetail:
+      'No API spec exists yet, so documentation and tests have nothing stable to build from.',
     runtimeSetupCanWait: 'Environments can wait until the first endpoint is defined.',
     executionTargetMissingDetail: 'No base URL, variables, or shared headers are configured yet.',
     specBaselineReadyDetail: 'The project already has {count} API specs ready for downstream work.',
@@ -941,13 +1072,15 @@ const messages: ProjectMessages = {
   apiSpecsPage: {
     backToProjects: 'Back to Projects',
     title: 'API Specifications',
-    description: 'Manage API specs, examples, AI documentation, and test generation for {projectName}. Backend entry: {path}.',
+    description:
+      'Manage API specs, examples, AI documentation, and test generation for {projectName}. Backend entry: {path}.',
     countSpecs: '{count} specs',
     countCategories: '{count} categories',
     countMembers: '{count} members',
     openManagementActions: 'Open API spec management actions',
     readOnlyTitle: 'Read-only access',
-    readOnlyDescription: 'Your current role is {role}. You can inspect and export API specs, but cannot create, edit, delete, import, or trigger AI generation.',
+    readOnlyDescription:
+      'Your current role is {role}. You can inspect and export API specs, but cannot create, edit, delete, import, or trigger AI generation.',
     totalSpecs: 'Total Specs',
     totalSpecsDescription: 'Project slug: {slug}',
     publicOnPage: 'Public On This Page',
@@ -969,7 +1102,8 @@ const messages: ProjectMessages = {
     previous: 'Previous',
     next: 'Next',
     selectedSpecTitle: 'Selected Spec',
-    selectedSpecDescription: 'Detail from {path}, full detail from {fullPath}, examples from {examplesPath}.',
+    selectedSpecDescription:
+      'Detail from {path}, full detail from {fullPath}, examples from {examplesPath}.',
     import: 'Import',
     export: 'Export',
     batchGenDoc: 'Batch Gen Doc',
@@ -994,16 +1128,22 @@ const messages: ProjectMessages = {
     tagsPlaceholder: 'auth, public, login',
     markdownPlaceholder: '## POST /api/v1/auth/login',
     specLoadFailedTitle: 'Unable to load spec details',
-    specLoadFailedDescription: 'The current spec details are still loading. Close this dialog and try again.',
+    specLoadFailedDescription:
+      'The current spec details are still loading. Close this dialog and try again.',
     editDialogTitle: 'Edit API Spec',
-    editDialogDescription: 'Update the current API spec through PATCH /v1/projects/:id/api-specs/:sid.',
-    editReadonlyNotice: 'The PATCH API does not support editing `method` or `version` yet, so both fields remain read-only in edit mode.',
+    editDialogDescription:
+      'Update the current API spec through PATCH /v1/projects/:id/api-specs/:sid.',
+    editReadonlyNotice:
+      'The PATCH API does not support editing `method` or `version` yet, so both fields remain read-only in edit mode.',
     requestBodyJsonLabel: 'Request Body JSON',
-    requestBodyJsonPlaceholder: '{"required": true, "content_type": "application/json", "schema": {"type": "object"}}',
+    requestBodyJsonPlaceholder:
+      '{"required": true, "content_type": "application/json", "schema": {"type": "object"}}',
     parametersJsonLabel: 'Parameters JSON',
-    parametersJsonPlaceholder: '[{"name": "Authorization", "in": "header", "required": true, "schema": {"type": "string"}}]',
+    parametersJsonPlaceholder:
+      '[{"name": "Authorization", "in": "header", "required": true, "schema": {"type": "string"}}]',
     responsesJsonLabel: 'Responses JSON',
-    responsesJsonPlaceholder: '{"200": {"description": "Success", "content_type": "application/json", "schema": {"type": "object"}}}',
+    responsesJsonPlaceholder:
+      '{"200": {"description": "Success", "content_type": "application/json", "schema": {"type": "object"}}}',
     requestBodyEmpty: 'This API spec does not define request body schema yet.',
     parametersEmpty: 'This API spec does not define parameters yet.',
     responsesEmpty: 'This API spec does not define responses yet.',
@@ -1017,14 +1157,16 @@ const messages: ProjectMessages = {
     createExample: 'Create Example',
     exampleStatus: 'Status {status}',
     exampleEmptyTitle: 'No examples yet',
-    exampleEmptyDescription: 'This spec does not have any request/response examples yet. Create one from the action above.',
+    exampleEmptyDescription:
+      'This spec does not have any request/response examples yet. Create one from the action above.',
     requestHeadersEmpty: 'No request headers stored for this example.',
     requestBodyExampleEmpty: 'No request body stored for this example.',
     responseBodyExampleEmpty: 'No response body stored for this example.',
     generatedFlowTest: 'Generated Flow Test',
     generatedLanguage: 'Current language: {lang}',
     copy: 'Copy',
-    generatedTestEmpty: 'No generated test is cached for this spec yet. Run `gen-test` to show the flow content here.',
+    generatedTestEmpty:
+      'No generated test is cached for this spec yet. Run `gen-test` to show the flow content here.',
     connectedEndpointsTitle: 'Connected API Endpoints',
     tabsOverview: 'Overview',
     tabsDocs: 'Docs',
@@ -1036,7 +1178,8 @@ const messages: ProjectMessages = {
     zhNotGenerated: 'ZH not generated',
     enNotGenerated: 'EN not generated',
     importTitle: 'Import API Specs',
-    importDescription: 'Submit a full `{ specs: [...] }` JSON payload. The backend will upsert by `method + path`.',
+    importDescription:
+      'Submit a full `{ specs: [...] }` JSON payload. The backend will upsert by `method + path`.',
     importPayloadLabel: 'Import Payload',
     importPayloadMissingSpecs: 'Import payload must include a `specs` array.',
     importPayloadInvalid: 'Import payload could not be parsed.',
@@ -1047,12 +1190,14 @@ const messages: ProjectMessages = {
     exportFormatLabel: 'Export Format',
     exportButton: 'Export',
     batchTitle: 'Batch Generate Docs',
-    batchDescription: 'Queue a backend generation task with POST /v1/projects/:id/api-specs/batch-gen-doc.',
+    batchDescription:
+      'Queue a backend generation task with POST /v1/projects/:id/api-specs/batch-gen-doc.',
     batchLanguageLabel: 'Language',
     batchCategoryLabel: 'Category Scope',
     batchWholeProject: 'Whole project',
     batchForceLabel: 'Force Regeneration',
-    batchForceDescription: 'When enabled, existing docs are regenerated instead of only filling missing ones.',
+    batchForceDescription:
+      'When enabled, existing docs are regenerated instead of only filling missing ones.',
     batchQueueButton: 'Queue Job',
     aiActionLanguageLabel: 'Language',
     aiGenerateDocTitle: 'Generate Documentation',
@@ -1060,7 +1205,8 @@ const messages: ProjectMessages = {
     aiGenerateDocButton: 'Generate Doc',
     aiGenerateTestButton: 'Generate Test',
     exampleCreateTitle: 'Create API Example',
-    exampleCreateDescription: 'Add a request/response example through POST /v1/projects/:id/api-specs/:sid/examples.',
+    exampleCreateDescription:
+      'Add a request/response example through POST /v1/projects/:id/api-specs/:sid/examples.',
     exampleNameLabel: 'Example Name',
     exampleNamePlaceholder: 'Successful login',
     exampleResponseStatusLabel: 'Response Status',
@@ -1075,21 +1221,25 @@ const messages: ProjectMessages = {
     deleteTitle: 'Delete API Spec',
     deleteDescription: 'This permanently removes {target} and its examples.',
     deleteFallbackTarget: 'the selected API spec',
-    deleteWarning: 'The backend immediately executes `DELETE /projects/:id/api-specs/:sid`, and the record cannot be restored.',
+    deleteWarning:
+      'The backend immediately executes `DELETE /projects/:id/api-specs/:sid`, and the record cannot be restored.',
   },
   testCasesPage: {
     title: 'Test Cases',
     backToProjectOverview: 'Back to Project Overview',
-    description: 'Manage project-scoped test cases through {listPath}, run them with {runPath}, and inspect history through {historyPath}.',
+    description:
+      'Manage project-scoped test cases through {listPath}, run them with {runPath}, and inspect history through {historyPath}.',
     totalCount: '{count} test cases',
     projectBadge: 'Project: {name}',
     create: 'New Test Case',
     generateFromSpec: 'Generate from Spec',
     openManagementActions: 'Open test case management actions',
     readOnlyTitle: 'Read-only access',
-    readOnlyDescription: 'You can browse test cases and run history, but creating, editing, duplicating, deleting, and executing tests requires write permission.',
+    readOnlyDescription:
+      'You can browse test cases and run history, but creating, editing, duplicating, deleting, and executing tests requires write permission.',
     noApiSpecsTitle: 'No API specs available',
-    noApiSpecsDescription: 'Test case generation depends on existing API specs. Start with an AI draft or create a spec first, then come back to generate coverage from it.',
+    noApiSpecsDescription:
+      'Test case generation depends on existing API specs. Start with an AI draft or create a spec first, then come back to generate coverage from it.',
     aiDraftSpecButton: 'AI Draft API Spec',
     aiSpecReadyTitle: 'AI spec ready for validation',
     aiSpecReadyDescription: 'Continue the flow by generating the first test case from {spec}.',
@@ -1109,10 +1259,12 @@ const messages: ProjectMessages = {
     filterByEnv: 'Filter by env',
     allEnvironments: 'All Environments',
     loadFailedTitle: 'Unable to load test cases',
-    loadFailedDescription: 'The current project test case list could not be loaded. Check your access or try again.',
+    loadFailedDescription:
+      'The current project test case list could not be loaded. Check your access or try again.',
     emptyTitle: 'No test cases found',
     emptyFilteredDescription: 'Adjust filters or the search keyword to see more results.',
-    emptyDefaultDescription: 'Create the first test case manually or bootstrap it from an API spec.',
+    emptyDefaultDescription:
+      'Create the first test case manually or bootstrap it from an API spec.',
     tableApiSpec: 'API Spec',
     tableEnv: 'Env',
     tableAssertions: 'Assertions',
@@ -1122,7 +1274,8 @@ const messages: ProjectMessages = {
     detailTitle: 'Test Case Detail',
     detailDescription: 'Inspect GET {path} and its associated run history.',
     noSelectionTitle: 'No test case selected',
-    noSelectionDescription: 'Pick a test case from the left table to inspect its full configuration and run history.',
+    noSelectionDescription:
+      'Pick a test case from the left table to inspect its full configuration and run history.',
     envBadge: 'Env: {env}',
     assertionsBadge: 'Assertions: {count}',
     run: 'Run',
@@ -1147,7 +1300,8 @@ const messages: ProjectMessages = {
     pathParamsEmpty: 'No path params configured.',
     requestBodyEmpty: 'No request body configured.',
     latestAdHocRun: 'Latest Ad Hoc Run',
-    latestAdHocRunDescription: 'This result was returned directly by the latest run call and may appear in history slightly later because the backend stores runs asynchronously.',
+    latestAdHocRunDescription:
+      'This result was returned directly by the latest run call and may appear in history slightly later because the backend stores runs asynchronously.',
     noRequestPayloadReturned: 'No request payload returned.',
     noResponsePayloadReturned: 'No response payload returned.',
     totalRuns: '{count} total runs',
@@ -1156,7 +1310,8 @@ const messages: ProjectMessages = {
     allStatuses: 'All statuses',
     refreshHistory: 'Refresh History',
     runHistoryLoadFailedTitle: 'Unable to load run history',
-    runHistoryLoadFailedDescription: 'The run history list could not be loaded for the current test case.',
+    runHistoryLoadFailedDescription:
+      'The run history list could not be loaded for the current test case.',
     noRunHistoryTitle: 'No run history yet',
     noRunHistoryDescription: 'Execute this test case to start generating run records.',
     tableDuration: 'Duration',
@@ -1169,9 +1324,11 @@ const messages: ProjectMessages = {
     createDialogTitle: 'Create Test Case',
     editDialogTitle: 'Edit Test Case',
     createDialogDescription: 'Create a project test case with POST /v1/projects/:id/test-cases.',
-    editDialogDescription: 'Update the current test case with PATCH /v1/projects/:id/test-cases/:tcid.',
+    editDialogDescription:
+      'Update the current test case with PATCH /v1/projects/:id/test-cases/:tcid.',
     formLoadFailedTitle: 'Unable to load test case details',
-    formLoadFailedDescription: 'The current test case is still loading. Close this dialog and try again.',
+    formLoadFailedDescription:
+      'The current test case is still loading. Close this dialog and try again.',
     apiSpecLabel: 'API Spec',
     selectApiSpec: 'Select API spec',
     environmentPlaceholder: 'staging',
@@ -1190,7 +1347,8 @@ const messages: ProjectMessages = {
     extractVarsJsonLabel: 'Extract Vars JSON',
     extractVarsJsonPlaceholder: '[{"name":"user_id","source":"body","path":"$.id"}]',
     duplicateDialogTitle: 'Duplicate Test Case',
-    duplicateDialogDescription: 'Duplicate the current test case with POST /v1/projects/:id/test-cases/:tcid/duplicate.',
+    duplicateDialogDescription:
+      'Duplicate the current test case with POST /v1/projects/:id/test-cases/:tcid/duplicate.',
     duplicateSourceLabel: 'Source:',
     unknownTestCase: 'Unknown test case',
     duplicateName: '{name} Copy',
@@ -1198,18 +1356,22 @@ const messages: ProjectMessages = {
     duplicateNamePlaceholder: 'Create user happy path copy',
     defaultName: 'Test {method} {path}',
     fromSpecDialogTitle: 'Create Test Case from API Spec',
-    fromSpecDialogDescription: 'Turn an existing API spec into the first runnable test case without rebuilding the request by hand.',
+    fromSpecDialogDescription:
+      'Turn an existing API spec into the first runnable test case without rebuilding the request by hand.',
     continueFromAiTitle: 'Continue from AI-generated spec',
-    continueFromAiDescription: 'The new spec {spec} was just created. Generate its first test case now to keep the authoring flow continuous.',
+    continueFromAiDescription:
+      'The new spec {spec} was just created. Generate its first test case now to keep the authoring flow continuous.',
     testCaseNameLabel: 'Test Case Name',
     fromSpecNamePlaceholder: 'Create user smoke test',
     useApiExample: 'Use API Example',
-    useApiExampleDescription: 'If the selected API spec already has examples, seed the test case with the request and response example data.',
+    useApiExampleDescription:
+      'If the selected API spec already has examples, seed the test case with the request and response example data.',
     useFirstExample: 'Use first example automatically',
     exampleOption: '{name} (HTTP {status})',
     loadingExamples: 'Loading examples...',
     runDialogTitle: 'Run Test Case',
-    runDialogDescription: 'Run the current test case with POST /v1/projects/:id/test-cases/:tcid/run and override the environment or variables if needed.',
+    runDialogDescription:
+      'Run the current test case with POST /v1/projects/:id/test-cases/:tcid/run and override the environment or variables if needed.',
     overrideEnvironment: 'Override Environment',
     useTestCaseEnv: 'Use test case env',
     globalVarsJsonLabel: 'Global Vars JSON',
@@ -1217,11 +1379,13 @@ const messages: ProjectMessages = {
     variableKeysJsonLabel: 'Variable Keys JSON',
     variableKeysJsonPlaceholder: '{"user_id":"42"}',
     deleteDialogTitle: 'Delete Test Case',
-    deleteDialogDescription: 'This action cannot be undone. Run history will also lose its direct entry point.',
+    deleteDialogDescription:
+      'This action cannot be undone. Run history will also lose its direct entry point.',
     deleteTargetDescription: 'You are deleting {name}.',
     deleteFallbackTarget: 'this test case',
     runDetailDialogTitle: 'Run Detail',
-    runDetailDialogDescription: 'Inspect the full request, response, and assertions returned by GET /v1/projects/:id/test-cases/:tcid/runs/:rid.',
+    runDetailDialogDescription:
+      'Inspect the full request, response, and assertions returned by GET /v1/projects/:id/test-cases/:tcid/runs/:rid.',
     runDetailLoadFailedTitle: 'Unable to load run detail',
     runDetailLoadFailedDescription: 'The run detail could not be loaded. Try again in a moment.',
     durationMs: '{value} ms',
@@ -1253,14 +1417,16 @@ const messages: ProjectMessages = {
   categoriesPage: {
     backToProjectOverview: 'Back to Project Overview',
     title: 'Categories',
-    description: 'Manage the category hierarchy for {projectName} and reuse it across API specs and other modules. Backend entry: {path}.',
+    description:
+      'Manage the category hierarchy for {projectName} and reuse it across API specs and other modules. Backend entry: {path}.',
     countCategories: '{count} categories',
     countSpecs: '{count} specs',
     selectableParents: '{count} selectable parents',
     createCategory: 'Create Category',
     openManagementActions: 'Open category management actions',
     readOnlyTitle: 'Read-only access',
-    readOnlyDescription: 'Your current role is {role}. You can inspect the category hierarchy, but cannot create, edit, sort, or delete.',
+    readOnlyDescription:
+      'Your current role is {role}. You can inspect the category hierarchy, but cannot create, edit, sort, or delete.',
     noProjectAccessTitle: 'No project access',
     noProjectAccessDescription: 'You do not have permission to view categories for this project.',
     totalCategories: 'Total Categories',
@@ -1273,13 +1439,15 @@ const messages: ProjectMessages = {
     withDescriptionDescription: 'Documented categories ready for reuse',
     withDescriptionFilteredDescription: 'Filtered results: {count}',
     registryTitle: 'Category Registry',
-    registryDescription: 'Hierarchy sourced from {path} and rendered as a local tree snapshot so hierarchy-aware sorting and selection stay stable.',
+    registryDescription:
+      'Hierarchy sourced from {path} and rendered as a local tree snapshot so hierarchy-aware sorting and selection stay stable.',
     visibleSummary: '{visible} visible of {total}',
     searchPlaceholder: 'Search by category name, description, or parent',
     sortingDisabled: 'Sorting is disabled while a local search filter is active.',
     sortingEnabled: 'Move up/down keeps the backend sort order aligned within each sibling group.',
     loadFailedTitle: 'Failed to load categories',
-    loadFailedDescription: 'The category list could not be loaded. Retry the request or confirm your project access.',
+    loadFailedDescription:
+      'The category list could not be loaded. Retry the request or confirm your project access.',
     tableName: 'Name',
     tableParent: 'Parent',
     tableOrder: 'Order',
@@ -1292,16 +1460,21 @@ const messages: ProjectMessages = {
     createChild: 'Create Child',
     moveUp: 'Move Up',
     moveDown: 'Move Down',
-    noCategoriesFound: 'No categories found. Create the first category to organize your project assets.',
+    noCategoriesFound:
+      'No categories found. Create the first category to organize your project assets.',
     noCategoriesMatched: 'No categories matched the current filter.',
     detailTitle: 'Category Detail',
-    detailDescription: 'Details from {path}, enriched with the loaded tree so parent/child relationships remain visible.',
+    detailDescription:
+      'Details from {path}, enriched with the loaded tree so parent/child relationships remain visible.',
     noCategoriesYetTitle: 'No categories yet',
-    noCategoriesYetDescription: 'Create a root category or a child category to start organizing API assets.',
+    noCategoriesYetDescription:
+      'Create a root category or a child category to start organizing API assets.',
     detailLoadFailedTitle: 'Failed to load category details',
-    detailLoadFailedDescription: 'The selected category details could not be loaded. Choose another record or retry refresh.',
+    detailLoadFailedDescription:
+      'The selected category details could not be loaded. Choose another record or retry refresh.',
     selectCategoryTitle: 'Select a category',
-    selectCategoryDescription: 'Pick a row from the registry to inspect its hierarchy and edit actions.',
+    selectCategoryDescription:
+      'Pick a row from the registry to inspect its hierarchy and edit actions.',
     childCategory: 'Child Category',
     orderBadge: 'Order {order}',
     categoryId: 'Category ID',
@@ -1314,7 +1487,8 @@ const messages: ProjectMessages = {
     childSpecs: 'API Specs',
     noChildren: 'No child categories under the selected node.',
     workspaceBehaviorTitle: 'Workspace behavior',
-    workspaceBehaviorDescription: 'This workspace keeps the full category tree loaded so search, sorting, and parent-child details remain consistent during edits. Delete actions stay conservative and avoid automatic reassignment.',
+    workspaceBehaviorDescription:
+      'This workspace keeps the full category tree loaded so search, sorting, and parent-child details remain consistent during edits. Delete actions stay conservative and avoid automatic reassignment.',
     connectedEndpointsTitle: 'Connected API Endpoints',
     connectedEndpointsDescription: 'Categories mounted in the current frontend workspace.',
     pageSummary: 'Page {page} of {pages}',
@@ -1325,7 +1499,8 @@ const messages: ProjectMessages = {
     projects: 'Projects',
     openProjectActions: 'Open project actions',
     projectNotFoundTitle: 'Project not found',
-    projectNotFoundDescription: 'The selected project could not be loaded. Check the project ID or your access.',
+    projectNotFoundDescription:
+      'The selected project could not be loaded. Check the project ID or your access.',
     openWorkspace: 'Open the workspace',
     nextStep: 'Next step',
     whyThisAction: 'Why this action',
@@ -1339,9 +1514,11 @@ const messages: ProjectMessages = {
     active: 'Active',
     optional: 'Optional',
     statsUnavailableTitle: 'Stats unavailable',
-    statsUnavailableDescription: 'Project stats could not be loaded. The workspace actions are still available.',
+    statsUnavailableDescription:
+      'Project stats could not be loaded. The workspace actions are still available.',
     workspaceModules: 'Workspace modules',
-    workspaceModulesDescription: 'Primary modules stay close to the workflow. Supporting modules are still one click away.',
+    workspaceModulesDescription:
+      'Primary modules stay close to the workflow. Supporting modules are still one click away.',
     openSpecs: 'Open specs',
     configure: 'Configure',
     openTests: 'Open tests',
@@ -1361,22 +1538,28 @@ const messages: ProjectMessages = {
     copiedSyncCommand: 'Copied sync command',
     copiedCliToken: 'Copied CLI token',
     supportingAreas: 'Supporting areas',
-    supportingAreasDescription: 'Use these after the core workflow needs team access, taxonomy, or orchestration.',
+    supportingAreasDescription:
+      'Use these after the core workflow needs team access, taxonomy, or orchestration.',
     members: 'Members',
     categories: 'Categories',
     flows: 'Flows',
     organize: 'Organize',
     loadingProject: 'Project signals are still loading, so the safest entry is the API workspace.',
-    loadingReason: 'The workspace keeps the core project resources in one place while stats finish loading.',
+    loadingReason:
+      'The workspace keeps the core project resources in one place while stats finish loading.',
     defineFirstApi: 'Define the first API surface',
-    defineFirstApiDescription: 'Start with one endpoint and turn it into a structured source of truth.',
+    defineFirstApiDescription:
+      'Start with one endpoint and turn it into a structured source of truth.',
     defineFirstApiReason: 'Docs, examples, and tests all depend on at least one API spec.',
     addRuntime: 'Add the first runtime target',
     addRuntimeDescription: 'Configure a base URL, variables, and headers before execution starts.',
-    addRuntimeReason: 'The API surface exists. One environment unlocks request runs and generated validation.',
+    addRuntimeReason:
+      'The API surface exists. One environment unlocks request runs and generated validation.',
     generateCoverage: 'Generate validation coverage',
-    generateCoverageDescription: 'Use the existing specs and environment baseline to create runnable tests.',
-    generateCoverageReason: 'The project has both a source of truth and runtime context. The next value is repeatable validation.',
+    generateCoverageDescription:
+      'Use the existing specs and environment baseline to create runnable tests.',
+    generateCoverageReason:
+      'The project has both a source of truth and runtime context. The next value is repeatable validation.',
     aiDraftApi: 'AI Draft API',
     quickRequest: 'Quick Request',
     configureEnvironment: 'Configure Environment',
@@ -1393,37 +1576,46 @@ const messages: ProjectMessages = {
     metricEnvironmentsDescription: 'Runnable targets and variables',
     metricCategoriesDescription: 'Resource organization',
     metricMembersDescription: 'People with project access',
-    shortcutApiSpecsDescription: 'Design endpoints, review AI drafts, and keep docs tied to the source of truth.',
+    shortcutApiSpecsDescription:
+      'Design endpoints, review AI drafts, and keep docs tied to the source of truth.',
     shortcutApiSpecsAction: 'Open specs',
-    shortcutEnvironmentsDescription: 'Set base URLs, headers, and variables before running requests or tests.',
+    shortcutEnvironmentsDescription:
+      'Set base URLs, headers, and variables before running requests or tests.',
     shortcutEnvironmentsAction: 'Configure',
-    shortcutTestCasesDescription: 'Generate and run validation coverage from the API specs already in this project.',
+    shortcutTestCasesDescription:
+      'Generate and run validation coverage from the API specs already in this project.',
     shortcutTestCasesAction: 'Open tests',
-    shortcutCollectionsDescription: 'Send quick requests and keep reusable request groups for manual debugging.',
+    shortcutCollectionsDescription:
+      'Send quick requests and keep reusable request groups for manual debugging.',
     shortcutCollectionsAction: 'Debug',
   },
   flowPage: {
     create: 'Create Flow',
     newFlow: 'New Flow',
     createDialogTitle: 'Create Flow',
-    createDialogDescription: 'Add a new HTTP test flow, then design the execution graph in the canvas.',
+    createDialogDescription:
+      'Add a new HTTP test flow, then design the execution graph in the canvas.',
     nameRequired: 'Flow name is required.',
     namePlaceholder: 'Auth chain',
-    descriptionPlaceholder: 'Describe what this flow validates and how variables move between steps.',
+    descriptionPlaceholder:
+      'Describe what this flow validates and how variables move between steps.',
     sidebarDescription: 'Design request graphs, save them, and stream execution in place.',
     hideSidebar: 'Hide flows sidebar',
     showSidebar: 'Show Flows',
     filterPlaceholder: 'Filter flows',
     loadFailedTitle: 'Unable to load flows',
-    loadFailedDescription: 'Refresh the workspace to retry loading this project\'s flows.',
+    loadFailedDescription: "Refresh the workspace to retry loading this project's flows.",
     emptyTitle: 'No flows yet',
-    emptyDescription: 'Create the first flow, then design request nodes and explicit variable mappings.',
+    emptyDescription:
+      'Create the first flow, then design request nodes and explicit variable mappings.',
     stepCount: '{count} steps',
     notFoundTitle: 'Flow not found',
     notFoundDescription: 'The selected flow no longer exists or the current item id is stale.',
     selectTitle: 'Select a flow',
-    selectDescriptionWithSidebar: 'Use the left sidebar to open an existing flow or create a new one for this project.',
-    selectDescriptionCollapsed: 'Use "Show Flows" to reopen the sidebar, then open an existing flow or create a new one.',
+    selectDescriptionWithSidebar:
+      'Use the left sidebar to open an existing flow or create a new one for this project.',
+    selectDescriptionCollapsed:
+      'Use "Show Flows" to reopen the sidebar, then open an existing flow or create a new one.',
     runEnvironment: 'Run Environment',
     runEnvironmentDefault: 'Project origin (default)',
     runLocal: 'Run Local',
@@ -1435,13 +1627,15 @@ const messages: ProjectMessages = {
     saved: 'Saved',
     validationTitle: 'Fix the flow before continuing',
     historyPanelTitle: 'Recent runs',
-    historyPanelDescription: 'Flow run history now lives in History. This panel keeps a quick view of the latest runs.',
+    historyPanelDescription:
+      'Flow run history now lives in History. This panel keeps a quick view of the latest runs.',
     openHistory: 'Open History',
     historyExecuted: 'Executed flow {name}',
     historyFailed: 'Flow {name} failed',
     historyCanceled: 'Flow {name} was canceled',
     heroTitleFallback: 'HTTP test flows',
-    heroDescription: 'Design HTTP request graphs, pass captures across edges, and inspect streamed execution without leaving the project workspace.',
+    heroDescription:
+      'Design HTTP request graphs, pass captures across edges, and inspect streamed execution without leaving the project workspace.',
     drawerTitle: 'Flow inspector',
     drawerDescription: 'Inspect the selected node, edge, or run history.',
   },
