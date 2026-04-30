@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   Bot,
   Boxes,
@@ -787,6 +787,7 @@ export function ProjectWorkspacePage({
     case 'histories':
       return (
         <HistoryWorkspaceSection
+          key={`histories:${initialHistoryEntityType?.trim() || 'all'}`}
           projectId={projectId}
           projectName={projectName}
           selectedItemId={selectedItemId}
@@ -2123,10 +2124,6 @@ function HistoryWorkspaceSection({
     initialEntityTypeFilter?.trim() || 'all'
   );
   const deferredSearch = useDeferredValue(searchQuery);
-
-  useEffect(() => {
-    setEntityTypeFilter(initialEntityTypeFilter?.trim() || 'all');
-  }, [initialEntityTypeFilter]);
 
   const historiesQuery = useProjectHistories({
     projectId: String(projectId),

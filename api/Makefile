@@ -1,6 +1,8 @@
 BINARY_NAME=kest-api
 SERVER_BINARY=kest-server
 OUTPUT_DIR=bin
+MAIN_PACKAGE=./cmd/api
+WIRE_PACKAGE=./internal/wiring
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -33,12 +35,12 @@ $(OUTPUT_DIR):
 # Build CLI binary for current platform (auto-runs wire first)
 build: wire $(OUTPUT_DIR)
 	@echo "Building $(BINARY_NAME)..."
-	go build $(LDFLAGS) -o $(OUTPUT_DIR)$(PATH_SEP)$(BINARY_NAME)$(BINARY_EXT) cmd/kest-api/main.go
+	go build $(LDFLAGS) -o $(OUTPUT_DIR)$(PATH_SEP)$(BINARY_NAME)$(BINARY_EXT) $(MAIN_PACKAGE)
 
 # Build server binary for current platform
 build-server: $(OUTPUT_DIR)
 	@echo "Building $(SERVER_BINARY)..."
-	go build $(LDFLAGS) -o $(OUTPUT_DIR)$(PATH_SEP)$(SERVER_BINARY)$(BINARY_EXT) cmd/server/main.go
+	go build $(LDFLAGS) -o $(OUTPUT_DIR)$(PATH_SEP)$(SERVER_BINARY)$(BINARY_EXT) $(MAIN_PACKAGE)
 
 # Build both binaries
 build-all: build build-server
@@ -47,24 +49,24 @@ build-all: build build-server
 # Build Windows binaries
 build-windows: $(OUTPUT_DIR)
 	@echo "Building Windows binaries..."
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME).exe cmd/kest-api/main.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY).exe cmd/server/main.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME).exe $(MAIN_PACKAGE)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY).exe $(MAIN_PACKAGE)
 	@echo "✅ Windows binaries built successfully"
 
 # Build Linux binaries
 build-linux: $(OUTPUT_DIR)
 	@echo "Building Linux binaries..."
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-linux cmd/kest-api/main.go
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY)-linux cmd/server/main.go
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-linux $(MAIN_PACKAGE)
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY)-linux $(MAIN_PACKAGE)
 	@echo "✅ Linux binaries built successfully"
 
 # Build macOS binaries (both Intel and Apple Silicon)
 build-darwin: $(OUTPUT_DIR)
 	@echo "Building macOS binaries..."
-	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-darwin-amd64 cmd/kest-api/main.go
-	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY)-darwin-amd64 cmd/server/main.go
-	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-darwin-arm64 cmd/kest-api/main.go
-	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY)-darwin-arm64 cmd/server/main.go
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PACKAGE)
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY)-darwin-amd64 $(MAIN_PACKAGE)
+	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PACKAGE)
+	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(SERVER_BINARY)-darwin-arm64 $(MAIN_PACKAGE)
 	@echo "✅ macOS binaries built successfully"
 
 # Build for all platforms
@@ -74,17 +76,17 @@ build-all-platforms: build-windows build-linux build-darwin
 # Production build with optimizations
 build-prod: wire $(OUTPUT_DIR)
 	@echo "Building production binaries..."
-	go build -ldflags="-s -w" -o $(OUTPUT_DIR)$(PATH_SEP)$(BINARY_NAME)$(BINARY_EXT) cmd/kest-api/main.go
-	go build -ldflags="-s -w" -o $(OUTPUT_DIR)$(PATH_SEP)$(SERVER_BINARY)$(BINARY_EXT) cmd/server/main.go
+	go build -ldflags="-s -w" -o $(OUTPUT_DIR)$(PATH_SEP)$(BINARY_NAME)$(BINARY_EXT) $(MAIN_PACKAGE)
+	go build -ldflags="-s -w" -o $(OUTPUT_DIR)$(PATH_SEP)$(SERVER_BINARY)$(BINARY_EXT) $(MAIN_PACKAGE)
 	@echo "✅ Production binaries built successfully"
 
 # Install CLI to $GOPATH/bin or /usr/local/bin
 install: build
 	@echo "Installing $(BINARY_NAME)..."
 ifeq ($(OS),Windows_NT)
-	go install $(LDFLAGS) ./cmd/kest-api
+	go install $(LDFLAGS) $(MAIN_PACKAGE)
 else
-	go install $(LDFLAGS) ./cmd/kest-api
+	go install $(LDFLAGS) $(MAIN_PACKAGE)
 endif
 	@echo "✅ $(BINARY_NAME) installed successfully"
 
@@ -136,8 +138,7 @@ generate:
 # Run Wire dependency injection
 wire:
 	@echo "Running Wire..."
-	@which wire > /dev/null || (echo "Installing wire..." && go install github.com/google/wire/cmd/wire@latest)
-	cd internal/wiring && wire
+	go generate $(WIRE_PACKAGE)
 
 # Generate API documentation (Swagger)
 docs:
@@ -153,7 +154,7 @@ mock:
 
 # Run development server
 dev:
-	go run cmd/server/main.go
+	go run $(MAIN_PACKAGE)
 
 # Run with Air hot-reload
 air:

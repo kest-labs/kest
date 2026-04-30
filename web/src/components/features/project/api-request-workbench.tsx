@@ -82,6 +82,7 @@ import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
 import { useCreateRequest, useDeleteRequest, useUpdateRequest } from '@/hooks/use-requests';
 import { requestService } from '@/services/request';
+import type { ScopedTranslations } from '@/i18n/shared';
 import type { ProjectCollection, ProjectCollectionTreeNode } from '@/types/collection';
 import type {
   CreateExampleRequest,
@@ -194,7 +195,7 @@ interface ImportDialogTarget {
 }
 
 type ImportDialogKind = 'postman' | 'markdown';
-type ProjectTranslationFn = (...args: any[]) => string;
+type ProjectTranslationFn = ScopedTranslations<'project'>;
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 const SECTION_ITEMS: RequestSection[] = [
   'params',
