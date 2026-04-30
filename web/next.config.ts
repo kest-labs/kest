@@ -15,7 +15,9 @@ const normalizeBasePath = (value: string) => {
   return withLeadingSlash.replace(/\/+$/, '');
 };
 
-const apiTarget = (process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kest.dev').replace(/\/$/, '');
+const defaultApiTarget =
+  process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:8025' : 'https://api.kest.dev';
+const apiTarget = (process.env.NEXT_PUBLIC_API_URL ?? defaultApiTarget).replace(/\/$/, '');
 const apiBasePath = normalizeBasePath(process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/v1');
 const apiProxyPath = normalizeBasePath(process.env.NEXT_PUBLIC_API_PROXY_PATH ?? '/api/proxy');
 const apiUseProxy = (process.env.NEXT_PUBLIC_API_USE_PROXY ?? 'true') === 'true';

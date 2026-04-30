@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const defaultApiUrl =
+  process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:8025' : 'https://api.kest.dev';
+
 /**
  * Extreme Purification: 
  * Only keep environment variables that MUST change between deploys.
@@ -7,7 +10,7 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
   // Only the API entry point
-  NEXT_PUBLIC_API_URL: z.string().default('https://api.kest.dev'),
+  NEXT_PUBLIC_API_URL: z.string().default(defaultApiUrl),
   NEXT_PUBLIC_API_BASE_PATH: z.string().default('/v1'),
   NEXT_PUBLIC_API_PROXY_PATH: z.string().default('/api/proxy'),
   NEXT_PUBLIC_API_USE_PROXY: z
