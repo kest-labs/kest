@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -51,13 +52,13 @@ func (r *repository) Update(workspace *WorkspacePO) error {
 
 // Delete soft deletes a workspace
 func (r *repository) Delete(id string) error {
-	return r.db.Delete(&WorkspacePO{}, id).Error
+	return dbutil.DeleteByID(r.db, &WorkspacePO{}, id).Error
 }
 
 // FindByID finds a workspace by ID
 func (r *repository) FindByID(id string) (*WorkspacePO, error) {
 	var workspace WorkspacePO
-	err := r.db.First(&workspace, id).Error
+	err := dbutil.ByID(r.db, id).First(&workspace).Error
 	if err != nil {
 		return nil, err
 	}

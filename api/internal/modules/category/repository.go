@@ -3,6 +3,7 @@ package category
 import (
 	"context"
 
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -32,7 +33,7 @@ func (r *repository) Create(ctx context.Context, category *CategoryPO) error {
 
 func (r *repository) GetByID(ctx context.Context, id string) (*CategoryPO, error) {
 	var category CategoryPO
-	if err := r.db.WithContext(ctx).First(&category, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&category).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -77,7 +78,7 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 			return err
 		}
 		// Delete the category
-		return tx.Delete(&CategoryPO{}, id).Error
+		return dbutil.DeleteByID(tx, &CategoryPO{}, id).Error
 	})
 }
 

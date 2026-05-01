@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -36,7 +37,7 @@ func (r *repository) Create(ctx context.Context, history *History) error {
 
 func (r *repository) GetByID(ctx context.Context, id string) (*History, error) {
 	var po HistoryPO
-	if err := r.db.WithContext(ctx).First(&po, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

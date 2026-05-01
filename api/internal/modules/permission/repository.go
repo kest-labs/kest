@@ -3,6 +3,7 @@ package permission
 import (
 	"context"
 
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -56,13 +57,13 @@ func (r *repository) UpdateRole(ctx context.Context, role *Role) error {
 
 // DeleteRole deletes a role by ID
 func (r *repository) DeleteRole(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&Role{}, id).Error
+	return dbutil.DeleteByID(r.db.WithContext(ctx), &Role{}, id).Error
 }
 
 // FindRoleByID finds a role by ID
 func (r *repository) FindRoleByID(ctx context.Context, id string) (*Role, error) {
 	var role Role
-	if err := r.db.WithContext(ctx).First(&role, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&role).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil

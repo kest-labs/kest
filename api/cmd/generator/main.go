@@ -371,13 +371,13 @@ func (r *{{.ModelName}}RepositoryImpl) Update(ctx context.Context, model *{{.Mod
 
 // Delete deletes a {{.ModelName}}
 func (r *{{.ModelName}}RepositoryImpl) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&{{.ModelName}}{}, id).Error
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&{{.ModelName}}{}).Error
 }
 
 // Get retrieves a {{.ModelName}}
 func (r *{{.ModelName}}RepositoryImpl) Get(ctx context.Context, id uint) (*{{.ModelName}}, error) {
 	var model {{.ModelName}}
-	err := r.db.WithContext(ctx).First(&model, id).Error
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error
 	if err != nil {
 		return nil, err
 	}

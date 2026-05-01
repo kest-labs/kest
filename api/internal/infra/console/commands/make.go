@@ -764,13 +764,13 @@ func (r *repository) Update(ctx context.Context, model *{{.ModelName}}) error {
 
 // Delete soft deletes a record
 func (r *repository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&{{.ModelName}}{}, id).Error
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&{{.ModelName}}{}).Error
 }
 
 // FindByID finds a record by ID
 func (r *repository) FindByID(ctx context.Context, id uint) (*{{.ModelName}}, error) {
 	var model {{.ModelName}}
-	if err := r.db.WithContext(ctx).First(&model, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		return nil, err
 	}
 	return &model, nil

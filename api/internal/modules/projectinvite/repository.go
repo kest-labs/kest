@@ -8,6 +8,7 @@ import (
 
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -105,7 +106,7 @@ func (r *repository) UpdateInvitation(ctx context.Context, invitation *ProjectIn
 
 func (r *repository) GetProjectSummary(ctx context.Context, projectID string) (*ProjectSummary, error) {
 	var po project.ProjectPO
-	if err := r.db.WithContext(ctx).First(&po, projectID).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), projectID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -65,7 +66,7 @@ func (r *repository) CreateFlow(ctx context.Context, flow *FlowPO) error {
 
 func (r *repository) GetFlowByID(ctx context.Context, id string) (*FlowPO, error) {
 	var flow FlowPO
-	if err := r.db.WithContext(ctx).First(&flow, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&flow).Error; err != nil {
 		return nil, err
 	}
 	return &flow, nil
@@ -85,7 +86,7 @@ func (r *repository) UpdateFlow(ctx context.Context, flow *FlowPO) error {
 }
 
 func (r *repository) DeleteFlow(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&FlowPO{}, id).Error
+	return dbutil.DeleteByID(r.db.WithContext(ctx), &FlowPO{}, id).Error
 }
 
 // --- Step ---
@@ -96,7 +97,7 @@ func (r *repository) CreateStep(ctx context.Context, step *FlowStepPO) error {
 
 func (r *repository) GetStepByID(ctx context.Context, id string) (*FlowStepPO, error) {
 	var step FlowStepPO
-	if err := r.db.WithContext(ctx).First(&step, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&step).Error; err != nil {
 		return nil, err
 	}
 	return &step, nil
@@ -116,7 +117,7 @@ func (r *repository) UpdateStep(ctx context.Context, step *FlowStepPO) error {
 }
 
 func (r *repository) DeleteStep(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&FlowStepPO{}, id).Error
+	return dbutil.DeleteByID(r.db.WithContext(ctx), &FlowStepPO{}, id).Error
 }
 
 func (r *repository) DeleteStepsByFlow(ctx context.Context, flowID string) error {
@@ -131,7 +132,7 @@ func (r *repository) CreateEdge(ctx context.Context, edge *FlowEdgePO) error {
 
 func (r *repository) GetEdgeByID(ctx context.Context, id string) (*FlowEdgePO, error) {
 	var edge FlowEdgePO
-	if err := r.db.WithContext(ctx).First(&edge, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&edge).Error; err != nil {
 		return nil, err
 	}
 	return &edge, nil
@@ -150,7 +151,7 @@ func (r *repository) UpdateEdge(ctx context.Context, edge *FlowEdgePO) error {
 }
 
 func (r *repository) DeleteEdge(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&FlowEdgePO{}, id).Error
+	return dbutil.DeleteByID(r.db.WithContext(ctx), &FlowEdgePO{}, id).Error
 }
 
 func (r *repository) DeleteEdgesByFlow(ctx context.Context, flowID string) error {
@@ -165,7 +166,7 @@ func (r *repository) CreateRun(ctx context.Context, run *FlowRunPO) error {
 
 func (r *repository) GetRunByID(ctx context.Context, id string) (*FlowRunPO, error) {
 	var run FlowRunPO
-	if err := r.db.WithContext(ctx).First(&run, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&run).Error; err != nil {
 		return nil, err
 	}
 	return &run, nil

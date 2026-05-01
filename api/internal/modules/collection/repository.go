@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -49,7 +50,7 @@ func (r *repository) Create(ctx context.Context, collection *Collection) error {
 
 func (r *repository) GetByID(ctx context.Context, id string) (*Collection, error) {
 	var po CollectionPO
-	if err := r.db.WithContext(ctx).First(&po, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -75,7 +76,7 @@ func (r *repository) Update(ctx context.Context, collection *Collection) error {
 }
 
 func (r *repository) Delete(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&CollectionPO{}, id).Error
+	return dbutil.DeleteByID(r.db.WithContext(ctx), &CollectionPO{}, id).Error
 }
 
 func (r *repository) List(ctx context.Context, projectID string, offset, limit int) ([]*Collection, int64, error) {

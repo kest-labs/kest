@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
 )
 
@@ -45,13 +46,13 @@ func (r *repository) Update(ctx context.Context, user *domain.User) error {
 
 // Delete removes a user by ID
 func (r *repository) Delete(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Delete(&UserPO{}, id).Error
+	return dbutil.DeleteByID(r.db.WithContext(ctx), &UserPO{}, id).Error
 }
 
 // FindByID retrieves a user by ID
 func (r *repository) FindByID(ctx context.Context, id string) (*domain.User, error) {
 	var po UserPO
-	if err := r.db.WithContext(ctx).First(&po, id).Error; err != nil {
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&po).Error; err != nil {
 		return nil, err
 	}
 	return po.toDomain(), nil
