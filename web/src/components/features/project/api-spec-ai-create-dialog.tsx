@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Bot, FileJson2, HelpCircle, Sparkles, WandSparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { CategoryOption } from '@/components/features/project/category-helpers';
 import type {
   AcceptApiSpecAIDraftRequest,
@@ -59,6 +60,15 @@ const REFINE_FIELDS = [
   { value: 'responses', label: 'Responses' },
   { value: 'tags', label: 'Tags' },
 ];
+const DRAFT_REQUIRED_HELP = 'Generate a draft to unlock Create Spec and post-create options.';
+const DRAFT_GENERATING_HELP =
+  'Draft generation is in progress. Create Spec and post-create options will unlock when it finishes.';
+const DRAFT_OPTIONS_DISABLED_REASON =
+  'Wait for draft generation to finish before changing these options.';
+const GENERATE_DRAFT_DISABLED_REASON =
+  'Finish the current draft action before starting a new generation.';
+const CREATE_SPEC_DISABLED_REASON =
+  'Wait for draft generation to finish before creating the spec.';
 
 interface EditableDraftState {
   categoryId: string;
@@ -150,6 +160,35 @@ const isAbortError = (error: unknown) =>
     : error instanceof Error
       ? error.name === 'AbortError' || error.message.toLowerCase().includes('aborted')
       : false;
+
+function DisabledReasonTooltip({
+  children,
+  disabled,
+  reason,
+  className = 'inline-flex',
+}: {
+  children: ReactNode;
+  disabled: boolean;
+  reason?: string;
+  className?: string;
+}) {
+  if (!disabled || !reason) {
+    return <>{children}</>;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} title={reason} aria-label={reason} className={className}>
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-64 text-center">
+        {reason}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 function DraftGenerationPreview({
   status,
@@ -295,6 +334,11 @@ function ApiSpecAICreateDialogContent({
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [didDraftGenerationFail, setDidDraftGenerationFail] = useState(false);
   const draftAbortRef = useRef<AbortController | null>(null);
+  const footerHelperMessage = isGeneratingDraft ? DRAFT_GENERATING_HELP : DRAFT_REQUIRED_HELP;
+  const draftOptionDisableReason = draft && isGeneratingDraft ? DRAFT_OPTIONS_DISABLED_REASON : undefined;
+  const generateDraftDisableReason =
+    isSubmittingAccept || isSubmittingRefine ? GENERATE_DRAFT_DISABLED_REASON : undefined;
+  const createSpecDisableReason = draft && isGeneratingDraft ? CREATE_SPEC_DISABLED_REASON : undefined;
 
   useEffect(() => {
     if (!isGeneratingDraft) {
@@ -969,30 +1013,54 @@ function ApiSpecAICreateDialogContent({
 
       <DialogFooter className="justify-between gap-3 border-t border-border/60 pt-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={generateDoc}
-              onCheckedChange={setGenerateDoc}
-              disabled={!draft || isGeneratingDraft}
-            />
-            <span className="text-sm text-muted-foreground">Generate Doc</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={generateTest}
-              onCheckedChange={setGenerateTest}
-              disabled={!draft || isGeneratingDraft}
-            />
-            <span className="text-sm text-muted-foreground">Generate Test</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={continueToTests}
-              onCheckedChange={setContinueToTests}
-              disabled={!draft || isGeneratingDraft}
-            />
-            <span className="text-sm text-muted-foreground">Open Test Cases after Create</span>
-          </div>
+          {draft ? (
+            <>
+              <DisabledReasonTooltip
+                disabled={Boolean(draftOptionDisableReason)}
+                reason={draftOptionDisableReason}
+              >
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={generateDoc}
+                    onCheckedChange={setGenerateDoc}
+                    disabled={isGeneratingDraft}
+                    className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
+                  />
+                  <span className="text-sm text-muted-foreground">Generate Doc</span>
+                </div>
+              </DisabledReasonTooltip>
+              <DisabledReasonTooltip
+                disabled={Boolean(draftOptionDisableReason)}
+                reason={draftOptionDisableReason}
+              >
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={generateTest}
+                    onCheckedChange={setGenerateTest}
+                    disabled={isGeneratingDraft}
+                    className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
+                  />
+                  <span className="text-sm text-muted-foreground">Generate Test</span>
+                </div>
+              </DisabledReasonTooltip>
+              <DisabledReasonTooltip
+                disabled={Boolean(draftOptionDisableReason)}
+                reason={draftOptionDisableReason}
+              >
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={continueToTests}
+                    onCheckedChange={setContinueToTests}
+                    disabled={isGeneratingDraft}
+                    className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
+                  />
+                  <span className="text-sm text-muted-foreground">Open Test Cases after Create</span>
+                </div>
+              </DisabledReasonTooltip>
+            </>
+          ) : (
+            <p className="max-w-md text-sm text-muted-foreground">{footerHelperMessage}</p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -1003,24 +1071,42 @@ function ApiSpecAICreateDialogContent({
           >
             {isGeneratingDraft ? 'Cancel Generation' : 'Cancel'}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            loading={isGeneratingDraft}
-            disabled={isSubmittingAccept || isSubmittingRefine}
-            onClick={() => void handleGenerateDraft()}
+          <DisabledReasonTooltip
+            disabled={Boolean(generateDraftDisableReason)}
+            reason={generateDraftDisableReason}
           >
-            <Sparkles className="h-4 w-4" />
-            {didDraftGenerationFail ? 'Retry Draft' : draft ? 'Regenerate Draft' : 'Generate Draft'}
-          </Button>
-          <Button
-            type="button"
-            loading={isSubmittingAccept}
-            onClick={() => void handleAccept()}
-            disabled={!draft || isGeneratingDraft}
-          >
-            Create Spec
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              loading={isGeneratingDraft}
+              disabled={isSubmittingAccept || isSubmittingRefine}
+              onClick={() => void handleGenerateDraft()}
+              className={generateDraftDisableReason ? 'pointer-events-none' : undefined}
+            >
+              <Sparkles className="h-4 w-4" />
+              {didDraftGenerationFail
+                ? 'Retry Draft'
+                : draft
+                  ? 'Regenerate Draft'
+                  : 'Generate Draft'}
+            </Button>
+          </DisabledReasonTooltip>
+          {draft ? (
+            <DisabledReasonTooltip
+              disabled={Boolean(createSpecDisableReason)}
+              reason={createSpecDisableReason}
+            >
+              <Button
+                type="button"
+                loading={isSubmittingAccept}
+                onClick={() => void handleAccept()}
+                disabled={isGeneratingDraft}
+                className={createSpecDisableReason ? 'pointer-events-none' : undefined}
+              >
+                Create Spec
+              </Button>
+            </DisabledReasonTooltip>
+          ) : null}
         </div>
       </DialogFooter>
     </DialogContent>
