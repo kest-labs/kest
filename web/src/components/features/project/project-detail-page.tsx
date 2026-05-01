@@ -241,33 +241,6 @@ const getStepIconClassName = (tone: StepTone) => {
   }
 };
 
-function MetricTile({
-  title,
-  value,
-  description,
-  icon: Icon,
-}: {
-  title: string;
-  value: string | number;
-  description: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <div className="rounded-xl border border-border/60 bg-background p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-text-muted">{title}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-text-main">{value}</p>
-          <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p>
-        </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-text-muted">
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function WorkflowStepRow({ step }: { step: WorkflowStep }) {
   const Icon = step.icon;
   const StatusIcon = step.tone === 'ready' ? CheckCircle2 : Clock3;
@@ -291,40 +264,6 @@ function WorkflowStepRow({ step }: { step: WorkflowStep }) {
           </Badge>
         </div>
         <p className="mt-1 text-sm leading-6 text-text-muted">{step.detail}</p>
-      </div>
-    </Link>
-  );
-}
-
-function ModuleShortcut({
-  title,
-  description,
-  href,
-  icon: Icon,
-  actionLabel,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: LucideIcon;
-  actionLabel: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex min-h-[150px] flex-col justify-between rounded-xl border border-border/60 bg-background p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
-    >
-      <div className="space-y-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-text-muted group-hover:bg-primary/10 group-hover:text-primary">
-          <Icon className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-text-main">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center gap-2 text-sm font-medium text-primary">
-        {actionLabel}
       </div>
     </Link>
   );
@@ -597,88 +536,6 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
               </div>
             </section>
           </div>
-
-          {projectStatsQuery.isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="h-32 animate-pulse rounded-xl border bg-muted/30" />
-              ))}
-            </div>
-          ) : projectStats ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricTile
-                title={t('modules.apiSpecs.label')}
-                value={projectStats.api_spec_count}
-                description={t('projectDetail.metricApiSpecsDescription')}
-                icon={FileJson2}
-              />
-              <MetricTile
-                title={t('modules.environments.label')}
-                value={projectStats.environment_count}
-                description={t('projectDetail.metricEnvironmentsDescription')}
-                icon={Globe}
-              />
-              <MetricTile
-                title={t('modules.categories.label')}
-                value={projectStats.category_count}
-                description={t('projectDetail.metricCategoriesDescription')}
-                icon={Tags}
-              />
-              <MetricTile
-                title={t('modules.members.label')}
-                value={projectStats.member_count}
-                description={t('projectDetail.metricMembersDescription')}
-                icon={Users}
-              />
-            </div>
-          ) : (
-            <Alert>
-              <AlertTitle>{t('projectDetail.statsUnavailableTitle')}</AlertTitle>
-              <AlertDescription>{t('projectDetail.statsUnavailableDescription')}</AlertDescription>
-            </Alert>
-          )}
-
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                {t('projectDetail.workspaceModules')}
-              </h2>
-              <p className="mt-1 text-sm text-text-muted">
-                {t('projectDetail.workspaceModulesDescription')}
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <ModuleShortcut
-                title={t('modules.apiSpecs.label')}
-                description={t('projectDetail.shortcutApiSpecsDescription')}
-                href={buildProjectApiSpecsRoute(projectId)}
-                icon={FileJson2}
-                actionLabel={t('projectDetail.shortcutApiSpecsAction')}
-              />
-              <ModuleShortcut
-                title={t('modules.environments.label')}
-                description={t('projectDetail.shortcutEnvironmentsDescription')}
-                href={buildProjectEnvironmentsRoute(projectId)}
-                icon={Globe}
-                actionLabel={t('projectDetail.shortcutEnvironmentsAction')}
-              />
-              <ModuleShortcut
-                title={t('modules.testCases.label')}
-                description={t('projectDetail.shortcutTestCasesDescription')}
-                href={buildProjectTestCasesRoute(projectId)}
-                icon={FlaskConical}
-                actionLabel={t('projectDetail.shortcutTestCasesAction')}
-              />
-              <ModuleShortcut
-                title={t('modules.collections.label')}
-                description={t('projectDetail.shortcutCollectionsDescription')}
-                href={buildProjectCollectionsRoute(projectId)}
-                icon={FolderOpen}
-                actionLabel={t('projectDetail.shortcutCollectionsAction')}
-              />
-            </div>
-          </section>
 
           <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <Card className="border-border/60 shadow-none">
