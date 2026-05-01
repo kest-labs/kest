@@ -82,7 +82,7 @@ import {
   useAcceptApiSpecAIDraft,
   useApiSpecFull,
   useApiSpecs,
-  useCreateApiSpecAIDraft,
+  useCreateApiSpecAIDraftStream,
   useCreateApiSpec,
   useProjectApiCategories,
   useRefineApiSpecAIDraft,
@@ -833,7 +833,7 @@ function ApiSpecsWorkspaceSection({
   const selectedSpecQuery = useApiSpecFull(projectId, selectedItemId ?? undefined);
   const categoriesQuery = useProjectApiCategories(projectId);
   const createSpecMutation = useCreateApiSpec(projectId);
-  const createAIDraftMutation = useCreateApiSpecAIDraft(projectId);
+  const createAIDraftStream = useCreateApiSpecAIDraftStream(projectId);
   const refineAIDraftMutation = useRefineApiSpecAIDraft(projectId);
   const acceptAIDraftMutation = useAcceptApiSpecAIDraft(projectId);
 
@@ -1162,10 +1162,9 @@ function ApiSpecsWorkspaceSection({
         onOpenChange={handleAICreateOpenChange}
         projectId={projectId}
         categories={categoryOptions}
-        isSubmittingDraft={createAIDraftMutation.isPending}
         isSubmittingRefine={refineAIDraftMutation.isPending}
         isSubmittingAccept={acceptAIDraftMutation.isPending}
-        onCreateDraft={payload => createAIDraftMutation.mutateAsync(payload)}
+        onCreateDraft={(payload, options) => createAIDraftStream.create(payload, options)}
         onRefineDraft={(draftId, payload) =>
           refineAIDraftMutation.mutateAsync({
             draftId,

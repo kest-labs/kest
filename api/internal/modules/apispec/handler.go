@@ -2,7 +2,9 @@ package apispec
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -253,6 +255,100 @@ func (h *Handler) CreateAIDraft(c *gin.Context) {
 	}
 
 	response.Created(c, draft)
+}
+
+type aiDraftStreamEvent struct {
+	name string
+	data interface{}
+}
+
+// CreateAIDraftStream generates a structured AI draft and streams status/token updates over SSE.
+func (h *Handler) CreateAIDraftStream(c *gin.Context) {
+	projectID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := getCurrentUserID(c)
+	if !ok {
+		response.Unauthorized(c, "Authentication required")
+		return
+	}
+
+	var req CreateAPISpecAIDraftRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Flush()
+
+	events := make(chan aiDraftStreamEvent, 64)
+	sendEvent := func(name string, data interface{}) bool {
+		select {
+		case <-c.Request.Context().Done():
+			return false
+		case events <- aiDraftStreamEvent{name: name, data: data}:
+			return true
+		}
+	}
+
+	go func() {
+		defer close(events)
+
+		draft, err := h.service.CreateAIDraftStream(
+			c.Request.Context(),
+			projectID,
+			userID,
+			&req,
+			AIDraftStreamCallbacks{
+				OnStatus: func(status string) {
+					sendEvent("status", gin.H{"message": status})
+				},
+				OnToken: func(token string) {
+					sendEvent("token", gin.H{"content": token})
+				},
+			},
+		)
+		if err != nil {
+			if errors.Is(err, context.Canceled) && c.Request.Context().Err() != nil {
+				return
+			}
+
+			sendEvent("error", gin.H{"message": h.streamAIDraftErrorMessage(err)})
+			return
+		}
+
+		sendEvent("result", draft)
+	}()
+
+	c.Stream(func(w io.Writer) bool {
+		event, ok := <-events
+		if !ok {
+			fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+			return false
+		}
+
+		payload, _ := json.Marshal(event.data)
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.name, string(payload))
+		return true
+	})
+}
+
+func (h *Handler) streamAIDraftErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, ErrAIUnavailable):
+		return err.Error()
+	case errors.Is(err, ErrInvalidSpecData):
+		return err.Error()
+	case errors.Is(err, context.DeadlineExceeded):
+		return "AI draft generation timed out"
+	default:
+		return err.Error()
+	}
 }
 
 // GetAIDraft fetches a stored AI draft by ID.

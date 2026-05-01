@@ -21,17 +21,43 @@ var (
 
 var pathParameterPattern = regexp.MustCompile(`[:{]([A-Za-z0-9_]+)[}]?`)
 
+type AIDraftStreamCallbacks struct {
+	OnStatus func(status string)
+	OnToken  func(token string)
+}
+
 func (s *service) CreateAIDraft(
 	ctx context.Context,
 	projectID string,
 	userID string,
 	req *CreateAPISpecAIDraftRequest,
 ) (*APISpecAIDraftResponse, error) {
+	return s.createAIDraft(ctx, projectID, userID, req, AIDraftStreamCallbacks{})
+}
+
+func (s *service) CreateAIDraftStream(
+	ctx context.Context,
+	projectID string,
+	userID string,
+	req *CreateAPISpecAIDraftRequest,
+	callbacks AIDraftStreamCallbacks,
+) (*APISpecAIDraftResponse, error) {
+	return s.createAIDraft(ctx, projectID, userID, req, callbacks)
+}
+
+func (s *service) createAIDraft(
+	ctx context.Context,
+	projectID string,
+	userID string,
+	req *CreateAPISpecAIDraftRequest,
+	callbacks AIDraftStreamCallbacks,
+) (*APISpecAIDraftResponse, error) {
 	client, err := newConfiguredLLMClient()
 	if err != nil {
 		return nil, err
 	}
 
+	emitStatus(callbacks, "Analyzing project conventions")
 	specs, err := s.repo.ListAllSpecs(ctx, projectID)
 	if err != nil {
 		return nil, err
@@ -40,18 +66,30 @@ func (s *service) CreateAIDraft(
 	conventions := conventionsForPrompt(specs, req.UseProjectConventions)
 	references := selectAIDraftReferences(req, specs)
 
-	llmCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	llmCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 
-	raw, err := client.complete(
-		llmCtx,
-		getAIDraftSystemPrompt(normalizeAIDraftLang(req.Lang)),
-		buildCreateAIDraftPrompt(req, conventions, references),
-	)
+	emitStatus(callbacks, "Generating structured draft")
+	var raw string
+	if callbacks.OnToken != nil {
+		raw, err = client.completeStream(
+			llmCtx,
+			getAIDraftSystemPrompt(normalizeAIDraftLang(req.Lang)),
+			buildCreateAIDraftPrompt(req, conventions, references),
+			callbacks.OnToken,
+		)
+	} else {
+		raw, err = client.complete(
+			llmCtx,
+			getAIDraftSystemPrompt(normalizeAIDraftLang(req.Lang)),
+			buildCreateAIDraftPrompt(req, conventions, references),
+		)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate AI draft: %w", err)
 	}
 
+	emitStatus(callbacks, "Validating generated draft")
 	output, err := parseAIDraftLLMOutput(raw)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse AI draft output: %w", err)
@@ -91,6 +129,7 @@ func (s *service) CreateAIDraft(
 		return nil, err
 	}
 
+	emitStatus(callbacks, "Saving draft")
 	po := &APISpecAIDraftPO{
 		ProjectID:     projectID,
 		CreatedBy:     userID,
@@ -108,7 +147,14 @@ func (s *service) CreateAIDraft(
 		return nil, err
 	}
 
+	emitStatus(callbacks, "Draft ready")
 	return fromAIDraftPO(po)
+}
+
+func emitStatus(callbacks AIDraftStreamCallbacks, status string) {
+	if callbacks.OnStatus != nil && strings.TrimSpace(status) != "" {
+		callbacks.OnStatus(status)
+	}
 }
 
 func (s *service) GetAIDraft(ctx context.Context, projectID, draftID string) (*APISpecAIDraftResponse, error) {
@@ -152,7 +198,7 @@ func (s *service) RefineAIDraft(
 		currentDraft = normalizeAIDraftSpec(req.CurrentDraft, seed, stored.Conventions)
 	}
 
-	llmCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	llmCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 
 	raw, err := client.complete(

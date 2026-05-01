@@ -1,9 +1,11 @@
 package apispec
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,6 +31,7 @@ type chatRequest struct {
 	Messages    []chatMessage `json:"messages"`
 	MaxTokens   int           `json:"max_tokens,omitempty"`
 	Temperature float64       `json:"temperature,omitempty"`
+	Stream      bool          `json:"stream,omitempty"`
 }
 
 type chatChoice struct {
@@ -37,6 +40,23 @@ type chatChoice struct {
 
 type chatResponse struct {
 	Choices []chatChoice `json:"choices"`
+	Error   *struct {
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+}
+
+type chatStreamDelta struct {
+	Content string `json:"content"`
+}
+
+type chatStreamChoice struct {
+	Delta        chatStreamDelta `json:"delta"`
+	Message      chatMessage     `json:"message"`
+	FinishReason *string         `json:"finish_reason"`
+}
+
+type chatStreamResponse struct {
+	Choices []chatStreamChoice `json:"choices"`
 	Error   *struct {
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
@@ -95,6 +115,128 @@ func (c *llmClient) complete(ctx context.Context, system, user string) (string, 
 		return "", fmt.Errorf("LLM returned no choices")
 	}
 	return strings.TrimSpace(result.Choices[0].Message.Content), nil
+}
+
+// completeStream calls the chat completions endpoint with stream=true and emits token deltas.
+func (c *llmClient) completeStream(
+	ctx context.Context,
+	system string,
+	user string,
+	onDelta func(chunk string),
+) (string, error) {
+	payload := chatRequest{
+		Model: c.model,
+		Messages: []chatMessage{
+			{Role: "system", Content: system},
+			{Role: "user", Content: user},
+		},
+		MaxTokens:   2048,
+		Temperature: 0.3,
+		Stream:      true,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	endpoint := strings.TrimSuffix(c.baseURL, "/") + "/chat/completions"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	timeout := c.timeout
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+	client := &http.Client{Timeout: timeout}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("LLM request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		raw, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("LLM API error (%d): %s", resp.StatusCode, strings.TrimSpace(string(raw)))
+	}
+
+	reader := bufio.NewReader(resp.Body)
+	var full strings.Builder
+	dataLines := make([]string, 0, 4)
+
+	flushEvent := func() (bool, error) {
+		if len(dataLines) == 0 {
+			return false, nil
+		}
+
+		payload := strings.Join(dataLines, "\n")
+		dataLines = dataLines[:0]
+		if payload == "[DONE]" {
+			return true, nil
+		}
+
+		var result chatStreamResponse
+		if err := json.Unmarshal([]byte(payload), &result); err != nil {
+			return false, fmt.Errorf("failed to parse LLM stream chunk: %w", err)
+		}
+		if result.Error != nil {
+			return false, fmt.Errorf("LLM API error: %s", result.Error.Message)
+		}
+
+		for _, choice := range result.Choices {
+			chunk := choice.Delta.Content
+			if chunk == "" {
+				chunk = choice.Message.Content
+			}
+			if chunk == "" {
+				continue
+			}
+			full.WriteString(chunk)
+			if onDelta != nil {
+				onDelta(chunk)
+			}
+		}
+
+		return false, nil
+	}
+
+	for {
+		line, readErr := reader.ReadString('\n')
+		if readErr != nil && !errors.Is(readErr, io.EOF) {
+			return "", fmt.Errorf("failed to read LLM stream: %w", readErr)
+		}
+
+		trimmed := strings.TrimRight(line, "\r\n")
+		if trimmed == "" {
+			done, err := flushEvent()
+			if err != nil {
+				return "", err
+			}
+			if done {
+				return strings.TrimSpace(full.String()), nil
+			}
+		} else if strings.HasPrefix(trimmed, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(trimmed[5:]))
+		}
+
+		if errors.Is(readErr, io.EOF) {
+			done, err := flushEvent()
+			if err != nil {
+				return "", err
+			}
+			if done {
+				return strings.TrimSpace(full.String()), nil
+			}
+			break
+		}
+	}
+
+	return strings.TrimSpace(full.String()), nil
 }
 
 // buildDocPrompt builds the user prompt for generating API documentation.
