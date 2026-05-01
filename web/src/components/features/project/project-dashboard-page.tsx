@@ -25,7 +25,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { ActionMenu } from '@/components/features/project/action-menu';
 import {
   DeleteProjectDialog,
   ProjectFormDialog,
@@ -124,7 +123,6 @@ export function ProjectDashboardPage() {
   const createProjectMutation = useCreateProject();
   const deleteProjectMutation = useDeleteProject();
   const updateProjectMutation = useUpdateProject();
-  const deleteProjectMutation = useDeleteProject();
 
   const projects = projectsQuery.data?.items ?? EMPTY_PROJECTS;
   const previewProjectId = normalizeProjectId(searchParams.get('preview'));

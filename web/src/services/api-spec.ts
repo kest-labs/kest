@@ -1,5 +1,9 @@
+import { buildApiUrl } from '@/config/api';
+import { ApiError } from '@/http/request';
 import request from '@/http';
+import { getAuthTokens } from '@/store/auth-store';
 import type {
+  ApiSpecAIDraftStreamOptions,
   AcceptApiSpecAIDraftRequest,
   AcceptApiSpecAIDraftResponse,
   ApiSpec,
@@ -60,6 +64,86 @@ const normalizePublicApiSpecShare = (share: PublicApiSpecShare): PublicApiSpecSh
       : {},
 });
 
+const readAIDraftStreamEvent = (
+  chunk: string,
+  handlers: {
+    onStatus: (status: string) => void;
+    onToken: (token: string) => void;
+    onResult: (draft: ApiSpecAIDraft) => void;
+    onError: (message: string) => void;
+  }
+) => {
+  const lines = chunk
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  let eventName = 'message';
+  const dataParts: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith('event:')) {
+      eventName = line.slice(6).trim();
+      continue;
+    }
+
+    if (line.startsWith('data:')) {
+      dataParts.push(line.slice(5).trim());
+    }
+  }
+
+  if (dataParts.length === 0 || eventName === 'done') {
+    return;
+  }
+
+  try {
+    const payload = JSON.parse(dataParts.join('\n')) as
+      | { message?: string }
+      | { content?: string }
+      | ApiSpecAIDraft;
+
+    if (eventName === 'status') {
+      handlers.onStatus((payload as { message?: string }).message ?? '');
+      return;
+    }
+
+    if (eventName === 'token') {
+      handlers.onToken((payload as { content?: string }).content ?? '');
+      return;
+    }
+
+    if (eventName === 'result') {
+      handlers.onResult(payload as ApiSpecAIDraft);
+      return;
+    }
+
+    if (eventName === 'error') {
+      handlers.onError((payload as { message?: string }).message ?? 'Failed to generate AI draft');
+    }
+  } catch {
+    // Ignore malformed stream events and keep the stream alive.
+  }
+};
+
+const parseFetchError = async (response: Response) => {
+  let payload: { code?: string | number; message?: string; error?: string } | null = null;
+  try {
+    payload = (await response.json()) as {
+      code?: string | number;
+      message?: string;
+      error?: string;
+    };
+  } catch {
+    payload = null;
+  }
+
+  throw new ApiError(
+    payload?.error || payload?.message || `Failed to generate AI draft: ${response.status}`,
+    payload?.code || 'FETCH_ERROR',
+    response.status
+  );
+};
+
 export const apiSpecService = {
   list: ({
     projectId,
@@ -95,7 +179,92 @@ export const apiSpecService = {
       .then(normalizeApiSpec),
 
   createAIDraft: (projectId: number | string, data: CreateApiSpecAIDraftRequest) =>
-    request.post<ApiSpecAIDraft>(`/projects/${projectId}/api-specs/ai-drafts`, normalizePayload(data)),
+    request.post<ApiSpecAIDraft>(
+      `/projects/${projectId}/api-specs/ai-drafts`,
+      normalizePayload(data)
+    ),
+
+  createAIDraftStream: async (
+    projectId: number | string,
+    data: CreateApiSpecAIDraftRequest,
+    options: ApiSpecAIDraftStreamOptions = {}
+  ): Promise<ApiSpecAIDraft> => {
+    const { accessToken } = getAuthTokens();
+    const response = await fetch(buildApiUrl(`/projects/${projectId}/api-specs/ai-drafts/stream`), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken
+          ? {
+              Authorization: `Bearer ${accessToken}`,
+            }
+          : {}),
+      },
+      body: JSON.stringify(normalizePayload(data)),
+      signal: options.signal,
+    });
+
+    if (!response.ok) {
+      await parseFetchError(response);
+    }
+
+    if (!response.body) {
+      throw new Error('AI draft stream is not available');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalDraft: ApiSpecAIDraft | null = null;
+    let streamError: string | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const chunks = buffer.split('\n\n');
+      buffer = chunks.pop() ?? '';
+
+      for (const chunk of chunks) {
+        readAIDraftStreamEvent(chunk, {
+          onStatus: status => options.onStatus?.(status),
+          onToken: token => options.onToken?.(token),
+          onResult: draft => {
+            finalDraft = draft;
+          },
+          onError: message => {
+            streamError = message;
+          },
+        });
+      }
+    }
+
+    if (buffer.trim()) {
+      readAIDraftStreamEvent(buffer, {
+        onStatus: status => options.onStatus?.(status),
+        onToken: token => options.onToken?.(token),
+        onResult: draft => {
+          finalDraft = draft;
+        },
+        onError: message => {
+          streamError = message;
+        },
+      });
+    }
+
+    if (streamError) {
+      throw new ApiError(streamError, 'STREAM_ERROR');
+    }
+
+    if (!finalDraft) {
+      throw new Error('AI draft generation finished without returning a draft');
+    }
+
+    return finalDraft;
+  },
 
   getAIDraft: (projectId: number | string, draftId: number | string) =>
     request.get<ApiSpecAIDraft>(`/projects/${projectId}/api-specs/ai-drafts/${draftId}`),
@@ -142,9 +311,13 @@ export const apiSpecService = {
     }),
 
   genTest: (projectId: number | string, specId: number | string, lang: ApiSpecLanguage) =>
-    request.post<GenApiTestResponse>(`/projects/${projectId}/api-specs/${specId}/gen-test`, undefined, {
-      params: { lang },
-    }),
+    request.post<GenApiTestResponse>(
+      `/projects/${projectId}/api-specs/${specId}/gen-test`,
+      undefined,
+      {
+        params: { lang },
+      }
+    ),
 
   batchGenDoc: (projectId: number | string, data: BatchGenDocRequest) =>
     request.post<BatchGenDocResponse>(
@@ -155,8 +328,15 @@ export const apiSpecService = {
   listExamples: (projectId: number | string, specId: number | string) =>
     request.get<ApiSpecExamplesResponse>(`/projects/${projectId}/api-specs/${specId}/examples`),
 
-  createExample: (projectId: number | string, specId: number | string, data: CreateApiExampleRequest) =>
-    request.post<ApiSpecExample>(`/projects/${projectId}/api-specs/${specId}/examples`, normalizePayload(data)),
+  createExample: (
+    projectId: number | string,
+    specId: number | string,
+    data: CreateApiExampleRequest
+  ) =>
+    request.post<ApiSpecExample>(
+      `/projects/${projectId}/api-specs/${specId}/examples`,
+      normalizePayload(data)
+    ),
 
   getShare: (projectId: number | string, specId: number | string) =>
     request.get<ApiSpecShare>(`/projects/${projectId}/api-specs/${specId}/share`),

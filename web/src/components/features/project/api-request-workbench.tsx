@@ -1901,6 +1901,30 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     };
   };
 
+  const buildTransientRequestFromTab = (tab: RequestPageTab): ProjectRequest => {
+    const scripts = toRequestScripts(tab.scripts);
+
+    return {
+      id: tab.id,
+      collection_id: tab.collectionId ?? 'quick-request',
+      name: getPersistedTabName(tab),
+      description: '',
+      method: tab.method,
+      url: tab.url.trim(),
+      headers: toRequestKeyValues(tab.headersMode, tab.headersRows, tab.headersBulk),
+      query_params: toRequestKeyValues(tab.paramsMode, tab.paramsRows, tab.paramsBulk),
+      path_params: tab.pathParams,
+      body: tab.bodyContent,
+      body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
+      auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+      pre_request: scripts.pre_request,
+      test: scripts.test,
+      sort_order: 0,
+      created_at: '',
+      updated_at: '',
+    };
+  };
+
   const syncPersistedRequestInWorkbench = (
     sourceTabId: string,
     persistedRequest: ProjectRequest,
@@ -2546,6 +2570,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     const tabSnapshot = activeTab;
     let tabId = activeTab.id;
     let persistedRequest: ProjectRequest | null = null;
+    let runnableRequest: ProjectRequest | null = null;
     let executableUrl = '';
     let executableHeaders: Record<string, string> = {};
     let executableBody: string | undefined;
@@ -2560,28 +2585,42 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     }));
 
     try {
-      persistedRequest = await persistTabRequest(tabSnapshot, {
-        requireRunnableUrl: true,
-      });
-      tabId = syncPersistedRequestInWorkbench(tabId, persistedRequest, {
-        isSending: true,
-      });
+      const persistedCollectionId =
+        tabSnapshot.collectionId && isPersistedCollectionId(tabSnapshot.collectionId)
+          ? tabSnapshot.collectionId
+          : null;
+
+      if (persistedCollectionId) {
+        persistedRequest = await persistTabRequest(tabSnapshot, {
+          requireRunnableUrl: true,
+        });
+        tabId = syncPersistedRequestInWorkbench(tabId, persistedRequest, {
+          isSending: true,
+        });
+        runnableRequest = persistedRequest;
+      } else {
+        if (!tabSnapshot.url.trim()) {
+          throw new Error(t('collections.enterUrlBeforeSend'));
+        }
+
+        runnableRequest = buildTransientRequestFromTab(tabSnapshot);
+      }
 
       if (tabSnapshot.settings.persistCookies) {
         throw new Error(t('collections.workbench.persistCookiesUnavailable'));
       }
 
-      executableUrl = buildExecutableRequestUrl(persistedRequest, selectedEnvironment, t);
+      executableUrl = buildExecutableRequestUrl(runnableRequest, selectedEnvironment, t);
       executableHeaders = headersToObject(
         buildDirectRequestHeaders(
-          persistedRequest,
+          runnableRequest,
           selectedEnvironment,
           t('collections.base64Unavailable')
         )
       );
-      executableBody = buildDirectRequestBody(persistedRequest, selectedEnvironment);
+      executableBody = buildDirectRequestBody(runnableRequest, selectedEnvironment);
       const response = await localRunnerService.execute({
-        method: persistedRequest.method,
+        method: runnableRequest.method,
         url: executableUrl,
         headers: executableHeaders,
         body: executableBody,
@@ -2595,32 +2634,34 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         response: toResponseDraft(response),
       }));
 
-      void createHistoryMutation
-        .mutateAsync(
-          buildRequestRunHistoryPayload({
-            request: persistedRequest,
-            executedUrl: executableUrl,
-            requestHeaders: executableHeaders,
-            requestBody: executableBody,
-            settings: tabSnapshot.settings,
-            response,
-            messages: {
-              executed: (requestLabel, status) =>
-                status
-                  ? t('collections.workbench.historyExecutedWithStatus', {
-                      label: requestLabel,
-                      status,
-                    })
-                  : t('collections.workbench.historyExecuted', { label: requestLabel }),
-              failed: (requestLabel, message) =>
-                t('collections.workbench.historyFailed', {
-                  label: requestLabel,
-                  error: message,
-                }),
-            },
-          })
-        )
-        .catch(() => {});
+      if (persistedRequest) {
+        void createHistoryMutation
+          .mutateAsync(
+            buildRequestRunHistoryPayload({
+              request: persistedRequest,
+              executedUrl: executableUrl,
+              requestHeaders: executableHeaders,
+              requestBody: executableBody,
+              settings: tabSnapshot.settings,
+              response,
+              messages: {
+                executed: (requestLabel, status) =>
+                  status
+                    ? t('collections.workbench.historyExecutedWithStatus', {
+                        label: requestLabel,
+                        status,
+                      })
+                    : t('collections.workbench.historyExecuted', { label: requestLabel }),
+                failed: (requestLabel, message) =>
+                  t('collections.workbench.historyFailed', {
+                    label: requestLabel,
+                    error: message,
+                  }),
+              },
+            })
+          )
+          .catch(() => {});
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t('collections.workbench.unableToSend');

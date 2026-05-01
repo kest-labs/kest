@@ -260,6 +260,12 @@ export interface CreateApiSpecAIDraftRequest {
   lang?: ApiSpecLanguage;
 }
 
+export interface ApiSpecAIDraftStreamOptions {
+  signal?: AbortSignal;
+  onStatus?: (status: string) => void;
+  onToken?: (chunk: string) => void;
+}
+
 export interface RefineApiSpecAIDraftRequest {
   instruction: string;
   fields?: string[];

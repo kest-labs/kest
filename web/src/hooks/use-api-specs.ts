@@ -7,6 +7,7 @@ import { apiSpecService } from '@/services/api-spec';
 import type {
   AcceptApiSpecAIDraftRequest,
   ApiSpecAIDraft,
+  ApiSpecAIDraftStreamOptions,
   ApiSpecLanguage,
   ApiSpecListParams,
   BatchGenDocRequest,
@@ -51,7 +52,7 @@ export function useApiSpecs(params: ApiSpecListParams) {
   return useQuery({
     queryKey: apiSpecKeys.list(params),
     queryFn: () => apiSpecService.list(params),
-    placeholderData: (previousData) => previousData,
+    placeholderData: previousData => previousData,
   });
 }
 
@@ -61,7 +62,8 @@ export function useApiSpec(projectId?: number | string, specId?: number | string
   return useQuery({
     queryKey: apiSpecKeys.detail(projectId ?? 'unknown', specId ?? 'unknown'),
     queryFn: () => apiSpecService.getById(projectId as number | string, specId as number | string),
-    enabled: projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    enabled:
+      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
   });
 }
 
@@ -70,8 +72,10 @@ export function useApiSpec(projectId?: number | string, specId?: number | string
 export function useApiSpecFull(projectId?: number | string, specId?: number | string) {
   return useQuery({
     queryKey: apiSpecKeys.full(projectId ?? 'unknown', specId ?? 'unknown'),
-    queryFn: () => apiSpecService.getFullById(projectId as number | string, specId as number | string),
-    enabled: projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    queryFn: () =>
+      apiSpecService.getFullById(projectId as number | string, specId as number | string),
+    enabled:
+      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
   });
 }
 
@@ -80,8 +84,10 @@ export function useApiSpecFull(projectId?: number | string, specId?: number | st
 export function useApiSpecExamples(projectId?: number | string, specId?: number | string) {
   return useQuery({
     queryKey: apiSpecKeys.examples(projectId ?? 'unknown', specId ?? 'unknown'),
-    queryFn: () => apiSpecService.listExamples(projectId as number | string, specId as number | string),
-    enabled: projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    queryFn: () =>
+      apiSpecService.listExamples(projectId as number | string, specId as number | string),
+    enabled:
+      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
   });
 }
 
@@ -92,7 +98,10 @@ export function useApiSpecShare(projectId?: number | string, specId?: number | s
     queryKey: apiSpecKeys.share(projectId ?? 'unknown', specId ?? 'unknown'),
     queryFn: async () => {
       try {
-        return await apiSpecService.getShare(projectId as number | string, specId as number | string);
+        return await apiSpecService.getShare(
+          projectId as number | string,
+          specId as number | string
+        );
       } catch (error) {
         if ((error as { status?: number })?.status === 404) {
           return null;
@@ -100,7 +109,8 @@ export function useApiSpecShare(projectId?: number | string, specId?: number | s
         throw error;
       }
     },
-    enabled: projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    enabled:
+      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
   });
 }
 
@@ -109,8 +119,10 @@ export function useApiSpecShare(projectId?: number | string, specId?: number | s
 export function useApiSpecAIDraft(projectId?: number | string, draftId?: number | string) {
   return useQuery({
     queryKey: apiSpecKeys.aiDraft(projectId ?? 'unknown', draftId ?? 'unknown'),
-    queryFn: () => apiSpecService.getAIDraft(projectId as number | string, draftId as number | string),
-    enabled: projectId !== undefined && projectId !== null && draftId !== undefined && draftId !== null,
+    queryFn: () =>
+      apiSpecService.getAIDraft(projectId as number | string, draftId as number | string),
+    enabled:
+      projectId !== undefined && projectId !== null && draftId !== undefined && draftId !== null,
   });
 }
 
@@ -127,7 +139,11 @@ export function useProjectApiCategories(projectId?: number | string) {
 
 // AI 生成测试内容缓存查询。
 // 作用：不触发网络请求，只订阅 mutation 写入的 flow_content 缓存。
-export function useGeneratedApiTest(projectId?: number | string, specId?: number | string, lang: ApiSpecLanguage = 'en') {
+export function useGeneratedApiTest(
+  projectId?: number | string,
+  specId?: number | string,
+  lang: ApiSpecLanguage = 'en'
+) {
   return useQuery<string | null>({
     queryKey: apiSpecKeys.generatedTest(projectId ?? 'unknown', specId ?? 'unknown', lang),
     queryFn: async () => null,
@@ -145,7 +161,7 @@ export function useCreateApiSpec(projectId: number | string) {
 
   return useMutation({
     mutationFn: (data: CreateApiSpecRequest) => apiSpecService.create(projectId, data),
-    onSuccess: (spec) => {
+    onSuccess: spec => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       queryClient.setQueryData(apiSpecKeys.detail(projectId, spec.id), spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, spec.id) });
@@ -155,7 +171,7 @@ export function useCreateApiSpec(projectId: number | string) {
 }
 
 const emitDraftWarnings = (warnings?: string[]) => {
-  warnings?.forEach((warning) => toast.warning(warning));
+  warnings?.forEach(warning => toast.warning(warning));
 };
 
 // AI 创建 draft mutation。
@@ -165,12 +181,32 @@ export function useCreateApiSpecAIDraft(projectId: number | string) {
   const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateApiSpecAIDraftRequest) => apiSpecService.createAIDraft(projectId, data),
-    onSuccess: (draft) => {
+    mutationFn: (data: CreateApiSpecAIDraftRequest) =>
+      apiSpecService.createAIDraft(projectId, data),
+    onSuccess: draft => {
       queryClient.setQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, draft.id), draft);
       toast.success(t.project('toasts.aiDraftGenerated'));
     },
   });
+}
+
+// AI 创建 draft 流式 helper。
+// 作用：把流式生成结果写入缓存，同时把实时状态回传给对话框 UI。
+export function useCreateApiSpecAIDraftStream(projectId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return {
+    create: async (
+      data: CreateApiSpecAIDraftRequest,
+      options?: ApiSpecAIDraftStreamOptions
+    ): Promise<ApiSpecAIDraft> => {
+      const draft = await apiSpecService.createAIDraftStream(projectId, data, options);
+      queryClient.setQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, draft.id), draft);
+      toast.success(t.project('toasts.aiDraftGenerated'));
+      return draft;
+    },
+  };
 }
 
 // AI refine mutation。
@@ -187,7 +223,7 @@ export function useRefineApiSpecAIDraft(projectId: number | string) {
       draftId: number | string;
       data: RefineApiSpecAIDraftRequest;
     }) => apiSpecService.refineAIDraft(projectId, draftId, data),
-    onSuccess: (draft) => {
+    onSuccess: draft => {
       queryClient.setQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, draft.id), draft);
       toast.success(t.project('toasts.aiDraftRefined'));
     },
@@ -208,22 +244,26 @@ export function useAcceptApiSpecAIDraft(projectId: number | string) {
       draftId: number | string;
       data: AcceptApiSpecAIDraftRequest;
     }) => apiSpecService.acceptAIDraft(projectId, draftId, data),
-    onSuccess: (result) => {
+    onSuccess: result => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       queryClient.setQueryData(apiSpecKeys.detail(projectId, result.spec.id), result.spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, result.spec.id) });
       queryClient.setQueryData(apiSpecKeys.aiDraft(projectId, result.draft_id), {
-        ...(queryClient.getQueryData<ApiSpecAIDraft>(apiSpecKeys.aiDraft(projectId, result.draft_id)) ?? {
+        ...(queryClient.getQueryData<ApiSpecAIDraft>(
+          apiSpecKeys.aiDraft(projectId, result.draft_id)
+        ) ?? {
           id: result.draft_id,
         }),
         accepted_spec_id: result.spec.id,
         status: 'accepted',
       });
       emitDraftWarnings(result.warnings);
-      toast.success(t.project('toasts.apiSpecCreated', {
-        method: result.spec.method,
-        path: result.spec.path,
-      }));
+      toast.success(
+        t.project('toasts.apiSpecCreated', {
+          method: result.spec.method,
+          path: result.spec.path,
+        })
+      );
     },
   });
 }
@@ -237,7 +277,7 @@ export function useUpdateApiSpec(projectId: number | string) {
   return useMutation({
     mutationFn: ({ specId, data }: { specId: number | string; data: UpdateApiSpecRequest }) =>
       apiSpecService.update(projectId, specId, data),
-    onSuccess: (spec) => {
+    onSuccess: spec => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       queryClient.setQueryData(apiSpecKeys.detail(projectId, spec.id), spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, spec.id) });
@@ -272,7 +312,7 @@ export function useImportApiSpecs(projectId: number | string) {
 
   return useMutation({
     mutationFn: (data: ImportApiSpecsRequest) => apiSpecService.import(projectId, data),
-    onSuccess: (result) => {
+    onSuccess: result => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       toast.success(result.message || t.project('toasts.specsImported'));
     },
@@ -297,7 +337,7 @@ export function useGenApiDoc(projectId: number | string) {
   return useMutation({
     mutationFn: ({ specId, lang }: { specId: number | string; lang: ApiSpecLanguage }) =>
       apiSpecService.genDoc(projectId, specId, lang),
-    onSuccess: (spec) => {
+    onSuccess: spec => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       queryClient.setQueryData(apiSpecKeys.detail(projectId, spec.id), spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, spec.id) });
@@ -334,12 +374,14 @@ export function useBatchGenApiDocs(projectId: number | string) {
 
   return useMutation({
     mutationFn: (data: BatchGenDocRequest) => apiSpecService.batchGenDoc(projectId, data),
-    onSuccess: (result) => {
+    onSuccess: result => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.project(projectId) });
-      toast.success(t.project('toasts.batchDocsQueued', {
-        queued: result.queued,
-        skipped: result.skipped,
-      }));
+      toast.success(
+        t.project('toasts.batchDocsQueued', {
+          queued: result.queued,
+          skipped: result.skipped,
+        })
+      );
     },
   });
 }
@@ -354,7 +396,9 @@ export function useCreateApiExample(projectId: number | string) {
     mutationFn: ({ specId, data }: { specId: number | string; data: CreateApiExampleRequest }) =>
       apiSpecService.createExample(projectId, specId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: apiSpecKeys.examples(projectId, variables.specId) });
+      queryClient.invalidateQueries({
+        queryKey: apiSpecKeys.examples(projectId, variables.specId),
+      });
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, variables.specId) });
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.share(projectId, variables.specId) });
       toast.success(t.project('toasts.apiExampleCreated'));
@@ -370,7 +414,7 @@ export function usePublishApiSpecShare(projectId: number | string) {
 
   return useMutation({
     mutationFn: (specId: number | string) => apiSpecService.publishShare(projectId, specId),
-    onSuccess: (share) => {
+    onSuccess: share => {
       queryClient.setQueryData(apiSpecKeys.share(projectId, share.api_spec_id), share);
       toast.success(t.project('toasts.publicSharePublished'));
     },

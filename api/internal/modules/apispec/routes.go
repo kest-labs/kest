@@ -23,6 +23,8 @@ func RegisterRoutes(r *router.Router, handler *Handler, memberService member.Ser
 			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
 		projects.POST("/ai-drafts", handler.CreateAIDraft).
 			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
+		projects.POST("/ai-drafts/stream", handler.CreateAIDraftStream).
+			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
 		projects.GET("/ai-drafts/:aid", handler.GetAIDraft).
 			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
 		projects.POST("/ai-drafts/:aid/refine", handler.RefineAIDraft).
