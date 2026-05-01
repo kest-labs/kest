@@ -8,6 +8,7 @@ import type {
   CreateProjectRequest,
   GenerateProjectCliTokenRequest,
   ProjectListParams,
+  ProjectListResponse,
   ProjectStats,
   UpdateProjectRequest,
 } from '@/types/project';
@@ -15,6 +16,46 @@ import type {
 interface ProjectQueryOptions {
   enabled?: boolean;
 }
+
+interface DeleteProjectMutationContext {
+  previousProjectLists: Array<readonly [ReadonlyArray<unknown>, ProjectListResponse | undefined]>;
+}
+
+const removeProjectFromListCache = (
+  projectList: ProjectListResponse | undefined,
+  projectId: number | string
+) => {
+  if (!projectList) {
+    return projectList;
+  }
+
+  const normalizedProjectId = String(projectId);
+  const nextItems = projectList.items.filter((project) => String(project.id) !== normalizedProjectId);
+  const nextTotal = Math.max(0, projectList.meta.total - 1);
+  const perPage = Math.max(1, projectList.meta.per_page || nextItems.length || 1);
+  const nextPages = Math.max(1, Math.ceil(nextTotal / perPage));
+  const nextPage = Math.min(projectList.meta.page, nextPages);
+
+  if (
+    nextItems.length === projectList.items.length &&
+    nextTotal === projectList.meta.total &&
+    nextPages === projectList.meta.pages &&
+    nextPage === projectList.meta.page
+  ) {
+    return projectList;
+  }
+
+  return {
+    ...projectList,
+    items: nextItems,
+    meta: {
+      ...projectList.meta,
+      total: nextTotal,
+      pages: nextPages,
+      page: nextPage,
+    },
+  };
+};
 
 // 项目域的 React Query key。
 // 作用：统一项目列表、详情、统计的缓存命名，方便后续失效与刷新。
@@ -103,11 +144,24 @@ export function useDeleteProject() {
   const t = useT();
 
   return useMutation({
-    onMutate: async (id) => {
+    onMutate: async (id): Promise<DeleteProjectMutationContext> => {
       await Promise.all([
+        queryClient.cancelQueries({ queryKey: projectKeys.lists() }),
         queryClient.cancelQueries({ queryKey: projectKeys.detail(id) }),
         queryClient.cancelQueries({ queryKey: projectKeys.projectStats(id) }),
       ]);
+
+      const previousProjectLists =
+        queryClient.getQueriesData<ProjectListResponse>({ queryKey: projectKeys.lists() });
+
+      queryClient.setQueriesData<ProjectListResponse>(
+        { queryKey: projectKeys.lists() },
+        (projectList) => removeProjectFromListCache(projectList, id)
+      );
+
+      return {
+        previousProjectLists,
+      };
     },
     mutationFn: (id: number | string) => projectService.delete(id),
     onSuccess: (_, id) => {
@@ -115,6 +169,16 @@ export function useDeleteProject() {
       queryClient.removeQueries({ queryKey: projectKeys.detail(id) });
       queryClient.removeQueries({ queryKey: projectKeys.projectStats(id) });
       toast.success(t.project('toasts.projectDeleted'));
+    },
+    onError: (_error, _id, context) => {
+      context?.previousProjectLists.forEach(([queryKey, projectList]) => {
+        if (projectList === undefined) {
+          queryClient.removeQueries({ queryKey, exact: true });
+          return;
+        }
+
+        queryClient.setQueryData(queryKey, projectList);
+      });
     },
   });
 }
