@@ -16,7 +16,7 @@ type UpdateProjectRequest struct {
 
 // ProjectResponse is the response for project endpoints
 type ProjectResponse struct {
-	ID string   `json:"id"`
+	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Slug      string `json:"slug"`
 	Platform  string `json:"platform"`
@@ -26,7 +26,7 @@ type ProjectResponse struct {
 
 // ProjectListResponse is the response for listing projects
 type ProjectListResponse struct {
-	ID string   `json:"id"`
+	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Slug     string `json:"slug"`
 	Platform string `json:"platform"`
