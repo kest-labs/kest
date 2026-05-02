@@ -781,8 +781,14 @@ const messages = {
   },
   topbar: {
     notifications: '通知',
+    notificationsEmpty: '暂无通知。',
     profile: '个人资料',
+    accountSettings: '个人设置',
     logout: '退出登录',
+  },
+  workspaceLayout: {
+    expandNavigation: '展开导航',
+    collapseNavigation: '折叠导航',
   },
   roles: {
     owner: '所有者',

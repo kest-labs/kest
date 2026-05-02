@@ -842,8 +842,14 @@ const messages: ProjectMessages = {
   },
   topbar: {
     notifications: 'Notifications',
+    notificationsEmpty: 'No notifications yet.',
     profile: 'Profile',
+    accountSettings: 'Account settings',
     logout: 'Logout',
+  },
+  workspaceLayout: {
+    expandNavigation: 'Expand navigation',
+    collapseNavigation: 'Collapse navigation',
   },
   roles: {
     owner: 'Owner',

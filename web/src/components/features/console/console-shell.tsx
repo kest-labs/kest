@@ -2,16 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, Bell, FolderKanban, Home, LogOut, Palette, Settings, Users } from 'lucide-react';
 import { useMemo } from 'react';
+import {
+  BarChart3,
+  Bell,
+  FolderKanban,
+  Home,
+  LogOut,
+  Palette,
+  Settings,
+  Users,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { LanguageSwitcher } from '@/components/common';
 import { ROUTES } from '@/constants/routes';
 import { useLogout } from '@/hooks/use-auth';
@@ -37,7 +49,7 @@ const buildInitials = (name: string) =>
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || '')
+    .map(part => part[0]?.toUpperCase() || '')
     .join('') || 'U';
 
 /**
@@ -47,11 +59,7 @@ const buildInitials = (name: string) =>
  * 2. 让 `/console`、`/project` 等受保护页面共享同一套后台布局
  * 3. 集中维护控制台导航项，避免多个页面布局重复拷贝
  */
-export function ConsoleShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useT();
@@ -112,40 +120,74 @@ export function ConsoleShell({
         </div>
 
         <div className="flex items-center gap-2">
-          <LanguageSwitcher />
-
-          <Button variant="ghost" isIcon className="relative h-9 w-9 rounded-full">
-            <Bell className="h-4 w-4 text-text-muted" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-bg-surface bg-primary" />
-            <span className="sr-only">{t.console('shell.notifications')}</span>
-          </Button>
+          <LanguageSwitcher showTooltip />
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                isIcon
-                noScale
-                className="h-9 w-9 overflow-hidden rounded-full border border-border/50 transition-colors hover:border-primary/50"
-              >
-                <Avatar className="h-full w-full">
-                  <AvatarImage src={user?.avatar} />
-                  <AvatarFallback className="bg-primary/10 text-primary">{initials}</AvatarFallback>
-                </Avatar>
-                <span className="sr-only">{t.console('shell.profile')}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 shadow-premium">
-              <div className="px-2 py-1.5 text-xs font-medium uppercase tracking-wider text-text-muted">
-                {displayName}
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    isIcon
+                    noScale
+                    className="h-9 w-9 rounded-full"
+                    aria-label={t.console('shell.notifications')}
+                  >
+                    <Bell className="h-4 w-4 text-text-muted" />
+                    <span className="sr-only">{t.console('shell.notifications')}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t.console('shell.notifications')}</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-72 rounded-xl p-1 shadow-premium">
+              <DropdownMenuLabel>{t.console('shell.notifications')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-3 text-sm text-text-muted">
+                {t.console('shell.notificationsEmpty')}
               </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    isIcon
+                    noScale
+                    className="h-9 w-9 overflow-hidden rounded-full border border-border/50 transition-colors hover:border-primary/50"
+                    aria-label={t.console('shell.profile')}
+                  >
+                    <Avatar className="h-full w-full">
+                      <AvatarImage src={user?.avatar} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">{t.console('shell.profile')}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t.console('shell.profile')}</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 shadow-premium">
+              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-wider text-text-muted">
+                {displayName}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
                 <Link href={ROUTES.CONSOLE.SETTINGS}>{t('nav.profile')}</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
                 <Link href={ROUTES.CONSOLE.SETTINGS}>{t('nav.settings')}</Link>
               </DropdownMenuItem>
-              <div className="my-1 h-px bg-border/50" />
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer rounded-lg text-destructive focus:bg-destructive/10"
                 onClick={handleLogout}
@@ -162,7 +204,7 @@ export function ConsoleShell({
         <aside className="hidden w-[220px] shrink-0 border-r bg-background md:flex md:flex-col">
           <div className="flex flex-1 flex-col overflow-y-auto py-2">
             <nav className="grid items-start px-2 text-sm font-medium">
-              {mainNavItems.map((item) => {
+              {mainNavItems.map(item => {
                 const IconComponent = item.icon;
                 const isActive = isRouteActive(item.href);
 
@@ -184,7 +226,7 @@ export function ConsoleShell({
           </div>
           <div className="mt-auto p-4">
             <nav className="grid items-start gap-1 text-sm font-medium">
-              {secondaryNavItems.map((item) => {
+              {secondaryNavItems.map(item => {
                 const IconComponent = item.icon;
                 const isActive = isRouteActive(item.href);
 
@@ -212,9 +254,7 @@ export function ConsoleShell({
           </div>
         </aside>
 
-        <main className="h-full w-full overflow-y-auto">
-          {children}
-        </main>
+        <main className="h-full w-full overflow-y-auto">{children}</main>
       </div>
     </div>
   );
