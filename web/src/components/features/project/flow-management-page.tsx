@@ -262,10 +262,7 @@ const getMethodBadgeClassName = (method: string) => {
   }
 };
 
-const buildEdgeLabel = (
-  mappings: FlowVariableMappingRule[],
-  dependencyLabel = 'Dependency'
-) => {
+const buildEdgeLabel = (mappings: FlowVariableMappingRule[], dependencyLabel = 'Dependency') => {
   if (mappings.length === 0) {
     return dependencyLabel;
   }
@@ -518,6 +515,30 @@ const getCanvasNodeLabel = (t: ProjectTranslator, node: FlowCanvasNode, index?: 
     return t('flowPage.stepLabel', { index: index + 1 });
   }
   return t('flowPage.unnamedStep');
+};
+
+const getFlowNodeUrlPreview = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const templateBaseMatch = trimmed.match(/^\{\{[^}]+\}\}(.*)$/);
+  if (templateBaseMatch?.[1]) {
+    const preview = templateBaseMatch[1].trim();
+    return preview || '/';
+  }
+
+  try {
+    const parsed =
+      trimmed.startsWith('http://') || trimmed.startsWith('https://')
+        ? new URL(trimmed)
+        : new URL(trimmed, 'http://kest.local');
+    const preview = `${parsed.pathname}${parsed.search}`.trim();
+    return preview || '/';
+  } catch {
+    return trimmed.replace(/^https?:\/\/[^/]+/i, '') || trimmed;
+  }
 };
 
 const getStepNodeBaseId = (step: FlowStep) => {
@@ -1026,11 +1047,13 @@ const createsCycle = (nodes: FlowCanvasNode[], edges: FlowCanvasEdge[], next: Co
 const HttpStepNode = ({ data, selected }: NodeProps) => {
   const t = useT('project');
   const flowData = data as FlowNodeData;
+  const name = flowData.name.trim() || t('flowPage.unnamedStep');
+  const requestPreview = getFlowNodeUrlPreview(flowData.url);
 
   return (
     <div
       className={cn(
-        'w-[260px] rounded-3xl border bg-background/95 p-4 shadow-lg transition-colors',
+        'w-[240px] rounded-3xl border bg-background/95 p-4 shadow-lg transition-colors',
         selected ? 'border-primary/40 ring-2 ring-primary/20' : 'border-border/60'
       )}
     >
@@ -1046,11 +1069,11 @@ const HttpStepNode = ({ data, selected }: NodeProps) => {
       />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-text-main">
-            {flowData.name || t('flowPage.unnamedStep')}
-          </p>
+          <p className="truncate text-sm font-semibold text-text-main">{name}</p>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">
-            {flowData.url || t('flowPage.configureRequestUrl')}
+            {requestPreview
+              ? `${flowData.method} ${requestPreview}`
+              : `${flowData.method} ${t('flowPage.configureRequestUrl')}`}
           </p>
         </div>
         <Badge
@@ -1059,14 +1082,6 @@ const HttpStepNode = ({ data, selected }: NodeProps) => {
         >
           {getStatusLabel(t, flowData.status)}
         </Badge>
-      </div>
-      <div className="mt-4 flex items-center justify-between">
-        <Badge variant="outline" className={getMethodBadgeClassName(flowData.method)}>
-          {flowData.method}
-        </Badge>
-        <p className="text-[11px] uppercase tracking-[0.16em] text-text-muted">
-          {flowData.clientKey}
-        </p>
       </div>
     </div>
   );
@@ -1300,6 +1315,39 @@ function FlowInspector({
                     root
                   />
                 </div>
+                <details className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-text-main">
+                    {t('flowPage.inspector.advancedTitle')}
+                  </summary>
+                  <div className="mt-4 space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="step-client-key">
+                        {t('flowPage.inspector.canvasNodeKeyLabel')}
+                      </Label>
+                      <Input
+                        id="step-client-key"
+                        value={selectedNode.data.clientKey}
+                        readOnly
+                        className="font-mono text-xs"
+                        root
+                      />
+                    </div>
+                    {selectedNode.data.backendStepId ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="step-backend-id">
+                          {t('flowPage.inspector.savedStepIdLabel')}
+                        </Label>
+                        <Input
+                          id="step-backend-id"
+                          value={selectedNode.data.backendStepId}
+                          readOnly
+                          className="font-mono text-xs"
+                          root
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
               </TabsContent>
               <TabsContent value="captures" className="space-y-4">
                 <div className="space-y-3">
@@ -1340,7 +1388,9 @@ function FlowInspector({
                     {t('flowPage.inspector.advancedCapturesTitle')}
                   </summary>
                   <div className="mt-4 space-y-2">
-                    <Label htmlFor="step-captures">{t('flowPage.inspector.capturesDslLabel')}</Label>
+                    <Label htmlFor="step-captures">
+                      {t('flowPage.inspector.capturesDslLabel')}
+                    </Label>
                     <Textarea
                       id="step-captures"
                       value={selectedNode.data.captures}
@@ -1397,9 +1447,7 @@ function FlowInspector({
         <Card className="border-border/60">
           <CardHeader>
             <CardTitle>{t('flowPage.inspector.edgeMappingsTitle')}</CardTitle>
-            <CardDescription>
-              {t('flowPage.inspector.edgeMappingsDescription')}
-            </CardDescription>
+            <CardDescription>{t('flowPage.inspector.edgeMappingsDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedEdgeError ? (
@@ -1714,7 +1762,9 @@ function RunHistoryPanel({
             {!isRunDetailsLoading && !selectedRun.step_results?.length ? (
               <Alert>
                 <AlertTitle>{t('flowPage.runHistory.noStepLogsTitle')}</AlertTitle>
-                <AlertDescription>{t('flowPage.runHistory.noStepLogsDescription')}</AlertDescription>
+                <AlertDescription>
+                  {t('flowPage.runHistory.noStepLogsDescription')}
+                </AlertDescription>
               </Alert>
             ) : null}
 
@@ -2670,10 +2720,7 @@ export function ProjectFlowManagementPage({
     } catch (error) {
       setValidationState(current => ({
         ...current,
-        message:
-          error instanceof Error
-            ? error.message
-            : t('flowPage.validation.saveFailed'),
+        message: error instanceof Error ? error.message : t('flowPage.validation.saveFailed'),
       }));
       return null;
     }
@@ -2839,10 +2886,7 @@ export function ProjectFlowManagementPage({
     } catch (error) {
       setValidationState(current => ({
         ...current,
-        message:
-          error instanceof Error
-            ? error.message
-            : t('flowPage.validation.startRunFailed'),
+        message: error instanceof Error ? error.message : t('flowPage.validation.startRunFailed'),
       }));
     }
   };
@@ -2940,9 +2984,7 @@ export function ProjectFlowManagementPage({
       setValidationState(current => ({
         ...current,
         message:
-          error instanceof Error
-            ? error.message
-            : t('flowPage.validation.startLocalRunFailed'),
+          error instanceof Error ? error.message : t('flowPage.validation.startLocalRunFailed'),
       }));
     } finally {
       setIsLocalRunPending(false);

@@ -1788,6 +1788,9 @@ const messages: ProjectMessages = {
       assertsTab: 'Asserts',
       urlLabel: 'URL',
       headersJsonLabel: 'Headers (JSON)',
+      advancedTitle: 'Advanced',
+      canvasNodeKeyLabel: 'Canvas node key',
+      savedStepIdLabel: 'Saved step ID',
       outputVariablesTitle: 'Output variables',
       outputVariablesDescription:
         'Variables generated from response fields and available to connected downstream steps.',
