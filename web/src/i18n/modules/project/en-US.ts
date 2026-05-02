@@ -276,8 +276,7 @@ const messages: ProjectMessages = {
         'Wait for draft generation to finish before changing these options.',
       generateDraftDisabledReason:
         'Finish the current draft action before starting a new generation.',
-      createSpecDisabledReason:
-        'Wait for draft generation to finish before creating the spec.',
+      createSpecDisabledReason: 'Wait for draft generation to finish before creating the spec.',
       starting: 'Starting...',
       elapsedSeconds: '{seconds}s elapsed',
       validationError: 'Validation Error',
@@ -340,11 +339,9 @@ const messages: ProjectMessages = {
         reviewDescription:
           'Review and adjust the draft before refining it again or creating the final spec.',
         refineTitle: 'Refine',
-        refineDescription:
-          'Rewrite a focused part of the draft without regenerating everything.',
+        refineDescription: 'Rewrite a focused part of the draft without regenerating everything.',
         whyTitle: 'Why This Draft',
-        whyDescription:
-          'Show the context, assumptions, and open questions behind this draft.',
+        whyDescription: 'Show the context, assumptions, and open questions behind this draft.',
       },
       review: {
         assumptions: 'Assumptions',
@@ -1084,6 +1081,12 @@ const messages: ProjectMessages = {
     pageSummary: 'Page {page} of {pages}',
     projectId: 'ID {id}',
   },
+  homeStatus: {
+    ready: 'Ready',
+    setup: 'Needs setup',
+    available: 'Ready to start',
+    optional: 'Optional',
+  },
   dashboardPage: {
     searchPlaceholder: 'Search projects',
     projectsLabel: 'Projects',
@@ -1698,6 +1701,7 @@ const messages: ProjectMessages = {
     workflowEnvironmentsDetailMissing: 'Add a base URL and runtime variables',
     workflowTestCasesDetailReady: 'Generate coverage from API specs',
     workflowTestCasesDetailMissing: 'Waiting for API specs',
+    workflowTestCasesDetailNeedsRuntime: 'Add one environment before generating coverage.',
     workflowOrganizeDetailReady: '{categories} categories, {flows} flows',
     workflowOrganizeDetailMissing: 'Optional taxonomy and flows',
     metricApiSpecsDescription: 'Structured source of truth',
@@ -1825,13 +1829,11 @@ const messages: ProjectMessages = {
       noStepLogsTitle: 'No step logs yet',
       noStepLogsDescription: 'This run has not produced step-level logs yet.',
       stepIdLabel: 'Step ID {id}',
-      detailDescription:
-        'Detailed request, response, assert results, and captured variables.',
+      detailDescription: 'Detailed request, response, assert results, and captured variables.',
       durationLabel: 'Duration',
       requestTitle: 'Request',
       responseTitle: 'Response',
-      passParametersDisabled:
-        'No downstream step can receive parameters from this step',
+      passParametersDisabled: 'No downstream step can receive parameters from this step',
       passParametersEnabled: 'Pass response fields to another step',
       passParameters: 'Pass parameters',
       assertResults: 'Assert results',
@@ -1840,8 +1842,7 @@ const messages: ProjectMessages = {
     },
     handoffDialog: {
       title: 'Pass parameters',
-      description:
-        'Select response fields from {source} and expose them to a downstream step.',
+      description: 'Select response fields from {source} and expose them to a downstream step.',
       currentStep: 'this step',
       targetStepLabel: 'Target step',
       targetStepPlaceholder: 'Select downstream step',

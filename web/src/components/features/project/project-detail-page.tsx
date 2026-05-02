@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   ArrowLeft,
-  CheckCircle2,
-  Clock3,
   Copy,
   FileJson2,
   FlaskConical,
@@ -32,10 +30,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import {
+  getProjectHomeStatusAccentClassName,
+  ProjectHomeStatusBadge,
+  type ProjectHomeStatusTone,
+} from '@/components/features/project/project-home-status';
+import {
   DeleteProjectDialog,
   type ProjectFormMode,
   ProjectFormDialog,
-  ProjectStatusBadge,
   resolvePlatformLabel,
 } from '@/components/features/project/project-shared';
 import { apiExternalBaseUrl, buildApiPath } from '@/config/api';
@@ -66,14 +68,11 @@ import type {
 } from '@/types/project';
 import { formatDate } from '@/utils';
 
-type StepTone = 'ready' | 'pending' | 'available';
-
 interface WorkflowStep {
   key: string;
   title: string;
   detail: string;
-  state: string;
-  tone: StepTone;
+  status: ProjectHomeStatusTone;
   href: string;
   icon: LucideIcon;
 }
@@ -169,8 +168,7 @@ const getProjectWorkflowSteps = (
       detail: hasSpecs
         ? t('projectDetail.workflowApiSpecsDetailReady', { count: apiSpecCount })
         : t('projectDetail.workflowApiSpecsDetailMissing'),
-      state: hasSpecs ? t('projectDetail.ready') : t('projectDetail.missing'),
-      tone: hasSpecs ? 'ready' : 'pending',
+      status: hasSpecs ? 'ready' : 'setup',
       href: hasSpecs
         ? buildProjectApiSpecsRoute(projectId)
         : `${buildProjectApiSpecsRoute(projectId)}?ai=create`,
@@ -182,8 +180,7 @@ const getProjectWorkflowSteps = (
       detail: hasEnvironment
         ? t('projectDetail.workflowEnvironmentsDetailReady', { count: environmentCount })
         : t('projectDetail.workflowEnvironmentsDetailMissing'),
-      state: hasEnvironment ? t('projectDetail.ready') : t('projectDetail.missing'),
-      tone: hasEnvironment ? 'ready' : 'pending',
+      status: hasEnvironment ? 'ready' : 'setup',
       href: buildProjectEnvironmentsRoute(projectId),
       icon: Globe,
     },
@@ -191,10 +188,11 @@ const getProjectWorkflowSteps = (
       key: 'test-cases',
       title: t('modules.testCases.label'),
       detail: hasSpecs
-        ? t('projectDetail.workflowTestCasesDetailReady')
+        ? hasEnvironment
+          ? t('projectDetail.workflowTestCasesDetailReady')
+          : t('projectDetail.workflowTestCasesDetailNeedsRuntime')
         : t('projectDetail.workflowTestCasesDetailMissing'),
-      state: hasSpecs ? t('projectDetail.available') : t('projectDetail.blocked'),
-      tone: hasSpecs ? 'available' : 'pending',
+      status: hasSpecs && hasEnvironment ? 'available' : 'setup',
       href: buildProjectTestCasesRoute(projectId),
       icon: FlaskConical,
     },
@@ -208,42 +206,15 @@ const getProjectWorkflowSteps = (
               flows: flowCount,
             })
           : t('projectDetail.workflowOrganizeDetailMissing'),
-      state:
-        categoryCount > 0 || flowCount > 0
-          ? t('projectDetail.active')
-          : t('projectDetail.optional'),
-      tone: categoryCount > 0 || flowCount > 0 ? 'available' : 'pending',
+      status: categoryCount > 0 || flowCount > 0 ? 'ready' : 'optional',
       href: buildProjectCategoriesRoute(projectId),
       icon: Layers3,
     },
   ];
 };
 
-const getStepBadgeClassName = (tone: StepTone) => {
-  switch (tone) {
-    case 'ready':
-      return 'border-emerald-200 bg-emerald-500/10 text-emerald-700';
-    case 'available':
-      return 'border-sky-200 bg-sky-500/10 text-sky-700';
-    default:
-      return 'border-amber-200 bg-amber-500/10 text-amber-700';
-  }
-};
-
-const getStepIconClassName = (tone: StepTone) => {
-  switch (tone) {
-    case 'ready':
-      return 'bg-emerald-500/10 text-emerald-700';
-    case 'available':
-      return 'bg-sky-500/10 text-sky-700';
-    default:
-      return 'bg-amber-500/10 text-amber-700';
-  }
-};
-
 function WorkflowStepRow({ step }: { step: WorkflowStep }) {
   const Icon = step.icon;
-  const StatusIcon = step.tone === 'ready' ? CheckCircle2 : Clock3;
 
   return (
     <Link
@@ -251,17 +222,14 @@ function WorkflowStepRow({ step }: { step: WorkflowStep }) {
       className="flex items-start gap-3 rounded-xl border border-border/60 bg-background p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
     >
       <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${getStepIconClassName(step.tone)}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${getProjectHomeStatusAccentClassName(step.status)}`}
       >
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-semibold text-text-main">{step.title}</p>
-          <Badge variant="outline" className={getStepBadgeClassName(step.tone)}>
-            <StatusIcon className="h-3.5 w-3.5" />
-            {step.state}
-          </Badge>
+          <ProjectHomeStatusBadge tone={step.status} />
         </div>
         <p className="mt-1 text-sm leading-6 text-text-muted">{step.detail}</p>
       </div>
@@ -441,10 +409,12 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
 
                   {project ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <ProjectStatusBadge status={project.status} />
-                      <Badge variant="outline">
-                        {resolvePlatformLabel(project.platform) || t('projectForm.notSet')}
-                      </Badge>
+                      {project.status !== 1 ? (
+                        <Badge variant="outline">{t('projectForm.inactive')}</Badge>
+                      ) : null}
+                      {project.platform ? (
+                        <Badge variant="outline">{resolvePlatformLabel(project.platform)}</Badge>
+                      ) : null}
                       <Badge variant="outline" className="font-mono">
                         {project.slug}
                       </Badge>

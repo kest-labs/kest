@@ -1004,6 +1004,12 @@ const messages = {
     pageSummary: '第 {page} / {pages} 页',
     projectId: 'ID {id}',
   },
+  homeStatus: {
+    ready: '已就绪',
+    setup: '待配置',
+    available: '可开始',
+    optional: '可选',
+  },
   dashboardPage: {
     searchPlaceholder: '搜索项目',
     projectsLabel: '项目',
@@ -1568,6 +1574,7 @@ const messages = {
     workflowEnvironmentsDetailMissing: '添加 base URL 和运行变量',
     workflowTestCasesDetailReady: '从 API 规格生成覆盖',
     workflowTestCasesDetailMissing: '等待 API 规格',
+    workflowTestCasesDetailNeedsRuntime: '先补运行环境，再生成验证覆盖。',
     workflowOrganizeDetailReady: '{categories} 个分类，{flows} 个流程',
     workflowOrganizeDetailMissing: '可选的分类体系与流程',
     metricApiSpecsDescription: '结构化事实来源',
