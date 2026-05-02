@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,9 +41,20 @@ type bridgeRunRequest struct {
 	URL             string            `json:"url"`
 	Headers         map[string]string `json:"headers"`
 	Body            string            `json:"body"`
+	BodyBase64      string            `json:"body_base64,omitempty"`
+	FormData        []bridgeFormField `json:"form_data,omitempty"`
 	TimeoutMS       int               `json:"timeout_ms,omitempty"`
 	FollowRedirects *bool             `json:"follow_redirects,omitempty"`
 	StrictTLS       *bool             `json:"strict_tls,omitempty"`
+}
+
+type bridgeFormField struct {
+	Key         string `json:"key"`
+	Value       string `json:"value,omitempty"`
+	Type        string `json:"type,omitempty"`
+	FileName    string `json:"file_name,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
+	FileBase64  string `json:"file_base64,omitempty"`
 }
 
 type bridgeRunResponse struct {
@@ -108,7 +122,7 @@ only to the local bridge, and the bridge performs the real HTTP request locally.
 			defer r.Body.Close()
 
 			var req bridgeRunRequest
-			decoder := json.NewDecoder(io.LimitReader(r.Body, 2*1024*1024))
+			decoder := json.NewDecoder(io.LimitReader(r.Body, 16*1024*1024))
 			decoder.DisallowUnknownFields()
 			if err := decoder.Decode(&req); err != nil {
 				writeBridgeError(w, http.StatusBadRequest, "invalid bridge payload")
@@ -320,7 +334,63 @@ func executeBridgeRequest(req bridgeRunRequest) (*bridgeRunResponse, error) {
 	}
 
 	var bodyReader io.Reader
-	if req.Body != "" {
+	contentTypeOverride := ""
+
+	switch {
+	case len(req.FormData) > 0:
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+
+		for _, field := range req.FormData {
+			key := strings.TrimSpace(field.Key)
+			if key == "" {
+				continue
+			}
+
+			if strings.EqualFold(field.Type, "file") {
+				if strings.TrimSpace(field.FileBase64) == "" {
+					return nil, fmt.Errorf("form-data file %q must be selected again", key)
+				}
+
+				fileBytes, err := base64.StdEncoding.DecodeString(field.FileBase64)
+				if err != nil {
+					return nil, fmt.Errorf("form-data file %q is invalid", key)
+				}
+
+				fileName := strings.TrimSpace(field.FileName)
+				if fileName == "" {
+					fileName = "upload.bin"
+				}
+
+				part, err := writer.CreateFormFile(key, fileName)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create multipart field %q: %w", key, err)
+				}
+
+				if _, err := part.Write(fileBytes); err != nil {
+					return nil, fmt.Errorf("failed to write multipart field %q: %w", key, err)
+				}
+				continue
+			}
+
+			if err := writer.WriteField(key, field.Value); err != nil {
+				return nil, fmt.Errorf("failed to write multipart field %q: %w", key, err)
+			}
+		}
+
+		if err := writer.Close(); err != nil {
+			return nil, fmt.Errorf("failed to finalize multipart body: %w", err)
+		}
+
+		bodyReader = bytes.NewReader(buf.Bytes())
+		contentTypeOverride = writer.FormDataContentType()
+	case strings.TrimSpace(req.BodyBase64) != "":
+		bodyBytes, err := base64.StdEncoding.DecodeString(req.BodyBase64)
+		if err != nil {
+			return nil, fmt.Errorf("binary request body is invalid")
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
+	case req.Body != "":
 		bodyReader = strings.NewReader(req.Body)
 	}
 
@@ -330,7 +400,13 @@ func executeBridgeRequest(req bridgeRunRequest) (*bridgeRunResponse, error) {
 	}
 
 	for key, value := range req.Headers {
+		if contentTypeOverride != "" && strings.EqualFold(key, "Content-Type") {
+			continue
+		}
 		httpReq.Header.Set(key, value)
+	}
+	if contentTypeOverride != "" {
+		httpReq.Header.Set("Content-Type", contentTypeOverride)
 	}
 
 	startedAt := time.Now()

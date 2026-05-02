@@ -1,11 +1,22 @@
 import { env } from '@/config/env';
 import type { RunRequestResponse } from '@/types/request';
 
+export interface LocalRunnerFormDataField {
+  key: string;
+  value?: string;
+  type?: 'text' | 'file';
+  file_name?: string;
+  content_type?: string;
+  file_base64?: string;
+}
+
 export interface LocalRunnerExecuteRequest {
   method: string;
   url: string;
   headers?: Record<string, string>;
   body?: string;
+  body_base64?: string;
+  form_data?: LocalRunnerFormDataField[];
   timeout_ms?: number;
   follow_redirects?: boolean;
   strict_tls?: boolean;
