@@ -627,33 +627,34 @@ function ApiSpecAICreateDialogContent({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>{t('common.method')}</Label>
-              <Select
-                value={seedMethod}
-                onValueChange={value => setSeedMethod(value as HttpMethod)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('common.method')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {METHOD_OPTIONS.map(method => (
-                    <SelectItem key={method} value={method}>
-                      {method}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="space-y-2 lg:col-span-2">
+              <Label>{`${t('common.method')} / ${t('common.path')}`}</Label>
+              <div className="grid gap-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
+                <Select
+                  value={seedMethod}
+                  onValueChange={value => setSeedMethod(value as HttpMethod)}
+                >
+                  <SelectTrigger className="w-full" aria-label={t('common.method')}>
+                    <SelectValue placeholder={t('common.method')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {METHOD_OPTIONS.map(method => (
+                      <SelectItem key={method} value={method}>
+                        {method}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <div className="space-y-2">
-              <Label htmlFor="ai-path">{t('common.path')}</Label>
-              <Input
-                id="ai-path"
-                value={seedPath}
-                onChange={event => setSeedPath(event.target.value)}
-                placeholder="/v1/orders"
-              />
+                <Input
+                  id="ai-path"
+                  aria-label={t('common.path')}
+                  className="font-mono"
+                  value={seedPath}
+                  onChange={event => setSeedPath(event.target.value)}
+                  placeholder="/v1/orders"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -728,32 +729,33 @@ function ApiSpecAICreateDialogContent({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{t('common.method')}</Label>
-                    <Select
-                      value={editableDraft.method}
-                      onValueChange={value => updateEditableDraft('method', value as HttpMethod)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('common.method')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {METHOD_OPTIONS.map(method => (
-                          <SelectItem key={method} value={method}>
-                            {method}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>{`${t('common.method')} / ${t('common.path')}`}</Label>
+                    <div className="grid gap-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
+                      <Select
+                        value={editableDraft.method}
+                        onValueChange={value => updateEditableDraft('method', value as HttpMethod)}
+                      >
+                        <SelectTrigger className="w-full" aria-label={t('common.method')}>
+                          <SelectValue placeholder={t('common.method')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {METHOD_OPTIONS.map(method => (
+                            <SelectItem key={method} value={method}>
+                              {method}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="draft-path">{t('common.path')}</Label>
-                    <Input
-                      id="draft-path"
-                      value={editableDraft.path}
-                      onChange={event => updateEditableDraft('path', event.target.value)}
-                    />
+                      <Input
+                        id="draft-path"
+                        aria-label={t('common.path')}
+                        className="font-mono"
+                        value={editableDraft.path}
+                        onChange={event => updateEditableDraft('path', event.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
