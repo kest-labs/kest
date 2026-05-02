@@ -105,6 +105,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useProjectMemberRole } from '@/hooks/use-members';
 import { useProject } from '@/hooks/use-projects';
 import { useT } from '@/i18n/client';
+import type { ScopedTranslations } from '@/i18n/shared';
 import { flowService } from '@/services/flow';
 import {
   extractFlowParameterCandidates,
@@ -147,6 +148,7 @@ const HISTORY_SENSITIVE_HEADER_NAMES = new Set([
   'x-api-key',
   'api-key',
 ]);
+type ProjectTranslator = ScopedTranslations<'project'>;
 
 const normalizeOpaqueId = (value: string | number | null | undefined): string | null => {
   if (typeof value === 'number') {
@@ -226,20 +228,20 @@ const getStatusBadgeClassName = (status: FlowRunStatus | 'idle') => {
   }
 };
 
-const getStatusLabel = (status: FlowRunStatus | 'idle') => {
+const getStatusLabel = (t: ProjectTranslator, status: FlowRunStatus | 'idle') => {
   switch (status) {
     case 'passed':
-      return 'Passed';
+      return t('flowPage.statusPassed');
     case 'failed':
-      return 'Failed';
+      return t('flowPage.statusFailed');
     case 'running':
-      return 'Running';
+      return t('flowPage.statusRunning');
     case 'canceled':
-      return 'Canceled';
+      return t('flowPage.statusCanceled');
     case 'pending':
-      return 'Pending';
+      return t('flowPage.statusPending');
     default:
-      return 'Idle';
+      return t('flowPage.statusIdle');
   }
 };
 
@@ -260,9 +262,12 @@ const getMethodBadgeClassName = (method: string) => {
   }
 };
 
-const buildEdgeLabel = (mappings: FlowVariableMappingRule[]) => {
+const buildEdgeLabel = (
+  mappings: FlowVariableMappingRule[],
+  dependencyLabel = 'Dependency'
+) => {
   if (mappings.length === 0) {
-    return 'Dependency';
+    return dependencyLabel;
   }
 
   const preview = mappings.slice(0, 2).map(mapping => `${mapping.source} -> ${mapping.target}`);
@@ -504,15 +509,15 @@ const createEmptyValidationState = (): FlowValidationState => ({
 
 const buildLocalRunId = () => `local-${Date.now()}-${Math.round(Math.random() * 1000)}`;
 
-const getCanvasNodeLabel = (node: FlowCanvasNode, index?: number) => {
+const getCanvasNodeLabel = (t: ProjectTranslator, node: FlowCanvasNode, index?: number) => {
   const name = node.data.name.trim();
   if (name) {
     return name;
   }
   if (typeof index === 'number') {
-    return `Step ${index + 1}`;
+    return t('flowPage.stepLabel', { index: index + 1 });
   }
-  return 'Unnamed step';
+  return t('flowPage.unnamedStep');
 };
 
 const getStepNodeBaseId = (step: FlowStep) => {
@@ -573,7 +578,8 @@ const createCanvasNode = (
 
 const createCanvasEdge = (
   edge: FlowEdge,
-  stepNodeIds: Map<string, string>
+  stepNodeIds: Map<string, string>,
+  t: ProjectTranslator
 ): FlowCanvasEdge | null => {
   const source = stepNodeIds.get(edge.source_step_id);
   const target = stepNodeIds.get(edge.target_step_id);
@@ -589,7 +595,7 @@ const createCanvasEdge = (
     source,
     target,
     markerEnd: { type: MarkerType.ArrowClosed, color: 'currentColor' },
-    label: buildEdgeLabel(mappings),
+    label: buildEdgeLabel(mappings, t('flowPage.inspector.dependencyLabel')),
     labelStyle: { fontSize: 11, fontWeight: 600 },
     data: {
       backendEdgeId: edge.id,
@@ -602,7 +608,8 @@ const buildCanvasGraph = (
   steps: FlowStep[],
   edges: FlowEdge[],
   run: FlowRun | null | undefined,
-  liveStepResults: Record<string, FlowStepResult>
+  liveStepResults: Record<string, FlowStepResult>,
+  t: ProjectTranslator
 ) => {
   const usedNodeIds = new Set<string>();
   const stepNodeIds = new Map<string, string>();
@@ -633,7 +640,7 @@ const buildCanvasGraph = (
   let droppedInvalidEdgeCount = 0;
 
   for (const edge of edges) {
-    const canvasEdge = createCanvasEdge(edge, stepNodeIds);
+    const canvasEdge = createCanvasEdge(edge, stepNodeIds, t);
     if (!canvasEdge) {
       droppedInvalidEdgeCount += 1;
       continue;
@@ -687,7 +694,8 @@ const mergeSavedGraphIntoCanvas = (
   currentEdges: FlowCanvasEdge[],
   saved: FlowDetail,
   run: FlowRun | null | undefined,
-  liveStepResults: Record<string, FlowStepResult>
+  liveStepResults: Record<string, FlowStepResult>,
+  t: ProjectTranslator
 ) => {
   const savedStepsByClientKey = new Map<string, FlowStep>();
   for (const step of saved.steps) {
@@ -747,7 +755,7 @@ const mergeSavedGraphIntoCanvas = (
     return {
       ...edge,
       id: `edge-${savedEdge.id}`,
-      label: buildEdgeLabel(mappings),
+      label: buildEdgeLabel(mappings, t('flowPage.inspector.dependencyLabel')),
       data: {
         backendEdgeId: savedEdge.id,
         mappings,
@@ -813,6 +821,7 @@ const buildLocalFlowExecutionGraph = (
 });
 
 const validateFlowDraft = (
+  t: ProjectTranslator,
   meta: { name: string; description: string },
   nodes: FlowCanvasNode[],
   edges: FlowCanvasEdge[],
@@ -838,37 +847,39 @@ const validateFlowDraft = (
   };
 
   if (!meta.name.trim()) {
-    flowName = 'Flow name is required.';
+    flowName = t('flowPage.validation.nameRequired');
     setFirstIssue(
-      mode === 'run' ? 'Name this flow before running it.' : 'Name this flow before saving it.',
+      mode === 'run'
+        ? t('flowPage.validation.nameBeforeRun')
+        : t('flowPage.validation.nameBeforeSave'),
       { kind: 'flow' }
     );
   }
 
   if (mode === 'run' && nodes.length === 0) {
-    setFirstIssue('Add at least one step before running this flow.', { kind: 'flow' });
+    setFirstIssue(t('flowPage.validation.addStepBeforeRun'), { kind: 'flow' });
   }
 
   for (const [index, node] of nodes.entries()) {
-    const label = getCanvasNodeLabel(node, index);
+    const label = getCanvasNodeLabel(t, node, index);
     const errors: FlowNodeValidationErrors = {};
 
     if (!node.id.trim()) {
-      errors.name = 'Step key is required.';
+      errors.name = t('flowPage.validation.stepKeyRequired');
     } else if (seenNodeIds.has(node.id)) {
-      errors.name = 'Duplicate step key detected.';
+      errors.name = t('flowPage.validation.duplicateStepKey');
     } else {
       seenNodeIds.add(node.id);
     }
 
     if (!node.data.name.trim()) {
-      errors.name = errors.name ?? 'Step name is required.';
+      errors.name = errors.name ?? t('flowPage.validation.stepNameRequired');
     }
     if (!node.data.method.trim()) {
-      errors.method = 'HTTP method is required.';
+      errors.method = t('flowPage.validation.httpMethodRequired');
     }
     if (!node.data.url.trim()) {
-      errors.url = 'Request URL is required.';
+      errors.url = t('flowPage.validation.requestUrlRequired');
     }
 
     if (errors.name || errors.method || errors.url) {
@@ -887,29 +898,29 @@ const validateFlowDraft = (
     let edgeError = '';
 
     if (!edge.source || !edge.target) {
-      edgeError = 'Connection endpoints are missing.';
+      edgeError = t('flowPage.validation.connectionEndpointsMissing');
     } else if (edge.source === edge.target) {
-      edgeError = 'A step cannot connect to itself.';
+      edgeError = t('flowPage.validation.selfConnection');
     } else if (!nodeById.has(edge.source)) {
-      edgeError = 'The upstream step no longer exists.';
+      edgeError = t('flowPage.validation.upstreamMissing');
     } else if (!nodeById.has(edge.target)) {
-      edgeError = 'The downstream step no longer exists.';
+      edgeError = t('flowPage.validation.downstreamMissing');
     } else if (
       (edge.data?.mappings ?? []).some(mapping => !mapping.source.trim() || !mapping.target.trim())
     ) {
-      edgeError = 'Complete or remove empty mapping rows.';
+      edgeError = t('flowPage.validation.emptyMappings');
     }
 
     if (edgeError) {
       edgeErrors[edge.id] = edgeError;
       const sourceName =
         edge.source && nodeById.has(edge.source)
-          ? getCanvasNodeLabel(nodeById.get(edge.source)!)
-          : 'Unknown source';
+          ? getCanvasNodeLabel(t, nodeById.get(edge.source)!)
+          : t('flowPage.validation.unknownSource');
       const targetName =
         edge.target && nodeById.has(edge.target)
-          ? getCanvasNodeLabel(nodeById.get(edge.target)!)
-          : 'Unknown target';
+          ? getCanvasNodeLabel(t, nodeById.get(edge.target)!)
+          : t('flowPage.validation.unknownTarget');
       setFirstIssue(`${sourceName} -> ${targetName}: ${edgeError}`, {
         kind: 'edge',
         id: edge.id,
@@ -941,7 +952,7 @@ const validateFlowDraft = (
     }
 
     if (visited !== nodes.length) {
-      setFirstIssue('Flow edges cannot form cycles.', { kind: 'flow' });
+      setFirstIssue(t('flowPage.validation.cycle'), { kind: 'flow' });
     }
   }
 
@@ -958,12 +969,13 @@ const validateFlowDraft = (
 const buildEdge = (
   source: string,
   target: string,
-  mappings: FlowVariableMappingRule[] = []
+  mappings: FlowVariableMappingRule[] = [],
+  dependencyLabel = 'Dependency'
 ): FlowCanvasEdge => ({
   id: `edge-${source}-${target}-${Date.now()}`,
   source,
   target,
-  label: buildEdgeLabel(mappings),
+  label: buildEdgeLabel(mappings, dependencyLabel),
   markerEnd: { type: MarkerType.ArrowClosed, color: 'currentColor' },
   labelStyle: { fontSize: 11, fontWeight: 600 },
   data: { mappings },
@@ -1012,6 +1024,7 @@ const createsCycle = (nodes: FlowCanvasNode[], edges: FlowCanvasEdge[], next: Co
 };
 
 const HttpStepNode = ({ data, selected }: NodeProps) => {
+  const t = useT('project');
   const flowData = data as FlowNodeData;
 
   return (
@@ -1034,17 +1047,17 @@ const HttpStepNode = ({ data, selected }: NodeProps) => {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-text-main">
-            {flowData.name || 'Untitled step'}
+            {flowData.name || t('flowPage.unnamedStep')}
           </p>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">
-            {flowData.url || 'Configure request URL'}
+            {flowData.url || t('flowPage.configureRequestUrl')}
           </p>
         </div>
         <Badge
           variant="outline"
           className={cn('shrink-0', getStatusBadgeClassName(flowData.status))}
         >
-          {getStatusLabel(flowData.status)}
+          {getStatusLabel(t, flowData.status)}
         </Badge>
       </div>
       <div className="mt-4 flex items-center justify-between">
@@ -1195,6 +1208,7 @@ function FlowInspector({
   onPassParameters: (payload: FlowParameterHandoffPayload) => void;
   historyHref: string;
 }) {
+  const t = useT('project');
   if (selectedNode) {
     const selectedNodeErrors = nodeErrors[selectedNode.id] ?? {};
     const captureDefinitions = parseCaptureDefinitions(selectedNode.data.captures);
@@ -1202,19 +1216,19 @@ function FlowInspector({
       <div className="space-y-6">
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Step inspector</CardTitle>
-            <CardDescription>Configure the selected HTTP request node.</CardDescription>
+            <CardTitle>{t('flowPage.inspector.stepTitle')}</CardTitle>
+            <CardDescription>{t('flowPage.inspector.stepDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="request" className="space-y-4">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="request">Request</TabsTrigger>
-                <TabsTrigger value="captures">Captures</TabsTrigger>
-                <TabsTrigger value="asserts">Asserts</TabsTrigger>
+                <TabsTrigger value="request">{t('flowPage.inspector.requestTab')}</TabsTrigger>
+                <TabsTrigger value="captures">{t('flowPage.inspector.capturesTab')}</TabsTrigger>
+                <TabsTrigger value="asserts">{t('flowPage.inspector.assertsTab')}</TabsTrigger>
               </TabsList>
               <TabsContent value="request" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="step-name">Name</Label>
+                  <Label htmlFor="step-name">{t('common.name')}</Label>
                   <Input
                     id="step-name"
                     value={selectedNode.data.name}
@@ -1225,7 +1239,7 @@ function FlowInspector({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="step-method">Method</Label>
+                  <Label htmlFor="step-method">{t('common.method')}</Label>
                   <Select
                     value={selectedNode.data.method}
                     disabled={!canEdit}
@@ -1249,7 +1263,7 @@ function FlowInspector({
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="step-url">URL</Label>
+                  <Label htmlFor="step-url">{t('flowPage.inspector.urlLabel')}</Label>
                   <Input
                     id="step-url"
                     value={selectedNode.data.url}
@@ -1261,7 +1275,7 @@ function FlowInspector({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="step-headers">Headers (JSON)</Label>
+                  <Label htmlFor="step-headers">{t('flowPage.inspector.headersJsonLabel')}</Label>
                   <Textarea
                     id="step-headers"
                     value={selectedNode.data.headers}
@@ -1275,7 +1289,7 @@ function FlowInspector({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="step-body">Body</Label>
+                  <Label htmlFor="step-body">{t('common.requestBody')}</Label>
                   <Textarea
                     id="step-body"
                     value={selectedNode.data.body}
@@ -1290,18 +1304,18 @@ function FlowInspector({
               <TabsContent value="captures" className="space-y-4">
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-medium text-text-main">Output variables</p>
+                    <p className="text-sm font-medium text-text-main">
+                      {t('flowPage.inspector.outputVariablesTitle')}
+                    </p>
                     <p className="mt-1 text-xs leading-5 text-text-muted">
-                      Variables generated from response fields and available to connected downstream
-                      steps.
+                      {t('flowPage.inspector.outputVariablesDescription')}
                     </p>
                   </div>
                   {captureDefinitions.length === 0 ? (
                     <Alert>
-                      <AlertTitle>No output variables</AlertTitle>
+                      <AlertTitle>{t('flowPage.inspector.noOutputVariablesTitle')}</AlertTitle>
                       <AlertDescription>
-                        Run this step, then use Pass parameters from the response log to create
-                        captures.
+                        {t('flowPage.inspector.noOutputVariablesDescription')}
                       </AlertDescription>
                     </Alert>
                   ) : (
@@ -1323,10 +1337,10 @@ function FlowInspector({
 
                 <details className="rounded-2xl border border-border/60 bg-background/70 p-4">
                   <summary className="cursor-pointer text-sm font-medium text-text-main">
-                    Advanced Captures DSL
+                    {t('flowPage.inspector.advancedCapturesTitle')}
                   </summary>
                   <div className="mt-4 space-y-2">
-                    <Label htmlFor="step-captures">Captures DSL</Label>
+                    <Label htmlFor="step-captures">{t('flowPage.inspector.capturesDslLabel')}</Label>
                     <Textarea
                       id="step-captures"
                       value={selectedNode.data.captures}
@@ -1342,7 +1356,7 @@ function FlowInspector({
                 </details>
               </TabsContent>
               <TabsContent value="asserts" className="space-y-2">
-                <Label htmlFor="step-asserts">Asserts DSL</Label>
+                <Label htmlFor="step-asserts">{t('flowPage.inspector.assertsTab')} DSL</Label>
                 <Textarea
                   id="step-asserts"
                   value={selectedNode.data.asserts}
@@ -1382,29 +1396,28 @@ function FlowInspector({
       <div className="space-y-6">
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Edge mappings</CardTitle>
+            <CardTitle>{t('flowPage.inspector.edgeMappingsTitle')}</CardTitle>
             <CardDescription>
-              Move captured variables from the upstream step into the downstream step scope.
+              {t('flowPage.inspector.edgeMappingsDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedEdgeError ? (
               <Alert variant="destructive">
-                <AlertTitle>Fix this connection</AlertTitle>
+                <AlertTitle>{t('flowPage.inspector.fixConnectionTitle')}</AlertTitle>
                 <AlertDescription>{selectedEdgeError}</AlertDescription>
               </Alert>
             ) : null}
             <Tabs defaultValue="mappings" className="space-y-4">
               <TabsList className="grid w-full grid-cols-1">
-                <TabsTrigger value="mappings">Mappings</TabsTrigger>
+                <TabsTrigger value="mappings">{t('flowPage.inspector.mappingsTab')}</TabsTrigger>
               </TabsList>
               <TabsContent value="mappings" className="space-y-4">
                 {mappings.length === 0 ? (
                   <Alert>
-                    <AlertTitle>No mappings yet</AlertTitle>
+                    <AlertTitle>{t('flowPage.inspector.noMappingsTitle')}</AlertTitle>
                     <AlertDescription>
-                      Add at least one mapping so the downstream step can reference upstream
-                      captures.
+                      {t('flowPage.inspector.noMappingsDescription')}
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -1469,7 +1482,7 @@ function FlowInspector({
                   }
                 >
                   <Plus className="h-4 w-4" />
-                  Add mapping
+                  {t('flowPage.inspector.addMapping')}
                 </Button>
               </TabsContent>
             </Tabs>
@@ -1498,12 +1511,12 @@ function FlowInspector({
     <div className="space-y-6">
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Flow settings</CardTitle>
-          <CardDescription>Update the graph metadata and review recent runs.</CardDescription>
+          <CardTitle>{t('flowPage.inspector.flowSettingsTitle')}</CardTitle>
+          <CardDescription>{t('flowPage.inspector.flowSettingsDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="flow-name">Name</Label>
+            <Label htmlFor="flow-name">{t('common.name')}</Label>
             <Input
               id="flow-name"
               value={flowName}
@@ -1514,7 +1527,7 @@ function FlowInspector({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="flow-description">Description</Label>
+            <Label htmlFor="flow-description">{t('common.description')}</Label>
             <Textarea
               id="flow-description"
               value={flowDescription}
@@ -1625,10 +1638,8 @@ function RunHistoryPanel({
         <CardContent>
           {runs.length === 0 ? (
             <Alert>
-              <AlertTitle>No runs yet</AlertTitle>
-              <AlertDescription>
-                Save the flow, then start the first run from the toolbar.
-              </AlertDescription>
+              <AlertTitle>{t('flowPage.runHistory.emptyTitle')}</AlertTitle>
+              <AlertDescription>{t('flowPage.runHistory.emptyDescription')}</AlertDescription>
             </Alert>
           ) : (
             <div className="space-y-3">
@@ -1647,12 +1658,14 @@ function RunHistoryPanel({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-text-main">
-                        {run.execution_mode === 'local' ? 'Local Run' : 'Run'} #{run.id}
+                        {run.execution_mode === 'local'
+                          ? t('flowPage.runHistory.localRunLabel', { id: run.id })
+                          : t('flowPage.runHistory.runLabel', { id: run.id })}
                       </p>
                       <p className="mt-1 text-xs text-text-muted">{formatDate(run.created_at)}</p>
                     </div>
                     <Badge variant="outline" className={getStatusBadgeClassName(run.status)}>
-                      {getStatusLabel(run.status)}
+                      {getStatusLabel(t, run.status)}
                     </Badge>
                   </div>
                 </button>
@@ -1665,40 +1678,43 @@ function RunHistoryPanel({
       {selectedRun ? (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Run log</CardTitle>
+            <CardTitle>{t('flowPage.runHistory.runLogTitle')}</CardTitle>
             <CardDescription>
-              Inspect each step for {selectedRun.execution_mode === 'local' ? 'local run' : 'run'} #
-              {selectedRun.id} and jump back to the canvas node when needed.
+              {selectedRun.execution_mode === 'local'
+                ? t('flowPage.runHistory.runLogDescriptionLocal', { id: selectedRun.id })
+                : t('flowPage.runHistory.runLogDescriptionServer', { id: selectedRun.id })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3">
-              <ResultField label="Status">
+              <ResultField label={t('flowPage.runHistory.statusLabel')}>
                 <Badge variant="outline" className={getStatusBadgeClassName(selectedRun.status)}>
-                  {getStatusLabel(selectedRun.status)}
+                  {getStatusLabel(t, selectedRun.status)}
                 </Badge>
               </ResultField>
-              <ResultField label="Started">
-                {selectedRun.started_at ? formatDate(selectedRun.started_at) : 'Not started'}
+              <ResultField label={t('flowPage.runHistory.startedLabel')}>
+                {selectedRun.started_at
+                  ? formatDate(selectedRun.started_at)
+                  : t('flowPage.runHistory.notStarted')}
               </ResultField>
-              <ResultField label="Completed Steps">
+              <ResultField label={t('flowPage.runHistory.completedStepsLabel')}>
                 {completedCount} / {selectedRun.step_results?.length ?? 0}
               </ResultField>
             </div>
 
             {isRunDetailsLoading && !selectedRun.step_results?.length ? (
               <Alert>
-                <AlertTitle>Loading run details</AlertTitle>
+                <AlertTitle>{t('flowPage.runHistory.loadingDetailsTitle')}</AlertTitle>
                 <AlertDescription>
-                  Fetching step-level request and response logs for this run.
+                  {t('flowPage.runHistory.loadingDetailsDescription')}
                 </AlertDescription>
               </Alert>
             ) : null}
 
             {!isRunDetailsLoading && !selectedRun.step_results?.length ? (
               <Alert>
-                <AlertTitle>No step logs yet</AlertTitle>
-                <AlertDescription>This run has not produced step-level logs yet.</AlertDescription>
+                <AlertTitle>{t('flowPage.runHistory.noStepLogsTitle')}</AlertTitle>
+                <AlertDescription>{t('flowPage.runHistory.noStepLogsDescription')}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -1706,7 +1722,9 @@ function RunHistoryPanel({
               <div className="space-y-3">
                 {selectedRun.step_results.map(result => {
                   const isActive = activeRunStepResult?.step_id === result.step_id;
-                  const stepName = stepNameById.get(result.step_id) ?? `Step #${result.step_id}`;
+                  const stepName =
+                    stepNameById.get(result.step_id) ??
+                    t('flowPage.stepNumberLabel', { id: result.step_id });
 
                   return (
                     <button
@@ -1727,7 +1745,7 @@ function RunHistoryPanel({
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-text-main">{stepName}</p>
                           <p className="mt-1 truncate text-xs text-text-muted">
-                            Step ID {result.step_id}
+                            {t('flowPage.runHistory.stepIdLabel', { id: result.step_id })}
                             {result.error_message ? ` · ${result.error_message}` : ''}
                           </p>
                         </div>
@@ -1737,7 +1755,7 @@ function RunHistoryPanel({
                             variant="outline"
                             className={getStatusBadgeClassName(result.status)}
                           >
-                            {getStatusLabel(result.status)}
+                            {getStatusLabel(t, result.status)}
                           </Badge>
                         </div>
                       </div>
@@ -1755,27 +1773,29 @@ function RunHistoryPanel({
                     <div>
                       <p className="text-sm font-semibold text-text-main">
                         {stepNameById.get(activeRunStepResult.step_id) ??
-                          `Step #${activeRunStepResult.step_id}`}
+                          t('flowPage.stepNumberLabel', { id: activeRunStepResult.step_id })}
                       </p>
                       <p className="mt-1 text-xs text-text-muted">
-                        Detailed request, response, assert results, and captured variables.
+                        {t('flowPage.runHistory.detailDescription')}
                       </p>
                     </div>
                     <Badge
                       variant="outline"
                       className={getStatusBadgeClassName(activeRunStepResult.status)}
                     >
-                      {getStatusLabel(activeRunStepResult.status)}
+                      {getStatusLabel(t, activeRunStepResult.status)}
                     </Badge>
                   </div>
 
-                  <ResultField label="Duration">{activeRunStepResult.duration_ms} ms</ResultField>
+                  <ResultField label={t('flowPage.runHistory.durationLabel')}>
+                    {activeRunStepResult.duration_ms} ms
+                  </ResultField>
                   <ResultJsonCard
-                    title="Request"
+                    title={t('flowPage.runHistory.requestTitle')}
                     value={parseJsonString(activeRunStepResult.request)}
                   />
                   <ResultJsonCard
-                    title="Response"
+                    title={t('flowPage.runHistory.responseTitle')}
                     value={parseJsonString(activeRunStepResult.response)}
                     action={
                       activeParameterCandidates.length > 0 ? (
@@ -1786,28 +1806,28 @@ function RunHistoryPanel({
                           disabled={!canEdit || activeTargetOptions.length === 0}
                           title={
                             activeTargetOptions.length === 0
-                              ? 'No downstream step can receive parameters from this step'
-                              : 'Pass response fields to another step'
+                              ? t('flowPage.runHistory.passParametersDisabled')
+                              : t('flowPage.runHistory.passParametersEnabled')
                           }
                           onClick={() => setHandoffStepResult(activeRunStepResult)}
                         >
                           <Share2 className="h-4 w-4" />
-                          Pass parameters
+                          {t('flowPage.runHistory.passParameters')}
                         </Button>
                       ) : null
                     }
                   />
                   <ResultJsonCard
-                    title="Assert results"
+                    title={t('flowPage.runHistory.assertResults')}
                     value={parseJsonString(activeRunStepResult.assert_results)}
                   />
                   <ResultJsonCard
-                    title="Captured variables"
+                    title={t('flowPage.runHistory.capturedVariables')}
                     value={parseJsonString(activeRunStepResult.variables_captured)}
                   />
                   {activeRunStepResult.error_message ? (
                     <Alert>
-                      <AlertTitle>Failure detail</AlertTitle>
+                      <AlertTitle>{t('flowPage.runHistory.failureDetail')}</AlertTitle>
                       <AlertDescription>{activeRunStepResult.error_message}</AlertDescription>
                     </Alert>
                   ) : null}
@@ -1823,7 +1843,8 @@ function RunHistoryPanel({
         open={handoffStepResult !== null}
         sourceStepName={
           handoffStepResult
-            ? (stepNameById.get(handoffStepResult.step_id) ?? `Step #${handoffStepResult.step_id}`)
+            ? (stepNameById.get(handoffStepResult.step_id) ??
+              t('flowPage.stepNumberLabel', { id: handoffStepResult.step_id }))
             : ''
         }
         candidates={extractFlowParameterCandidates(handoffStepResult?.response)}
@@ -1866,6 +1887,7 @@ function FlowParameterHandoffDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (targetStepId: string, selections: FlowParameterSelection[]) => void;
 }) {
+  const t = useT('project');
   const [targetStepId, setTargetStepId] = useState(
     targetOptions[0]?.stepId ? String(targetOptions[0].stepId) : ''
   );
@@ -1900,19 +1922,22 @@ function FlowParameterHandoffDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="xl">
         <DialogHeader>
-          <DialogTitle>Pass parameters</DialogTitle>
+          <DialogTitle>{t('flowPage.handoffDialog.title')}</DialogTitle>
           <DialogDescription>
-            Select response fields from {sourceStepName || 'this step'} and expose them to a
-            downstream step.
+            {t('flowPage.handoffDialog.description', {
+              source: sourceStepName || t('flowPage.handoffDialog.currentStep'),
+            })}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-5">
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
             <div className="space-y-2">
-              <Label htmlFor="handoff-target-step">Target step</Label>
+              <Label htmlFor="handoff-target-step">
+                {t('flowPage.handoffDialog.targetStepLabel')}
+              </Label>
               <Select value={targetStepId} onValueChange={setTargetStepId}>
                 <SelectTrigger id="handoff-target-step" className="w-full">
-                  <SelectValue placeholder="Select downstream step" />
+                  <SelectValue placeholder={t('flowPage.handoffDialog.targetStepPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {targetOptions.map(option => (
@@ -1923,15 +1948,18 @@ function FlowParameterHandoffDialog({
                 </SelectContent>
               </Select>
             </div>
-            <ResultField label="Selected">{selectedCandidates.length} fields</ResultField>
+            <ResultField label={t('flowPage.handoffDialog.selectedLabel')}>
+              {t('flowPage.handoffDialog.selectedCount', {
+                count: selectedCandidates.length,
+              })}
+            </ResultField>
           </div>
 
           {targetOptions.length === 0 ? (
             <Alert>
-              <AlertTitle>No available target step</AlertTitle>
+              <AlertTitle>{t('flowPage.handoffDialog.noAvailableTargetTitle')}</AlertTitle>
               <AlertDescription>
-                Add another step or remove cyclic connections before passing parameters from this
-                response.
+                {t('flowPage.handoffDialog.noAvailableTargetDescription')}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -1941,10 +1969,12 @@ function FlowParameterHandoffDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10" />
-                  <TableHead>Response path</TableHead>
-                  <TableHead className="w-24">Type</TableHead>
-                  <TableHead className="min-w-[180px]">Variable</TableHead>
-                  <TableHead>Preview</TableHead>
+                  <TableHead>{t('flowPage.handoffDialog.responsePath')}</TableHead>
+                  <TableHead className="w-24">{t('flowPage.handoffDialog.type')}</TableHead>
+                  <TableHead className="min-w-[180px]">
+                    {t('flowPage.handoffDialog.variable')}
+                  </TableHead>
+                  <TableHead>{t('flowPage.handoffDialog.preview')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1961,7 +1991,9 @@ function FlowParameterHandoffDialog({
                           onCheckedChange={checked =>
                             toggleCandidate(candidate.id, checked === true)
                           }
-                          aria-label={`Select ${candidate.displayPath}`}
+                          aria-label={t('flowPage.handoffDialog.selectCandidate', {
+                            path: candidate.displayPath,
+                          })}
                         />
                       </TableCell>
                       <TableCell className="max-w-[260px]">
@@ -1982,12 +2014,14 @@ function FlowParameterHandoffDialog({
                               [candidate.id]: event.target.value,
                             }))
                           }
-                          errorText={isInvalid ? 'Use letters, numbers, or underscore.' : undefined}
+                          errorText={
+                            isInvalid ? t('flowPage.handoffDialog.invalidVariable') : undefined
+                          }
                           root
                         />
                       </TableCell>
                       <TableCell className="max-w-[220px] truncate text-xs text-text-muted">
-                        {candidate.preview || 'null'}
+                        {candidate.preview || t('flowPage.handoffDialog.noPreview')}
                       </TableCell>
                     </TableRow>
                   );
@@ -1998,7 +2032,7 @@ function FlowParameterHandoffDialog({
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="button"
@@ -2006,7 +2040,7 @@ function FlowParameterHandoffDialog({
             onClick={() => onSubmit(targetStepId, selectedVariables)}
           >
             <Share2 className="h-4 w-4" />
-            Apply handoff
+            {t('flowPage.handoffDialog.applyAction')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -2060,7 +2094,7 @@ export function ProjectFlowManagementPage({
   const router = useRouter();
   const isMobile = useIsMobile();
   const projectQuery = useProject(projectId);
-  const projectName = projectQuery.data?.name || `Project #${projectId}`;
+  const projectName = projectQuery.data?.name || t('flowPage.projectFallback', { id: projectId });
   const memberRoleQuery = useProjectMemberRole(projectId);
   const flowListQuery = useFlows(projectId);
   const environmentsQuery = useEnvironments(projectId);
@@ -2127,7 +2161,7 @@ export function ProjectFlowManagementPage({
   const selectedRun = selectedLocalRun ?? selectedRunQuery.data ?? latestRun;
 
   const canEdit = WRITE_ROLES.includes(memberRoleQuery.data?.role ?? 'read');
-  const flows = flowListQuery.data?.items ?? [];
+  const flows = flowListQuery.data?.items;
   const runEnvironments = useMemo(
     () =>
       (environmentsQuery.data?.items ?? []).filter(
@@ -2148,12 +2182,13 @@ export function ProjectFlowManagementPage({
   const flowHistoryHref = `${buildProjectHistoriesRoute(projectId)}?entityType=${FLOW_HISTORY_ENTITY_TYPE}`;
   const showFlowSidebar = isMobile || !isSidebarCollapsed;
   const filteredFlows = useMemo(() => {
+    const allFlows = flows ?? [];
     const keyword = deferredSearch.trim().toLowerCase();
     if (!keyword) {
-      return flows;
+      return allFlows;
     }
 
-    return flows.filter(flow =>
+    return allFlows.filter(flow =>
       [flow.name, flow.description]
         .filter(Boolean)
         .some(value => value.toLowerCase().includes(keyword))
@@ -2174,6 +2209,8 @@ export function ProjectFlowManagementPage({
     setSelectedRunEnvironmentId(runEnvironments[0].id);
   }, [runEnvironments, selectedRunEnvironmentId]);
 
+  // This hydration path should only react to backend flow revisions, not local run state changes.
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     const detail = selectedFlowQuery.data;
     if (!detail) {
@@ -2184,7 +2221,13 @@ export function ProjectFlowManagementPage({
       return;
     }
 
-    const canvasGraph = buildCanvasGraph(detail.steps, detail.edges, selectedRun, liveStepResults);
+    const canvasGraph = buildCanvasGraph(
+      detail.steps,
+      detail.edges,
+      selectedRun,
+      liveStepResults,
+      t
+    );
     setFlowMeta({
       name: detail.name,
       description: detail.description,
@@ -2197,6 +2240,7 @@ export function ProjectFlowManagementPage({
     setLiveStepResults({});
     setValidationState(createEmptyValidationState());
   }, [selectedFlowQuery.data?.updated_at]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     if (!selectedFlowQuery.data) {
@@ -2204,7 +2248,7 @@ export function ProjectFlowManagementPage({
     }
 
     setNodes(current => applyRunStateToCanvasNodes(current, selectedRun, liveStepResults));
-  }, [liveStepResults, selectedFlowQuery.data, selectedRun?.id]);
+  }, [liveStepResults, selectedFlowQuery.data, selectedRun]);
 
   useEffect(() => {
     if (previousFlowIdRef.current === selectedFlowId) {
@@ -2240,7 +2284,7 @@ export function ProjectFlowManagementPage({
       ? [
           {
             id: node.data.backendStepId,
-            name: node.data.name || `Step #${node.data.backendStepId}`,
+            name: node.data.name || t('flowPage.stepNumberLabel', { id: node.data.backendStepId }),
           },
         ]
       : []
@@ -2364,7 +2408,15 @@ export function ProjectFlowManagementPage({
 
     setEdges(
       current =>
-        addEdge(buildEdge(connection.source!, connection.target!), current) as FlowCanvasEdge[]
+        addEdge(
+          buildEdge(
+            connection.source!,
+            connection.target!,
+            [],
+            t('flowPage.inspector.dependencyLabel')
+          ),
+          current
+        ) as FlowCanvasEdge[]
     );
     setDirty(true);
     clearValidationState();
@@ -2394,7 +2446,7 @@ export function ProjectFlowManagementPage({
         edge.id === edgeId
           ? {
               ...edge,
-              label: buildEdgeLabel(mappings),
+              label: buildEdgeLabel(mappings, t('flowPage.inspector.dependencyLabel')),
               data: {
                 ...edge.data,
                 mappings,
@@ -2424,10 +2476,13 @@ export function ProjectFlowManagementPage({
             targetHandle: null,
           })
       )
-      .map(node => ({
-        stepId: node.data.backendStepId!,
-        name: node.data.name || `Step #${node.data.backendStepId}`,
-      }));
+      .map(node => {
+        const backendStepId = node.data.backendStepId!;
+        return {
+          stepId: backendStepId,
+          name: node.data.name || t('flowPage.stepNumberLabel', { id: backendStepId }),
+        };
+      });
   };
 
   const handlePassParameters = ({
@@ -2448,7 +2503,7 @@ export function ProjectFlowManagementPage({
     if (!sourceNode || !targetNode) {
       setValidationState(current => ({
         ...current,
-        message: 'Unable to pass parameters because one of the selected steps no longer exists.',
+        message: t('flowPage.validation.passParametersMissing'),
       }));
       return;
     }
@@ -2464,7 +2519,7 @@ export function ProjectFlowManagementPage({
     ) {
       setValidationState(current => ({
         ...current,
-        message: 'Unable to pass parameters because this connection would create a cycle.',
+        message: t('flowPage.validation.passParametersCycle'),
       }));
       return;
     }
@@ -2497,7 +2552,7 @@ export function ProjectFlowManagementPage({
           edge.id === existingEdge.id
             ? {
                 ...edge,
-                label: buildEdgeLabel(nextMappings),
+                label: buildEdgeLabel(nextMappings, t('flowPage.inspector.dependencyLabel')),
                 data: {
                   ...edge.data,
                   mappings: nextMappings,
@@ -2507,7 +2562,15 @@ export function ProjectFlowManagementPage({
         );
       }
 
-      return [...current, buildEdge(sourceNode.id, targetNode.id, nextMappings)];
+      return [
+        ...current,
+        buildEdge(
+          sourceNode.id,
+          targetNode.id,
+          nextMappings,
+          t('flowPage.inspector.dependencyLabel')
+        ),
+      ];
     });
 
     setDirty(true);
@@ -2549,7 +2612,7 @@ export function ProjectFlowManagementPage({
       },
       data: {
         clientKey,
-        name: `Step ${nodes.length + 1}`,
+        name: t('flowPage.stepLabel', { index: nodes.length + 1 }),
         method: 'GET',
         url: '',
         headers: '',
@@ -2574,7 +2637,7 @@ export function ProjectFlowManagementPage({
       return null;
     }
 
-    const validation = validateFlowDraft(flowMeta, nodes, edges, 'save');
+    const validation = validateFlowDraft(t, flowMeta, nodes, edges, 'save');
     if (!validation.isValid) {
       applyValidationResult(validation);
       return null;
@@ -2597,7 +2660,8 @@ export function ProjectFlowManagementPage({
         edges,
         saved,
         selectedRun,
-        liveStepResults
+        liveStepResults,
+        t
       );
       setNodes(mergedGraph.nodes);
       setEdges(mergedGraph.edges);
@@ -2609,7 +2673,7 @@ export function ProjectFlowManagementPage({
         message:
           error instanceof Error
             ? error.message
-            : 'Failed to save this flow. Review the current graph and try again.',
+            : t('flowPage.validation.saveFailed'),
       }));
       return null;
     }
@@ -2744,7 +2808,7 @@ export function ProjectFlowManagementPage({
       return;
     }
 
-    const validation = validateFlowDraft(flowMeta, nodes, edges, 'run');
+    const validation = validateFlowDraft(t, flowMeta, nodes, edges, 'run');
     if (!validation.isValid) {
       applyValidationResult(validation);
       return;
@@ -2762,7 +2826,7 @@ export function ProjectFlowManagementPage({
       }
 
       if (!savedFlow) {
-        throw new Error('Load this flow again before starting a flow run.');
+        throw new Error(t('flowPage.validation.reloadBeforeRun'));
       }
 
       setLiveStepResults({});
@@ -2778,7 +2842,7 @@ export function ProjectFlowManagementPage({
         message:
           error instanceof Error
             ? error.message
-            : 'Failed to start this flow run. Review the current graph and try again.',
+            : t('flowPage.validation.startRunFailed'),
       }));
     }
   };
@@ -2788,7 +2852,7 @@ export function ProjectFlowManagementPage({
       return;
     }
 
-    const validation = validateFlowDraft(flowMeta, nodes, edges, 'run');
+    const validation = validateFlowDraft(t, flowMeta, nodes, edges, 'run');
     if (!validation.isValid) {
       applyValidationResult(validation);
       return;
@@ -2807,7 +2871,7 @@ export function ProjectFlowManagementPage({
       }
 
       if (!savedFlow) {
-        throw new Error('Load this flow again before starting a local run.');
+        throw new Error(t('flowPage.validation.reloadBeforeLocalRun'));
       }
 
       const runId = buildLocalRunId();
@@ -2878,7 +2942,7 @@ export function ProjectFlowManagementPage({
         message:
           error instanceof Error
             ? error.message
-            : 'Failed to start this local flow run. Review the current graph and try again.',
+            : t('flowPage.validation.startLocalRunFailed'),
       }));
     } finally {
       setIsLocalRunPending(false);
@@ -3317,7 +3381,7 @@ export function ProjectFlowManagementPage({
                 ) : null}
                 <Button type="button" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
                   <Plus className="h-4 w-4" />
-                  {t('flowPage.newFlow')}
+                  {t('flowPage.create')}
                 </Button>
               </div>
             </div>

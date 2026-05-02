@@ -12,13 +12,12 @@ import {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-} from 'lucide-react';
+import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { ActionMenu } from '@/components/features/project/action-menu';
+import {
+  ProjectHomeStatusBadge,
+  type ProjectHomeStatusTone,
+} from '@/components/features/project/project-home-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,6 @@ import {
   DeleteProjectDialog,
   ProjectFormDialog,
   type ProjectFormMode,
-  ProjectStatusBadge,
 } from '@/components/features/project/project-shared';
 import {
   buildProjectApiSpecsRoute,
@@ -58,6 +56,24 @@ const PROJECTS_PAGE_SIZE = 1000;
 const MAX_PREVIEW_SPECS = 5;
 const EMPTY_PROJECTS: ApiProject[] = [];
 type ProjectT = ScopedTranslations<'project'>;
+
+interface DashboardStatusItem {
+  label: string;
+  detail: string;
+  tone: ProjectHomeStatusTone;
+}
+
+interface DashboardNextStep {
+  summary: string;
+  title: string;
+  description: string;
+  reason: string;
+  primaryHref: string;
+  primaryLabel: string;
+  secondaryHref: string;
+  secondaryLabel: string;
+  blockers: DashboardStatusItem[];
+}
 
 const getProjectCreatedAt = (project: ApiProject) => project.created_at || '';
 
@@ -126,10 +142,7 @@ export function ProjectDashboardPage() {
 
   const projects = projectsQuery.data?.items ?? EMPTY_PROJECTS;
   const previewProjectId = normalizeProjectId(searchParams.get('preview'));
-  const sortedProjects = useMemo(
-    () => [...projects].sort(sortProjectsByCreatedAtDesc),
-    [projects]
-  );
+  const sortedProjects = useMemo(() => [...projects].sort(sortProjectsByCreatedAtDesc), [projects]);
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = deferredSearch.trim().toLowerCase();
@@ -138,51 +151,56 @@ export function ProjectDashboardPage() {
       return sortedProjects;
     }
 
-    return sortedProjects
-      .filter((project) =>
-        [project.name, project.slug, project.platform]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(normalizedQuery))
-      );
+    return sortedProjects.filter(project =>
+      [project.name, project.slug, project.platform]
+        .filter(Boolean)
+        .some(value => value.toLowerCase().includes(normalizedQuery))
+    );
   }, [deferredSearch, sortedProjects]);
 
   const selectedProject =
     previewProjectId !== null
-      ? projects.find((project) => normalizeProjectId(project.id) === previewProjectId) ?? null
+      ? (projects.find(project => normalizeProjectId(project.id) === previewProjectId) ?? null)
       : null;
   const fallbackProject = sortedProjects[0] ?? null;
 
-  const prefetchProjectPreview = useCallback((projectId: number | string) => {
-    void queryClient.prefetchQuery({
-      queryKey: projectKeys.projectStats(projectId),
-      queryFn: () => projectService.getStats(projectId),
-    });
+  const prefetchProjectPreview = useCallback(
+    (projectId: number | string) => {
+      void queryClient.prefetchQuery({
+        queryKey: projectKeys.projectStats(projectId),
+        queryFn: () => projectService.getStats(projectId),
+      });
 
-    void queryClient.prefetchQuery({
-      queryKey: apiSpecKeys.list({ projectId, page: 1, pageSize: MAX_PREVIEW_SPECS }),
-      queryFn: () =>
-        apiSpecService.list({
-          projectId,
-          page: 1,
-          pageSize: MAX_PREVIEW_SPECS,
-        }),
-    });
-  }, [queryClient]);
+      void queryClient.prefetchQuery({
+        queryKey: apiSpecKeys.list({ projectId, page: 1, pageSize: MAX_PREVIEW_SPECS }),
+        queryFn: () =>
+          apiSpecService.list({
+            projectId,
+            page: 1,
+            pageSize: MAX_PREVIEW_SPECS,
+          }),
+      });
+    },
+    [queryClient]
+  );
 
-  const navigateToPreview = useCallback((projectId?: string | number | null) => {
-    if (projectId) {
-      prefetchProjectPreview(projectId);
-    }
+  const navigateToPreview = useCallback(
+    (projectId?: string | number | null) => {
+      if (projectId) {
+        prefetchProjectPreview(projectId);
+      }
 
-    startTransition(() => {
-      router.replace(
-        buildDashboardHref(pathname, new URLSearchParams(searchParams.toString()), projectId)
-      );
-    });
-  }, [pathname, prefetchProjectPreview, router, searchParams]);
+      startTransition(() => {
+        router.replace(
+          buildDashboardHref(pathname, new URLSearchParams(searchParams.toString()), projectId)
+        );
+      });
+    },
+    [pathname, prefetchProjectPreview, router, searchParams]
+  );
 
   useEffect(() => {
-    filteredProjects.slice(0, 3).forEach((project) => {
+    filteredProjects.slice(0, 3).forEach(project => {
       prefetchProjectPreview(project.id);
     });
   }, [filteredProjects, prefetchProjectPreview]);
@@ -207,7 +225,13 @@ export function ProjectDashboardPage() {
     }
 
     navigateToPreview(fallbackProject?.id ?? null);
-  }, [fallbackProject, navigateToPreview, previewProjectId, projectsQuery.isLoading, selectedProject]);
+  }, [
+    fallbackProject,
+    navigateToPreview,
+    previewProjectId,
+    projectsQuery.isLoading,
+    selectedProject,
+  ]);
 
   const openCreateDialog = () => {
     setFormMode('create');
@@ -263,7 +287,7 @@ export function ProjectDashboardPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
               <Input
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={event => setSearchQuery(event.target.value)}
                 placeholder={t('dashboardPage.searchPlaceholder')}
                 className="pl-9"
               />
@@ -299,9 +323,7 @@ export function ProjectDashboardPage() {
             ) : projectsQuery.error ? (
               <Alert>
                 <AlertTitle>{t('dashboardPage.loadFailedTitle')}</AlertTitle>
-                <AlertDescription>
-                  {t('dashboardPage.loadFailedDescription')}
-                </AlertDescription>
+                <AlertDescription>{t('dashboardPage.loadFailedDescription')}</AlertDescription>
               </Alert>
             ) : filteredProjects.length === 0 ? (
               <Card className="border-dashed">
@@ -313,7 +335,7 @@ export function ProjectDashboardPage() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {filteredProjects.map((project) => {
+                {filteredProjects.map(project => {
                   const isActive = project.id === selectedProject?.id;
                   const menuItems = [
                     {
@@ -353,12 +375,17 @@ export function ProjectDashboardPage() {
                           className="min-w-0 flex-1 text-left"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-text-main">{project.name}</p>
+                            <p className="truncate text-sm font-medium text-text-main">
+                              {project.name}
+                            </p>
                             <p className="truncate text-xs text-text-muted">{project.slug}</p>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
                             {isActive ? (
-                              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                              <Badge
+                                variant="outline"
+                                className="border-primary/20 bg-primary/10 text-primary"
+                              >
                                 {t('dashboardPage.selected')}
                               </Badge>
                             ) : null}
@@ -429,7 +456,7 @@ export function ProjectDashboardPage() {
         open={Boolean(deleteTarget)}
         project={deleteTarget}
         isDeleting={deleteProjectMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDeleteTarget(null);
           }
@@ -450,9 +477,7 @@ function ProjectDashboardWelcome({
   onCreateProject: () => void;
 }) {
   const t = useT('project');
-  const recentProjects = [...projects]
-    .sort(sortProjectsByCreatedAtDesc)
-    .slice(0, 5);
+  const recentProjects = [...projects].sort(sortProjectsByCreatedAtDesc).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -492,7 +517,7 @@ function ProjectDashboardWelcome({
                 <AlertDescription>{t('dashboardPage.noProjectsYetDescription')}</AlertDescription>
               </Alert>
             ) : (
-              recentProjects.map((project) => (
+              recentProjects.map(project => (
                 <button
                   key={project.id}
                   type="button"
@@ -501,9 +526,7 @@ function ProjectDashboardWelcome({
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{project.name}</p>
-                    <p className="truncate text-xs text-text-muted">
-                      {project.slug}
-                    </p>
+                    <p className="truncate text-xs text-text-muted">{project.slug}</p>
                   </div>
                 </button>
               ))
@@ -532,13 +555,7 @@ function ProjectDashboardWelcome({
   );
 }
 
-function ProjectPreviewPanel({
-  project,
-  onEdit,
-}: {
-  project: ApiProject;
-  onEdit: () => void;
-}) {
+function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit: () => void }) {
   const t = useT('project');
   const [slowPreviewKey, setSlowPreviewKey] = useState('');
   const statsQuery = useProjectStats(project.id);
@@ -556,14 +573,10 @@ function ProjectPreviewPanel({
   const memberCount = stats?.member_count ?? 0;
   const createdAtLabel = formatProjectTimestamp(projectDetail.created_at);
   const hasResolvedReadiness = Boolean(stats);
-  const hasReadinessError =
-    !hasResolvedReadiness &&
-    Boolean(statsQuery.error);
+  const hasReadinessError = !hasResolvedReadiness && Boolean(statsQuery.error);
   const slowPreviewLoadKey = `${project.id}:${statsQuery.fetchStatus}:${statsQuery.dataUpdatedAt}`;
   const isSlowPreview =
-    !hasResolvedReadiness &&
-    !hasReadinessError &&
-    slowPreviewKey === slowPreviewLoadKey;
+    !hasResolvedReadiness && !hasReadinessError && slowPreviewKey === slowPreviewLoadKey;
   const nextStep = hasResolvedReadiness
     ? resolveDashboardNextStep({
         t,
@@ -576,11 +589,7 @@ function ProjectPreviewPanel({
     ? ([
         {
           label: t('dashboardPage.sourceOfTruthLabel'),
-          value:
-            apiSpecCount > 0
-              ? t('dashboardPage.sourceOfTruthReadyValue', { count: apiSpecCount })
-              : t('projectDetail.missing'),
-          tone: apiSpecCount > 0 ? 'ready' : 'pending',
+          tone: apiSpecCount > 0 ? 'ready' : 'setup',
           detail:
             apiSpecCount > 0
               ? t('dashboardPage.sourceOfTruthReadyDetail')
@@ -588,11 +597,7 @@ function ProjectPreviewPanel({
         },
         {
           label: t('dashboardPage.runtimeContextLabel'),
-          value:
-            environmentCount > 0
-              ? t('dashboardPage.runtimeContextReadyValue', { count: environmentCount })
-              : t('projectDetail.missing'),
-          tone: environmentCount > 0 ? 'ready' : 'pending',
+          tone: environmentCount > 0 ? 'ready' : 'setup',
           detail:
             environmentCount > 0
               ? t('dashboardPage.runtimeContextReadyDetail')
@@ -600,17 +605,13 @@ function ProjectPreviewPanel({
         },
         {
           label: t('dashboardPage.validationLabel'),
-          value:
-            apiSpecCount > 0 && environmentCount > 0
-              ? t('dashboardPage.validationReadyValue')
-              : t('dashboardPage.validationPendingValue'),
-          tone: apiSpecCount > 0 && environmentCount > 0 ? 'ready' : 'pending',
+          tone: apiSpecCount > 0 && environmentCount > 0 ? 'available' : 'setup',
           detail:
             apiSpecCount > 0 && environmentCount > 0
               ? t('dashboardPage.validationReadyDetail')
               : t('dashboardPage.validationPendingDetail'),
         },
-      ] as const)
+      ] as const satisfies readonly DashboardStatusItem[])
     : [];
 
   const handleRetryPreview = () => {
@@ -639,7 +640,9 @@ function ProjectPreviewPanel({
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <ProjectStatusBadge status={projectDetail.status} />
+                {projectDetail.status !== 1 ? (
+                  <Badge variant="outline">{t('projectForm.inactive')}</Badge>
+                ) : null}
               </div>
               <div>
                 <CardTitle className="text-2xl tracking-tight">{projectDetail.name}</CardTitle>
@@ -648,8 +651,7 @@ function ProjectPreviewPanel({
                     ? t('dashboardPage.previewSummaryFailed')
                     : isSlowPreview
                       ? t('dashboardPage.previewSummarySlow')
-                    : nextStep?.summary ??
-                        t('dashboardPage.previewSummaryLoading')}
+                      : (nextStep?.summary ?? t('dashboardPage.previewSummaryLoading'))}
                 </CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-5 text-sm text-text-muted">
@@ -658,9 +660,7 @@ function ProjectPreviewPanel({
                   <span>{t('dashboardPage.createdAt', { value: createdAtLabel })}</span>
                 ) : null}
                 {typeof stats?.member_count === 'number' ? (
-                  <span>
-                    {t('dashboardPage.teamMembers', { count: memberCount })}
-                  </span>
+                  <span>{t('dashboardPage.teamMembers', { count: memberCount })}</span>
                 ) : null}
                 <Button
                   type="button"
@@ -705,7 +705,13 @@ function ProjectPreviewPanel({
                 <AlertDescription className="mt-2">
                   {t('dashboardPage.readinessLoadFailedDescription')}
                 </AlertDescription>
-                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={handleRetryPreview}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={handleRetryPreview}
+                >
                   {t('dashboardPage.retryPreview')}
                 </Button>
               </Alert>
@@ -729,7 +735,7 @@ function ProjectPreviewPanel({
                 ) : null}
               </>
             ) : (
-              readinessItems.map((item) => (
+              readinessItems.map(item => (
                 <div
                   key={item.label}
                   className="rounded-2xl border border-border/60 bg-background/70 p-4"
@@ -739,16 +745,7 @@ function ProjectPreviewPanel({
                       <p className="text-sm font-medium text-text-main">{item.label}</p>
                       <p className="mt-1 text-sm text-text-muted">{item.detail}</p>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        item.tone === 'ready'
-                          ? 'border-emerald-200 bg-emerald-500/10 text-emerald-700'
-                          : 'border-amber-200 bg-amber-500/10 text-amber-700'
-                      }
-                    >
-                      {item.value}
-                    </Badge>
+                    <ProjectHomeStatusBadge tone={item.tone} />
                   </div>
                 </div>
               ))
@@ -764,7 +761,9 @@ function ProjectPreviewPanel({
               <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-text-main">{t('dashboardPage.recentApiSpecsTitle')}</p>
+                    <p className="text-sm font-medium text-text-main">
+                      {t('dashboardPage.recentApiSpecsTitle')}
+                    </p>
                     <p className="mt-1 text-sm text-text-muted">
                       {t('dashboardPage.recentApiSpecsDescription')}
                     </p>
@@ -777,7 +776,7 @@ function ProjectPreviewPanel({
                 </div>
 
                 <div className="space-y-2">
-                  {apiSpecs.slice(0, 3).map((spec) => (
+                  {apiSpecs.slice(0, 3).map(spec => (
                     <div
                       key={spec.id}
                       className="flex items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-3"
@@ -806,15 +805,14 @@ function ProjectPreviewPanel({
                 ? t('dashboardPage.previewNeedsAttention')
                 : isSlowPreview && !nextStep
                   ? t('dashboardPage.moveNowRefineLater')
-                  : nextStep?.title ?? t('dashboardPage.loadingNextStep')}
+                  : (nextStep?.title ?? t('dashboardPage.loadingNextStep'))}
             </CardTitle>
             <CardDescription>
               {hasReadinessError
                 ? t('dashboardPage.previewNeedsAttentionDescription')
                 : isSlowPreview && !nextStep
                   ? t('dashboardPage.moveNowRefineLaterDescription')
-                : nextStep?.description ??
-                    t('dashboardPage.recommendationLoadingDescription')}
+                  : (nextStep?.description ?? t('dashboardPage.recommendationLoadingDescription'))}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -857,7 +855,12 @@ function ProjectPreviewPanel({
                           {t('projectDetail.openWorkspace')}
                         </Link>
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={handleRetryPreview}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRetryPreview}
+                      >
                         {t('common.refresh')}
                       </Button>
                     </div>
@@ -878,22 +881,13 @@ function ProjectPreviewPanel({
                     {t('dashboardPage.unlockTitle')}
                   </p>
                   <div className="mt-3 space-y-3">
-                    {nextStep.blockers.map((blocker) => (
+                    {nextStep.blockers.map(blocker => (
                       <div key={blocker.label} className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-sm font-medium text-text-main">{blocker.label}</p>
                           <p className="mt-1 text-sm text-text-muted">{blocker.detail}</p>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            blocker.tone === 'ready'
-                              ? 'border-emerald-200 bg-emerald-500/10 text-emerald-700'
-                              : 'border-amber-200 bg-amber-500/10 text-amber-700'
-                          }
-                        >
-                          {blocker.state}
-                        </Badge>
+                        <ProjectHomeStatusBadge tone={blocker.tone} />
                       </div>
                     ))}
                   </div>
@@ -901,15 +895,11 @@ function ProjectPreviewPanel({
 
                 <div className="flex flex-wrap gap-2">
                   <Button asChild>
-                    <Link href={nextStep.primaryHref}>
-                      {nextStep.primaryLabel}
-                    </Link>
+                    <Link href={nextStep.primaryHref}>{nextStep.primaryLabel}</Link>
                   </Button>
                   {nextStep.secondaryHref && nextStep.secondaryLabel ? (
                     <Button asChild variant="outline">
-                      <Link href={nextStep.secondaryHref}>
-                        {nextStep.secondaryLabel}
-                      </Link>
+                      <Link href={nextStep.secondaryHref}>{nextStep.secondaryLabel}</Link>
                     </Button>
                   ) : null}
                 </div>
@@ -932,7 +922,7 @@ function resolveDashboardNextStep({
   projectId: number | string;
   apiSpecCount: number;
   environmentCount: number;
-}) {
+}): DashboardNextStep {
   if (apiSpecCount === 0) {
     return {
       summary: t('dashboardPage.noApiSpecSummary'),
@@ -947,17 +937,15 @@ function resolveDashboardNextStep({
         {
           label: t('dashboardPage.apiSourceLabel'),
           detail: t('dashboardPage.apiSourceMissingDetail'),
-          state: t('projectDetail.missing'),
-          tone: 'pending' as const,
+          tone: 'setup' as const,
         },
         {
           label: t('dashboardPage.runtimeSetupLabel'),
           detail: t('dashboardPage.runtimeSetupCanWait'),
-          state: t('dashboardPage.notStarted'),
-          tone: 'pending' as const,
+          tone: 'available' as const,
         },
       ],
-    };
+    } satisfies DashboardNextStep;
   }
 
   if (environmentCount === 0) {
@@ -974,17 +962,15 @@ function resolveDashboardNextStep({
         {
           label: t('dashboardPage.executionTargetLabel'),
           detail: t('dashboardPage.executionTargetMissingDetail'),
-          state: t('projectDetail.missing'),
-          tone: 'pending' as const,
+          tone: 'setup' as const,
         },
         {
           label: t('dashboardPage.apiSourceLabel'),
           detail: t('dashboardPage.specBaselineReadyDetail', { count: apiSpecCount }),
-          state: t('projectDetail.ready'),
           tone: 'ready' as const,
         },
       ],
-    };
+    } satisfies DashboardNextStep;
   }
 
   return {
@@ -1003,15 +989,13 @@ function resolveDashboardNextStep({
       {
         label: t('dashboardPage.apiSourceLabel'),
         detail: t('dashboardPage.apiSourceReadyDetail'),
-        state: t('projectDetail.ready'),
         tone: 'ready' as const,
       },
       {
         label: t('dashboardPage.runtimeSetupLabel'),
         detail: t('dashboardPage.runtimeSetupReadyDetail', { count: environmentCount }),
-        state: t('projectDetail.ready'),
         tone: 'ready' as const,
       },
     ],
-  };
+  } satisfies DashboardNextStep;
 }

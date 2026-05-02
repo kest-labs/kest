@@ -1349,12 +1349,27 @@ const mergeServerCollections = (
 };
 
 const mergeServerTabs = (currentTabs: RequestPageTab[], serverTabs: RequestPageTab[]) => {
+  const currentById = new Map(currentTabs.map(tab => [tab.id, tab]));
   const serverIds = new Set(serverTabs.map(tab => tab.id));
   const localOnlyTabs = currentTabs.filter(
     tab => !serverIds.has(tab.id) && getPersistedRequestId(tab.id) === null
   );
 
-  return [...serverTabs, ...localOnlyTabs];
+  return [
+    ...serverTabs.map(serverTab => {
+      const currentTab = currentById.get(serverTab.id);
+
+      // Opened request tabs act like local editing buffers. Background refetches
+      // should not clobber the user's in-progress section selection or unsaved edits.
+      return currentTab
+        ? {
+            ...currentTab,
+            collectionId: serverTab.collectionId,
+          }
+        : serverTab;
+    }),
+    ...localOnlyTabs,
+  ];
 };
 
 const mergeExpandedCollectionIds = (currentIds: string[], serverIds: string[]) => {
@@ -3067,7 +3082,11 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                       onDeleteExample={openDeleteExampleDialog}
                     />
                   ) : (
-                    <RequestSectionPanel tab={activeTab} onTabChange={updateActiveTab} />
+                    <RequestSectionPanel
+                      key={`${activeTab.id}-${activeTab.activeSection}`}
+                      tab={activeTab}
+                      onTabChange={updateActiveTab}
+                    />
                   )}
                 </CardContent>
               </Card>

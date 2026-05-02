@@ -31,6 +31,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { CategoryOption } from '@/components/features/project/category-helpers';
+import { useT } from '@/i18n/client';
 import type {
   AcceptApiSpecAIDraftRequest,
   AcceptApiSpecAIDraftResponse,
@@ -47,28 +48,16 @@ import type {
 } from '@/types/api-spec';
 
 const METHOD_OPTIONS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
-const LANGUAGE_OPTIONS: Array<{ value: ApiSpecLanguage; label: string }> = [
-  { value: 'en', label: 'English' },
-  { value: 'zh', label: 'Chinese' },
-];
+const LANGUAGE_OPTIONS: ApiSpecLanguage[] = ['en', 'zh'];
 const REFINE_FIELDS = [
-  { value: 'all', label: 'All Fields' },
-  { value: 'summary', label: 'Summary' },
-  { value: 'description', label: 'Description' },
-  { value: 'request_body', label: 'Request Body' },
-  { value: 'parameters', label: 'Parameters' },
-  { value: 'responses', label: 'Responses' },
-  { value: 'tags', label: 'Tags' },
-];
-const DRAFT_REQUIRED_HELP = 'Generate a draft to unlock Create Spec and post-create options.';
-const DRAFT_GENERATING_HELP =
-  'Draft generation is in progress. Create Spec and post-create options will unlock when it finishes.';
-const DRAFT_OPTIONS_DISABLED_REASON =
-  'Wait for draft generation to finish before changing these options.';
-const GENERATE_DRAFT_DISABLED_REASON =
-  'Finish the current draft action before starting a new generation.';
-const CREATE_SPEC_DISABLED_REASON =
-  'Wait for draft generation to finish before creating the spec.';
+  'all',
+  'summary',
+  'description',
+  'request_body',
+  'parameters',
+  'responses',
+  'tags',
+] as const;
 
 interface EditableDraftState {
   categoryId: string;
@@ -116,8 +105,8 @@ const formatEditableDraft = (draft: ApiSpecAIDraftSpec): EditableDraftState => (
 
 const parseJsonField = <T,>(
   value: string,
-  label: string,
-  expected: 'object' | 'array'
+  expected: 'object' | 'array',
+  errorMessage: string
 ): T | undefined => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -127,10 +116,10 @@ const parseJsonField = <T,>(
   const parsed = JSON.parse(trimmed) as T;
   const isArray = Array.isArray(parsed);
   if (expected === 'array' && !isArray) {
-    throw new Error(`${label} must be a JSON array.`);
+    throw new Error(errorMessage);
   }
   if (expected === 'object' && (parsed === null || isArray || typeof parsed !== 'object')) {
-    throw new Error(`${label} must be a JSON object.`);
+    throw new Error(errorMessage);
   }
 
   return parsed;
@@ -145,14 +134,6 @@ const normalizeTags = (value: string) =>
         .filter(Boolean)
     )
   );
-
-const formatElapsedLabel = (seconds: number) => {
-  if (seconds <= 0) {
-    return 'Starting...';
-  }
-
-  return `${seconds}s elapsed`;
-};
 
 const isAbortError = (error: unknown) =>
   error instanceof DOMException
@@ -201,22 +182,32 @@ function DraftGenerationPreview({
   streamOutput: string;
   error?: string | null;
 }) {
+  const t = useT('project');
+  const elapsedLabel =
+    elapsedSeconds <= 0
+      ? t('apiSpecs.aiCreateDialog.starting')
+      : t('apiSpecs.aiCreateDialog.elapsedSeconds', { seconds: elapsedSeconds });
+
   return (
     <Card className="border-border/60">
       <CardHeader>
-        <CardTitle className="text-base">2. Draft Preview</CardTitle>
+        <CardTitle className="text-base">
+          {t('apiSpecs.aiCreateDialog.sections.previewTitle')}
+        </CardTitle>
         <CardDescription>
           {status}
           {' • '}
-          {formatElapsedLabel(elapsedSeconds)}
+          {elapsedLabel}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-4">
           <div className="rounded-lg border border-border/60 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-medium">Draft Structure</div>
-              <Badge variant="secondary">Generating</Badge>
+              <div className="text-sm font-medium">
+                {t('apiSpecs.aiCreateDialog.sections.draftStructure')}
+              </div>
+              <Badge variant="secondary">{status}</Badge>
             </div>
             <div className="space-y-3">
               <Skeleton className="h-10 w-full" />
@@ -227,7 +218,7 @@ function DraftGenerationPreview({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-border/60 p-4">
-              <div className="mb-3 text-sm font-medium">Parameters</div>
+              <div className="mb-3 text-sm font-medium">{t('common.parameters')}</div>
               <div className="space-y-3">
                 <Skeleton className="h-4 w-2/5" />
                 <Skeleton className="h-16 w-full" />
@@ -235,7 +226,7 @@ function DraftGenerationPreview({
             </div>
 
             <div className="rounded-lg border border-border/60 p-4">
-              <div className="mb-3 text-sm font-medium">Responses</div>
+              <div className="mb-3 text-sm font-medium">{t('common.responses')}</div>
               <div className="space-y-3">
                 <Skeleton className="h-4 w-1/3" />
                 <Skeleton className="h-16 w-full" />
@@ -247,18 +238,20 @@ function DraftGenerationPreview({
         <div className="space-y-3">
           <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-sm font-medium">Live Output</div>
-              <Badge variant="outline">Streaming</Badge>
+              <div className="text-sm font-medium">
+                {t('apiSpecs.aiCreateDialog.sections.liveOutput')}
+              </div>
+              <Badge variant="outline">{t('apiSpecs.aiCreateDialog.sections.streaming')}</Badge>
             </div>
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs leading-6 text-muted-foreground">
-              {streamOutput || 'Waiting for the first tokens...'}
+              {streamOutput || t('apiSpecs.aiCreateDialog.placeholders.waitForTokens')}
             </pre>
           </div>
 
           {error ? (
             <Alert variant="destructive">
               <HelpCircle className="h-4 w-4" />
-              <AlertTitle>Generation Failed</AlertTitle>
+              <AlertTitle>{t('apiSpecs.aiCreateDialog.sections.generationFailed')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
@@ -313,6 +306,7 @@ function ApiSpecAICreateDialogContent({
   onAcceptDraft,
   onAccepted,
 }: Omit<ApiSpecAICreateDialogProps, 'open'>) {
+  const t = useT('project');
   const [intent, setIntent] = useState('');
   const [seedMethod, setSeedMethod] = useState<HttpMethod>('GET');
   const [seedPath, setSeedPath] = useState('');
@@ -328,17 +322,52 @@ function ApiSpecAICreateDialogContent({
   const [continueToTests, setContinueToTests] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
-  const [draftStatus, setDraftStatus] = useState('Ready to generate');
+  const [draftStatus, setDraftStatus] = useState(t('apiSpecs.aiCreateDialog.readyToGenerate'));
   const [draftStreamOutput, setDraftStreamOutput] = useState('');
   const [draftElapsedSeconds, setDraftElapsedSeconds] = useState(0);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [didDraftGenerationFail, setDidDraftGenerationFail] = useState(false);
   const draftAbortRef = useRef<AbortController | null>(null);
-  const footerHelperMessage = isGeneratingDraft ? DRAFT_GENERATING_HELP : DRAFT_REQUIRED_HELP;
-  const draftOptionDisableReason = draft && isGeneratingDraft ? DRAFT_OPTIONS_DISABLED_REASON : undefined;
+  const footerHelperMessage = isGeneratingDraft
+    ? t('apiSpecs.aiCreateDialog.draftGeneratingHelp')
+    : t('apiSpecs.aiCreateDialog.draftRequiredHelp');
+  const draftOptionDisableReason =
+    draft && isGeneratingDraft
+      ? t('apiSpecs.aiCreateDialog.draftOptionsDisabledReason')
+      : undefined;
   const generateDraftDisableReason =
-    isSubmittingAccept || isSubmittingRefine ? GENERATE_DRAFT_DISABLED_REASON : undefined;
-  const createSpecDisableReason = draft && isGeneratingDraft ? CREATE_SPEC_DISABLED_REASON : undefined;
+    isSubmittingAccept || isSubmittingRefine
+      ? t('apiSpecs.aiCreateDialog.generateDraftDisabledReason')
+      : undefined;
+  const createSpecDisableReason =
+    draft && isGeneratingDraft
+      ? t('apiSpecs.aiCreateDialog.createSpecDisabledReason')
+      : undefined;
+  const languageOptions = LANGUAGE_OPTIONS.map(value => ({
+    value,
+    label:
+      value === 'en'
+        ? t('apiSpecs.aiCreateDialog.languages.english')
+        : t('apiSpecs.aiCreateDialog.languages.chinese'),
+  }));
+  const refineFields = REFINE_FIELDS.map(value => {
+    switch (value) {
+      case 'all':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.all') };
+      case 'summary':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.summary') };
+      case 'description':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.description') };
+      case 'request_body':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.requestBody') };
+      case 'parameters':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.parameters') };
+      case 'responses':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.responses') };
+      case 'tags':
+        return { value, label: t('apiSpecs.aiCreateDialog.refineFields.tags') };
+    }
+  });
 
   useEffect(() => {
     if (!isGeneratingDraft) {
@@ -372,18 +401,18 @@ function ApiSpecAICreateDialogContent({
   const buildDraftSpec = (): ApiSpecAIDraftSpec => {
     const requestBody = parseJsonField<RequestBodySpec>(
       editableDraft.requestBody,
-      'Request Body',
-      'object'
+      'object',
+      t('common.jsonMustBeObject', { label: t('common.requestBody') })
     );
     const parameters = parseJsonField<ParameterSpec[]>(
       editableDraft.parameters,
-      'Parameters',
-      'array'
+      'array',
+      t('common.jsonMustBeArray', { label: t('common.parameters') })
     );
     const responses = parseJsonField<Record<string, ResponseSpec>>(
       editableDraft.responses,
-      'Responses',
-      'object'
+      'object',
+      t('common.jsonMustBeObject', { label: t('common.responses') })
     );
 
     return {
@@ -403,14 +432,14 @@ function ApiSpecAICreateDialogContent({
 
   const handleGenerateDraft = async () => {
     if (!intent.trim()) {
-      setValidationError('Intent is required.');
+      setValidationError(t('apiSpecs.aiCreateDialog.intentRequired'));
       return;
     }
 
     setValidationError(null);
     setDraftError(null);
     setDidDraftGenerationFail(false);
-    setDraftStatus('Preparing draft stream');
+    setDraftStatus(t('apiSpecs.aiCreateDialog.preparingDraftStream'));
     setDraftStreamOutput('');
     setIsGeneratingDraft(true);
 
@@ -431,7 +460,7 @@ function ApiSpecAICreateDialogContent({
         {
           signal: controller.signal,
           onStatus: status => {
-            setDraftStatus(status || 'Generating structured draft');
+            setDraftStatus(status || t('apiSpecs.aiCreateDialog.generatingStructuredDraft'));
           },
           onToken: chunk => {
             if (!chunk) {
@@ -445,21 +474,22 @@ function ApiSpecAICreateDialogContent({
       setDraft(result);
       setEditableDraft(formatEditableDraft(result.draft));
       setDraftError(null);
-      setDraftStatus('Draft ready');
+      setDraftStatus(t('apiSpecs.aiCreateDialog.draftReady'));
       setDidDraftGenerationFail(false);
     } catch (error) {
       if (isAbortError(error) || controller.signal.aborted) {
-        setDraftStatus('Generation canceled. Your inputs are preserved.');
+        setDraftStatus(t('apiSpecs.aiCreateDialog.generationCanceled'));
         setDidDraftGenerationFail(false);
         return;
       }
 
-      const message = error instanceof Error ? error.message : 'Unable to generate the draft.';
+      const message =
+        error instanceof Error ? error.message : t('apiSpecs.aiCreateDialog.unableToGenerateDraft');
       setDraftError(message);
-      setDraftStatus('Generation failed');
+      setDraftStatus(t('apiSpecs.aiCreateDialog.generationFailedStatus'));
       setDidDraftGenerationFail(true);
-      toast.error('Failed to generate draft', {
-        description: `${message}. Retry when ready.`,
+      toast.error(t('apiSpecs.aiCreateDialog.toasts.generateFailedTitle'), {
+        description: t('apiSpecs.aiCreateDialog.toasts.generateFailedDescription', { message }),
       });
     } finally {
       setIsGeneratingDraft(false);
@@ -479,7 +509,7 @@ function ApiSpecAICreateDialogContent({
     }
 
     if (!refineInstruction.trim()) {
-      setValidationError('Refine instruction is required.');
+      setValidationError(t('apiSpecs.aiCreateDialog.refineInstructionRequired'));
       return;
     }
 
@@ -497,7 +527,9 @@ function ApiSpecAICreateDialogContent({
       setEditableDraft(formatEditableDraft(result.draft));
       setRefineInstruction('');
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : 'Unable to refine the draft.');
+      setValidationError(
+        error instanceof Error ? error.message : t('apiSpecs.aiCreateDialog.unableToRefineDraft')
+      );
     }
   };
 
@@ -522,7 +554,9 @@ function ApiSpecAICreateDialogContent({
       });
       onOpenChange(false);
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : 'Unable to create the spec.');
+      setValidationError(
+        error instanceof Error ? error.message : t('apiSpecs.aiCreateDialog.unableToCreateSpec')
+      );
     }
   };
 
@@ -544,12 +578,10 @@ function ApiSpecAICreateDialogContent({
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
-          AI Create API Spec
+          {t('apiSpecs.aiCreateDialog.title')}
         </DialogTitle>
         <DialogDescription>
-          Start with one sentence of product intent, then let AI draft the spec using the current
-          project conventions. Project ID: <code>{projectId}</code>. Raw request secrets are not
-          used as prompt context.
+          {t('apiSpecs.aiCreateDialog.description', { projectId: String(projectId) })}
         </DialogDescription>
       </DialogHeader>
 
@@ -557,7 +589,7 @@ function ApiSpecAICreateDialogContent({
         {validationError ? (
           <Alert variant="destructive">
             <HelpCircle className="h-4 w-4" />
-            <AlertTitle>Validation Error</AlertTitle>
+            <AlertTitle>{t('apiSpecs.aiCreateDialog.validationError')}</AlertTitle>
             <AlertDescription>{validationError}</AlertDescription>
           </Alert>
         ) : null}
@@ -565,40 +597,44 @@ function ApiSpecAICreateDialogContent({
         {draftError && draft ? (
           <Alert variant="destructive">
             <HelpCircle className="h-4 w-4" />
-            <AlertTitle>Latest Generation Failed</AlertTitle>
+            <AlertTitle>{t('apiSpecs.aiCreateDialog.latestGenerationFailed')}</AlertTitle>
             <AlertDescription>
-              {draftError}. The last successful draft is still shown below.
+              {t('apiSpecs.aiCreateDialog.latestGenerationFailedDescription', {
+                message: draftError,
+              })}
             </AlertDescription>
           </Alert>
         ) : null}
 
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle className="text-base">1. Intent</CardTitle>
+            <CardTitle className="text-base">
+              {t('apiSpecs.aiCreateDialog.sections.intentTitle')}
+            </CardTitle>
             <CardDescription>
-              Give AI the goal first, then optionally pin method, path, and category as seeds.
+              {t('apiSpecs.aiCreateDialog.sections.intentDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="ai-intent">Intent</Label>
+              <Label htmlFor="ai-intent">{t('apiSpecs.aiCreateDialog.fields.intent')}</Label>
               <Textarea
                 id="ai-intent"
                 value={intent}
                 onChange={event => setIntent(event.target.value)}
-                placeholder="Example: Create an order endpoint for signed-in users with line items, shipping address, and coupon support"
+                placeholder={t('apiSpecs.aiCreateDialog.placeholders.intent')}
                 rows={5}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Method</Label>
+              <Label>{t('common.method')}</Label>
               <Select
                 value={seedMethod}
                 onValueChange={value => setSeedMethod(value as HttpMethod)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Method" />
+                  <SelectValue placeholder={t('common.method')} />
                 </SelectTrigger>
                 <SelectContent>
                   {METHOD_OPTIONS.map(method => (
@@ -611,7 +647,7 @@ function ApiSpecAICreateDialogContent({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ai-path">Path</Label>
+              <Label htmlFor="ai-path">{t('common.path')}</Label>
               <Input
                 id="ai-path"
                 value={seedPath}
@@ -621,16 +657,18 @@ function ApiSpecAICreateDialogContent({
             </div>
 
             <div className="space-y-2">
-              <Label>Category</Label>
+              <Label>{t('common.category')}</Label>
               <Select
                 value={seedCategoryId || 'none'}
                 onValueChange={value => setSeedCategoryId(value === 'none' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a category" />
+                  <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.category')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No category</SelectItem>
+                  <SelectItem value="none">
+                    {t('apiSpecs.aiCreateDialog.fields.noCategory')}
+                  </SelectItem>
                   {categories.map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -641,13 +679,13 @@ function ApiSpecAICreateDialogContent({
             </div>
 
             <div className="space-y-2">
-              <Label>Language</Label>
+              <Label>{t('apiSpecs.aiCreateDialog.fields.language')}</Label>
               <Select value={lang} onValueChange={value => setLang(value as ApiSpecLanguage)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Language" />
+                  <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.language')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {LANGUAGE_OPTIONS.map(option => (
+                  {languageOptions.map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -658,9 +696,11 @@ function ApiSpecAICreateDialogContent({
 
             <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3 lg:col-span-2">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Use project conventions</div>
+                <div className="text-sm font-medium">
+                  {t('apiSpecs.aiCreateDialog.fields.useProjectConventions')}
+                </div>
                 <div className="text-sm text-muted-foreground">
-                  Reuse the current project&apos;s versioning, tags, and response code patterns.
+                  {t('apiSpecs.aiCreateDialog.fields.useProjectConventionsDescription')}
                 </div>
               </div>
               <Switch checked={useProjectConventions} onCheckedChange={setUseProjectConventions} />
@@ -679,21 +719,23 @@ function ApiSpecAICreateDialogContent({
           <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
             <Card className="border-border/60">
               <CardHeader>
-                <CardTitle className="text-base">2. Draft Review</CardTitle>
+                <CardTitle className="text-base">
+                  {t('apiSpecs.aiCreateDialog.sections.reviewTitle')}
+                </CardTitle>
                 <CardDescription>
-                  Review and adjust the draft before refining it again or creating the final spec.
+                  {t('apiSpecs.aiCreateDialog.sections.reviewDescription')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Method</Label>
+                    <Label>{t('common.method')}</Label>
                     <Select
                       value={editableDraft.method}
                       onValueChange={value => updateEditableDraft('method', value as HttpMethod)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Method" />
+                        <SelectValue placeholder={t('common.method')} />
                       </SelectTrigger>
                       <SelectContent>
                         {METHOD_OPTIONS.map(method => (
@@ -706,7 +748,7 @@ function ApiSpecAICreateDialogContent({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="draft-path">Path</Label>
+                    <Label htmlFor="draft-path">{t('common.path')}</Label>
                     <Input
                       id="draft-path"
                       value={editableDraft.path}
@@ -715,7 +757,7 @@ function ApiSpecAICreateDialogContent({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="draft-summary">Summary</Label>
+                    <Label htmlFor="draft-summary">{t('common.summary')}</Label>
                     <Input
                       id="draft-summary"
                       value={editableDraft.summary}
@@ -724,7 +766,7 @@ function ApiSpecAICreateDialogContent({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="draft-version">Version</Label>
+                    <Label htmlFor="draft-version">{t('common.version')}</Label>
                     <Input
                       id="draft-version"
                       value={editableDraft.version}
@@ -733,7 +775,7 @@ function ApiSpecAICreateDialogContent({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Category</Label>
+                    <Label>{t('common.category')}</Label>
                     <Select
                       value={editableDraft.categoryId || 'none'}
                       onValueChange={value =>
@@ -741,10 +783,12 @@ function ApiSpecAICreateDialogContent({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose a category" />
+                        <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.category')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No category</SelectItem>
+                        <SelectItem value="none">
+                          {t('apiSpecs.aiCreateDialog.fields.noCategory')}
+                        </SelectItem>
                         {categories.map(option => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
@@ -756,9 +800,9 @@ function ApiSpecAICreateDialogContent({
 
                   <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3">
                     <div>
-                      <div className="text-sm font-medium">Public</div>
+                      <div className="text-sm font-medium">{t('common.public')}</div>
                       <div className="text-sm text-muted-foreground">
-                        Mark the spec public after creation.
+                        {t('apiSpecs.aiCreateDialog.fields.publicDescription')}
                       </div>
                     </div>
                     <Switch
@@ -769,7 +813,7 @@ function ApiSpecAICreateDialogContent({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="draft-description">Description</Label>
+                  <Label htmlFor="draft-description">{t('common.description')}</Label>
                   <Textarea
                     id="draft-description"
                     value={editableDraft.description}
@@ -779,17 +823,19 @@ function ApiSpecAICreateDialogContent({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="draft-tags">Tags</Label>
+                  <Label htmlFor="draft-tags">{t('common.tags')}</Label>
                   <Input
                     id="draft-tags"
                     value={editableDraft.tags}
                     onChange={event => updateEditableDraft('tags', event.target.value)}
-                    placeholder="orders, checkout"
+                    placeholder={t('apiSpecs.aiCreateDialog.placeholders.tags')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="draft-request-body">Request Body JSON</Label>
+                  <Label htmlFor="draft-request-body">
+                    {t('apiSpecs.aiCreateDialog.fields.requestBodyJson')}
+                  </Label>
                   <Textarea
                     id="draft-request-body"
                     value={editableDraft.requestBody}
@@ -800,7 +846,9 @@ function ApiSpecAICreateDialogContent({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="draft-parameters">Parameters JSON</Label>
+                  <Label htmlFor="draft-parameters">
+                    {t('apiSpecs.aiCreateDialog.fields.parametersJson')}
+                  </Label>
                   <Textarea
                     id="draft-parameters"
                     value={editableDraft.parameters}
@@ -811,7 +859,9 @@ function ApiSpecAICreateDialogContent({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="draft-responses">Responses JSON</Label>
+                  <Label htmlFor="draft-responses">
+                    {t('apiSpecs.aiCreateDialog.fields.responsesJson')}
+                  </Label>
                   <Textarea
                     id="draft-responses"
                     value={editableDraft.responses}
@@ -828,21 +878,23 @@ function ApiSpecAICreateDialogContent({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    Refine
+                    {t('apiSpecs.aiCreateDialog.sections.refineTitle')}
                   </CardTitle>
                   <CardDescription>
-                    Rewrite a focused part of the draft without regenerating everything.
+                    {t('apiSpecs.aiCreateDialog.sections.refineDescription')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
-                    <Label>Target Field</Label>
+                    <Label>{t('apiSpecs.aiCreateDialog.fields.targetField')}</Label>
                     <Select value={refineField} onValueChange={setRefineField}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Target field" />
+                        <SelectValue
+                          placeholder={t('apiSpecs.aiCreateDialog.fields.targetFieldPlaceholder')}
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        {REFINE_FIELDS.map(field => (
+                        {refineFields.map(field => (
                           <SelectItem key={field.value} value={field.value}>
                             {field.label}
                           </SelectItem>
@@ -852,12 +904,14 @@ function ApiSpecAICreateDialogContent({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="draft-refine">Instruction</Label>
+                    <Label htmlFor="draft-refine">
+                      {t('apiSpecs.aiCreateDialog.fields.instruction')}
+                    </Label>
                     <Textarea
                       id="draft-refine"
                       value={refineInstruction}
                       onChange={event => setRefineInstruction(event.target.value)}
-                      placeholder="Example: Use the project's standard error envelope and wrap successful responses in data"
+                      placeholder={t('apiSpecs.aiCreateDialog.placeholders.refineInstruction')}
                       rows={5}
                     />
                   </div>
@@ -869,21 +923,25 @@ function ApiSpecAICreateDialogContent({
                     onClick={() => void handleRefine()}
                   >
                     <WandSparkles className="h-4 w-4" />
-                    Apply Refine
+                    {t('apiSpecs.aiCreateDialog.actions.applyRefine')}
                   </Button>
                 </CardContent>
               </Card>
 
               <Card className="border-border/60">
                 <CardHeader>
-                  <CardTitle className="text-base">Why This Draft</CardTitle>
+                  <CardTitle className="text-base">
+                    {t('apiSpecs.aiCreateDialog.sections.whyTitle')}
+                  </CardTitle>
                   <CardDescription>
-                    Show the context, assumptions, and open questions behind this draft.
+                    {t('apiSpecs.aiCreateDialog.sections.whyDescription')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                   <div className="space-y-2">
-                    <div className="font-medium">Assumptions</div>
+                    <div className="font-medium">
+                      {t('apiSpecs.aiCreateDialog.review.assumptions')}
+                    </div>
                     {draft.assumptions?.length ? (
                       <ul className="space-y-2 text-muted-foreground">
                         {draft.assumptions.map(item => (
@@ -891,14 +949,18 @@ function ApiSpecAICreateDialogContent({
                         ))}
                       </ul>
                     ) : (
-                      <div className="text-muted-foreground">No assumptions.</div>
+                      <div className="text-muted-foreground">
+                        {t('apiSpecs.aiCreateDialog.review.noAssumptions')}
+                      </div>
                     )}
                   </div>
 
                   <Separator />
 
                   <div className="space-y-2">
-                    <div className="font-medium">Questions</div>
+                    <div className="font-medium">
+                      {t('apiSpecs.aiCreateDialog.review.questions')}
+                    </div>
                     {draft.questions?.length ? (
                       <ul className="space-y-2 text-muted-foreground">
                         {draft.questions.map(item => (
@@ -906,23 +968,33 @@ function ApiSpecAICreateDialogContent({
                         ))}
                       </ul>
                     ) : (
-                      <div className="text-muted-foreground">No open questions.</div>
+                      <div className="text-muted-foreground">
+                        {t('apiSpecs.aiCreateDialog.review.noQuestions')}
+                      </div>
                     )}
                   </div>
 
                   <Separator />
 
                   <div className="space-y-2">
-                    <div className="font-medium">Project Conventions</div>
+                    <div className="font-medium">
+                      {t('apiSpecs.aiCreateDialog.review.projectConventions')}
+                    </div>
                     {draft.conventions ? (
                       <div className="flex flex-wrap gap-2">
                         {draft.conventions.default_version ? (
                           <Badge variant="outline">
-                            Version: {draft.conventions.default_version}
+                            {t('apiSpecs.aiCreateDialog.review.versionBadge', {
+                              value: draft.conventions.default_version,
+                            })}
                           </Badge>
                         ) : null}
                         {draft.conventions.auth_style ? (
-                          <Badge variant="outline">Auth: {draft.conventions.auth_style}</Badge>
+                          <Badge variant="outline">
+                            {t('apiSpecs.aiCreateDialog.review.authBadge', {
+                              value: draft.conventions.auth_style,
+                            })}
+                          </Badge>
                         ) : null}
                         {(draft.conventions.common_tags ?? []).map(tag => (
                           <Badge key={tag} variant="secondary">
@@ -931,14 +1003,18 @@ function ApiSpecAICreateDialogContent({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-muted-foreground">Project conventions disabled.</div>
+                      <div className="text-muted-foreground">
+                        {t('apiSpecs.aiCreateDialog.review.projectConventionsDisabled')}
+                      </div>
                     )}
                   </div>
 
                   <Separator />
 
                   <div className="space-y-2">
-                    <div className="font-medium">References</div>
+                    <div className="font-medium">
+                      {t('apiSpecs.aiCreateDialog.review.references')}
+                    </div>
                     {draft.references?.length ? (
                       <div className="space-y-2">
                         {draft.references.map(reference => (
@@ -950,27 +1026,35 @@ function ApiSpecAICreateDialogContent({
                               <Badge variant="outline">{reference.method}</Badge>
                               <code className="text-xs">{reference.path}</code>
                               {reference.explicit ? (
-                                <Badge variant="secondary">Explicit</Badge>
+                                <Badge variant="secondary">
+                                  {t('apiSpecs.aiCreateDialog.review.explicit')}
+                                </Badge>
                               ) : null}
                             </div>
                             <div className="mt-2 text-sm font-medium">
-                              {reference.summary || 'Untitled spec'}
+                              {reference.summary || t('apiSpecs.aiCreateDialog.review.untitledSpec')}
                             </div>
                             <div className="mt-1 text-xs text-muted-foreground">
-                              score {reference.score.toFixed(1)}
+                              {t('apiSpecs.aiCreateDialog.review.referenceScore', {
+                                score: reference.score.toFixed(1),
+                              })}
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-muted-foreground">No references available.</div>
+                      <div className="text-muted-foreground">
+                        {t('apiSpecs.aiCreateDialog.review.noReferences')}
+                      </div>
                     )}
                   </div>
 
                   <Separator />
 
                   <div className="space-y-2">
-                    <div className="font-medium">Field Insights</div>
+                    <div className="font-medium">
+                      {t('apiSpecs.aiCreateDialog.review.fieldInsights')}
+                    </div>
                     {draft.field_insights && Object.keys(draft.field_insights).length > 0 ? (
                       <div className="space-y-2">
                         {Object.entries(draft.field_insights).map(([field, insight]) => (
@@ -988,7 +1072,9 @@ function ApiSpecAICreateDialogContent({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-muted-foreground">No field insights.</div>
+                      <div className="text-muted-foreground">
+                        {t('apiSpecs.aiCreateDialog.review.noFieldInsights')}
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -1000,10 +1086,9 @@ function ApiSpecAICreateDialogContent({
             <CardContent className="flex min-h-40 flex-col items-center justify-center gap-3 py-10 text-center">
               <FileJson2 className="h-10 w-10 text-primary/70" />
               <div className="space-y-1">
-                <div className="font-medium">Generate a structured draft first</div>
+                <div className="font-medium">{t('apiSpecs.aiCreateDialog.emptyState.title')}</div>
                 <div className="max-w-xl text-sm text-muted-foreground">
-                  The draft uses existing API specs in this project to infer method, parameters,
-                  request body, and responses.
+                  {t('apiSpecs.aiCreateDialog.emptyState.description')}
                 </div>
               </div>
             </CardContent>
@@ -1026,7 +1111,9 @@ function ApiSpecAICreateDialogContent({
                     disabled={isGeneratingDraft}
                     className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
                   />
-                  <span className="text-sm text-muted-foreground">Generate Doc</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('apiSpecs.aiCreateDialog.toggles.generateDoc')}
+                  </span>
                 </div>
               </DisabledReasonTooltip>
               <DisabledReasonTooltip
@@ -1040,7 +1127,9 @@ function ApiSpecAICreateDialogContent({
                     disabled={isGeneratingDraft}
                     className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
                   />
-                  <span className="text-sm text-muted-foreground">Generate Test</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('apiSpecs.aiCreateDialog.toggles.generateTest')}
+                  </span>
                 </div>
               </DisabledReasonTooltip>
               <DisabledReasonTooltip
@@ -1054,7 +1143,9 @@ function ApiSpecAICreateDialogContent({
                     disabled={isGeneratingDraft}
                     className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
                   />
-                  <span className="text-sm text-muted-foreground">Open Test Cases after Create</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('apiSpecs.aiCreateDialog.toggles.openTestsAfterCreate')}
+                  </span>
                 </div>
               </DisabledReasonTooltip>
             </>
@@ -1069,7 +1160,9 @@ function ApiSpecAICreateDialogContent({
             variant="outline"
             onClick={isGeneratingDraft ? handleCancelDraftGeneration : () => onOpenChange(false)}
           >
-            {isGeneratingDraft ? 'Cancel Generation' : 'Cancel'}
+            {isGeneratingDraft
+              ? t('apiSpecs.aiCreateDialog.actions.cancelGeneration')
+              : t('common.cancel')}
           </Button>
           <DisabledReasonTooltip
             disabled={Boolean(generateDraftDisableReason)}
@@ -1085,10 +1178,10 @@ function ApiSpecAICreateDialogContent({
             >
               <Sparkles className="h-4 w-4" />
               {didDraftGenerationFail
-                ? 'Retry Draft'
+                ? t('apiSpecs.aiCreateDialog.actions.retryDraft')
                 : draft
-                  ? 'Regenerate Draft'
-                  : 'Generate Draft'}
+                  ? t('apiSpecs.aiCreateDialog.actions.regenerateDraft')
+                  : t('apiSpecs.aiCreateDialog.actions.generateDraft')}
             </Button>
           </DisabledReasonTooltip>
           {draft ? (
@@ -1103,7 +1196,7 @@ function ApiSpecAICreateDialogContent({
                 disabled={isGeneratingDraft}
                 className={createSpecDisableReason ? 'pointer-events-none' : undefined}
               >
-                Create Spec
+                {t('apiSpecs.aiCreateDialog.actions.createSpec')}
               </Button>
             </DisabledReasonTooltip>
           ) : null}

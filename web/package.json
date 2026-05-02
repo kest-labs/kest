@@ -14,6 +14,7 @@
     "start:custom": "node ./scripts/next-runner.mjs start",
     "lint": "eslint .",
     "test": "vitest",
+    "test:i18n": "vitest run src/test/i18n-key-parity.test.ts",
     "test:coverage": "vitest run --coverage",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",

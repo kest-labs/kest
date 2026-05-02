@@ -62,11 +62,47 @@ function collectEmptyStrings(value: unknown, path: string[] = []): string[] {
   );
 }
 
+function collectLeafPaths(value: unknown, path: string[] = []): string[] {
+  if (typeof value === 'string') {
+    return [path.join('.')];
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.entries(value).flatMap(([key, nested]) =>
+    collectLeafPaths(nested, [...path, key])
+  );
+}
+
 describe('i18n messages', () => {
   it('keeps en-US and zh-Hans module keys in sync', () => {
     Object.entries(modules).forEach(([moduleName, [en, zh]]) => {
       expect(keyShape(en), moduleName).toEqual(keyShape(zh));
     });
+  });
+
+  it('keeps en-US and zh-Hans leaf key counts aligned', () => {
+    let totalEnLeafCount = 0;
+    let totalZhLeafCount = 0;
+
+    Object.entries(modules).forEach(([moduleName, [en, zh]]) => {
+      const enLeafPaths = collectLeafPaths(en);
+      const zhLeafPaths = collectLeafPaths(zh);
+
+      totalEnLeafCount += enLeafPaths.length;
+      totalZhLeafCount += zhLeafPaths.length;
+
+      expect(
+        enLeafPaths.length,
+        `${moduleName} leaf keys en-US=${enLeafPaths.length}, zh-Hans=${zhLeafPaths.length}`
+      ).toBe(zhLeafPaths.length);
+    });
+
+    expect(totalEnLeafCount, `total leaf keys en-US=${totalEnLeafCount}, zh-Hans=${totalZhLeafCount}`).toBe(
+      totalZhLeafCount
+    );
   });
 
   it('does not ship empty translation strings', () => {
