@@ -263,6 +263,11 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
   const projectStats = projectStatsQuery.data;
   const nextAction = getProjectNextAction(t, projectId, projectStats);
   const workflowSteps = getProjectWorkflowSteps(t, projectId, projectStats);
+  const totalWorkflowSteps = workflowSteps.length;
+  const completedWorkflowSteps = workflowSteps.filter(step => step.status === 'ready').length;
+  const workflowCompletionPercent =
+    totalWorkflowSteps > 0 ? Math.round((completedWorkflowSteps / totalWorkflowSteps) * 100) : 0;
+  const shouldShowWorkflowProgress = Boolean(projectStats);
   const PrimaryIcon = nextAction.primaryIcon;
   const SecondaryIcon = nextAction.secondaryIcon;
   const cliPlatformUrl = (apiExternalBaseUrl || buildApiPath('/')).replace(/\/$/, '');
@@ -494,10 +499,39 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     {t('projectDetail.projectFlowDescription')}
                   </p>
                 </div>
-                {isProjectLoading ? (
-                  <Badge variant="outline">{t('projectDetail.loading')}</Badge>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-2">
+                  {shouldShowWorkflowProgress ? (
+                    <div className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-sm font-medium text-primary">
+                      {t('projectDetail.projectFlowProgress', {
+                        percent: workflowCompletionPercent,
+                        completed: completedWorkflowSteps,
+                        total: totalWorkflowSteps,
+                      })}
+                    </div>
+                  ) : null}
+                  {isProjectLoading ? (
+                    <Badge variant="outline">{t('projectDetail.loading')}</Badge>
+                  ) : null}
+                </div>
               </div>
+
+              {shouldShowWorkflowProgress ? (
+                <div className="mt-4">
+                  <div
+                    role="progressbar"
+                    aria-label={t('projectDetail.projectFlow')}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={workflowCompletionPercent}
+                    className="h-2 overflow-hidden rounded-full bg-muted"
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                      style={{ width: `${workflowCompletionPercent}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-4 space-y-3">
                 {workflowSteps.map(step => (

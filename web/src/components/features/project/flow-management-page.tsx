@@ -23,12 +23,13 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import {
+  ChevronLeft,
+  ChevronRight,
   CircleHelp,
   ChevronUp,
   FileClock,
   FolderGit2,
   Minus,
-  PanelLeft,
   Play,
   Plus as PlusIcon,
   Plus,
@@ -2525,12 +2526,17 @@ export function ProjectFlowManagementPage({
     initializeHistoryStacks(undoStackRef, redoStackRef, setHistoryVersion, nextSnapshot);
   };
 
+  const openInspectorPanel = () => {
+    setInspectorOpen(true);
+    setIsDesktopInspectorCollapsed(false);
+  };
+
   const focusValidationTarget = (target?: FlowValidationTarget) => {
     if (!target) {
       return;
     }
 
-    setInspectorOpen(true);
+    openInspectorPanel();
     if (target.kind === 'node') {
       setSelectedNodeId(target.id);
       setSelectedEdgeId(null);
@@ -2826,7 +2832,7 @@ export function ProjectFlowManagementPage({
 
     setSelectedNodeId(node.id);
     setSelectedEdgeId(null);
-    setInspectorOpen(true);
+    openInspectorPanel();
   };
 
   const handleDeleteSelection = () => {
@@ -2911,7 +2917,7 @@ export function ProjectFlowManagementPage({
     ]);
     setSelectedNodeId(duplicatedNodes[0]?.id ?? null);
     setSelectedEdgeId(null);
-    setInspectorOpen(true);
+    openInspectorPanel();
     setDirty(true);
     clearValidationState();
   };
@@ -2996,7 +3002,7 @@ export function ProjectFlowManagementPage({
     ]);
     setSelectedNodeId(nextNode.id);
     setSelectedEdgeId(null);
-    setInspectorOpen(true);
+    openInspectorPanel();
     setDirty(true);
     clearValidationState();
   };
@@ -3344,11 +3350,11 @@ export function ProjectFlowManagementPage({
                 variant="outline"
                 size="sm"
                 isIcon
-                aria-label={t('flowPage.hideSidebar')}
-                title={t('flowPage.hideSidebar')}
+                aria-label={t('flowPage.collapseFlowItems')}
+                title={t('flowPage.collapseFlowItems')}
                 onClick={() => setIsSidebarCollapsed(true)}
               >
-                <PanelLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
             ) : null}
             <Button
@@ -3623,12 +3629,12 @@ export function ProjectFlowManagementPage({
                 onNodeClick={(_, node) => {
                   setSelectedNodeId(node.id);
                   setSelectedEdgeId(null);
-                  setInspectorOpen(true);
+                  openInspectorPanel();
                 }}
                 onEdgeClick={(_, edge) => {
                   setSelectedEdgeId(edge.id);
                   setSelectedNodeId(null);
-                  setInspectorOpen(true);
+                  openInspectorPanel();
                 }}
                 deleteKeyCode={null}
                 minZoom={0.2}
@@ -3887,14 +3893,14 @@ export function ProjectFlowManagementPage({
                   variant="outline"
                   size="sm"
                   isIcon
-                  aria-label={t('flowPage.expandInspector')}
+                  aria-label={t('flowPage.openFlowSettings')}
                   onClick={() => setIsDesktopInspectorCollapsed(false)}
                 >
-                  <PanelLeft className="h-4 w-4 rotate-180" />
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left">
-                {t('flowPage.expandInspector')}
+                {t('flowPage.openFlowSettings')}
               </TooltipContent>
             </Tooltip>
           </aside>
@@ -3908,14 +3914,14 @@ export function ProjectFlowManagementPage({
                     variant="ghost"
                     size="sm"
                     isIcon
-                    aria-label={t('flowPage.collapseInspector')}
+                    aria-label={t('flowPage.closeFlowSettings')}
                     onClick={() => setIsDesktopInspectorCollapsed(true)}
                   >
-                    <PanelLeft className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left">
-                  {t('flowPage.collapseInspector')}
+                  {t('flowPage.closeFlowSettings')}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -3954,7 +3960,29 @@ export function ProjectFlowManagementPage({
   return (
     <>
       <div className="flex min-h-full flex-col lg:flex-row">
-        {showFlowSidebar ? flowSidebar : null}
+        {showFlowSidebar ? (
+          flowSidebar
+        ) : !isMobile ? (
+          <aside className="hidden w-[72px] shrink-0 border-r border-border/60 bg-bg-surface/70 lg:flex lg:flex-col lg:items-center lg:justify-start lg:py-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  isIcon
+                  aria-label={t('flowPage.expandFlowItems')}
+                  onClick={() => setIsSidebarCollapsed(false)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {t('flowPage.expandFlowItems')}
+              </TooltipContent>
+            </Tooltip>
+          </aside>
+        ) : null}
 
         <main className="flex min-w-0 flex-1 flex-col">
           <div className="space-y-4 border-b border-border/60 bg-bg-surface/70 px-4 py-4 md:px-6">
@@ -3998,28 +4026,6 @@ export function ProjectFlowManagementPage({
                   <RefreshCw className="h-4 w-4" />
                   {t('common.refresh')}
                 </Button>
-                {!isMobile ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDesktopInspectorCollapsed(current => !current)}
-                  >
-                    <PanelLeft className={cn('h-4 w-4', isDesktopInspectorCollapsed ? 'rotate-180' : '')} />
-                    {isDesktopInspectorCollapsed
-                      ? t('flowPage.expandInspector')
-                      : t('flowPage.collapseInspector')}
-                  </Button>
-                ) : null}
-                {!isMobile && isSidebarCollapsed ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsSidebarCollapsed(false)}
-                  >
-                    <PanelLeft className="h-4 w-4" />
-                    {t('flowPage.showSidebar')}
-                  </Button>
-                ) : null}
                 <Button type="button" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
                   <Plus className="h-4 w-4" />
                   {t('flowPage.create')}
