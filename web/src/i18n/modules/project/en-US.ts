@@ -263,6 +263,7 @@ const messages: ProjectMessages = {
       title: 'AI Create API Spec',
       description:
         'Start with one sentence of product intent, then let AI draft the spec using the current project conventions. Project ID: {projectId}. Raw request secrets are not used as prompt context.',
+      compactDescription: 'Describe the intent in one sentence and let AI draft a structured spec.',
       readyToGenerate: 'Ready to generate',
       preparingDraftStream: 'Preparing draft stream',
       generatingStructuredDraft: 'Generating structured draft',
@@ -330,7 +331,11 @@ const messages: ProjectMessages = {
         intentTitle: '1. Intent',
         intentDescription:
           'Give AI the goal first, then optionally pin method, path, and category as seeds.',
+        intentDescriptionCompact:
+          'Describe the intent in one sentence and let AI draft a structured spec.',
+        advancedOptions: 'Advanced Options',
         previewTitle: '2. Draft Preview',
+        previewReady: 'Draft ready',
         draftStructure: 'Draft Structure',
         liveOutput: 'Live Output',
         streaming: 'Streaming',
@@ -338,10 +343,20 @@ const messages: ProjectMessages = {
         reviewTitle: '2. Draft Review',
         reviewDescription:
           'Review and adjust the draft before refining it again or creating the final spec.',
+        reviewDescriptionCompact:
+          'Expand to edit the structured fields, refine specific parts, and inspect the draft logic.',
         refineTitle: 'Refine',
         refineDescription: 'Rewrite a focused part of the draft without regenerating everything.',
         whyTitle: 'Why This Draft',
         whyDescription: 'Show the context, assumptions, and open questions behind this draft.',
+      },
+      previewSummary: {
+        requestBodyReady: 'Request body drafted',
+        noRequestBody: 'No request body drafted yet',
+        parameterCount: '{count} parameters',
+        noResponses: 'No responses drafted yet',
+        tags: 'Tags: {value}',
+        noTags: 'No tags',
       },
       review: {
         assumptions: 'Assumptions',
@@ -376,6 +391,7 @@ const messages: ProjectMessages = {
         regenerateDraft: 'Regenerate Draft',
         generateDraft: 'Generate Draft',
         createSpec: 'Create Spec',
+        createSpecCompact: 'Create',
         applyRefine: 'Apply Refine',
       },
       toasts: {
@@ -1761,6 +1777,8 @@ const messages: ProjectMessages = {
     workflowEnvironmentsDetailReady: '{count} targets configured',
     workflowEnvironmentsDetailMissing: 'Add a base URL and runtime variables',
     workflowTestCasesDetailReady: 'Generate coverage from API specs',
+    workflowTestCasesDetailReadyToCreate:
+      'Specs and runtime are ready. You can generate the first validation coverage now.',
     workflowTestCasesDetailMissing: 'Waiting for API specs',
     workflowTestCasesDetailNeedsRuntime: 'Add one environment before generating coverage.',
     workflowOrganizeDetailReady: '{categories} categories, {flows} flows',
