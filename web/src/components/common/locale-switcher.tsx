@@ -21,7 +21,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLocale } from '@/hooks/use-locale';
 import { useT } from '@/i18n/client';
-import { isLocaleSwitcherEnabled, localeNames, locales, type Locale } from '@/i18n';
+import { isLocaleSwitcherEnabled, localeNames, locales } from '@/i18n';
 import { cn } from '@/utils';
 
 export function LanguageSwitcher({ showTooltip = false }: { showTooltip?: boolean }) {

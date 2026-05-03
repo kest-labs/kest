@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,14 @@ import { cn } from '@/utils';
 
 const PROJECT_WORKSPACE_NAV_STATE_KEY = 'kest_project_workspace_nav_collapsed';
 
+const getInitialDesktopNavCollapsed = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.localStorage.getItem(PROJECT_WORKSPACE_NAV_STATE_KEY) === '1';
+};
+
 export function ProjectWorkspaceLayout({
   projectId,
   children,
@@ -29,20 +37,9 @@ export function ProjectWorkspaceLayout({
   const pathname = usePathname();
   const readyModules = PROJECT_WORKSPACE_MODULES.filter(item => item.status !== 'planned');
   const plannedModules = PROJECT_WORKSPACE_MODULES.filter(item => item.status === 'planned');
-  const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(false);
+  const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(getInitialDesktopNavCollapsed);
   const isRouteActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}?`) || pathname.startsWith(`${href}/`);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const savedState = window.localStorage.getItem(PROJECT_WORKSPACE_NAV_STATE_KEY);
-    if (savedState === '1') {
-      setIsDesktopNavCollapsed(true);
-    }
-  }, []);
 
   const updateDesktopNavCollapsed = (nextValue: boolean) => {
     setIsDesktopNavCollapsed(nextValue);

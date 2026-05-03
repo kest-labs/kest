@@ -58,6 +58,25 @@ export const getProjectHomeStatusAccentClassName = (tone: ProjectHomeStatusTone)
 
 export const getProjectHomeStatusIcon = (tone: ProjectHomeStatusTone) => STATUS_ICON_BY_TONE[tone];
 
+function ProjectHomeStatusIcon({
+  tone,
+  className,
+}: {
+  tone: ProjectHomeStatusTone;
+  className?: string;
+}) {
+  switch (tone) {
+    case 'ready':
+      return <CheckCircle2 className={className} />;
+    case 'available':
+      return <PlayCircle className={className} />;
+    case 'optional':
+      return <CircleEllipsis className={className} />;
+    default:
+      return <Wrench className={className} />;
+  }
+}
+
 export function ProjectHomeStatusBadge({
   tone,
   className,
@@ -66,11 +85,10 @@ export function ProjectHomeStatusBadge({
   className?: string;
 }) {
   const t = useT('project');
-  const Icon = getProjectHomeStatusIcon(tone);
 
   return (
     <Badge variant="outline" className={cn(getProjectHomeStatusBadgeClassName(tone), className)}>
-      <Icon className="h-3.5 w-3.5" />
+      <ProjectHomeStatusIcon tone={tone} className="h-3.5 w-3.5" />
       {getProjectHomeStatusLabel(t, tone)}
     </Badge>
   );

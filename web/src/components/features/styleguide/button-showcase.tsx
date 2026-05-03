@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { SearchIcon, Loader2, InfoIcon, MailIcon } from "lucide-react"
+import { SearchIcon, InfoIcon, MailIcon } from "lucide-react"
 
 const variants = ["default", "secondary", "outline", "ghost", "destructive", "link"] as const
 const sizes = ["xs", "sm", "default", "lg", "xl", "2xl"] as const
