@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft,
   Boxes,
@@ -372,6 +374,94 @@ function CodeBlock({
     <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
       <code>{value}</code>
     </pre>
+  );
+}
+
+function MarkdownPreview({
+  value,
+  emptyLabel,
+}: {
+  value?: string;
+  emptyLabel: string;
+}) {
+  if (!value?.trim()) {
+    return (
+      <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="markdown-content rounded-2xl border border-border/60 bg-background/80 p-5">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ className, ...props }) => (
+            <a
+              className={cn(
+                'font-medium text-primary underline-offset-4 hover:text-primary-deep hover:underline',
+                className
+              )}
+              {...props}
+            />
+          ),
+          code: ({ className, children, ...props }) => {
+            const isInlineCode = !className;
+
+            if (isInlineCode) {
+              return (
+                <code
+                  className="rounded bg-slate-950/8 px-1.5 py-0.5 font-mono text-[0.925em] text-text-main"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            }
+
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children, ...props }) => (
+            <pre
+              className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100"
+              {...props}
+            >
+              {children}
+            </pre>
+          ),
+          table: ({ className, ...props }) => (
+            <div className="overflow-x-auto">
+              <table
+                className={cn('min-w-full border-collapse text-sm text-text-main', className)}
+                {...props}
+              />
+            </div>
+          ),
+          th: ({ className, ...props }) => (
+            <th
+              className={cn(
+                'border border-border/60 bg-muted/40 px-3 py-2 text-left font-semibold',
+                className
+              )}
+              {...props}
+            />
+          ),
+          td: ({ className, ...props }) => (
+            <td
+              className={cn('border border-border/60 px-3 py-2 align-top', className)}
+              {...props}
+            />
+          ),
+        }}
+      >
+        {value}
+      </ReactMarkdown>
+    </div>
   );
 }
 
@@ -2278,10 +2368,13 @@ export function TestCaseManagementPage({
                   </div>
 
                   {activeTestCase.description ? (
-                    <Alert>
-                      <AlertTitle>{t('common.description')}</AlertTitle>
-                      <AlertDescription>{activeTestCase.description}</AlertDescription>
-                    </Alert>
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium">{t('common.description')}</div>
+                      <MarkdownPreview
+                        value={activeTestCase.description}
+                        emptyLabel={t('common.noDescriptionProvided')}
+                      />
+                    </div>
                   ) : null}
 
                     <Tabs
