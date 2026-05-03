@@ -404,6 +404,28 @@ const messages: ProjectMessages = {
     createDialogDescription:
       'Create a project-scoped environment with base URL, variables, and headers.',
     editDialogDescription: 'Update the selected project-scoped environment.',
+    tableMode: 'Table',
+    jsonMode: 'JSON',
+    addRow: 'Add row',
+    fieldTableKey: 'Key',
+    fieldTableType: 'Type',
+    fieldTableValue: 'Value',
+    fieldTypeString: 'String',
+    fieldTypeSecret: 'Secret',
+    fieldTypeNumber: 'Number',
+    fieldTypeBoolean: 'Boolean',
+    showSecret: 'Show',
+    hideSecret: 'Hide',
+    variableKeyPlaceholder: 'API_URL',
+    variableValuePlaceholder: 'https://api.example.com',
+    headerKeyPlaceholder: 'Authorization',
+    headerValuePlaceholder: 'Bearer {{token}}',
+    variablesEditorHint:
+      'Default to table mode for safer editing. Switch to JSON only when you need raw control.',
+    headersEditorHint:
+      'Headers are easier to manage row by row. Secret-looking values stay masked by default.',
+    keyRequiredForRow: 'Row {row} needs a key before it can be saved.',
+    invalidNumberValue: 'Variable "{key}" must contain a valid number.',
     unableToLoadDetails: 'Unable to load environment details',
     unableToLoadDetailsDescription:
       'The selected environment details are not available yet. Close this dialog and try again.',
