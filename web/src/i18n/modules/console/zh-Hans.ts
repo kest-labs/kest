@@ -2,6 +2,7 @@ const messages = {
   shell: {
     title: 'KEST 控制台',
     notifications: '通知',
+    notificationsEmpty: '暂无通知。',
     profile: '个人资料',
     logout: '退出登录',
     returnToSite: '返回站点',

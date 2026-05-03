@@ -9,21 +9,22 @@
  */
 'use client';
 
-import * as React from "react";
-import { Globe, Check } from "lucide-react";
-import { useLocale } from "@/hooks/use-locale";
-import { locales, localeNames, isLocaleSwitcherEnabled, type Locale } from "@/i18n";
+import * as React from 'react';
+import { Check, Globe } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { useT } from "@/i18n/client";
-import { cn } from "@/utils";
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useLocale } from '@/hooks/use-locale';
+import { useT } from '@/i18n/client';
+import { isLocaleSwitcherEnabled, localeNames, locales } from '@/i18n';
+import { cn } from '@/utils';
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ showTooltip = false }: { showTooltip?: boolean }) {
   const { locale, setLocale, isPending } = useLocale();
   const t = useT();
 
@@ -33,29 +34,49 @@ export function LanguageSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          isIcon
-          noScale
-          className="h-9 w-9 rounded-full hover:bg-muted/50 transition-colors"
-          disabled={isPending}
-        >
-          <Globe className={cn("size-4.5 text-text-muted transition-transform duration-300", isPending && "animate-spin")} />
-          <span className="sr-only">{t('common.toggleLanguage')}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[160px] rounded-xl p-1 shadow-premium border-border/50 animate-in fade-in zoom-in-95 duration-200">
+      <Tooltip delayDuration={showTooltip ? 300 : 0}>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              isIcon
+              noScale
+              className="h-9 w-9 rounded-full transition-colors hover:bg-muted/50"
+              disabled={isPending}
+              aria-label={t('common.selectLanguage')}
+            >
+              <Globe
+                className={cn(
+                  'size-4.5 text-text-muted transition-transform duration-300',
+                  isPending && 'animate-spin'
+                )}
+              />
+              <span className="sr-only">{t('common.toggleLanguage')}</span>
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        {showTooltip ? (
+          <TooltipContent>
+            <p>{t('common.selectLanguage')}</p>
+          </TooltipContent>
+        ) : null}
+      </Tooltip>
+      <DropdownMenuContent
+        align="end"
+        className="w-[160px] rounded-xl border-border/50 p-1 shadow-premium animate-in fade-in zoom-in-95 duration-200"
+      >
         <div className="px-2 py-1.5 text-xs font-semibold text-text-muted uppercase tracking-wider">
           {t('common.selectLanguage')}
         </div>
-        {locales.map((loc) => (
+        {locales.map(loc => (
           <DropdownMenuItem
             key={loc}
             onClick={() => setLocale(loc)}
             className={cn(
-              "rounded-lg cursor-pointer flex items-center justify-between px-2 py-2 transition-colors",
-              locale === loc ? "bg-primary/10 text-primary font-medium" : "text-text-subtle hover:bg-muted/50"
+              'flex cursor-pointer items-center justify-between rounded-lg px-2 py-2 transition-colors',
+              locale === loc
+                ? 'bg-primary/10 font-medium text-primary'
+                : 'text-text-subtle hover:bg-muted/50'
             )}
           >
             <span>{localeNames[loc]}</span>

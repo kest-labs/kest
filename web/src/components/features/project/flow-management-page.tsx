@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
   Background,
   BackgroundVariant,
-  Controls,
   Handle,
   MarkerType,
+  Panel,
   Position,
   ReactFlow,
   type Connection,
@@ -23,17 +23,24 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import {
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  ChevronUp,
   FileClock,
   FolderGit2,
-  PanelLeft,
+  Minus,
   Play,
+  Plus as PlusIcon,
   Plus,
+  Redo2,
   RefreshCw,
   Save,
   Search,
   Share2,
   Trash2,
   Workflow,
+  Copy,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -84,6 +91,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   buildProjectDetailRoute,
   buildProjectFlowsRoute,
@@ -210,6 +218,17 @@ type FlowParameterHandoffPayload = {
   targetStepId: string;
   selections: FlowParameterSelection[];
 };
+type FlowCanvasSnapshot = {
+  nodes: FlowCanvasNode[];
+  edges: FlowCanvasEdge[];
+  flowMeta: { name: string; description: string };
+  selectedNodeId: string | null;
+  selectedEdgeId: string | null;
+};
+
+const FLOW_SHORTCUT_SCOPE_SELECTOR =
+  'input, textarea, select, button, [contenteditable="true"], [role="textbox"]';
+const FLOW_UNDO_HISTORY_LIMIT = 50;
 
 const getStatusBadgeClassName = (status: FlowRunStatus | 'idle') => {
   switch (status) {
@@ -242,23 +261,6 @@ const getStatusLabel = (t: ProjectTranslator, status: FlowRunStatus | 'idle') =>
       return t('flowPage.statusPending');
     default:
       return t('flowPage.statusIdle');
-  }
-};
-
-const getMethodBadgeClassName = (method: string) => {
-  switch (method) {
-    case 'GET':
-      return 'border-emerald-200 bg-emerald-500/10 text-emerald-700';
-    case 'POST':
-      return 'border-sky-200 bg-sky-500/10 text-sky-700';
-    case 'PUT':
-      return 'border-amber-200 bg-amber-500/10 text-amber-700';
-    case 'PATCH':
-      return 'border-violet-200 bg-violet-500/10 text-violet-700';
-    case 'DELETE':
-      return 'border-rose-200 bg-rose-500/10 text-rose-700';
-    default:
-      return 'border-border/60 bg-background text-text-muted';
   }
 };
 
@@ -505,6 +507,60 @@ const createEmptyValidationState = (): FlowValidationState => ({
 });
 
 const buildLocalRunId = () => `local-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+
+const cloneFlowCanvasNode = (node: FlowCanvasNode): FlowCanvasNode => ({
+  ...node,
+  position: {
+    x: node.position.x,
+    y: node.position.y,
+  },
+  data: {
+    ...node.data,
+    latestResult: node.data.latestResult ? { ...node.data.latestResult } : node.data.latestResult,
+  },
+});
+
+const cloneFlowCanvasEdge = (edge: FlowCanvasEdge): FlowCanvasEdge => ({
+  ...edge,
+  data: edge.data
+    ? {
+        ...edge.data,
+        mappings: (edge.data.mappings ?? []).map(mapping => ({ ...mapping })),
+      }
+    : edge.data,
+});
+
+const cloneFlowCanvasSnapshot = (snapshot: FlowCanvasSnapshot): FlowCanvasSnapshot => ({
+  nodes: snapshot.nodes.map(cloneFlowCanvasNode),
+  edges: snapshot.edges.map(cloneFlowCanvasEdge),
+  flowMeta: {
+    ...snapshot.flowMeta,
+  },
+  selectedNodeId: snapshot.selectedNodeId,
+  selectedEdgeId: snapshot.selectedEdgeId,
+});
+
+const isSameFlowCanvasSnapshot = (left: FlowCanvasSnapshot, right: FlowCanvasSnapshot) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+const isEditableShortcutTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(target.closest(FLOW_SHORTCUT_SCOPE_SELECTOR));
+};
+
+const initializeHistoryStacks = (
+  undoStackRef: React.RefObject<FlowCanvasSnapshot[]>,
+  redoStackRef: React.RefObject<FlowCanvasSnapshot[]>,
+  setHistoryVersion: React.Dispatch<React.SetStateAction<number>>,
+  snapshot: FlowCanvasSnapshot
+) => {
+  undoStackRef.current = [cloneFlowCanvasSnapshot(snapshot)];
+  redoStackRef.current = [];
+  setHistoryVersion(current => current + 1);
+};
 
 const getCanvasNodeLabel = (t: ProjectTranslator, node: FlowCanvasNode, index?: number) => {
   const name = node.data.name.trim();
@@ -2170,11 +2226,15 @@ export function ProjectFlowManagementPage({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [isDesktopInspectorCollapsed, setIsDesktopInspectorCollapsed] = useState(false);
   const [liveStepResults, setLiveStepResults] = useState<Record<string, FlowStepResult>>({});
   const [validationState, setValidationState] = useState<FlowValidationState>(() =>
     createEmptyValidationState()
   );
   const [isLocalRunPending, setIsLocalRunPending] = useState(false);
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
+  const [isCanvasToolsOpen, setIsCanvasToolsOpen] = useState(false);
+  const [, setHistoryVersion] = useState(0);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<
     FlowCanvasNode,
     FlowCanvasEdge
@@ -2185,6 +2245,8 @@ export function ProjectFlowManagementPage({
   const previousFlowIdRef = useRef<string | null>(normalizeOpaqueId(selectedItemId));
   const persistedRunHistoryKeysRef = useRef<Set<string>>(new Set());
   const persistingRunHistoryKeysRef = useRef<Set<string>>(new Set());
+  const undoStackRef = useRef<FlowCanvasSnapshot[]>([]);
+  const redoStackRef = useRef<FlowCanvasSnapshot[]>([]);
 
   const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
   const [edges, setEdges] = useState<FlowCanvasEdge[]>([]);
@@ -2289,6 +2351,16 @@ export function ProjectFlowManagementPage({
     setDirty(canvasGraph.droppedInvalidEdgeCount > 0);
     setLiveStepResults({});
     setValidationState(createEmptyValidationState());
+    initializeHistoryStacks(undoStackRef, redoStackRef, setHistoryVersion, {
+      nodes: canvasGraph.nodes,
+      edges: canvasGraph.edges,
+      flowMeta: {
+        name: detail.name,
+        description: detail.description,
+      },
+      selectedNodeId: null,
+      selectedEdgeId: null,
+    });
   }, [selectedFlowQuery.data?.updated_at]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -2318,6 +2390,13 @@ export function ProjectFlowManagementPage({
       setLocalRuns([]);
       setLiveStepResults({});
       setValidationState(createEmptyValidationState());
+      initializeHistoryStacks(undoStackRef, redoStackRef, setHistoryVersion, {
+        nodes: [],
+        edges: [],
+        flowMeta: { name: '', description: '' },
+        selectedNodeId: null,
+        selectedEdgeId: null,
+      });
     }
   }, [selectedFlowId]);
 
@@ -2327,8 +2406,66 @@ export function ProjectFlowManagementPage({
     };
   }, []);
 
+  const handleCanvasKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (!selectedFlowId) {
+      return;
+    }
+
+    const metaOrCtrl = event.metaKey || event.ctrlKey;
+    const key = event.key.toLowerCase();
+    const editableTarget = isEditableShortcutTarget(event.target);
+
+    if (key === '?' && !metaOrCtrl && !event.altKey) {
+      if (editableTarget) {
+        return;
+      }
+
+      event.preventDefault();
+      setIsShortcutHelpOpen(true);
+      return;
+    }
+
+    if (editableTarget) {
+      return;
+    }
+
+    if (metaOrCtrl && key === 'z' && !event.shiftKey) {
+      event.preventDefault();
+      handleUndo();
+      return;
+    }
+
+    if ((metaOrCtrl && key === 'z' && event.shiftKey) || (metaOrCtrl && key === 'y')) {
+      event.preventDefault();
+      handleRedo();
+      return;
+    }
+
+    if (metaOrCtrl && key === 'd') {
+      event.preventDefault();
+      handleDuplicateSelection();
+      return;
+    }
+
+    if ((event.key === 'Delete' || event.key === 'Backspace') && !metaOrCtrl) {
+      event.preventDefault();
+      handleDeleteSelection();
+    }
+  });
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleCanvasKeyDown);
+    return () => window.removeEventListener('keydown', handleCanvasKeyDown);
+  }, []);
+
   const selectedNode = nodes.find(node => node.id === selectedNodeId) ?? null;
   const selectedEdge = edges.find(edge => edge.id === selectedEdgeId) ?? null;
+  const selectedNodes = useMemo(() => nodes.filter(node => node.selected), [nodes]);
+  const selectedEdges = useMemo(() => edges.filter(edge => edge.selected), [edges]);
+  const canDeleteSelection = selectedNodes.length > 0 || selectedEdges.length > 0;
+  const canDuplicateSelection = selectedNodes.length > 0;
+  const canUndo = undoStackRef.current.length > 1;
+  const canRedo = redoStackRef.current.length > 0;
   const stepOptions = nodes.flatMap(node =>
     node.data.backendStepId
       ? [
@@ -2349,12 +2486,57 @@ export function ProjectFlowManagementPage({
     setValidationState(createEmptyValidationState());
   };
 
+  const buildCurrentSnapshot = (): FlowCanvasSnapshot => ({
+    nodes: nodes.map(cloneFlowCanvasNode),
+    edges: edges.map(cloneFlowCanvasEdge),
+    flowMeta: {
+      ...flowMeta,
+    },
+    selectedNodeId,
+    selectedEdgeId,
+  });
+
+  const applySnapshot = (snapshot: FlowCanvasSnapshot) => {
+    setNodes(snapshot.nodes.map(cloneFlowCanvasNode));
+    setEdges(snapshot.edges.map(cloneFlowCanvasEdge));
+    setFlowMeta({
+      ...snapshot.flowMeta,
+    });
+    setSelectedNodeId(snapshot.selectedNodeId);
+    setSelectedEdgeId(snapshot.selectedEdgeId);
+    setDirty(true);
+    clearValidationState();
+  };
+
+  const pushHistorySnapshot = (snapshot?: FlowCanvasSnapshot) => {
+    const nextSnapshot = cloneFlowCanvasSnapshot(snapshot ?? buildCurrentSnapshot());
+    const previousSnapshot = undoStackRef.current.at(-1);
+
+    if (previousSnapshot && isSameFlowCanvasSnapshot(previousSnapshot, nextSnapshot)) {
+      return;
+    }
+
+    undoStackRef.current = [...undoStackRef.current, nextSnapshot].slice(-FLOW_UNDO_HISTORY_LIMIT);
+    redoStackRef.current = [];
+    setHistoryVersion(current => current + 1);
+  };
+
+  const resetHistoryStacks = (snapshot?: FlowCanvasSnapshot) => {
+    const nextSnapshot = cloneFlowCanvasSnapshot(snapshot ?? buildCurrentSnapshot());
+    initializeHistoryStacks(undoStackRef, redoStackRef, setHistoryVersion, nextSnapshot);
+  };
+
+  const openInspectorPanel = () => {
+    setInspectorOpen(true);
+    setIsDesktopInspectorCollapsed(false);
+  };
+
   const focusValidationTarget = (target?: FlowValidationTarget) => {
     if (!target) {
       return;
     }
 
-    setInspectorOpen(true);
+    openInspectorPanel();
     if (target.kind === 'node') {
       setSelectedNodeId(target.id);
       setSelectedEdgeId(null);
@@ -2456,6 +2638,8 @@ export function ProjectFlowManagementPage({
       return;
     }
 
+    pushHistorySnapshot();
+
     setEdges(
       current =>
         addEdge(
@@ -2470,6 +2654,10 @@ export function ProjectFlowManagementPage({
     );
     setDirty(true);
     clearValidationState();
+  };
+
+  const handleNodeDragStart = () => {
+    pushHistorySnapshot();
   };
 
   const handleNodeChange = (nodeId: string, patch: Partial<FlowNodeData>) => {
@@ -2644,13 +2832,143 @@ export function ProjectFlowManagementPage({
 
     setSelectedNodeId(node.id);
     setSelectedEdgeId(null);
-    setInspectorOpen(true);
+    openInspectorPanel();
+  };
+
+  const handleDeleteSelection = () => {
+    if (!canDeleteSelection) {
+      return;
+    }
+
+    pushHistorySnapshot();
+
+    const deletedNodeIds = new Set(selectedNodes.map(node => node.id));
+    setNodes(current => current.filter(node => !node.selected));
+    setEdges(current =>
+      current.filter(
+        edge =>
+          !edge.selected && !deletedNodeIds.has(edge.source) && !deletedNodeIds.has(edge.target)
+      )
+    );
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setDirty(true);
+    clearValidationState();
+  };
+
+  const handleDuplicateSelection = () => {
+    if (!canDuplicateSelection) {
+      return;
+    }
+
+    pushHistorySnapshot();
+
+    const duplicationOffset = {
+      x: 64,
+      y: 48,
+    };
+    const duplicateNodeIdMap = new Map<string, string>();
+    const duplicatedNodes = selectedNodes.map(node => {
+      const nextId = buildClientKey();
+      duplicateNodeIdMap.set(node.id, nextId);
+
+      return {
+        ...cloneFlowCanvasNode(node),
+        id: nextId,
+        selected: true,
+        position: {
+          x: node.position.x + duplicationOffset.x,
+          y: node.position.y + duplicationOffset.y,
+        },
+        data: {
+          ...node.data,
+          backendStepId: undefined,
+          clientKey: nextId,
+          status: 'idle',
+          latestResult: null,
+        },
+      } satisfies FlowCanvasNode;
+    });
+
+    const duplicatedEdges = edges
+      .filter(edge => duplicateNodeIdMap.has(edge.source) && duplicateNodeIdMap.has(edge.target))
+      .map(edge =>
+        buildEdge(
+          duplicateNodeIdMap.get(edge.source)!,
+          duplicateNodeIdMap.get(edge.target)!,
+          (edge.data?.mappings ?? []).map(mapping => ({ ...mapping })),
+          t('flowPage.inspector.dependencyLabel')
+        )
+      );
+
+    setNodes(current => [
+      ...current.map(node => ({
+        ...node,
+        selected: false,
+      })),
+      ...duplicatedNodes,
+    ]);
+    setEdges(current => [
+      ...current.map(edge => ({
+        ...edge,
+        selected: false,
+      })),
+      ...duplicatedEdges,
+    ]);
+    setSelectedNodeId(duplicatedNodes[0]?.id ?? null);
+    setSelectedEdgeId(null);
+    openInspectorPanel();
+    setDirty(true);
+    clearValidationState();
+  };
+
+  const handleUndo = () => {
+    if (undoStackRef.current.length <= 1) {
+      return;
+    }
+
+    const currentSnapshot = undoStackRef.current.at(-1);
+    const previousSnapshot = undoStackRef.current.at(-2);
+    if (!currentSnapshot || !previousSnapshot) {
+      return;
+    }
+
+    undoStackRef.current = undoStackRef.current.slice(0, -1);
+    redoStackRef.current = [...redoStackRef.current, cloneFlowCanvasSnapshot(currentSnapshot)];
+    setHistoryVersion(current => current + 1);
+    applySnapshot(previousSnapshot);
+  };
+
+  const handleRedo = () => {
+    const nextSnapshot = redoStackRef.current.at(-1);
+    if (!nextSnapshot) {
+      return;
+    }
+
+    redoStackRef.current = redoStackRef.current.slice(0, -1);
+    undoStackRef.current = [...undoStackRef.current, cloneFlowCanvasSnapshot(nextSnapshot)];
+    setHistoryVersion(current => current + 1);
+    applySnapshot(nextSnapshot);
+  };
+
+  const handleCanvasZoomIn = () => {
+    void reactFlowInstance?.zoomIn({ duration: 180 });
+  };
+
+  const handleCanvasZoomOut = () => {
+    void reactFlowInstance?.zoomOut({ duration: 180 });
+  };
+
+  const handleCanvasFitView = () => {
+    void reactFlowInstance?.fitView({ padding: 0.16, duration: 220 });
   };
 
   const handleAddStep = () => {
     if (!selectedFlowId) {
       return;
     }
+
+    pushHistorySnapshot();
 
     const clientKey = buildClientKey();
     const nextNode: FlowCanvasNode = {
@@ -2672,12 +2990,19 @@ export function ProjectFlowManagementPage({
         status: 'idle',
         latestResult: null,
       },
+      selected: true,
     };
 
-    setNodes(current => [...current, nextNode]);
+    setNodes(current => [
+      ...current.map(node => ({
+        ...node,
+        selected: false,
+      })),
+      nextNode,
+    ]);
     setSelectedNodeId(nextNode.id);
     setSelectedEdgeId(null);
-    setInspectorOpen(true);
+    openInspectorPanel();
     setDirty(true);
     clearValidationState();
   };
@@ -2716,6 +3041,16 @@ export function ProjectFlowManagementPage({
       setNodes(mergedGraph.nodes);
       setEdges(mergedGraph.edges);
       setDirty(false);
+      resetHistoryStacks({
+        nodes: mergedGraph.nodes,
+        edges: mergedGraph.edges,
+        flowMeta: {
+          name: saved.name,
+          description: saved.description,
+        },
+        selectedNodeId,
+        selectedEdgeId,
+      });
       return saved;
     } catch (error) {
       setValidationState(current => ({
@@ -3015,11 +3350,11 @@ export function ProjectFlowManagementPage({
                 variant="outline"
                 size="sm"
                 isIcon
-                aria-label={t('flowPage.hideSidebar')}
-                title={t('flowPage.hideSidebar')}
+                aria-label={t('flowPage.collapseFlowItems')}
+                title={t('flowPage.collapseFlowItems')}
                 onClick={() => setIsSidebarCollapsed(true)}
               >
-                <PanelLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
             ) : null}
             <Button
@@ -3162,7 +3497,7 @@ export function ProjectFlowManagementPage({
       </CardContent>
     </Card>
   ) : (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-bg-surface/70 px-4 py-4 md:px-6">
         <Select
           value={
@@ -3243,14 +3578,6 @@ export function ProjectFlowManagementPage({
         <Button
           type="button"
           variant="outline"
-          onClick={() => reactFlowInstance?.fitView({ padding: 0.16 })}
-          disabled={!selectedFlowId}
-        >
-          {t('flowPage.fitView')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
           onClick={handleRefresh}
           disabled={flowListQuery.isFetching || selectedFlowQuery.isFetching}
         >
@@ -3280,10 +3607,10 @@ export function ProjectFlowManagementPage({
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex flex-col xl:min-h-0 xl:flex-1 xl:flex-row">
         <div className="min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.08),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.85),rgba(248,250,252,0.98))]">
-          <div className="h-full min-h-[540px] p-4 md:p-6">
-            <div className="h-full overflow-hidden rounded-[32px] border border-border/60 bg-background/85 shadow-premium">
+          <div className="min-h-[720px] p-4 md:p-6">
+            <div className="h-[min(72vh,960px)] min-h-[720px] overflow-hidden rounded-[32px] border border-border/60 bg-background/85 shadow-premium">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -3294,6 +3621,7 @@ export function ProjectFlowManagementPage({
                 onEdgesChange={handleEdgesChange}
                 onNodesDelete={handleNodesDelete}
                 onConnect={handleConnect}
+                onNodeDragStart={handleNodeDragStart}
                 onPaneClick={() => {
                   setSelectedNodeId(null);
                   setSelectedEdgeId(null);
@@ -3301,14 +3629,14 @@ export function ProjectFlowManagementPage({
                 onNodeClick={(_, node) => {
                   setSelectedNodeId(node.id);
                   setSelectedEdgeId(null);
-                  setInspectorOpen(true);
+                  openInspectorPanel();
                 }}
                 onEdgeClick={(_, edge) => {
                   setSelectedEdgeId(edge.id);
                   setSelectedNodeId(null);
-                  setInspectorOpen(true);
+                  openInspectorPanel();
                 }}
-                deleteKeyCode={['Backspace', 'Delete']}
+                deleteKeyCode={null}
                 minZoom={0.2}
                 defaultViewport={{ x: 0, y: 0, zoom: 0.9 }}
               >
@@ -3326,50 +3654,337 @@ export function ProjectFlowManagementPage({
                   lineWidth={1.2}
                   color="rgba(100, 116, 139, 0.22)"
                 />
-                <Controls />
+                <Panel position="top-right" className="!m-4 flex max-w-[min(90vw,360px)] flex-col items-end gap-3">
+                  {isCanvasToolsOpen ? (
+                    <div className="w-[min(90vw,320px)] rounded-[28px] border border-border/60 bg-background/92 p-3 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.4)] backdrop-blur-xl">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
+                            {t('flowPage.canvasToolsLabel')}
+                          </p>
+                          <p className="mt-1 text-sm text-text-main">
+                            {t('flowPage.canvasToolsDescription')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                isIcon
+                                aria-label={t('flowPage.shortcutsTitle')}
+                                onClick={() => setIsShortcutHelpOpen(true)}
+                              >
+                                <CircleHelp className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              {t('flowPage.shortcutsHint')}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                isIcon
+                                aria-label={t('flowPage.closeCanvasTools')}
+                                onClick={() => setIsCanvasToolsOpen(false)}
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              {t('flowPage.closeCanvasTools')}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => void handleRunLocal()}
+                          disabled={!canEdit || !selectedFlowId}
+                          loading={isLocalRunPending}
+                        >
+                          <Play className="h-4 w-4" />
+                          {t('flowPage.runAll')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleRunServer()}
+                          disabled={!canEdit || !selectedFlowId}
+                          loading={runFlowMutation.isPending}
+                        >
+                          <Play className="h-4 w-4" />
+                          {t('flowPage.runServer')}
+                        </Button>
+                      </div>
+
+                      <Separator className="my-3" />
+
+                      <div className="grid grid-cols-4 gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleCanvasZoomIn}
+                              disabled={!selectedFlowId}
+                              aria-label={t('flowPage.zoomIn')}
+                            >
+                              <PlusIcon className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('flowPage.zoomIn')}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleCanvasZoomOut}
+                              disabled={!selectedFlowId}
+                              aria-label={t('flowPage.zoomOut')}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('flowPage.zoomOut')}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleCanvasFitView}
+                              disabled={!selectedFlowId}
+                              aria-label={t('flowPage.fitView')}
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('flowPage.fitView')}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleDuplicateSelection}
+                              disabled={!canEdit || !canDuplicateSelection}
+                              aria-label={t('flowPage.duplicateSelection')}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('flowPage.duplicateSelection')}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleDeleteSelection}
+                              disabled={!canEdit || !canDeleteSelection}
+                              aria-label={t('common.delete')}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('common.delete')}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleUndo}
+                              disabled={!canEdit || !canUndo}
+                              aria-label={t('flowPage.undo')}
+                            >
+                              <Redo2 className="h-4 w-4 rotate-180" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('flowPage.undo')}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              isIcon
+                              onClick={handleRedo}
+                              disabled={!canEdit || !canRedo}
+                              aria-label={t('flowPage.redo')}
+                            >
+                              <Redo2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {t('flowPage.redo')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="lg"
+                          isIcon
+                          aria-label={t('flowPage.openCanvasTools')}
+                          className="h-14 w-14 rounded-full border border-primary/20 bg-primary text-primary-foreground shadow-[0_20px_45px_-22px_rgba(14,165,233,0.75)]"
+                          onClick={() => setIsCanvasToolsOpen(true)}
+                        >
+                          <CircleHelp className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">
+                        {t('flowPage.openCanvasTools')}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </Panel>
               </ReactFlow>
             </div>
           </div>
         </div>
 
-        <aside className="hidden w-[380px] shrink-0 border-l border-border/60 bg-bg-surface/70 xl:block">
-          <div className="h-full overflow-y-auto p-4">
-            <FlowInspector
-              flowName={flowMeta.name}
-              flowDescription={flowMeta.description}
-              flowNameError={validationState.flowName}
-              onFlowMetaChange={handleFlowMetaChange}
-              selectedNode={selectedNode}
-              selectedEdge={selectedEdge}
-              nodeErrors={validationState.nodeErrors}
-              edgeErrors={validationState.edgeErrors}
-              onNodeChange={handleNodeChange}
-              onEdgeMappingsChange={handleEdgeMappingsChange}
-              canEdit={canEdit}
-              runs={runs}
-              selectedRun={selectedRun}
-              isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
-              stepOptions={stepOptions}
-              selectedRunId={effectiveRunId}
-              onSelectRun={setSelectedRunId}
-              onSelectRunStep={handleSelectRunStep}
-              selectedStepResult={selectedStepResult}
-              getParameterTargetOptions={getParameterTargetOptions}
-              onPassParameters={handlePassParameters}
-              historyHref={flowHistoryHref}
-            />
-          </div>
-        </aside>
+        {isDesktopInspectorCollapsed ? (
+          <aside className="hidden w-[72px] shrink-0 border-l border-border/60 bg-bg-surface/70 xl:flex xl:flex-col xl:items-center xl:justify-start xl:py-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  isIcon
+                  aria-label={t('flowPage.openFlowSettings')}
+                  onClick={() => setIsDesktopInspectorCollapsed(false)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                {t('flowPage.openFlowSettings')}
+              </TooltipContent>
+            </Tooltip>
+          </aside>
+        ) : (
+          <aside className="hidden w-[380px] shrink-0 border-l border-border/60 bg-bg-surface/70 xl:block">
+            <div className="flex items-center justify-end border-b border-border/60 px-4 py-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    isIcon
+                    aria-label={t('flowPage.closeFlowSettings')}
+                    onClick={() => setIsDesktopInspectorCollapsed(true)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  {t('flowPage.closeFlowSettings')}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="max-h-[calc(72vh-57px)] min-h-[320px] overflow-y-auto p-4">
+              <FlowInspector
+                flowName={flowMeta.name}
+                flowDescription={flowMeta.description}
+                flowNameError={validationState.flowName}
+                onFlowMetaChange={handleFlowMetaChange}
+                selectedNode={selectedNode}
+                selectedEdge={selectedEdge}
+                nodeErrors={validationState.nodeErrors}
+                edgeErrors={validationState.edgeErrors}
+                onNodeChange={handleNodeChange}
+                onEdgeMappingsChange={handleEdgeMappingsChange}
+                canEdit={canEdit}
+                runs={runs}
+                selectedRun={selectedRun}
+                isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
+                stepOptions={stepOptions}
+                selectedRunId={effectiveRunId}
+                onSelectRun={setSelectedRunId}
+                onSelectRunStep={handleSelectRunStep}
+                selectedStepResult={selectedStepResult}
+                getParameterTargetOptions={getParameterTargetOptions}
+                onPassParameters={handlePassParameters}
+                historyHref={flowHistoryHref}
+              />
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col lg:flex-row lg:overflow-hidden">
-        {showFlowSidebar ? flowSidebar : null}
+      <div className="flex min-h-full flex-col lg:flex-row">
+        {showFlowSidebar ? (
+          flowSidebar
+        ) : !isMobile ? (
+          <aside className="hidden w-[72px] shrink-0 border-r border-border/60 bg-bg-surface/70 lg:flex lg:flex-col lg:items-center lg:justify-start lg:py-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  isIcon
+                  aria-label={t('flowPage.expandFlowItems')}
+                  onClick={() => setIsSidebarCollapsed(false)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {t('flowPage.expandFlowItems')}
+              </TooltipContent>
+            </Tooltip>
+          </aside>
+        ) : null}
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <main className="flex min-w-0 flex-1 flex-col">
           <div className="space-y-4 border-b border-border/60 bg-bg-surface/70 px-4 py-4 md:px-6">
             <Breadcrumb>
               <BreadcrumbList>
@@ -3411,16 +4026,6 @@ export function ProjectFlowManagementPage({
                   <RefreshCw className="h-4 w-4" />
                   {t('common.refresh')}
                 </Button>
-                {!isMobile && isSidebarCollapsed ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsSidebarCollapsed(false)}
-                  >
-                    <PanelLeft className="h-4 w-4" />
-                    {t('flowPage.showSidebar')}
-                  </Button>
-                ) : null}
                 <Button type="button" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
                   <Plus className="h-4 w-4" />
                   {t('flowPage.create')}
@@ -3429,7 +4034,7 @@ export function ProjectFlowManagementPage({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden">{editorContent}</div>
+          <div className="flex-1">{editorContent}</div>
         </main>
       </div>
 
@@ -3440,6 +4045,54 @@ export function ProjectFlowManagementPage({
         onOpenChange={setIsCreateOpen}
         onSubmit={handleCreateFlow}
       />
+
+      <Dialog open={isShortcutHelpOpen} onOpenChange={setIsShortcutHelpOpen}>
+        <DialogContent size="default">
+          <DialogHeader>
+            <DialogTitle>{t('flowPage.shortcutsTitle')}</DialogTitle>
+            <DialogDescription>{t('flowPage.shortcutsDescription')}</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                <p className="text-sm font-semibold text-text-main">
+                  {t('flowPage.deleteSelection')}
+                </p>
+                <p className="mt-2 font-mono text-xs text-text-muted">
+                  {t('flowPage.shortcutDelete')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                <p className="text-sm font-semibold text-text-main">{t('flowPage.undo')}</p>
+                <p className="mt-2 font-mono text-xs text-text-muted">
+                  {t('flowPage.shortcutUndo')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                <p className="text-sm font-semibold text-text-main">
+                  {t('flowPage.duplicateSelection')}
+                </p>
+                <p className="mt-2 font-mono text-xs text-text-muted">
+                  {t('flowPage.shortcutDuplicate')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                <p className="text-sm font-semibold text-text-main">
+                  {t('flowPage.openShortcuts')}
+                </p>
+                <p className="mt-2 font-mono text-xs text-text-muted">
+                  {t('flowPage.shortcutOpenHelp')}
+                </p>
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsShortcutHelpOpen(false)}>
+              {t('common.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isMobile && selectedFlowId ? (
         <Drawer open={inspectorOpen} onOpenChange={setInspectorOpen} direction="right">

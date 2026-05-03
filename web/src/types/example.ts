@@ -1,6 +1,13 @@
 import type { RequestAuthConfig, RequestKeyValue } from '@/types/request';
 
-export type RequestExampleBodyType = 'none' | 'json' | 'form-data' | 'text';
+export type RequestExampleBodyType =
+  | 'none'
+  | 'json'
+  | 'form-data'
+  | 'x-www-form-urlencoded'
+  | 'binary'
+  | 'graphql'
+  | 'text';
 
 export interface RequestExample {
   id: number | string;

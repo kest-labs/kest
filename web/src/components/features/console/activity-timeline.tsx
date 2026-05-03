@@ -82,7 +82,7 @@ export function ActivityTimeline({ items, className, title = "Recent Activity", 
         {/* Timeline line */}
         <div className="absolute left-4 top-2 bottom-2 w-px bg-border-subtle" />
         
-        {items.map((item, index) => {
+        {items.map((item) => {
           const Icon = iconMap[item.type]
           return (
             <div

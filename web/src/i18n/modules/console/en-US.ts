@@ -4,6 +4,7 @@ const messages: ConsoleMessages = {
   shell: {
     title: 'KEST Console',
     notifications: 'Notifications',
+    notificationsEmpty: 'No notifications yet.',
     profile: 'Profile',
     logout: 'Logout',
     returnToSite: 'Return to Site',
@@ -14,7 +15,8 @@ const messages: ConsoleMessages = {
     profileInformation: 'Profile Information',
     profileDescription: 'Update your account display information.',
     profile: 'Profile',
-    profileReviewDescription: 'Review the current account state and update editable profile fields.',
+    profileReviewDescription:
+      'Review the current account state and update editable profile fields.',
     accountSnapshot: 'Account Snapshot',
     accountSnapshotDescription: 'Current values returned by GET {path}.',
     status: 'Status',
@@ -46,7 +48,8 @@ const messages: ConsoleMessages = {
     updatePassword: 'Update password',
     dangerZone: 'Danger Zone',
     dangerDescription: 'Deletes the current account through DELETE {path}.',
-    dangerBody: 'This action is permanent. The current authenticated user will be removed from the backend database.',
+    dangerBody:
+      'This action is permanent. The current authenticated user will be removed from the backend database.',
     deleteAccount: 'Delete Account',
     deleteConfirm: 'This will permanently delete your account. Continue?',
     profileUpdated: 'Profile updated',
@@ -94,7 +97,8 @@ const messages: ConsoleMessages = {
     createProject: 'Create Project',
     projects: 'Projects',
     unableToLoadProjects: 'Unable to load projects',
-    unableToLoadProjectsDescription: 'The dashboard could not load the project list from the current API.',
+    unableToLoadProjectsDescription:
+      'The dashboard could not load the project list from the current API.',
     selected: 'Selected',
   },
 };

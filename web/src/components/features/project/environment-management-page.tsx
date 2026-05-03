@@ -6,10 +6,12 @@ import {
   ArrowLeft,
   Boxes,
   Eye,
+  EyeOff,
   FileJson2,
   FlaskConical,
   FolderKanban,
   Globe,
+  Info,
   Pencil,
   Plus,
   RefreshCw,
@@ -38,6 +40,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -47,6 +56,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
 import { buildApiPath } from '@/config/api';
 import {
@@ -97,15 +107,29 @@ interface EnvironmentFormDraft {
   name: string;
   displayName: string;
   baseUrl: string;
-  variables: string;
-  headers: string;
+  variables: EnvironmentFieldRow[];
+  variablesJson: string;
+  headers: EnvironmentFieldRow[];
+  headersJson: string;
 }
 
 // 复制环境弹窗草稿。
 // 作用：承载 duplicate 接口所需的新名称和可选变量覆盖文本。
 interface DuplicateEnvironmentDraft {
   name: string;
-  overrideVars: string;
+  overrideVars: EnvironmentFieldRow[];
+  overrideVarsJson: string;
+}
+
+type EnvironmentFieldEditorMode = 'table' | 'json';
+type EnvironmentFieldKind = 'variables' | 'headers';
+type EnvironmentFieldValueType = 'string' | 'secret' | 'number' | 'boolean';
+
+interface EnvironmentFieldRow {
+  id: string;
+  key: string;
+  value: string;
+  type: EnvironmentFieldValueType;
 }
 
 // 项目角色显示文案解析器。
@@ -133,6 +157,213 @@ const formatJson = (value: unknown) => {
   }
 
   return JSON.stringify(value, null, 2);
+};
+
+const createEnvironmentFieldRow = (
+  overrides: Partial<EnvironmentFieldRow> = {}
+): EnvironmentFieldRow => ({
+  id:
+    overrides.id ??
+    `env-field-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`,
+  key: overrides.key ?? '',
+  value: overrides.value ?? '',
+  type: overrides.type ?? 'string',
+});
+
+const isLikelySecretKey = (key: string) => {
+  const normalizedKey = key.trim().toLowerCase();
+
+  if (!normalizedKey) {
+    return false;
+  }
+
+  return [
+    'secret',
+    'token',
+    'password',
+    'authorization',
+    'api_key',
+    'apikey',
+    'client_secret',
+    'access_key',
+    'private_key',
+  ].some(fragment => normalizedKey.includes(fragment));
+};
+
+const inferEnvironmentFieldType = (
+  key: string,
+  value: unknown,
+  kind: EnvironmentFieldKind
+): EnvironmentFieldValueType => {
+  if (typeof value === 'boolean') {
+    return 'boolean';
+  }
+
+  if (typeof value === 'number') {
+    return 'number';
+  }
+
+  if (kind === 'headers' || isLikelySecretKey(key)) {
+    return 'secret';
+  }
+
+  return 'string';
+};
+
+const recordToEnvironmentFieldRows = (
+  value: Record<string, unknown> | Record<string, string> | undefined,
+  kind: EnvironmentFieldKind
+) => {
+  if (!value || Object.keys(value).length === 0) {
+    return [createEnvironmentFieldRow({ type: kind === 'headers' ? 'secret' : 'string' })];
+  }
+
+  return Object.entries(value).map(([key, item]) =>
+    createEnvironmentFieldRow({
+      key,
+      value: typeof item === 'string' ? item : JSON.stringify(item),
+      type: inferEnvironmentFieldType(key, item, kind),
+    })
+  );
+};
+
+const environmentFieldRowsToJson = (rows: EnvironmentFieldRow[], kind: EnvironmentFieldKind) => {
+  const normalizedEntries = rows
+    .map((row) => {
+      const trimmedKey = row.key.trim();
+
+      if (!trimmedKey) {
+        return null;
+      }
+
+      return [trimmedKey, parseEnvironmentFieldValue(row, kind)] as const;
+    })
+    .filter((entry): entry is readonly [string, string | number | boolean] => Boolean(entry));
+
+  if (normalizedEntries.length === 0) {
+    return '';
+  }
+
+  return JSON.stringify(Object.fromEntries(normalizedEntries), null, 2);
+};
+
+const parseEnvironmentFieldValue = (
+  row: EnvironmentFieldRow,
+  kind: EnvironmentFieldKind
+): string | number | boolean => {
+  if (kind === 'headers') {
+    return row.value;
+  }
+
+  switch (row.type) {
+    case 'number': {
+      const trimmedValue = row.value.trim();
+
+      if (!trimmedValue) {
+        return 0;
+      }
+
+      return Number(trimmedValue);
+    }
+    case 'boolean':
+      return row.value === 'true';
+    default:
+      return row.value;
+  }
+};
+
+const buildVariablesRecordFromRows = (
+  rows: EnvironmentFieldRow[],
+  t: ScopedTranslations<'project'>
+) => {
+  const entries: Array<[string, string | number | boolean]> = [];
+
+  rows.forEach((row, index) => {
+    const trimmedKey = row.key.trim();
+
+    if (!trimmedKey) {
+      if (row.value.trim()) {
+        throw new Error(
+          t('environments.keyRequiredForRow', {
+            row: index + 1,
+          })
+        );
+      }
+      return;
+    }
+
+    if (row.type === 'number') {
+      const trimmedValue = row.value.trim();
+
+      if (!trimmedValue || Number.isNaN(Number(trimmedValue))) {
+        throw new Error(
+          t('environments.invalidNumberValue', {
+            key: trimmedKey,
+          })
+        );
+      }
+    }
+
+    entries.push([trimmedKey, parseEnvironmentFieldValue(row, 'variables')]);
+  });
+
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(entries) as Record<string, unknown>;
+};
+
+const buildHeadersRecordFromRows = (
+  rows: EnvironmentFieldRow[],
+  t: ScopedTranslations<'project'>
+) => {
+  const entries: Array<[string, string]> = [];
+
+  rows.forEach((row, index) => {
+    const trimmedKey = row.key.trim();
+
+    if (!trimmedKey) {
+      if (row.value.trim()) {
+        throw new Error(
+          t('environments.keyRequiredForRow', {
+            row: index + 1,
+          })
+        );
+      }
+      return;
+    }
+
+    entries.push([trimmedKey, row.value]);
+  });
+
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(entries);
+};
+
+const parseObjectJsonToRows = (
+  value: string,
+  label: string,
+  t: ScopedTranslations<'project'>,
+  kind: EnvironmentFieldKind
+) => {
+  const parsed = parseObjectJsonInput<Record<string, unknown>>(value, label, t);
+  return recordToEnvironmentFieldRows(parsed, kind);
+};
+
+const maskSecretPreview = (value: string) => {
+  if (!value) {
+    return '';
+  }
+
+  if (value.length <= 4) {
+    return '•'.repeat(Math.max(value.length, 4));
+  }
+
+  return `${'•'.repeat(Math.min(Math.max(value.length - 4, 4), 12))}${value.slice(-4)}`;
 };
 
 // JSON 输入解析器。
@@ -176,8 +407,10 @@ const getEnvironmentFormDraft = (environment?: ProjectEnvironment | null): Envir
   name: environment?.name ?? '',
   displayName: environment?.display_name ?? '',
   baseUrl: environment?.base_url ?? '',
-  variables: formatJson(environment?.variables),
-  headers: formatJson(environment?.headers),
+  variables: recordToEnvironmentFieldRows(environment?.variables, 'variables'),
+  variablesJson: formatJson(environment?.variables),
+  headers: recordToEnvironmentFieldRows(environment?.headers, 'headers'),
+  headersJson: formatJson(environment?.headers),
 });
 
 // 复制环境弹窗默认值。
@@ -186,7 +419,8 @@ const getDuplicateEnvironmentDraft = (
   environment?: ProjectEnvironment | null
 ): DuplicateEnvironmentDraft => ({
   name: environment ? `${environment.name} Copy` : '',
-  overrideVars: '',
+  overrideVars: recordToEnvironmentFieldRows(undefined, 'variables'),
+  overrideVarsJson: '',
 });
 
 // 角色徽章。
@@ -201,16 +435,18 @@ function RoleBadge({ role }: { role?: ProjectMemberRole }) {
   );
 }
 
-// 长文本代码块渲染器。
-// 作用：统一承载 JSON 数据的只读展示。
-function CodeBlock({
+function EnvironmentFieldPreview({
   value,
   emptyLabel,
 }: {
-  value?: string;
+  value?: Record<string, unknown> | Record<string, string>;
   emptyLabel: string;
 }) {
-  if (!value?.trim()) {
+  const t = useT('project');
+  const [visibleSecretKeys, setVisibleSecretKeys] = useState<Record<string, boolean>>({});
+  const entries = Object.entries(value ?? {});
+
+  if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
         {emptyLabel}
@@ -219,27 +455,326 @@ function CodeBlock({
   }
 
   return (
-    <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
-      <code>{value}</code>
-    </pre>
+    <div className="overflow-hidden rounded-xl border">
+      <Table>
+        <TableHeader className="bg-muted/15">
+          <TableRow className="hover:bg-transparent">
+            <TableHead>{t('environments.fieldTableKey')}</TableHead>
+            <TableHead>{t('environments.fieldTableType')}</TableHead>
+            <TableHead>{t('environments.fieldTableValue')}</TableHead>
+            <TableHead className="w-[96px] text-right">{t('common.actions')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map(([key, rawValue]) => {
+            const stringValue =
+              typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue);
+            const secret = isLikelySecretKey(key);
+            const visible = visibleSecretKeys[key] ?? false;
+
+            return (
+              <TableRow key={key}>
+                <TableCell className="font-mono text-xs">{key}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {typeof rawValue === 'boolean'
+                      ? t('environments.fieldTypeBoolean')
+                      : typeof rawValue === 'number'
+                        ? t('environments.fieldTypeNumber')
+                        : secret
+                          ? t('environments.fieldTypeSecret')
+                          : t('environments.fieldTypeString')}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {secret && !visible ? maskSecretPreview(stringValue) : stringValue}
+                </TableCell>
+                <TableCell className="text-right">
+                  {secret ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setVisibleSecretKeys(current => ({
+                          ...current,
+                          [key]: !visible,
+                        }))
+                      }
+                    >
+                      {visible ? (
+                        <>
+                          <EyeOff className="size-4" />
+                          {t('environments.hideSecret')}
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="size-4" />
+                          {t('environments.showSecret')}
+                        </>
+                      )}
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
-// JSON 预览块。
-// 作用：把 variables 和 headers 包装成带标题的只读内容区域。
-function JsonPreview({
-  title,
-  value,
-  emptyLabel,
+function EnvironmentFieldEditor({
+  label,
+  kind,
+  rows,
+  jsonValue,
+  mode,
+  errorText,
+  onRowsChange,
+  onJsonChange,
+  onModeChange,
 }: {
-  title: string;
-  value: unknown;
-  emptyLabel: string;
+  label: string;
+  kind: EnvironmentFieldKind;
+  rows: EnvironmentFieldRow[];
+  jsonValue: string;
+  mode: EnvironmentFieldEditorMode;
+  errorText?: string;
+  onRowsChange: (rows: EnvironmentFieldRow[]) => void;
+  onJsonChange: (value: string) => void;
+  onModeChange: (mode: EnvironmentFieldEditorMode) => void;
 }) {
+  const t = useT('project');
+  const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
+
+  const updateRow = (rowId: string, updater: (row: EnvironmentFieldRow) => EnvironmentFieldRow) => {
+    onRowsChange(rows.map(row => (row.id === rowId ? updater(row) : row)));
+  };
+
+  const addRow = () => {
+    onRowsChange([
+      ...rows,
+      createEnvironmentFieldRow({ type: kind === 'headers' ? 'secret' : 'string' }),
+    ]);
+  };
+
+  const removeRow = (rowId: string) => {
+    const nextRows = rows.filter(row => row.id !== rowId);
+    onRowsChange(
+      nextRows.length > 0
+        ? nextRows
+        : [createEnvironmentFieldRow({ type: kind === 'headers' ? 'secret' : 'string' })]
+    );
+    setVisibleSecrets(current => {
+      const nextVisible = { ...current };
+      delete nextVisible[rowId];
+      return nextVisible;
+    });
+  };
+
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">{title}</div>
-      <CodeBlock value={formatJson(value)} emptyLabel={emptyLabel} />
+    <div className="space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <Label>{label}</Label>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Info className="size-3.5" />
+            <span>
+              {kind === 'variables'
+                ? t('environments.variablesEditorHint')
+                : t('environments.headersEditorHint')}
+            </span>
+          </div>
+        </div>
+
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(nextMode) => {
+            if (nextMode === 'table' || nextMode === 'json') {
+              onModeChange(nextMode);
+            }
+          }}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="table">{t('environments.tableMode')}</ToggleGroupItem>
+          <ToggleGroupItem value="json">{t('environments.jsonMode')}</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {mode === 'table' ? (
+        <div className="space-y-3">
+          <div className="overflow-hidden rounded-xl border">
+            <Table>
+              <TableHeader className="bg-muted/15">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t('environments.fieldTableKey')}</TableHead>
+                  <TableHead className="w-[140px]">{t('environments.fieldTableType')}</TableHead>
+                  <TableHead>{t('environments.fieldTableValue')}</TableHead>
+                  <TableHead className="w-[80px] text-right">{t('common.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map(row => {
+                  const secret = row.type === 'secret';
+                  const visible = visibleSecrets[row.id] ?? false;
+
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <Input
+                          value={row.key}
+                          onChange={(event) =>
+                            updateRow(row.id, current => ({
+                              ...current,
+                              key: event.target.value,
+                              type:
+                                kind === 'headers'
+                                  ? current.type
+                                  : isLikelySecretKey(event.target.value) && current.type === 'string'
+                                    ? 'secret'
+                                    : current.type,
+                            }))
+                          }
+                          placeholder={
+                            kind === 'variables'
+                              ? t('environments.variableKeyPlaceholder')
+                              : t('environments.headerKeyPlaceholder')
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.type}
+                          onValueChange={(nextType) =>
+                            updateRow(row.id, current => ({
+                              ...current,
+                              type: nextType as EnvironmentFieldValueType,
+                              value:
+                                nextType === 'boolean' &&
+                                current.value !== 'true' &&
+                                current.value !== 'false'
+                                  ? 'false'
+                                  : current.value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="w-full rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="string">{t('environments.fieldTypeString')}</SelectItem>
+                            <SelectItem value="secret">{t('environments.fieldTypeSecret')}</SelectItem>
+                            {kind === 'variables' ? (
+                              <SelectItem value="number">{t('environments.fieldTypeNumber')}</SelectItem>
+                            ) : null}
+                            {kind === 'variables' ? (
+                              <SelectItem value="boolean">{t('environments.fieldTypeBoolean')}</SelectItem>
+                            ) : null}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {row.type === 'boolean' ? (
+                          <Select
+                            value={row.value === 'true' ? 'true' : 'false'}
+                            onValueChange={(nextValue) =>
+                              updateRow(row.id, current => ({
+                                ...current,
+                                value: nextValue,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-full rounded-xl">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">true</SelectItem>
+                              <SelectItem value="false">false</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            type={secret && !visible ? 'password' : 'text'}
+                            value={row.value}
+                            onChange={(event) =>
+                              updateRow(row.id, current => ({
+                                ...current,
+                                value: event.target.value,
+                              }))
+                            }
+                            placeholder={
+                              kind === 'variables'
+                                ? t('environments.variableValuePlaceholder')
+                                : t('environments.headerValuePlaceholder')
+                            }
+                            rightIcon={
+                              secret ? (
+                                <button
+                                  type="button"
+                                  className="pointer-events-auto rounded-sm text-muted-foreground transition-colors hover:text-foreground"
+                                  onClick={() =>
+                                    setVisibleSecrets(current => ({
+                                      ...current,
+                                      [row.id]: !visible,
+                                    }))
+                                  }
+                                >
+                                  {visible ? (
+                                    <EyeOff className="size-4" />
+                                  ) : (
+                                    <Eye className="size-4" />
+                                  )}
+                                </button>
+                              ) : undefined
+                            }
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeRow(row.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <Button type="button" size="sm" variant="outline" onClick={addRow}>
+              <Plus className="size-4" />
+              {t('environments.addRow')}
+            </Button>
+            {errorText ? (
+              <p className="text-xs font-medium text-destructive">{errorText}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <Textarea
+          value={jsonValue}
+          onChange={(event) => onJsonChange(event.target.value)}
+          rows={14}
+          placeholder={
+            kind === 'variables'
+              ? '{"API_URL": "https://api.example.com", "DEBUG": false}'
+              : '{"Authorization": "Bearer {{token}}"}'
+          }
+          errorText={errorText}
+          root
+        />
+      )}
     </div>
   );
 }
@@ -271,6 +806,8 @@ function EnvironmentFormDialog({
   const t = i18n.project;
   const [draft, setDraft] = useState<EnvironmentFormDraft>(() => getEnvironmentFormDraft(environment));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [variablesMode, setVariablesMode] = useState<EnvironmentFieldEditorMode>('table');
+  const [headersMode, setHeadersMode] = useState<EnvironmentFieldEditorMode>('table');
 
   const updateDraft = <K extends keyof EnvironmentFormDraft>(
     key: K,
@@ -292,11 +829,15 @@ function EnvironmentFormDialog({
     }
 
     try {
-      variables = parseObjectJsonInput<Record<string, unknown>>(
-        draft.variables,
-        t('common.variablesJson'),
-        t
-      );
+      if (variablesMode === 'json') {
+        variables = parseObjectJsonInput<Record<string, unknown>>(
+          draft.variablesJson,
+          t('common.variablesJson'),
+          t
+        );
+      } else {
+        variables = buildVariablesRecordFromRows(draft.variables, t);
+      }
     } catch (error) {
       nextErrors.variables =
         error instanceof Error
@@ -305,12 +846,16 @@ function EnvironmentFormDialog({
     }
 
     try {
-      const parsedHeaders = parseObjectJsonInput<Record<string, unknown>>(
-        draft.headers,
-        t('common.headersJson'),
-        t
-      );
-      headers = parsedHeaders ? toStringRecord(parsedHeaders) : undefined;
+      if (headersMode === 'json') {
+        const parsedHeaders = parseObjectJsonInput<Record<string, unknown>>(
+          draft.headersJson,
+          t('common.headersJson'),
+          t
+        );
+        headers = parsedHeaders ? toStringRecord(parsedHeaders) : undefined;
+      } else {
+        headers = buildHeadersRecordFromRows(draft.headers, t);
+      }
     } catch (error) {
       nextErrors.headers =
         error instanceof Error
@@ -401,31 +946,85 @@ function EnvironmentFormDialog({
               </div>
 
               <div className="grid gap-4 xl:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="environment-variables">{t('common.variablesJson')}</Label>
-                  <Textarea
-                    id="environment-variables"
-                    value={draft.variables}
-                    onChange={(event) => updateDraft('variables', event.target.value)}
-                    rows={14}
-                    placeholder='{"API_URL": "https://api.example.com", "DEBUG": false}'
-                    errorText={errors.variables}
-                    root
-                  />
-                </div>
+                <EnvironmentFieldEditor
+                  label={t('common.variables')}
+                  kind="variables"
+                  rows={draft.variables}
+                  jsonValue={draft.variablesJson}
+                  mode={variablesMode}
+                  errorText={errors.variables}
+                  onRowsChange={(rows) =>
+                    setDraft(current => ({
+                      ...current,
+                      variables: rows,
+                      variablesJson: environmentFieldRowsToJson(rows, 'variables'),
+                    }))
+                  }
+                  onJsonChange={(value) => updateDraft('variablesJson', value)}
+                  onModeChange={(nextMode) => {
+                    if (nextMode === 'json' && !draft.variablesJson.trim()) {
+                      updateDraft('variablesJson', environmentFieldRowsToJson(draft.variables, 'variables'));
+                    }
 
-                <div className="space-y-2">
-                  <Label htmlFor="environment-headers">{t('common.headersJson')}</Label>
-                  <Textarea
-                    id="environment-headers"
-                    value={draft.headers}
-                    onChange={(event) => updateDraft('headers', event.target.value)}
-                    rows={14}
-                    placeholder='{"Authorization": "Bearer {{token}}"}'
-                    errorText={errors.headers}
-                    root
-                  />
-                </div>
+                    if (nextMode === 'table') {
+                      try {
+                        const nextRows = parseObjectJsonToRows(
+                          draft.variablesJson,
+                          t('common.variablesJson'),
+                          t,
+                          'variables'
+                        );
+                        setDraft(current => ({
+                          ...current,
+                          variables: nextRows,
+                        }));
+                        setErrors(current => ({ ...current, variables: '' }));
+                      } catch {}
+                    }
+
+                    setVariablesMode(nextMode);
+                  }}
+                />
+
+                <EnvironmentFieldEditor
+                  label={t('common.headers')}
+                  kind="headers"
+                  rows={draft.headers}
+                  jsonValue={draft.headersJson}
+                  mode={headersMode}
+                  errorText={errors.headers}
+                  onRowsChange={(rows) =>
+                    setDraft(current => ({
+                      ...current,
+                      headers: rows,
+                      headersJson: environmentFieldRowsToJson(rows, 'headers'),
+                    }))
+                  }
+                  onJsonChange={(value) => updateDraft('headersJson', value)}
+                  onModeChange={(nextMode) => {
+                    if (nextMode === 'json' && !draft.headersJson.trim()) {
+                      updateDraft('headersJson', environmentFieldRowsToJson(draft.headers, 'headers'));
+                    }
+
+                    if (nextMode === 'table') {
+                      try {
+                        const nextRows = parseObjectJsonToRows(
+                          draft.headersJson,
+                          t('common.headersJson'),
+                          t,
+                          'headers'
+                        );
+                        setDraft(current => ({
+                          ...current,
+                          headers: nextRows,
+                        }));
+                        setErrors(current => ({ ...current, headers: '' }));
+                      } catch {}
+                    }
+
+                    setHeadersMode(nextMode);
+                  }}
+                />
               </div>
             </form>
           )}
@@ -526,6 +1125,7 @@ function DuplicateEnvironmentDialog({
     getDuplicateEnvironmentDraft(environment)
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [overrideMode, setOverrideMode] = useState<EnvironmentFieldEditorMode>('table');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -539,11 +1139,15 @@ function DuplicateEnvironmentDialog({
     }
 
     try {
-      overrideVars = parseObjectJsonInput<Record<string, unknown>>(
-        draft.overrideVars,
-        t('common.overrideVariablesJson'),
-        t
-      );
+      if (overrideMode === 'json') {
+        overrideVars = parseObjectJsonInput<Record<string, unknown>>(
+          draft.overrideVarsJson,
+          t('common.overrideVariablesJson'),
+          t
+        );
+      } else {
+        overrideVars = buildVariablesRecordFromRows(draft.overrideVars, t);
+      }
     } catch (error) {
       nextErrors.overrideVars =
         error instanceof Error
@@ -585,20 +1189,50 @@ function DuplicateEnvironmentDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="duplicate-environment-override-vars">{t('common.overrideVariablesJson')}</Label>
-              <Textarea
-                id="duplicate-environment-override-vars"
-                value={draft.overrideVars}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, overrideVars: event.target.value }))
+            <EnvironmentFieldEditor
+              label={t('common.variables')}
+              kind="variables"
+              rows={draft.overrideVars}
+              jsonValue={draft.overrideVarsJson}
+              mode={overrideMode}
+              errorText={errors.overrideVars}
+              onRowsChange={(rows) =>
+                setDraft(current => ({
+                  ...current,
+                  overrideVars: rows,
+                  overrideVarsJson: environmentFieldRowsToJson(rows, 'variables'),
+                }))
+              }
+              onJsonChange={(value) =>
+                setDraft(current => ({ ...current, overrideVarsJson: value }))
+              }
+              onModeChange={(nextMode) => {
+                if (nextMode === 'json' && !draft.overrideVarsJson.trim()) {
+                  setDraft(current => ({
+                    ...current,
+                    overrideVarsJson: environmentFieldRowsToJson(current.overrideVars, 'variables'),
+                  }));
                 }
-                rows={12}
-                placeholder='{"API_URL": "https://staging.example.com"}'
-                errorText={errors.overrideVars}
-                root
-              />
-            </div>
+
+                if (nextMode === 'table') {
+                  try {
+                    const nextRows = parseObjectJsonToRows(
+                      draft.overrideVarsJson,
+                      t('common.overrideVariablesJson'),
+                      t,
+                      'variables'
+                    );
+                    setDraft(current => ({
+                      ...current,
+                      overrideVars: nextRows,
+                    }));
+                    setErrors(current => ({ ...current, overrideVars: '' }));
+                  } catch {}
+                }
+
+                setOverrideMode(nextMode);
+              }}
+            />
           </form>
         </DialogBody>
         <DialogFooter>
@@ -1186,16 +1820,14 @@ export function EnvironmentManagementPage({
                   </TabsContent>
 
                   <TabsContent value="variables">
-                    <JsonPreview
-                      title={t('common.variablesJson')}
+                    <EnvironmentFieldPreview
                       value={selectedEnvironment.variables}
                       emptyLabel={t('common.noData')}
                     />
                   </TabsContent>
 
                   <TabsContent value="headers">
-                    <JsonPreview
-                      title={t('common.headersJson')}
+                    <EnvironmentFieldPreview
                       value={selectedEnvironment.headers}
                       emptyLabel={t('common.noData')}
                     />

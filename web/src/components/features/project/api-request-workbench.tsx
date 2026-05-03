@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   startTransition,
+  type ComponentType,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -13,11 +14,16 @@ import {
 import { usePathname, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
+  Binary,
+  Braces,
   ChevronDown,
   ChevronRight,
   Copy,
+  FileCode2,
   FileText,
+  FileType2,
   FolderOpen,
+  FormInput,
   MoreHorizontal,
   Plus,
   RefreshCw,
@@ -117,13 +123,53 @@ type RequestSection =
   | 'examples';
 type BulkMode = 'table' | 'bulk';
 type AuthorizationMode = 'none' | 'bearer' | 'basic' | 'api-key';
-type BodyMode = 'json' | 'raw' | 'form-data';
+type BodyMode =
+  | 'json'
+  | 'raw'
+  | 'form-data'
+  | 'x-www-form-urlencoded'
+  | 'binary'
+  | 'graphql';
+type BodyValueType = 'text' | 'file';
 
 interface KeyValueRow {
   id: string;
   key: string;
   value: string;
   description: string;
+  type: BodyValueType;
+}
+
+interface BodyFileValue {
+  name: string;
+  type: string;
+  size: number;
+  contentBase64: string;
+}
+
+interface BinaryBodyValue {
+  file_name: string;
+  content_type?: string;
+}
+
+interface GraphqlBodyValue {
+  query: string;
+  variables_text?: string;
+  operation_name?: string;
+}
+
+interface DirectRequestExecutionPayload {
+  body?: string;
+  body_base64?: string;
+  form_data?: Array<{
+    key: string;
+    value?: string;
+    type?: BodyValueType;
+    file_name?: string;
+    content_type?: string;
+    file_base64?: string;
+  }>;
+  historyBody?: string;
 }
 
 interface ResponseDraft {
@@ -154,6 +200,8 @@ interface RequestPageTab {
   headersBulk: string;
   bodyMode: BodyMode;
   bodyContent: string;
+  bodyFiles: Record<string, BodyFileValue>;
+  binaryFile: BodyFileValue | null;
   scripts: string;
   settings: {
     followRedirects: boolean;
@@ -206,10 +254,21 @@ const SECTION_ITEMS: RequestSection[] = [
   'settings',
   'examples',
 ];
-const BODY_MODE_OPTIONS: BodyMode[] = ['json', 'raw', 'form-data'];
+const BODY_MODE_OPTIONS: BodyMode[] = [
+  'json',
+  'raw',
+  'form-data',
+  'x-www-form-urlencoded',
+  'binary',
+  'graphql',
+];
 const AUTHORIZATION_OPTIONS: AuthorizationMode[] = ['none', 'bearer', 'basic', 'api-key'];
 const COLLECTION_COLORS = ['#2563eb', '#0f766e', '#ea580c', '#7c3aed', '#dc2626'];
 const REQUEST_TEMPLATE_PATTERN = /\{\{([^}]+)\}\}/g;
+const DEFAULT_JSON_BODY = '{\n  "ping": "hello"\n}';
+const DEFAULT_JSON_PLACEHOLDER = '{\n  \n}';
+const DEFAULT_GRAPHQL_QUERY = 'query Example {\n  \n}';
+const DEFAULT_GRAPHQL_VARIABLES = '{\n  \n}';
 const METHOD_BADGE_STYLES: Record<RequestMethod, string> = {
   GET: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   POST: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
@@ -246,6 +305,12 @@ const getBodyModeLabel = (
       return t('collections.workbench.bodyModes.raw');
     case 'form-data':
       return t('collections.workbench.bodyModes.form-data');
+    case 'x-www-form-urlencoded':
+      return t('collections.workbench.bodyModes.x-www-form-urlencoded');
+    case 'binary':
+      return t('collections.workbench.bodyModes.binary');
+    case 'graphql':
+      return t('collections.workbench.bodyModes.graphql');
     case 'none':
     case undefined:
     case null:
@@ -324,6 +389,7 @@ const createKeyValueRow = (key = '', value = '', description = ''): KeyValueRow 
   key,
   value,
   description,
+  type: 'text',
 });
 
 const createEmptyResponse = (): ResponseDraft => ({
@@ -394,6 +460,12 @@ const toBodyMode = (bodyType: string): BodyMode => {
   switch (bodyType) {
     case 'form-data':
       return 'form-data';
+    case 'x-www-form-urlencoded':
+      return 'x-www-form-urlencoded';
+    case 'binary':
+      return 'binary';
+    case 'graphql':
+      return 'graphql';
     case 'text':
       return 'raw';
     case 'json':
@@ -456,6 +528,8 @@ const toRequestPageTab = (request: ProjectRequest): RequestPageTab => {
     headersBulk: rowsToBulkText(headersRows),
     bodyMode: toBodyMode(request.body_type),
     bodyContent: request.body,
+    bodyFiles: {},
+    binaryFile: null,
     scripts: toScriptsValue(request),
   });
 };
@@ -497,7 +571,9 @@ const createRequestPageTab = (
   ],
   headersBulk: overrides.headersBulk ?? 'Accept: application/json',
   bodyMode: overrides.bodyMode ?? 'json',
-  bodyContent: overrides.bodyContent ?? copy?.defaultBodyContent ?? '{\n  "ping": "hello"\n}',
+  bodyContent: overrides.bodyContent ?? copy?.defaultBodyContent ?? DEFAULT_JSON_BODY,
+  bodyFiles: overrides.bodyFiles ?? {},
+  binaryFile: overrides.binaryFile ?? null,
   scripts:
     overrides.scripts ??
     copy?.defaultScripts ??
@@ -532,6 +608,231 @@ const bulkTextToRows = (value: string) => {
     });
 
   return rows.length > 0 ? rows : [createKeyValueRow()];
+};
+
+const createBodyFileValue = async (file: File): Promise<BodyFileValue> => {
+  const contentBase64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => {
+      reject(new Error('Unable to read file'));
+    };
+
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        reject(new Error('Unable to read file'));
+        return;
+      }
+
+      const [, base64 = ''] = reader.result.split(',', 2);
+      resolve(base64);
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+  return {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    contentBase64,
+  };
+};
+
+const parseStructuredBodyRows = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return [createKeyValueRow()];
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Array<Record<string, unknown>>;
+    if (!Array.isArray(parsed)) {
+      return bulkTextToRows(value);
+    }
+
+    const rows = parsed.map(row => {
+      const nextRow = createKeyValueRow(
+        typeof row?.key === 'string' ? row.key : '',
+        typeof row?.value === 'string' ? row.value : '',
+        typeof row?.description === 'string' ? row.description : ''
+      );
+      nextRow.id = typeof row?.id === 'string' && row.id.trim() ? row.id : nextRow.id;
+      nextRow.type = row?.type === 'file' ? 'file' : 'text';
+      return nextRow;
+    });
+    return rows.length > 0 ? rows : [createKeyValueRow()];
+  } catch {
+    return bulkTextToRows(value);
+  }
+};
+
+const serializeStructuredBodyRows = (rows: KeyValueRow[]) => {
+  const payload = rows
+    .filter(row => row.key.trim() || row.value.trim() || row.description.trim())
+    .map(row => ({
+      id: row.id,
+      key: row.key.trim(),
+      value: row.value,
+      type: row.type === 'file' ? 'file' : undefined,
+      enabled: true,
+      description: row.description.trim() || undefined,
+    }));
+
+  return payload.length > 0 ? JSON.stringify(payload, null, 2) : '';
+};
+
+const parseBinaryBodyValue = (value: string): BinaryBodyValue => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { file_name: '', content_type: '' };
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Partial<BinaryBodyValue>;
+    return {
+      file_name: typeof parsed.file_name === 'string' ? parsed.file_name : '',
+      content_type: typeof parsed.content_type === 'string' ? parsed.content_type : '',
+    };
+  } catch {
+    return {
+      file_name: trimmed,
+      content_type: '',
+    };
+  }
+};
+
+const serializeBinaryBodyValue = (value: BinaryBodyValue) => {
+  const fileName = value.file_name.trim();
+  const contentType = value.content_type?.trim() ?? '';
+
+  if (!fileName && !contentType) {
+    return '';
+  }
+
+  return JSON.stringify(
+    {
+      file_name: fileName,
+      content_type: contentType || undefined,
+    },
+    null,
+    2
+  );
+};
+
+const parseGraphqlBodyValue = (value: string): GraphqlBodyValue => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return {
+      query: '',
+      variables_text: '',
+      operation_name: '',
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    return {
+      query: typeof parsed.query === 'string' ? parsed.query : '',
+      variables_text:
+        typeof parsed.variables_text === 'string'
+          ? parsed.variables_text
+          : parsed.variables !== undefined
+            ? JSON.stringify(parsed.variables, null, 2)
+            : '',
+      operation_name:
+        typeof parsed.operation_name === 'string'
+          ? parsed.operation_name
+          : typeof parsed.operationName === 'string'
+            ? parsed.operationName
+            : '',
+    };
+  } catch {
+    return {
+      query: value,
+      variables_text: '',
+      operation_name: '',
+    };
+  }
+};
+
+const serializeGraphqlBodyValue = (value: GraphqlBodyValue) => {
+  const query = value.query.trim();
+  const variablesText = value.variables_text?.trim() ?? '';
+  const operationName = value.operation_name?.trim() ?? '';
+
+  if (!query && !variablesText && !operationName) {
+    return '';
+  }
+
+  return JSON.stringify(
+    {
+      query,
+      variables_text: variablesText || undefined,
+      operation_name: operationName || undefined,
+    },
+    null,
+    2
+  );
+};
+
+const formatBodyFileSize = (size: number) => {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getNextBodyContentForMode = (nextMode: BodyMode, currentMode: BodyMode, value: string) => {
+  if (nextMode === currentMode) {
+    return value;
+  }
+
+  switch (nextMode) {
+    case 'json':
+      return currentMode === 'raw' ? value : DEFAULT_JSON_BODY;
+    case 'raw':
+      return currentMode === 'json' ? value : '';
+    case 'form-data':
+      if (currentMode === 'x-www-form-urlencoded') {
+        return serializeStructuredBodyRows(parseStructuredBodyRows(value));
+      }
+      return '';
+    case 'x-www-form-urlencoded':
+      if (currentMode === 'form-data') {
+        return serializeStructuredBodyRows(
+          parseStructuredBodyRows(value).map(row => ({
+            ...row,
+            type: 'text',
+            value: row.type === 'file' ? '' : row.value,
+          }))
+        );
+      }
+      return '';
+    case 'binary':
+      return '';
+    case 'graphql': {
+      if (currentMode === 'raw') {
+        return serializeGraphqlBodyValue({
+          query: value,
+          variables_text: '',
+          operation_name: '',
+        });
+      }
+      return serializeGraphqlBodyValue({
+        query: DEFAULT_GRAPHQL_QUERY,
+        variables_text: DEFAULT_GRAPHQL_VARIABLES,
+        operation_name: '',
+      });
+    }
+    default:
+      return value;
+  }
 };
 
 const getTabSaveLabel = (tab: RequestPageTab) => {
@@ -572,6 +873,12 @@ const requestBodyTypeFromMode = (mode: BodyMode, value: string) => {
   switch (mode) {
     case 'form-data':
       return 'form-data';
+    case 'x-www-form-urlencoded':
+      return 'x-www-form-urlencoded';
+    case 'binary':
+      return 'binary';
+    case 'graphql':
+      return 'graphql';
     case 'raw':
       return 'text';
     case 'json':
@@ -590,6 +897,7 @@ const toRequestKeyValues = (
     .map(row => ({
       key: row.key.trim(),
       value: row.value,
+      type: row.type !== 'text' ? row.type : undefined,
       enabled: true,
       description: row.description.trim() || undefined,
     }));
@@ -946,6 +1254,8 @@ const applyExampleToTab = (tab: RequestPageTab, example: RequestExample): Reques
     headersBulk: rowsToBulkText(headersRows),
     bodyMode: toBodyMode(example.body_type),
     bodyContent: example.body || '',
+    bodyFiles: {},
+    binaryFile: null,
   };
 };
 
@@ -1150,27 +1460,160 @@ const buildDirectRequestHeaders = (
     }
   }
 
-  if (request.body.trim() && request.body_type === 'json' && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
+  if (request.body_type === 'form-data') {
+    headers.delete('Content-Type');
   }
 
-  if (request.body.trim() && request.body_type === 'text' && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'text/plain');
+  if (request.body.trim() && !headers.has('Content-Type')) {
+    switch (request.body_type) {
+      case 'json':
+        headers.set('Content-Type', 'application/json');
+        break;
+      case 'text':
+        headers.set('Content-Type', 'text/plain');
+        break;
+      case 'x-www-form-urlencoded':
+        headers.set('Content-Type', 'application/x-www-form-urlencoded');
+        break;
+      case 'graphql':
+        headers.set('Content-Type', 'application/json');
+        break;
+      case 'binary': {
+        const binary = parseBinaryBodyValue(request.body);
+        headers.set('Content-Type', binary.content_type?.trim() || 'application/octet-stream');
+        break;
+      }
+      default:
+        break;
+    }
   }
 
   return headers;
 };
 
-const buildDirectRequestBody = (
+const buildDirectRequestPayload = (
   request: ProjectRequest,
+  tab: RequestPageTab,
+  t: ProjectTranslationFn,
   environment?: ProjectEnvironment | null
-) => {
+): DirectRequestExecutionPayload => {
   if (request.method === 'GET' || request.method === 'HEAD') {
-    return undefined;
+    return {};
   }
 
-  const resolvedBody = resolveTemplateValue(request.body, buildExecutionVariables(environment));
-  return resolvedBody.trim() ? resolvedBody : undefined;
+  const variables = buildExecutionVariables(environment);
+
+  switch (request.body_type) {
+    case 'form-data': {
+      const rows = parseStructuredBodyRows(request.body).filter(row => row.key.trim());
+      if (rows.length === 0) {
+        return {};
+      }
+
+      const formData = rows.map(field => {
+        const key = resolveTemplateValue(field.key.trim(), variables);
+        if (field.type === 'file') {
+          const selectedFile = tab.bodyFiles[field.id];
+          return {
+            key,
+            type: 'file' as const,
+            file_name: selectedFile?.name || field.value.trim(),
+            content_type: selectedFile?.type || undefined,
+            file_base64: selectedFile?.contentBase64 || undefined,
+          };
+        }
+
+        return {
+          key,
+          type: 'text' as const,
+          value: resolveTemplateValue(field.value, variables),
+        };
+      });
+
+      const missingFileField = formData.find(field => field.type === 'file' && !field.file_base64);
+      if (missingFileField) {
+        throw new Error(
+          t('collections.workbench.body.fileRequired', {
+            field: missingFileField.key || t('collections.workbench.editors.key'),
+          })
+        );
+      }
+
+      return {
+        form_data: formData,
+        historyBody: request.body,
+      };
+    }
+    case 'x-www-form-urlencoded': {
+      const rows = parseStructuredBodyRows(request.body).filter(row => row.key.trim());
+      const body = rows
+        .map(
+          row =>
+            `${encodeURIComponent(resolveTemplateValue(row.key.trim(), variables))}=${encodeURIComponent(resolveTemplateValue(row.value, variables))}`
+        )
+        .join('&');
+
+      return {
+        body: body || undefined,
+        historyBody: body,
+      };
+    }
+    case 'binary': {
+      const binary = parseBinaryBodyValue(request.body);
+      if (!tab.binaryFile?.contentBase64) {
+        if (binary.file_name.trim()) {
+          throw new Error(t('collections.workbench.body.binaryFileRequired'));
+        }
+
+        return {};
+      }
+
+      return {
+        body_base64: tab.binaryFile.contentBase64,
+        historyBody: binary.file_name || tab.binaryFile.name,
+      };
+    }
+    case 'graphql': {
+      const graphql = parseGraphqlBodyValue(request.body);
+      const query = resolveTemplateValue(graphql.query, variables).trim();
+      const variablesText = resolveTemplateValue(graphql.variables_text ?? '', variables).trim();
+      let parsedVariables: unknown;
+
+      if (variablesText) {
+        try {
+          parsedVariables = JSON.parse(variablesText) as unknown;
+        } catch {
+          throw new Error(
+            t('common.jsonMustBeValid', {
+              label: t('collections.workbench.body.graphqlVariablesLabel'),
+            })
+          );
+        }
+      }
+
+      const body = JSON.stringify(
+        {
+          query,
+          variables: parsedVariables,
+          operationName: graphql.operation_name?.trim() || undefined,
+        },
+        null,
+        2
+      );
+
+      return {
+        body: query ? body : undefined,
+        historyBody: query ? body : '',
+      };
+    }
+    default: {
+      const resolvedBody = resolveTemplateValue(request.body, variables);
+      return {
+        body: resolvedBody.trim() ? resolvedBody : undefined,
+        historyBody: resolvedBody.trim() ? resolvedBody : '',
+      };
+    }
+  }
 };
 
 const flattenCollectionTree = (nodes: ProjectCollectionTreeNode[]): ProjectCollectionTreeNode[] =>
@@ -1955,6 +2398,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               activeSection: tab.activeSection,
               paramsMode: tab.paramsMode,
               headersMode: tab.headersMode,
+              bodyFiles: tab.bodyFiles,
+              binaryFile: tab.binaryFile,
               settings: tab.settings,
               isSending: overrides.isSending ?? tab.isSending,
               response: overrides.response ?? tab.response,
@@ -2588,7 +3033,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     let runnableRequest: ProjectRequest | null = null;
     let executableUrl = '';
     let executableHeaders: Record<string, string> = {};
-    let executableBody: string | undefined;
+    let executablePayload: DirectRequestExecutionPayload = {};
+    let historyRequestBody: string | undefined;
 
     updateTab(tabId, tab => ({
       ...tab,
@@ -2633,12 +3079,19 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
           t('collections.base64Unavailable')
         )
       );
-      executableBody = buildDirectRequestBody(runnableRequest, selectedEnvironment);
+      executablePayload = buildDirectRequestPayload(
+        runnableRequest,
+        tabSnapshot,
+        t,
+        selectedEnvironment
+      );
+      const { historyBody: nextHistoryBody, ...runnerPayload } = executablePayload;
+      historyRequestBody = nextHistoryBody;
       const response = await localRunnerService.execute({
         method: runnableRequest.method,
         url: executableUrl,
         headers: executableHeaders,
-        body: executableBody,
+        ...runnerPayload,
         follow_redirects: tabSnapshot.settings.followRedirects,
         strict_tls: tabSnapshot.settings.strictTls,
       });
@@ -2656,7 +3109,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               request: persistedRequest,
               executedUrl: executableUrl,
               requestHeaders: executableHeaders,
-              requestBody: executableBody,
+              requestBody: historyRequestBody,
               settings: tabSnapshot.settings,
               response,
               messages: {
@@ -2700,7 +3153,13 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               t('collections.base64Unavailable')
             )
           );
-          executableBody = buildDirectRequestBody(persistedRequest, selectedEnvironment);
+          executablePayload = buildDirectRequestPayload(
+            persistedRequest,
+            tabSnapshot,
+            t,
+            selectedEnvironment
+          );
+          historyRequestBody = executablePayload.historyBody;
         }
 
         void createHistoryMutation
@@ -2709,7 +3168,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               request: persistedRequest,
               executedUrl: executableUrl,
               requestHeaders: executableHeaders,
-              requestBody: executableBody,
+              requestBody: historyRequestBody,
               settings: tabSnapshot.settings,
               errorMessage: message,
               messages: {
@@ -5004,16 +5463,31 @@ function RequestSectionPanel({
         <BodyEditor
           mode={tab.bodyMode}
           value={tab.bodyContent}
+          files={tab.bodyFiles}
+          binaryFile={tab.binaryFile}
           onModeChange={mode =>
             onTabChange(current => ({
               ...current,
               bodyMode: mode,
+              bodyContent: getNextBodyContentForMode(mode, current.bodyMode, current.bodyContent),
             }))
           }
           onValueChange={value =>
             onTabChange(current => ({
               ...current,
               bodyContent: value,
+            }))
+          }
+          onFilesChange={files =>
+            onTabChange(current => ({
+              ...current,
+              bodyFiles: files,
+            }))
+          }
+          onBinaryFileChange={file =>
+            onTabChange(current => ({
+              ...current,
+              binaryFile: file,
             }))
           }
         />
@@ -5262,19 +5736,160 @@ function AuthorizationPanel({
 function BodyEditor({
   mode,
   value,
+  files,
+  binaryFile,
   onModeChange,
   onValueChange,
+  onFilesChange,
+  onBinaryFileChange,
 }: {
   mode: BodyMode;
   value: string;
+  files: Record<string, BodyFileValue>;
+  binaryFile: BodyFileValue | null;
   onModeChange: (mode: BodyMode) => void;
   onValueChange: (value: string) => void;
+  onFilesChange: (files: Record<string, BodyFileValue>) => void;
+  onBinaryFileChange: (file: BodyFileValue | null) => void;
 }) {
   const t = useT('project');
+  const bodyModeIcons: Record<BodyMode, ComponentType<{ className?: string }>> = {
+    json: Braces,
+    raw: FileType2,
+    'form-data': Upload,
+    'x-www-form-urlencoded': FormInput,
+    binary: Binary,
+    graphql: FileCode2,
+  };
+  const structuredRows =
+    mode === 'form-data' || mode === 'x-www-form-urlencoded'
+      ? parseStructuredBodyRows(value)
+      : [createKeyValueRow()];
+  const graphqlValue = mode === 'graphql' ? parseGraphqlBodyValue(value) : null;
+  const binaryValue = mode === 'binary' ? parseBinaryBodyValue(value) : null;
+  const usesFileRows = mode === 'form-data';
+
+  const updateStructuredRows = (nextRows: KeyValueRow[]) => {
+    onValueChange(serializeStructuredBodyRows(nextRows));
+  };
+
+  const updateStructuredRow = (rowId: string, patch: Partial<KeyValueRow>) => {
+    updateStructuredRows(
+      structuredRows.map(row => (row.id === rowId ? { ...row, ...patch } : row))
+    );
+  };
+
+  const removeStructuredRow = (rowId: string) => {
+    const nextRows = structuredRows.filter(row => row.id !== rowId);
+    updateStructuredRows(nextRows);
+
+    if (files[rowId]) {
+      const nextFiles = { ...files };
+      delete nextFiles[rowId];
+      onFilesChange(nextFiles);
+    }
+  };
+
+  const handleStructuredTypeChange = (rowId: string, nextType: BodyValueType) => {
+    updateStructuredRows(
+      structuredRows.map(row =>
+        row.id === rowId
+          ? {
+              ...row,
+              type: nextType,
+              value: nextType === 'file' ? '' : row.value,
+            }
+          : row
+      )
+    );
+
+    if (nextType !== 'file' && files[rowId]) {
+      const nextFiles = { ...files };
+      delete nextFiles[rowId];
+      onFilesChange(nextFiles);
+    }
+  };
+
+  const handleStructuredFileSelect = async (rowId: string, file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const nextFile = await createBodyFileValue(file);
+      onFilesChange({
+        ...files,
+        [rowId]: nextFile,
+      });
+      updateStructuredRow(rowId, {
+        type: 'file',
+        value: nextFile.name,
+      });
+    } catch {
+      toast.error(t('collections.workbench.body.fileReadFailed'));
+    }
+  };
+
+  const clearStructuredFile = (rowId: string) => {
+    const nextFiles = { ...files };
+    delete nextFiles[rowId];
+    onFilesChange(nextFiles);
+    updateStructuredRow(rowId, { value: '' });
+  };
+
+  const updateGraphqlValue = (patch: Partial<GraphqlBodyValue>) => {
+    onValueChange(
+      serializeGraphqlBodyValue({
+        ...(graphqlValue ?? {
+          query: '',
+          variables_text: '',
+          operation_name: '',
+        }),
+        ...patch,
+      })
+    );
+  };
+
+  const updateBinaryValue = (patch: Partial<BinaryBodyValue>) => {
+    onValueChange(
+      serializeBinaryBodyValue({
+        ...(binaryValue ?? {
+          file_name: '',
+          content_type: '',
+        }),
+        ...patch,
+      })
+    );
+  };
+
+  const handleBinaryFileSelect = async (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const nextFile = await createBodyFileValue(file);
+      onBinaryFileChange(nextFile);
+      onValueChange(
+        serializeBinaryBodyValue({
+          file_name: nextFile.name,
+          content_type:
+            nextFile.type || binaryValue?.content_type?.trim() || 'application/octet-stream',
+        })
+      );
+    } catch {
+      toast.error(t('collections.workbench.body.fileReadFailed'));
+    }
+  };
+
+  const clearBinaryFile = () => {
+    onBinaryFileChange(null);
+    onValueChange('');
+  };
 
   return (
     <div className="rounded-[24px] border border-border/60 bg-white/85 shadow-sm">
-      <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="border-b border-border/60 px-5 py-5">
         <div>
           <h3 className="text-base font-semibold text-text-main">
             {t('collections.workbench.sections.body')}
@@ -5284,35 +5899,335 @@ function BodyEditor({
           </p>
         </div>
 
-        <div className="inline-flex rounded-full border border-border/60 bg-slate-50/80 p-1">
-          {BODY_MODE_OPTIONS.map(option => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onModeChange(option)}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors',
-                option === mode
-                  ? 'bg-white text-text-main shadow-sm'
-                  : 'text-text-muted hover:text-text-main'
-              )}
-            >
-              {getBodyModeLabel(t, option)}
-            </button>
-          ))}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {BODY_MODE_OPTIONS.map(option => {
+            const Icon = bodyModeIcons[option];
+
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onModeChange(option)}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors',
+                  option === mode
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : 'border-border/70 bg-slate-50 text-text-main hover:border-slate-300 hover:bg-white'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {getBodyModeLabel(t, option)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="px-5 py-5">
-        <Textarea
-          value={value}
-          onChange={event => onValueChange(event.target.value)}
-          rows={14}
-          className="min-h-[280px] rounded-2xl font-mono text-sm"
-          placeholder={
-            mode === 'form-data' ? t('collections.workbench.body.formDataPlaceholder') : '{\n  \n}'
-          }
-        />
+        {mode === 'json' || mode === 'raw' ? (
+          <Textarea
+            value={value}
+            onChange={event => onValueChange(event.target.value)}
+            rows={14}
+            className="min-h-[280px] rounded-2xl font-mono text-sm"
+            placeholder={
+              mode === 'json'
+                ? DEFAULT_JSON_PLACEHOLDER
+                : t('collections.workbench.body.rawPlaceholder')
+            }
+          />
+        ) : null}
+
+        {mode === 'form-data' || mode === 'x-www-form-urlencoded' ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm text-text-muted">
+                {mode === 'form-data'
+                  ? t('collections.workbench.body.formDataHelp')
+                  : t('collections.workbench.body.urlEncodedHelp')}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  updateStructuredRows([
+                    ...structuredRows,
+                    createKeyValueRow('', '', ''),
+                  ])
+                }
+              >
+                <Plus className="h-4 w-4" />
+                {t('collections.workbench.actions.addRow')}
+              </Button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <div
+                className={cn(
+                  'space-y-3',
+                  usesFileRows ? 'min-w-[920px]' : 'min-w-[760px]'
+                )}
+              >
+                <div
+                  className={cn(
+                    'grid gap-3 px-3 text-xs font-medium uppercase tracking-[0.16em] text-text-muted',
+                    usesFileRows
+                      ? 'grid-cols-[1fr_140px_1.35fr_1fr_56px]'
+                      : 'grid-cols-[1.05fr_1.25fr_1fr_56px]'
+                  )}
+                >
+                  <span>{t('collections.workbench.editors.key')}</span>
+                  {usesFileRows ? <span>{t('collections.workbench.body.valueTypeLabel')}</span> : null}
+                  <span>{t('collections.workbench.editors.value')}</span>
+                  <span>{t('common.description')}</span>
+                  <span />
+                </div>
+
+                {structuredRows.map(row => {
+                  const selectedFile = files[row.id];
+                  return (
+                    <div
+                      key={row.id}
+                      className={cn(
+                        'grid gap-3',
+                        usesFileRows
+                          ? 'grid-cols-[1fr_140px_1.35fr_1fr_56px]'
+                          : 'grid-cols-[1.05fr_1.25fr_1fr_56px]'
+                      )}
+                    >
+                      <Input
+                        value={row.key}
+                        onChange={event => updateStructuredRow(row.id, { key: event.target.value })}
+                        placeholder={t('collections.workbench.editors.keyPlaceholder')}
+                        className="rounded-2xl"
+                      />
+
+                      {usesFileRows ? (
+                        <Select
+                          value={row.type}
+                          onValueChange={nextValue =>
+                            handleStructuredTypeChange(row.id, nextValue as BodyValueType)
+                          }
+                        >
+                          <SelectTrigger className="rounded-2xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">
+                              {t('collections.workbench.body.textValueType')}
+                            </SelectItem>
+                            <SelectItem value="file">
+                              {t('collections.workbench.body.fileValueType')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : null}
+
+                      {usesFileRows && row.type === 'file' ? (
+                        <div className="space-y-2 rounded-2xl border border-border/70 bg-slate-50/60 px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-1.5 text-xs font-medium text-text-main transition-colors hover:border-slate-300">
+                              <Upload className="h-3.5 w-3.5" />
+                              {selectedFile
+                                ? t('collections.workbench.body.replaceFile')
+                                : t('collections.workbench.body.selectFile')}
+                              <input
+                                type="file"
+                                className="hidden"
+                                onChange={event =>
+                                  void handleStructuredFileSelect(
+                                    row.id,
+                                    event.target.files?.[0] ?? null
+                                  )
+                                }
+                              />
+                            </label>
+                            {selectedFile ? (
+                              <Badge variant="outline" className="font-normal">
+                                {selectedFile.name} • {formatBodyFileSize(selectedFile.size)}
+                              </Badge>
+                            ) : row.value.trim() ? (
+                              <Badge variant="outline" className="font-normal">
+                                {row.value}
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-text-muted">
+                                {t('collections.workbench.body.noFileSelected')}
+                              </span>
+                            )}
+                            {selectedFile || row.value.trim() ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-full px-3"
+                                onClick={() => clearStructuredFile(row.id)}
+                              >
+                                {t('collections.workbench.body.clearFile')}
+                              </Button>
+                            ) : null}
+                          </div>
+                          <div className="text-xs text-text-muted">
+                            {selectedFile
+                              ? selectedFile.type || t('collections.workbench.body.binaryFallbackType')
+                              : row.value.trim()
+                                ? t('collections.workbench.body.reselectFile')
+                                : t('collections.workbench.body.fileFieldHelp')}
+                          </div>
+                        </div>
+                      ) : (
+                        <Input
+                          value={row.value}
+                          onChange={event =>
+                            updateStructuredRow(row.id, { value: event.target.value })
+                          }
+                          placeholder={
+                            mode === 'form-data'
+                              ? t('collections.workbench.body.formValuePlaceholder')
+                              : t('collections.workbench.body.urlEncodedValuePlaceholder')
+                          }
+                          className="rounded-2xl"
+                        />
+                      )}
+
+                      <Input
+                        value={row.description}
+                        onChange={event =>
+                          updateStructuredRow(row.id, { description: event.target.value })
+                        }
+                        placeholder={t('collections.workbench.editors.descriptionPlaceholder')}
+                        className="rounded-2xl"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        isIcon
+                        className="h-9 w-9 rounded-2xl"
+                        onClick={() => removeStructuredRow(row.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {mode === 'binary' && binaryValue ? (
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-3xl border border-dashed border-border/70 bg-slate-50/70 p-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+                  <Upload className="h-4 w-4" />
+                  {binaryFile
+                    ? t('collections.workbench.body.replaceFile')
+                    : t('collections.workbench.body.selectBinaryFile')}
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={event =>
+                      void handleBinaryFileSelect(event.target.files?.[0] ?? null)
+                    }
+                  />
+                </label>
+                {binaryFile ? (
+                  <Badge variant="outline" className="font-normal">
+                    {binaryFile.name} • {formatBodyFileSize(binaryFile.size)}
+                  </Badge>
+                ) : binaryValue.file_name.trim() ? (
+                  <Badge variant="outline" className="font-normal">
+                    {binaryValue.file_name}
+                  </Badge>
+                ) : (
+                  <span className="text-sm text-text-muted">
+                    {t('collections.workbench.body.noBinaryFileSelected')}
+                  </span>
+                )}
+                {binaryFile || binaryValue.file_name.trim() ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3"
+                    onClick={clearBinaryFile}
+                  >
+                    {t('collections.workbench.body.clearFile')}
+                  </Button>
+                ) : null}
+              </div>
+              <p className="mt-3 text-sm text-text-muted">
+                {binaryFile || binaryValue.file_name.trim()
+                  ? t('collections.workbench.body.binaryReadyHelp')
+                  : t('collections.workbench.body.binaryEmptyHelp')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="request-binary-content-type">
+                {t('collections.workbench.body.contentTypeLabel')}
+              </Label>
+              <Input
+                id="request-binary-content-type"
+                value={binaryValue.content_type ?? ''}
+                onChange={event => updateBinaryValue({ content_type: event.target.value })}
+                placeholder="application/octet-stream"
+                className="rounded-2xl font-mono"
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {mode === 'graphql' && graphqlValue ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="request-graphql-operation">
+                {t('collections.workbench.body.operationNameLabel')}
+              </Label>
+              <Input
+                id="request-graphql-operation"
+                value={graphqlValue.operation_name ?? ''}
+                onChange={event => updateGraphqlValue({ operation_name: event.target.value })}
+                placeholder={t('collections.workbench.body.operationNamePlaceholder')}
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="request-graphql-query">
+                  {t('collections.workbench.body.graphqlQueryLabel')}
+                </Label>
+                <Textarea
+                  id="request-graphql-query"
+                  value={graphqlValue.query}
+                  onChange={event => updateGraphqlValue({ query: event.target.value })}
+                  rows={14}
+                  className="min-h-[280px] rounded-2xl font-mono text-sm"
+                  placeholder={DEFAULT_GRAPHQL_QUERY}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="request-graphql-variables">
+                  {t('collections.workbench.body.graphqlVariablesLabel')}
+                </Label>
+                <Textarea
+                  id="request-graphql-variables"
+                  value={graphqlValue.variables_text ?? ''}
+                  onChange={event =>
+                    updateGraphqlValue({ variables_text: event.target.value })
+                  }
+                  rows={14}
+                  className="min-h-[280px] rounded-2xl font-mono text-sm"
+                  placeholder={DEFAULT_GRAPHQL_VARIABLES}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

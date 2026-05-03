@@ -57,6 +57,9 @@ const MAX_PREVIEW_SPECS = 5;
 const EMPTY_PROJECTS: ApiProject[] = [];
 type ProjectT = ScopedTranslations<'project'>;
 
+const navigationLinkClassName =
+  'inline-flex items-center gap-2 font-medium text-primary underline-offset-4 transition-colors hover:text-primary-deep hover:underline focus-ring rounded-md';
+
 interface DashboardStatusItem {
   label: string;
   detail: string;
@@ -676,17 +679,13 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
 
             <div className="flex flex-wrap gap-2">
               {isSlowPreview && !nextStep && !hasReadinessError ? (
-                <Button asChild>
-                  <Link href={buildProjectCollectionsRoute(project.id)}>
+                <Link href={buildProjectCollectionsRoute(project.id)} className={navigationLinkClassName}>
                     {t('projectDetail.quickRequest')}
-                  </Link>
-                </Button>
-              ) : null}
-              <Button asChild variant="outline">
-                <Link href={buildProjectDetailRoute(project.id)}>
-                  {t('projectDetail.openWorkspace')}
                 </Link>
-              </Button>
+              ) : null}
+              <Link href={buildProjectDetailRoute(project.id)} className={navigationLinkClassName}>
+                  {t('projectDetail.openWorkspace')}
+              </Link>
             </div>
           </div>
         </CardHeader>
@@ -768,11 +767,9 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                       {t('dashboardPage.recentApiSpecsDescription')}
                     </p>
                   </div>
-                  <Button asChild variant="ghost" className="px-0">
-                    <Link href={buildProjectApiSpecsRoute(project.id)}>
-                      {t('projectDetail.reviewApiSpecs')}
-                    </Link>
-                  </Button>
+                  <Link href={buildProjectApiSpecsRoute(project.id)} className={navigationLinkClassName}>
+                    {t('projectDetail.reviewApiSpecs')}
+                  </Link>
                 </div>
 
                 <div className="space-y-2">
@@ -826,11 +823,9 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                   <Button type="button" variant="outline" size="sm" onClick={handleRetryPreview}>
                     {t('dashboardPage.retryPreview')}
                   </Button>
-                  <Button asChild size="sm">
-                    <Link href={buildProjectDetailRoute(project.id)}>
+                  <Link href={buildProjectDetailRoute(project.id)} className={navigationLinkClassName}>
                       {t('projectDetail.openWorkspace')}
-                    </Link>
-                  </Button>
+                  </Link>
                 </div>
               </Alert>
             ) : !nextStep ? (
@@ -845,16 +840,18 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                       {t('dashboardPage.recommendationSlowDescription')}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      <Button asChild size="sm">
-                        <Link href={buildProjectCollectionsRoute(project.id)}>
+                      <Link
+                        href={buildProjectCollectionsRoute(project.id)}
+                        className={navigationLinkClassName}
+                      >
                           {t('projectDetail.quickRequest')}
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={buildProjectDetailRoute(project.id)}>
+                      </Link>
+                      <Link
+                        href={buildProjectDetailRoute(project.id)}
+                        className={navigationLinkClassName}
+                      >
                           {t('projectDetail.openWorkspace')}
-                        </Link>
-                      </Button>
+                      </Link>
                       <Button
                         type="button"
                         variant="outline"
@@ -894,13 +891,13 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button asChild>
-                    <Link href={nextStep.primaryHref}>{nextStep.primaryLabel}</Link>
-                  </Button>
+                  <Link href={nextStep.primaryHref} className={navigationLinkClassName}>
+                    {nextStep.primaryLabel}
+                  </Link>
                   {nextStep.secondaryHref && nextStep.secondaryLabel ? (
-                    <Button asChild variant="outline">
-                      <Link href={nextStep.secondaryHref}>{nextStep.secondaryLabel}</Link>
-                    </Button>
+                    <Link href={nextStep.secondaryHref} className={navigationLinkClassName}>
+                      {nextStep.secondaryLabel}
+                    </Link>
                   ) : null}
                 </div>
               </>

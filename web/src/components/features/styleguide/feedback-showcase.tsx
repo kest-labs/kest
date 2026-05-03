@@ -91,7 +91,7 @@ export function FeedbackShowcase() {
                     const promise = () => new Promise((resolve) => setTimeout(() => resolve({ name: 'Success' }), 2000));
                     toast.promise(promise, {
                       loading: 'Loading data...',
-                      success: (data) => `Data loaded successfully`,
+                      success: () => 'Data loaded successfully',
                       error: 'Error loading data',
                     });
                   }}

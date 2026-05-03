@@ -89,6 +89,9 @@ interface ProjectNextAction {
   secondaryIcon: LucideIcon;
 }
 
+const navigationLinkClassName =
+  'inline-flex items-center gap-2 font-medium text-primary underline-offset-4 transition-colors hover:text-primary-deep hover:underline focus-ring rounded-md';
+
 const getProjectNextAction = (
   t: ScopedTranslations<'project'>,
   projectId: number | string,
@@ -263,6 +266,11 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
   const projectStats = projectStatsQuery.data;
   const nextAction = getProjectNextAction(t, projectId, projectStats);
   const workflowSteps = getProjectWorkflowSteps(t, projectId, projectStats);
+  const totalWorkflowSteps = workflowSteps.length;
+  const completedWorkflowSteps = workflowSteps.filter(step => step.status === 'ready').length;
+  const workflowCompletionPercent =
+    totalWorkflowSteps > 0 ? Math.round((completedWorkflowSteps / totalWorkflowSteps) * 100) : 0;
+  const shouldShowWorkflowProgress = Boolean(projectStats);
   const PrimaryIcon = nextAction.primaryIcon;
   const SecondaryIcon = nextAction.secondaryIcon;
   const cliPlatformUrl = (apiExternalBaseUrl || buildApiPath('/')).replace(/\/$/, '');
@@ -424,18 +432,14 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" asChild>
-                  <Link href={nextAction.primaryHref}>
+                <Link href={nextAction.primaryHref} className={navigationLinkClassName}>
                     <PrimaryIcon className="h-4 w-4" />
                     {nextAction.primaryLabel}
-                  </Link>
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href={nextAction.secondaryHref}>
+                </Link>
+                <Link href={nextAction.secondaryHref} className={navigationLinkClassName}>
                     <SecondaryIcon className="h-4 w-4" />
                     {nextAction.secondaryLabel}
-                  </Link>
-                </Button>
+                </Link>
                 <ActionMenu
                   items={pageActionItems}
                   ariaLabel={t('projectDetail.openProjectActions')}
@@ -467,12 +471,10 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button asChild>
-                    <Link href={nextAction.primaryHref}>
-                      <PrimaryIcon className="h-4 w-4" />
-                      {nextAction.primaryLabel}
-                    </Link>
-                  </Button>
+                  <Link href={nextAction.primaryHref} className={navigationLinkClassName}>
+                    <PrimaryIcon className="h-4 w-4" />
+                    {nextAction.primaryLabel}
+                  </Link>
                 </div>
               </div>
 
@@ -494,10 +496,39 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     {t('projectDetail.projectFlowDescription')}
                   </p>
                 </div>
-                {isProjectLoading ? (
-                  <Badge variant="outline">{t('projectDetail.loading')}</Badge>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-2">
+                  {shouldShowWorkflowProgress ? (
+                    <div className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-sm font-medium text-primary">
+                      {t('projectDetail.projectFlowProgress', {
+                        percent: workflowCompletionPercent,
+                        completed: completedWorkflowSteps,
+                        total: totalWorkflowSteps,
+                      })}
+                    </div>
+                  ) : null}
+                  {isProjectLoading ? (
+                    <Badge variant="outline">{t('projectDetail.loading')}</Badge>
+                  ) : null}
+                </div>
               </div>
+
+              {shouldShowWorkflowProgress ? (
+                <div className="mt-4">
+                  <div
+                    role="progressbar"
+                    aria-label={t('projectDetail.projectFlow')}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={workflowCompletionPercent}
+                    className="h-2 overflow-hidden rounded-full bg-muted"
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                      style={{ width: `${workflowCompletionPercent}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-4 space-y-3">
                 {workflowSteps.map(step => (
@@ -645,24 +676,21 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline">
-                  <Link href={buildProjectMembersRoute(projectId)}>
-                    <Users className="h-4 w-4" />
-                    {t('projectDetail.members')}
-                  </Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href={buildProjectCategoriesRoute(projectId)}>
-                    <Tags className="h-4 w-4" />
-                    {t('projectDetail.categories')}
-                  </Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href={buildProjectFlowsRoute(projectId)}>
-                    <Layers3 className="h-4 w-4" />
-                    {t('projectDetail.flows')}
-                  </Link>
-                </Button>
+                <Link href={buildProjectMembersRoute(projectId)} className={navigationLinkClassName}>
+                  <Users className="h-4 w-4" />
+                  {t('projectDetail.members')}
+                </Link>
+                <Link
+                  href={buildProjectCategoriesRoute(projectId)}
+                  className={navigationLinkClassName}
+                >
+                  <Tags className="h-4 w-4" />
+                  {t('projectDetail.categories')}
+                </Link>
+                <Link href={buildProjectFlowsRoute(projectId)} className={navigationLinkClassName}>
+                  <Layers3 className="h-4 w-4" />
+                  {t('projectDetail.flows')}
+                </Link>
               </div>
             </div>
           </section>
