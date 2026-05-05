@@ -1,8 +1,18 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { Bot, FileJson2, HelpCircle, Sparkles, WandSparkles } from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Bot,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  FileJson2,
+  HelpCircle,
+  Sparkles,
+  WandSparkles,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -261,6 +271,67 @@ function DraftGenerationPreview({
   );
 }
 
+function PreviewSummary({ draft }: { draft: ApiSpecAIDraft }) {
+  const t = useT('project');
+  const responseCodes = Object.keys(draft.draft.responses ?? {});
+  const tagSummary = (draft.draft.tags ?? []).slice(0, 3).join(', ');
+  const hasRequestBody = Boolean(draft.draft.request_body);
+  const parameterCount = draft.draft.parameters?.length ?? 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline">{draft.draft.method}</Badge>
+        <code className="rounded-md bg-muted px-2 py-1 font-mono text-xs text-text-main">
+          {draft.draft.path || '/'}
+        </code>
+        {draft.draft.version ? <Badge variant="secondary">{draft.draft.version}</Badge> : null}
+      </div>
+
+      {draft.draft.summary ? (
+        <p className="text-sm font-medium text-text-main">{draft.draft.summary}</p>
+      ) : null}
+
+      {draft.draft.description ? (
+        <p className="text-sm leading-6 text-text-muted">{draft.draft.description}</p>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+            {t('common.request')}
+          </p>
+          <p className="mt-2 text-sm text-text-main">
+            {hasRequestBody
+              ? t('apiSpecs.aiCreateDialog.previewSummary.requestBodyReady')
+              : t('apiSpecs.aiCreateDialog.previewSummary.noRequestBody')}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            {t('apiSpecs.aiCreateDialog.previewSummary.parameterCount', {
+              count: parameterCount,
+            })}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+            {t('common.responses')}
+          </p>
+          <p className="mt-2 text-sm text-text-main">
+            {responseCodes.length > 0
+              ? responseCodes.join(', ')
+              : t('apiSpecs.aiCreateDialog.previewSummary.noResponses')}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            {tagSummary
+              ? t('apiSpecs.aiCreateDialog.previewSummary.tags', { value: tagSummary })
+              : t('apiSpecs.aiCreateDialog.previewSummary.noTags')}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ApiSpecAICreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -297,7 +368,6 @@ export function ApiSpecAICreateDialog({
 
 function ApiSpecAICreateDialogContent({
   onOpenChange,
-  projectId,
   categories,
   isSubmittingRefine,
   isSubmittingAccept,
@@ -327,6 +397,10 @@ function ApiSpecAICreateDialogContent({
   const [draftElapsedSeconds, setDraftElapsedSeconds] = useState(0);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [didDraftGenerationFail, setDidDraftGenerationFail] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showDraftDetails, setShowDraftDetails] = useState(false);
+  const [showWhyDetails, setShowWhyDetails] = useState(false);
   const draftAbortRef = useRef<AbortController | null>(null);
   const footerHelperMessage = isGeneratingDraft
     ? t('apiSpecs.aiCreateDialog.draftGeneratingHelp')
@@ -368,6 +442,11 @@ function ApiSpecAICreateDialogContent({
         return { value, label: t('apiSpecs.aiCreateDialog.refineFields.tags') };
     }
   });
+  const hasPreviewPanel = isGeneratingDraft || (!draft && (didDraftGenerationFail || draftStreamOutput)) || Boolean(draft);
+  const methodPathValue = useMemo(
+    () => `${seedMethod} ${seedPath.trim() || '/v1/...'}`,
+    [seedMethod, seedPath]
+  );
 
   useEffect(() => {
     if (!isGeneratingDraft) {
@@ -476,6 +555,8 @@ function ApiSpecAICreateDialogContent({
       setDraftError(null);
       setDraftStatus(t('apiSpecs.aiCreateDialog.draftReady'));
       setDidDraftGenerationFail(false);
+      setShowPreview(true);
+      setShowDraftDetails(true);
     } catch (error) {
       if (isAbortError(error) || controller.signal.aborted) {
         setDraftStatus(t('apiSpecs.aiCreateDialog.generationCanceled'));
@@ -488,6 +569,7 @@ function ApiSpecAICreateDialogContent({
       setDraftError(message);
       setDraftStatus(t('apiSpecs.aiCreateDialog.generationFailedStatus'));
       setDidDraftGenerationFail(true);
+      setShowPreview(true);
       toast.error(t('apiSpecs.aiCreateDialog.toasts.generateFailedTitle'), {
         description: t('apiSpecs.aiCreateDialog.toasts.generateFailedDescription', { message }),
       });
@@ -562,7 +644,8 @@ function ApiSpecAICreateDialogContent({
 
   return (
     <DialogContent
-      size="xl"
+      size="lg"
+      className="max-w-4xl gap-3 p-0"
       hideCloseButton={isGeneratingDraft}
       onEscapeKeyDown={event => {
         if (isGeneratingDraft) {
@@ -575,17 +658,15 @@ function ApiSpecAICreateDialogContent({
         }
       }}
     >
-      <DialogHeader>
+      <DialogHeader className="border-b border-border/60 px-6 pt-6 pb-4">
         <DialogTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
           {t('apiSpecs.aiCreateDialog.title')}
         </DialogTitle>
-        <DialogDescription>
-          {t('apiSpecs.aiCreateDialog.description', { projectId: String(projectId) })}
-        </DialogDescription>
+        <DialogDescription>{t('apiSpecs.aiCreateDialog.compactDescription')}</DialogDescription>
       </DialogHeader>
 
-      <DialogBody className="space-y-6">
+      <DialogBody className="space-y-4 px-6 py-5">
         {validationError ? (
           <Alert variant="destructive">
             <HelpCircle className="h-4 w-4" />
@@ -606,118 +687,190 @@ function ApiSpecAICreateDialogContent({
           </Alert>
         ) : null}
 
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle className="text-base">
-              {t('apiSpecs.aiCreateDialog.sections.intentTitle')}
-            </CardTitle>
-            <CardDescription>
-              {t('apiSpecs.aiCreateDialog.sections.intentDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="ai-intent">{t('apiSpecs.aiCreateDialog.fields.intent')}</Label>
-              <Textarea
-                id="ai-intent"
-                value={intent}
-                onChange={event => setIntent(event.target.value)}
-                placeholder={t('apiSpecs.aiCreateDialog.placeholders.intent')}
-                rows={5}
-              />
-            </div>
+        <div className="space-y-3 rounded-2xl border border-border/60 bg-background p-4">
+          <div>
+            <p className="text-sm font-medium text-text-main">
+              {t('apiSpecs.aiCreateDialog.sections.intentDescriptionCompact')}
+            </p>
+            <p className="mt-1 text-xs text-text-muted">{methodPathValue}</p>
+          </div>
 
-            <div className="space-y-2 lg:col-span-2">
-              <Label>{`${t('common.method')} / ${t('common.path')}`}</Label>
-              <div className="grid gap-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
+          <div className="grid gap-3 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
+            <Select value={seedMethod} onValueChange={value => setSeedMethod(value as HttpMethod)}>
+              <SelectTrigger className="w-full" aria-label={t('common.method')}>
+                <SelectValue placeholder={t('common.method')} />
+              </SelectTrigger>
+              <SelectContent>
+                {METHOD_OPTIONS.map(method => (
+                  <SelectItem key={method} value={method}>
+                    {method}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              id="ai-path"
+              aria-label={t('common.path')}
+              className="font-mono"
+              value={seedPath}
+              onChange={event => setSeedPath(event.target.value)}
+              placeholder="/v1/users/signup"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ai-intent">{t('apiSpecs.aiCreateDialog.fields.intent')}</Label>
+            <Textarea
+              id="ai-intent"
+              value={intent}
+              onChange={event => setIntent(event.target.value)}
+              placeholder={t('apiSpecs.aiCreateDialog.placeholders.intent')}
+              rows={4}
+              className="min-h-[140px] text-sm leading-6"
+              autoFocus
+            />
+          </div>
+
+          <details
+            className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+            open={showAdvancedOptions}
+            onToggle={event =>
+              setShowAdvancedOptions((event.currentTarget as HTMLDetailsElement).open)
+            }
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-text-main">
+              {showAdvancedOptions ? (
+                <ChevronDown className="h-4 w-4 text-text-muted" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-text-muted" />
+              )}
+              {t('apiSpecs.aiCreateDialog.sections.advancedOptions')}
+            </summary>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('common.category')}</Label>
                 <Select
-                  value={seedMethod}
-                  onValueChange={value => setSeedMethod(value as HttpMethod)}
+                  value={seedCategoryId || 'none'}
+                  onValueChange={value => setSeedCategoryId(value === 'none' ? '' : value)}
                 >
-                  <SelectTrigger className="w-full" aria-label={t('common.method')}>
-                    <SelectValue placeholder={t('common.method')} />
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.category')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {METHOD_OPTIONS.map(method => (
-                      <SelectItem key={method} value={method}>
-                        {method}
+                    <SelectItem value="none">
+                      {t('apiSpecs.aiCreateDialog.fields.noCategory')}
+                    </SelectItem>
+                    {categories.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
 
-                <Input
-                  id="ai-path"
-                  aria-label={t('common.path')}
-                  className="font-mono"
-                  value={seedPath}
-                  onChange={event => setSeedPath(event.target.value)}
-                  placeholder="/v1/orders"
+              <div className="space-y-2">
+                <Label>{t('apiSpecs.aiCreateDialog.fields.language')}</Label>
+                <Select value={lang} onValueChange={value => setLang(value as ApiSpecLanguage)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.language')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languageOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2 flex items-center justify-between rounded-xl border border-border/60 bg-background px-4 py-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">
+                    {t('apiSpecs.aiCreateDialog.fields.useProjectConventions')}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('apiSpecs.aiCreateDialog.fields.useProjectConventionsDescription')}
+                  </div>
+                </div>
+                <Switch
+                  checked={useProjectConventions}
+                  onCheckedChange={setUseProjectConventions}
                 />
               </div>
             </div>
+          </details>
+        </div>
 
-            <div className="space-y-2">
-              <Label>{t('common.category')}</Label>
-              <Select
-                value={seedCategoryId || 'none'}
-                onValueChange={value => setSeedCategoryId(value === 'none' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.category')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    {t('apiSpecs.aiCreateDialog.fields.noCategory')}
-                  </SelectItem>
-                  {categories.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t('apiSpecs.aiCreateDialog.fields.language')}</Label>
-              <Select value={lang} onValueChange={value => setLang(value as ApiSpecLanguage)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('apiSpecs.aiCreateDialog.placeholders.language')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {languageOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3 lg:col-span-2">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">
-                  {t('apiSpecs.aiCreateDialog.fields.useProjectConventions')}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {t('apiSpecs.aiCreateDialog.fields.useProjectConventionsDescription')}
-                </div>
+        {hasPreviewPanel ? (
+          <details
+            className="rounded-2xl border border-border/60 bg-background"
+            open={showPreview}
+            onToggle={event => setShowPreview((event.currentTarget as HTMLDetailsElement).open)}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-2">
+                {showPreview ? (
+                  <ChevronDown className="h-4 w-4 text-text-muted" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-text-muted" />
+                )}
+                <span className="text-sm font-medium text-text-main">
+                  {t('apiSpecs.aiCreateDialog.sections.previewTitle')}
+                </span>
+                <Badge variant="outline">{draftStatus}</Badge>
               </div>
-              <Switch checked={useProjectConventions} onCheckedChange={setUseProjectConventions} />
-            </div>
-          </CardContent>
-        </Card>
+              {draft ? (
+                <span className="text-xs text-text-muted">
+                  {t('apiSpecs.aiCreateDialog.sections.previewReady')}
+                </span>
+              ) : null}
+            </summary>
 
-        {isGeneratingDraft || (!draft && (didDraftGenerationFail || draftStreamOutput)) ? (
-          <DraftGenerationPreview
-            status={draftStatus}
-            elapsedSeconds={draftElapsedSeconds}
-            streamOutput={draftStreamOutput}
-            error={didDraftGenerationFail ? draftError : null}
-          />
-        ) : draft ? (
-          <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+            <div className="border-t border-border/60 px-4 py-4">
+              {isGeneratingDraft || (!draft && (didDraftGenerationFail || draftStreamOutput)) ? (
+                <DraftGenerationPreview
+                  status={draftStatus}
+                  elapsedSeconds={draftElapsedSeconds}
+                  streamOutput={draftStreamOutput}
+                  error={didDraftGenerationFail ? draftError : null}
+                />
+              ) : draft ? (
+                <PreviewSummary draft={draft} />
+              ) : null}
+            </div>
+          </details>
+        ) : null}
+
+        {draft ? (
+          <div className="space-y-4">
+            <details
+              className="rounded-2xl border border-border/60 bg-background"
+              open={showDraftDetails}
+              onToggle={event =>
+                setShowDraftDetails((event.currentTarget as HTMLDetailsElement).open)
+              }
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  {showDraftDetails ? (
+                    <ChevronDown className="h-4 w-4 text-text-muted" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-text-muted" />
+                  )}
+                  <span className="text-sm font-medium text-text-main">
+                    {t('apiSpecs.aiCreateDialog.sections.reviewTitle')}
+                  </span>
+                </div>
+                <span className="text-xs text-text-muted">
+                  {t('apiSpecs.aiCreateDialog.sections.reviewDescriptionCompact')}
+                </span>
+              </summary>
+
+              <div className="border-t border-border/60 px-4 py-4">
+                <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
             <Card className="border-border/60">
               <CardHeader>
                 <CardTitle className="text-base">
@@ -930,16 +1083,31 @@ function ApiSpecAICreateDialogContent({
                 </CardContent>
               </Card>
 
-              <Card className="border-border/60">
-                <CardHeader>
-                  <CardTitle className="text-base">
+              <details
+                className="rounded-2xl border border-border/60 bg-background"
+                open={showWhyDetails}
+                onToggle={event =>
+                  setShowWhyDetails((event.currentTarget as HTMLDetailsElement).open)
+                }
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
+                  {showWhyDetails ? (
+                    <ChevronDown className="h-4 w-4 text-text-muted" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-text-muted" />
+                  )}
+                  <span className="text-sm font-medium text-text-main">
                     {t('apiSpecs.aiCreateDialog.sections.whyTitle')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('apiSpecs.aiCreateDialog.sections.whyDescription')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm">
+                  </span>
+                </summary>
+                <div className="border-t border-border/60">
+                  <Card className="border-0 shadow-none">
+                    <CardHeader>
+                      <CardDescription>
+                        {t('apiSpecs.aiCreateDialog.sections.whyDescription')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
                   <div className="space-y-2">
                     <div className="font-medium">
                       {t('apiSpecs.aiCreateDialog.review.assumptions')}
@@ -1079,13 +1247,18 @@ function ApiSpecAICreateDialogContent({
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                </div>
+              </details>
             </div>
+                </div>
+              </div>
+            </details>
           </div>
         ) : (
           <Card className="border-dashed border-border/70 bg-muted/20">
-            <CardContent className="flex min-h-40 flex-col items-center justify-center gap-3 py-10 text-center">
+            <CardContent className="flex min-h-32 flex-col items-center justify-center gap-3 py-8 text-center">
               <FileJson2 className="h-10 w-10 text-primary/70" />
               <div className="space-y-1">
                 <div className="font-medium">{t('apiSpecs.aiCreateDialog.emptyState.title')}</div>
@@ -1098,57 +1271,51 @@ function ApiSpecAICreateDialogContent({
         )}
       </DialogBody>
 
-      <DialogFooter className="justify-between gap-3 border-t border-border/60 pt-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <DialogFooter className="justify-between gap-3 border-t border-border/60 px-6 py-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {draft ? (
             <>
               <DisabledReasonTooltip
                 disabled={Boolean(draftOptionDisableReason)}
                 reason={draftOptionDisableReason}
               >
-                <div className="flex items-center gap-2">
-                  <Switch
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox
                     checked={generateDoc}
-                    onCheckedChange={setGenerateDoc}
+                    onCheckedChange={checked => setGenerateDoc(checked === true)}
                     disabled={isGeneratingDraft}
                     className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
                   />
-                  <span className="text-sm text-muted-foreground">
-                    {t('apiSpecs.aiCreateDialog.toggles.generateDoc')}
-                  </span>
-                </div>
+                  <span>{t('apiSpecs.aiCreateDialog.toggles.generateDoc')}</span>
+                </label>
               </DisabledReasonTooltip>
               <DisabledReasonTooltip
                 disabled={Boolean(draftOptionDisableReason)}
                 reason={draftOptionDisableReason}
               >
-                <div className="flex items-center gap-2">
-                  <Switch
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox
                     checked={generateTest}
-                    onCheckedChange={setGenerateTest}
+                    onCheckedChange={checked => setGenerateTest(checked === true)}
                     disabled={isGeneratingDraft}
                     className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
                   />
-                  <span className="text-sm text-muted-foreground">
-                    {t('apiSpecs.aiCreateDialog.toggles.generateTest')}
-                  </span>
-                </div>
+                  <span>{t('apiSpecs.aiCreateDialog.toggles.generateTest')}</span>
+                </label>
               </DisabledReasonTooltip>
               <DisabledReasonTooltip
                 disabled={Boolean(draftOptionDisableReason)}
                 reason={draftOptionDisableReason}
               >
-                <div className="flex items-center gap-2">
-                  <Switch
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox
                     checked={continueToTests}
-                    onCheckedChange={setContinueToTests}
+                    onCheckedChange={checked => setContinueToTests(checked === true)}
                     disabled={isGeneratingDraft}
                     className={draftOptionDisableReason ? 'pointer-events-none' : undefined}
                   />
-                  <span className="text-sm text-muted-foreground">
-                    {t('apiSpecs.aiCreateDialog.toggles.openTestsAfterCreate')}
-                  </span>
-                </div>
+                  <span>{t('apiSpecs.aiCreateDialog.toggles.openTestsAfterCreate')}</span>
+                </label>
               </DisabledReasonTooltip>
             </>
           ) : (
@@ -1157,11 +1324,11 @@ function ApiSpecAICreateDialogContent({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={isGeneratingDraft ? handleCancelDraftGeneration : () => onOpenChange(false)}
-          >
+            <Button
+              type="button"
+              variant="outline"
+              onClick={isGeneratingDraft ? handleCancelDraftGeneration : () => onOpenChange(false)}
+            >
             {isGeneratingDraft
               ? t('apiSpecs.aiCreateDialog.actions.cancelGeneration')
               : t('common.cancel')}
@@ -1179,11 +1346,7 @@ function ApiSpecAICreateDialogContent({
               className={generateDraftDisableReason ? 'pointer-events-none' : undefined}
             >
               <Sparkles className="h-4 w-4" />
-              {didDraftGenerationFail
-                ? t('apiSpecs.aiCreateDialog.actions.retryDraft')
-                : draft
-                  ? t('apiSpecs.aiCreateDialog.actions.regenerateDraft')
-                  : t('apiSpecs.aiCreateDialog.actions.generateDraft')}
+              {t('apiSpecs.aiCreateDialog.actions.regenerateDraft')}
             </Button>
           </DisabledReasonTooltip>
           {draft ? (
@@ -1198,7 +1361,8 @@ function ApiSpecAICreateDialogContent({
                 disabled={isGeneratingDraft}
                 className={createSpecDisableReason ? 'pointer-events-none' : undefined}
               >
-                {t('apiSpecs.aiCreateDialog.actions.createSpec')}
+                <Check className="h-4 w-4" />
+                {t('apiSpecs.aiCreateDialog.actions.createSpecCompact')}
               </Button>
             </DisabledReasonTooltip>
           ) : null}

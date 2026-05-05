@@ -19,7 +19,7 @@ func TestRepositoryGetSpecByMethodAndPathReturnsNilWhenMissing(t *testing.T) {
 	}
 
 	repo := NewRepository(db)
-	spec, err := repo.GetSpecByMethodAndPath(context.Background(), 1, "GET", "/missing")
+	spec, err := repo.GetSpecByMethodAndPath(context.Background(), "project-1", "GET", "/missing")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

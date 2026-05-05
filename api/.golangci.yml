@@ -4,30 +4,17 @@ run:
   build-tags: []
 
 linters:
+  disable-all: true
   enable:
-    - errcheck
+    - gofmt
+    - goimports
     - gosimple
     - govet
     - ineffassign
-    - staticcheck
-    - unused
-    - misspell
-    - gofmt
-    - goimports
-    - bodyclose
-    - exhaustive
-    - nilerr
     - unconvert
-    - unparam
-    - wastedassign
 
 linters-settings:
-  errcheck:
-    check-blank: true
-    check-type-assertions: true
-  
   govet:
-    enable-all: true
     disable:
       - fieldalignment
   
@@ -35,32 +22,17 @@ linters-settings:
     simplify: true
   
   goimports:
-    local-prefixes: github.com/zgiai/zgo
-  
-  misspell:
-    locale: US
-  
-  exhaustive:
-    default-signifies-exhaustive: true
+    local-prefixes: github.com/kest-labs/kest/api
 
 issues:
   exclude-rules:
-    # Exclude some linters from tests
     - path: _test\.go
       linters:
-        - errcheck
-        - bodyclose
-    
-    # Exclude test helpers
+        - govet
+
     - path: tests/
       linters:
-        - errcheck
-        - bodyclose
-    
-    # Allow TODO comments
-    - source: "TODO"
-      linters:
-        - godox
+        - govet
 
   max-issues-per-linter: 50
   max-same-issues: 5

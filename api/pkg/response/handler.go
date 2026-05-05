@@ -5,8 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kest-labs/kest/api/internal/domain"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/domain"
 )
 
 // Common domain errors that can be mapped to HTTP responses.

@@ -7,14 +7,15 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/bootstrap"
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/console"
 	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/wiring"
 	"github.com/kest-labs/kest/api/routes"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 )
 
 // ServeCommand starts the HTTP server

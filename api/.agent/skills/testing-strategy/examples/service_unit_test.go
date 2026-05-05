@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
 	"github.com/kest-labs/kest/api/internal/domain"
 	"github.com/kest-labs/kest/api/internal/modules/user"
 )

@@ -3,6 +3,7 @@ SERVER_BINARY=kest-server
 OUTPUT_DIR=bin
 MAIN_PACKAGE=./cmd/api
 WIRE_PACKAGE=./internal/wiring
+GOBIN_PATH=$(shell go env GOPATH)/bin
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -122,13 +123,16 @@ cover:
 # Run linter
 lint:
 	@echo "Running linter..."
-	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
-	golangci-lint run ./...
+	@PATH="$(GOBIN_PATH):$$PATH"; \
+		command -v golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest); \
+		golangci-lint run ./...
 
 # Fix lint issues automatically
 lint-fix:
 	@echo "Fixing lint issues..."
-	golangci-lint run --fix ./...
+	@PATH="$(GOBIN_PATH):$$PATH"; \
+		command -v golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest); \
+		golangci-lint run --fix ./...
 
 # Generate code (Wire, etc.)
 generate:

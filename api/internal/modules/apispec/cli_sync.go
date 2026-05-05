@@ -179,25 +179,14 @@ func toCreateAPISpecRequest(projectID string, spec CLISpecSyncSpecInput) *Create
 	if len(spec.Parameters) > 0 {
 		req.Parameters = make([]ParameterSpec, 0, len(spec.Parameters))
 		for _, parameter := range spec.Parameters {
-			req.Parameters = append(req.Parameters, ParameterSpec{
-				Name:        parameter.Name,
-				In:          parameter.In,
-				Description: parameter.Description,
-				Required:    parameter.Required,
-				Schema:      parameter.Schema,
-				Example:     parameter.Example,
-			})
+			req.Parameters = append(req.Parameters, ParameterSpec(parameter))
 		}
 	}
 
 	if len(spec.Responses) > 0 {
 		req.Responses = make(map[string]ResponseSpec, len(spec.Responses))
 		for code, response := range spec.Responses {
-			req.Responses[code] = ResponseSpec{
-				Description: response.Description,
-				ContentType: response.ContentType,
-				Schema:      response.Schema,
-			}
+			req.Responses[code] = ResponseSpec(response)
 		}
 	}
 

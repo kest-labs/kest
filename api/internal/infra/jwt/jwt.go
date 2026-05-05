@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	idpkg "github.com/kest-labs/kest/api/pkg/id"
 )

@@ -4,7 +4,7 @@ import "time"
 
 // CreateExampleRequest is the request body for creating an example
 type CreateExampleRequest struct {
-	RequestID string        `json:"request_id"`
+	RequestID   string      `json:"request_id"`
 	Name        string      `json:"name" binding:"required,min=1,max=100"`
 	Description string      `json:"description" binding:"max=500"`
 	URL         string      `json:"url" binding:"max=2000"`
@@ -43,8 +43,8 @@ type SaveResponseRequest struct {
 
 // ExampleResponse is the response for example endpoints
 type ExampleResponse struct {
-	ID string              `json:"id"`
-	RequestID string              `json:"request_id"`
+	ID              string            `json:"id"`
+	RequestID       string            `json:"request_id"`
 	Name            string            `json:"name"`
 	Description     string            `json:"description"`
 	URL             string            `json:"url"`

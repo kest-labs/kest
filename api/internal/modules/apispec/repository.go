@@ -4,8 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 )
 
 // SpecListFilter holds filter parameters for listing API specs

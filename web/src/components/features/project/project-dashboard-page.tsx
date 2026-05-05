@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowRight, Boxes, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
 import { ActionMenu } from '@/components/features/project/action-menu';
 import {
   ProjectHomeStatusBadge,
@@ -36,6 +36,7 @@ import {
   buildProjectEnvironmentsRoute,
   buildProjectTestCasesRoute,
 } from '@/constants/routes';
+import { useCreateDemoProject } from '@/hooks/use-create-demo-project';
 import { apiSpecKeys, useApiSpecs } from '@/hooks/use-api-specs';
 import {
   projectKeys,
@@ -49,6 +50,7 @@ import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
 import { apiSpecService } from '@/services/api-spec';
 import { projectService } from '@/services/project';
+import { useOnboardingStore } from '@/store/onboarding-store';
 import type { ApiProject, CreateProjectRequest, UpdateProjectRequest } from '@/types/project';
 import { formatDate } from '@/utils';
 
@@ -140,8 +142,10 @@ export function ProjectDashboardPage() {
 
   const projectsQuery = useProjects({ page: 1, perPage: PROJECTS_PAGE_SIZE });
   const createProjectMutation = useCreateProject();
+  const createDemoProjectMutation = useCreateDemoProject();
   const deleteProjectMutation = useDeleteProject();
   const updateProjectMutation = useUpdateProject();
+  const markFirstProjectCreated = useOnboardingStore.use.markFirstProjectCreated();
 
   const projects = projectsQuery.data?.items ?? EMPTY_PROJECTS;
   const previewProjectId = normalizeProjectId(searchParams.get('preview'));
@@ -252,6 +256,7 @@ export function ProjectDashboardPage() {
     try {
       if (formMode === 'create') {
         const project = await createProjectMutation.mutateAsync(payload as CreateProjectRequest);
+        markFirstProjectCreated();
         navigateToPreview(project.id);
       } else if (editingProject) {
         await updateProjectMutation.mutateAsync({
@@ -296,7 +301,12 @@ export function ProjectDashboardPage() {
               />
             </div>
 
-            <Button type="button" onClick={openCreateDialog} className="w-full">
+            <Button
+              type="button"
+              onClick={openCreateDialog}
+              className="w-full"
+              data-onboarding="create-project"
+            >
               <Plus className="h-4 w-4" />
               {t('projectForm.createButton')}
             </Button>
@@ -304,7 +314,7 @@ export function ProjectDashboardPage() {
 
           <Separator />
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3" data-onboarding="project-list">
             <div className="mb-3 flex items-center justify-between px-2 text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
               <span>{t('dashboardPage.projectsLabel')}</span>
               <span>{filteredProjects.length}</span>
@@ -438,6 +448,12 @@ export function ProjectDashboardPage() {
               projects={projects}
               onOpenProject={navigateToPreview}
               onCreateProject={openCreateDialog}
+              onCreateDemoProject={async () => {
+                const result = await createDemoProjectMutation.mutateAsync();
+                markFirstProjectCreated();
+                navigateToPreview(result.project.id);
+              }}
+              isCreatingDemoProject={createDemoProjectMutation.isPending}
             />
           )}
         </div>
@@ -449,6 +465,7 @@ export function ProjectDashboardPage() {
         project={editingProject}
         isSubmitting={
           createProjectMutation.isPending ||
+          createDemoProjectMutation.isPending ||
           updateProjectMutation.isPending ||
           deleteProjectMutation.isPending
         }
@@ -474,10 +491,14 @@ function ProjectDashboardWelcome({
   projects,
   onOpenProject,
   onCreateProject,
+  onCreateDemoProject,
+  isCreatingDemoProject,
 }: {
   projects: ApiProject[];
   onOpenProject: (projectId?: string | number | null) => void;
   onCreateProject: () => void;
+  onCreateDemoProject: () => Promise<void>;
+  isCreatingDemoProject: boolean;
 }) {
   const t = useT('project');
   const recentProjects = [...projects].sort(sortProjectsByCreatedAtDesc).slice(0, 5);
@@ -499,7 +520,7 @@ function ProjectDashboardWelcome({
               </CardDescription>
             </div>
 
-            <Button type="button" onClick={onCreateProject}>
+            <Button type="button" onClick={onCreateProject} data-onboarding="create-project">
               <Plus className="h-4 w-4" />
               {t('projectForm.createButton')}
             </Button>
@@ -537,19 +558,52 @@ function ProjectDashboardWelcome({
           </CardContent>
         </Card>
 
-        <Card className="border-dashed border-border/70">
+        <Card
+          className="border-border/70 bg-linear-to-br from-amber-50 via-background to-cyan-50"
+          data-onboarding="demo-project-card"
+        >
           <CardHeader>
-            <CardTitle>{t('dashboardPage.twoWaysTitle')}</CardTitle>
-            <CardDescription>{t('dashboardPage.twoWaysDescription')}</CardDescription>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Boxes className="h-5 w-5 text-primary" />
+                  {t('dashboardPage.demoCardTitle')}
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  {t('dashboardPage.demoCardDescription')}
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                {t('dashboardPage.demoCardBadge')}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-text-muted">
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">{t('dashboardPage.aiStartTitle')}</p>
-              <p className="mt-1">{t('dashboardPage.aiStartDescription')}</p>
+              <p className="font-medium text-text-main">{t('dashboardPage.demoCardApiSpecsTitle')}</p>
+              <p className="mt-1">{t('dashboardPage.demoCardApiSpecsDescription')}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">{t('dashboardPage.quickRequestTitle')}</p>
-              <p className="mt-1">{t('dashboardPage.quickRequestDescription')}</p>
+              <p className="font-medium text-text-main">{t('dashboardPage.demoCardRequestsTitle')}</p>
+              <p className="mt-1">{t('dashboardPage.demoCardRequestsDescription')}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="font-medium text-text-main">{t('dashboardPage.demoCardRuntimeTitle')}</p>
+              <p className="mt-1">{t('dashboardPage.demoCardRuntimeDescription')}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                type="button"
+                onClick={() => void onCreateDemoProject()}
+                loading={isCreatingDemoProject}
+              >
+                <Sparkles className="h-4 w-4" />
+                {t('dashboardPage.demoCardAction')}
+              </Button>
+              <Button type="button" variant="ghost" onClick={onCreateProject}>
+                {t('dashboardPage.demoCardSecondaryAction')}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>

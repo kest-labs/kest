@@ -3,8 +3,9 @@ package unit
 import (
 	"testing"
 
-	"github.com/kest-labs/kest/api/pkg/validation"
 	"github.com/go-playground/validator/v10"
+
+	"github.com/kest-labs/kest/api/pkg/validation"
 )
 
 func TestValidation_Required(t *testing.T) {

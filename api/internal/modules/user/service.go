@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/kest-labs/kest/api/internal/domain"
 	"github.com/kest-labs/kest/api/internal/infra/email"
 	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/kest-labs/kest/api/internal/infra/jwt"
 	"github.com/kest-labs/kest/api/pkg/utils"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Service defines the interface for user-related operations.

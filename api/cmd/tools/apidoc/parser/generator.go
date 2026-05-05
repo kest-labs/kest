@@ -273,7 +273,7 @@ func GenerateModuleDocs(endpoints []Endpoint, outputDir string) error {
 
 		// Base URL reference
 		sb.WriteString("## Base URL\n\n")
-		sb.WriteString(fmt.Sprintf("See [API Documentation](./api.md) for environment-specific base URLs.\n\n"))
+		sb.WriteString("See [API Documentation](./api.md) for environment-specific base URLs.\n\n")
 
 		// Summary table
 		sb.WriteString("## Endpoints\n\n")

@@ -3,9 +3,10 @@ package user
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/kest-labs/kest/api/internal/domain"
 	"github.com/kest-labs/kest/api/pkg/dbutil"
-	"gorm.io/gorm"
 )
 
 // repository implements domain.UserRepository

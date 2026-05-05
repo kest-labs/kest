@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kest-labs/kest/api/pkg/logger"
 	"github.com/fsnotify/fsnotify"
+
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 // Observer is a callback function that's called when config changes

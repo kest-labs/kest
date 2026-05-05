@@ -8,9 +8,9 @@ import (
 )
 
 func TestServiceUpdateRejectsDescendantParent(t *testing.T) {
-	projectID := uint(1)
-	rootID := uint(1)
-	childID := uint(2)
+	projectID := "1"
+	rootID := "1"
+	childID := "2"
 
 	repo := &stubCollectionRepository{
 		collections: map[string]*Collection{
@@ -24,7 +24,7 @@ func TestServiceUpdateRejectsDescendantParent(t *testing.T) {
 				ID:        childID,
 				Name:      "Child",
 				ProjectID: projectID,
-				ParentID:  uintPtr(rootID),
+				ParentID:  stringPtr(rootID),
 				IsFolder:  true,
 			},
 		},
@@ -32,7 +32,7 @@ func TestServiceUpdateRejectsDescendantParent(t *testing.T) {
 
 	service := NewService(repo)
 	req := &UpdateCollectionRequest{
-		ParentID: uintPtr(childID),
+		ParentID: stringPtr(childID),
 	}
 
 	_, err := service.Update(context.Background(), rootID, projectID, req)
@@ -42,10 +42,10 @@ func TestServiceUpdateRejectsDescendantParent(t *testing.T) {
 }
 
 func TestServiceGetTreeHandlesCorruptHierarchy(t *testing.T) {
-	projectID := uint(1)
-	cycleA := uint(1)
-	cycleB := uint(2)
-	orphanParent := uint(999)
+	projectID := "1"
+	cycleA := "1"
+	cycleB := "2"
+	orphanParent := "999"
 
 	repo := &stubCollectionRepository{
 		collections: map[string]*Collection{
@@ -53,7 +53,7 @@ func TestServiceGetTreeHandlesCorruptHierarchy(t *testing.T) {
 				ID:        cycleA,
 				Name:      "Cycle A",
 				ProjectID: projectID,
-				ParentID:  uintPtr(cycleB),
+				ParentID:  stringPtr(cycleB),
 				IsFolder:  true,
 				SortOrder: 2,
 			},
@@ -61,15 +61,15 @@ func TestServiceGetTreeHandlesCorruptHierarchy(t *testing.T) {
 				ID:        cycleB,
 				Name:      "Cycle B",
 				ProjectID: projectID,
-				ParentID:  uintPtr(cycleA),
+				ParentID:  stringPtr(cycleA),
 				IsFolder:  true,
 				SortOrder: 1,
 			},
-			3: {
-				ID:        3,
+			"3": {
+				ID:        "3",
 				Name:      "Orphan",
 				ProjectID: projectID,
-				ParentID:  uintPtr(orphanParent),
+				ParentID:  stringPtr(orphanParent),
 				IsFolder:  false,
 				SortOrder: 3,
 			},
@@ -172,7 +172,7 @@ func (r *stubCollectionRepository) GetByParentID(_ context.Context, projectID st
 	return collections, nil
 }
 
-func (r *stubCollectionRepository) GetStats(_ context.Context, _ uint) (*CollectionStats, error) {
+func (r *stubCollectionRepository) GetStats(_ context.Context, _ string) (*CollectionStats, error) {
 	return &CollectionStats{}, nil
 }
 
@@ -183,12 +183,12 @@ func cloneCollection(collection *Collection) *Collection {
 
 	cloned := *collection
 	if collection.ParentID != nil {
-		cloned.ParentID = uintPtr(*collection.ParentID)
+		cloned.ParentID = stringPtr(*collection.ParentID)
 	}
 
 	return &cloned
 }
 
-func uintPtr(value uint) *uint {
+func stringPtr(value string) *string {
 	return &value
 }

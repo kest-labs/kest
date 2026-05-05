@@ -8,17 +8,17 @@ import (
 
 // APISpecPO is the persistent object for API specifications
 type APISpecPO struct {
-	ID string   `gorm:"primaryKey"`
-	ProjectID string   `gorm:"index;not null"`          // Foreign key to projects table
-	CategoryID *string  `gorm:"index"`                   // Optional category
-	Method         string `gorm:"size:10;not null;index"`  // GET, POST, etc.
-	Path           string `gorm:"size:500;not null;index"` // /api/users/:id
-	Summary        string `gorm:"size:500"`                // Short description
-	Description    string `gorm:"type:text"`               // Detailed description
-	DocMarkdown    string `gorm:"type:text"`               // Frontend-facing API doc content (Markdown)
-	DocMarkdownZh  string `gorm:"type:text"`               // Chinese API doc content (Markdown)
-	DocMarkdownEn  string `gorm:"type:text"`               // English API doc content (Markdown)
-	DocSource      string `gorm:"size:20;default:manual"`  // manual | ai
+	ID             string  `gorm:"primaryKey"`
+	ProjectID      string  `gorm:"index;not null"`          // Foreign key to projects table
+	CategoryID     *string `gorm:"index"`                   // Optional category
+	Method         string  `gorm:"size:10;not null;index"`  // GET, POST, etc.
+	Path           string  `gorm:"size:500;not null;index"` // /api/users/:id
+	Summary        string  `gorm:"size:500"`                // Short description
+	Description    string  `gorm:"type:text"`               // Detailed description
+	DocMarkdown    string  `gorm:"type:text"`               // Frontend-facing API doc content (Markdown)
+	DocMarkdownZh  string  `gorm:"type:text"`               // Chinese API doc content (Markdown)
+	DocMarkdownEn  string  `gorm:"type:text"`               // English API doc content (Markdown)
+	DocSource      string  `gorm:"size:20;default:manual"`  // manual | ai
 	DocUpdatedAt   *time.Time
 	DocUpdatedAtZh *time.Time
 	DocUpdatedAtEn *time.Time
@@ -44,8 +44,8 @@ func (APISpecPO) TableName() string {
 
 // APIExamplePO is the persistent object for API request/response examples
 type APIExamplePO struct {
-	ID string   `gorm:"primaryKey"`
-	APISpecID string   `gorm:"index;not null"`    // Foreign key to api_specs
+	ID              string `gorm:"primaryKey"`
+	APISpecID       string `gorm:"index;not null"`    // Foreign key to api_specs
 	Name            string `gorm:"size:255;not null"` // Example name
 	Description     string `gorm:"type:text"`         // Example description
 	Path            string `gorm:"size:500"`          // Request path

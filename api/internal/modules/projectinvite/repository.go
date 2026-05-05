@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/project"
 	"github.com/kest-labs/kest/api/pkg/dbutil"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Repository interface {

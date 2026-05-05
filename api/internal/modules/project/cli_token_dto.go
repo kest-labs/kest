@@ -9,8 +9,8 @@ type GenerateProjectCLITokenRequest struct {
 }
 
 type ProjectCLITokenResponse struct {
-	ID string       `json:"id"`
-	ProjectID string       `json:"project_id"`
+	ID          string     `json:"id"`
+	ProjectID   string     `json:"project_id"`
 	Name        string     `json:"name"`
 	TokenPrefix string     `json:"token_prefix"`
 	Scopes      []string   `json:"scopes"`
@@ -22,7 +22,7 @@ type ProjectCLITokenResponse struct {
 type GenerateProjectCLITokenResponse struct {
 	Token     string                   `json:"token"`
 	TokenType string                   `json:"token_type"`
-	ProjectID string                     `json:"project_id"`
+	ProjectID string                   `json:"project_id"`
 	TokenInfo *ProjectCLITokenResponse `json:"token_info"`
 }
 

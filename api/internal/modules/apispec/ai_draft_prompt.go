@@ -32,7 +32,7 @@ func buildCreateAIDraftPrompt(
 			sb.WriteString(fmt.Sprintf("Path: %s\n", req.Path))
 		}
 		if req.CategoryID != nil {
-			sb.WriteString(fmt.Sprintf("CategoryID: %d\n", *req.CategoryID))
+			sb.WriteString(fmt.Sprintf("CategoryID: %s\n", *req.CategoryID))
 		}
 		sb.WriteString("\n")
 	}

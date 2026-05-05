@@ -4,7 +4,7 @@ import "time"
 
 // CreateRequestRequest is the request body for creating a request
 type CreateRequestRequest struct {
-	CollectionID string        `json:"collection_id"`
+	CollectionID string      `json:"collection_id"`
 	Name         string      `json:"name" binding:"required,min=1,max=100"`
 	Description  string      `json:"description" binding:"max=500"`
 	Method       string      `json:"method" binding:"required,oneof=GET POST PUT PATCH DELETE HEAD OPTIONS"`
@@ -40,13 +40,13 @@ type UpdateRequestRequest struct {
 // MoveRequestRequest is the request body for moving a request
 type MoveRequestRequest struct {
 	CollectionID *string `json:"collection_id,omitempty"`
-	SortOrder    *int  `json:"sort_order,omitempty"`
+	SortOrder    *int    `json:"sort_order,omitempty"`
 }
 
 // RequestResponse is the response for request endpoints
 type RequestResponse struct {
-	ID string              `json:"id"`
-	CollectionID string              `json:"collection_id"`
+	ID           string            `json:"id"`
+	CollectionID string            `json:"collection_id"`
 	Name         string            `json:"name"`
 	Description  string            `json:"description"`
 	Method       string            `json:"method"`

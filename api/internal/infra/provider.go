@@ -2,6 +2,7 @@ package infra
 
 import (
 	"github.com/google/wire"
+
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/database"
 	"github.com/kest-labs/kest/api/internal/infra/email"

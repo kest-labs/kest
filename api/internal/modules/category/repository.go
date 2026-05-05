@@ -3,8 +3,9 @@ package category
 import (
 	"context"
 
-	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 )
 
 // Repository defines the interface for category data access

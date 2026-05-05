@@ -9,25 +9,25 @@ import (
 func TestServiceGetCategoryRespectsProjectScope(t *testing.T) {
 	repo := &stubCategoryRepository{
 		categories: map[string]*CategoryPO{
-			7: {
-				ID:        7,
-				ProjectID: 2,
+			"7": {
+				ID:        "7",
+				ProjectID: "2",
 				Name:      "Foreign",
 			},
 		},
 	}
 
 	service := NewService(repo)
-	_, err := service.GetCategory(context.Background(), 1, 7)
+	_, err := service.GetCategory(context.Background(), "1", "7")
 	if !errors.Is(err, ErrCategoryNotFound) {
 		t.Fatalf("expected ErrCategoryNotFound, got %v", err)
 	}
 }
 
 func TestServiceUpdateCategoryRejectsCrossProjectParent(t *testing.T) {
-	projectID := uint(1)
-	categoryID := uint(10)
-	foreignParentID := uint(99)
+	projectID := "1"
+	categoryID := "10"
+	foreignParentID := "99"
 
 	repo := &stubCategoryRepository{
 		categories: map[string]*CategoryPO{
@@ -38,7 +38,7 @@ func TestServiceUpdateCategoryRejectsCrossProjectParent(t *testing.T) {
 			},
 			foreignParentID: {
 				ID:        foreignParentID,
-				ProjectID: 2,
+				ProjectID: "2",
 				Name:      "Foreign Parent",
 			},
 		},
@@ -58,16 +58,16 @@ func TestServiceUpdateCategoryRejectsCrossProjectParent(t *testing.T) {
 func TestServiceDeleteCategoryRespectsProjectScope(t *testing.T) {
 	repo := &stubCategoryRepository{
 		categories: map[string]*CategoryPO{
-			8: {
-				ID:        8,
-				ProjectID: 2,
+			"8": {
+				ID:        "8",
+				ProjectID: "2",
 				Name:      "Foreign",
 			},
 		},
 	}
 
 	service := NewService(repo)
-	err := service.DeleteCategory(context.Background(), 1, 8)
+	err := service.DeleteCategory(context.Background(), "1", "8")
 	if !errors.Is(err, ErrCategoryNotFound) {
 		t.Fatalf("expected ErrCategoryNotFound, got %v", err)
 	}
@@ -140,7 +140,7 @@ func cloneCategory(category *CategoryPO) *CategoryPO {
 	return &cloned
 }
 
-func ptrToPtr(value uint) **uint {
+func ptrToPtr(value string) **string {
 	ptr := &value
 	return &ptr
 }

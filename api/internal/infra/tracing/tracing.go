@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kest-labs/kest/api/internal/infra/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -14,6 +13,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/kest-labs/kest/api/internal/infra/config"
 )
 
 // TracerProvider wraps the OpenTelemetry tracer provider

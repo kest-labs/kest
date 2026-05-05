@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -26,11 +27,11 @@ func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 
 var _ Repository = (*runnerRepoStub)(nil)
 
-func newRunnerRepoStub(runID string, stepIDs ...uint) *runnerRepoStub {
+func newRunnerRepoStub(runID string, stepIDs ...string) *runnerRepoStub {
 	results := make([]*FlowStepResultPO, 0, len(stepIDs))
 	for index, stepID := range stepIDs {
 		results = append(results, &FlowStepResultPO{
-			ID:     uint(index + 1),
+			ID:     strconv.Itoa(index + 1),
 			RunID:  runID,
 			StepID: stepID,
 			Status: RunStatusPending,
@@ -46,58 +47,64 @@ func newRunnerRepoStub(runID string, stepIDs ...uint) *runnerRepoStub {
 func (r *runnerRepoStub) CreateFlow(context.Context, *FlowPO) error {
 	panic("unexpected CreateFlow call")
 }
-func (r *runnerRepoStub) GetFlowByID(context.Context, uint) (*FlowPO, error) {
+func (r *runnerRepoStub) GetFlowByID(context.Context, string) (*FlowPO, error) {
 	panic("unexpected GetFlowByID call")
 }
-func (r *runnerRepoStub) ListFlowsByProject(context.Context, uint) ([]*FlowPO, error) {
+func (r *runnerRepoStub) ListFlowsByProject(context.Context, string) ([]*FlowPO, error) {
 	panic("unexpected ListFlowsByProject call")
 }
 func (r *runnerRepoStub) UpdateFlow(context.Context, *FlowPO) error {
 	panic("unexpected UpdateFlow call")
 }
-func (r *runnerRepoStub) DeleteFlow(context.Context, uint) error { panic("unexpected DeleteFlow call") }
+func (r *runnerRepoStub) DeleteFlow(context.Context, string) error {
+	panic("unexpected DeleteFlow call")
+}
 
 func (r *runnerRepoStub) CreateStep(context.Context, *FlowStepPO) error {
 	panic("unexpected CreateStep call")
 }
-func (r *runnerRepoStub) GetStepByID(context.Context, uint) (*FlowStepPO, error) {
+func (r *runnerRepoStub) GetStepByID(context.Context, string) (*FlowStepPO, error) {
 	panic("unexpected GetStepByID call")
 }
-func (r *runnerRepoStub) ListStepsByFlow(context.Context, uint) ([]*FlowStepPO, error) {
+func (r *runnerRepoStub) ListStepsByFlow(context.Context, string) ([]*FlowStepPO, error) {
 	panic("unexpected ListStepsByFlow call")
 }
 func (r *runnerRepoStub) UpdateStep(context.Context, *FlowStepPO) error {
 	panic("unexpected UpdateStep call")
 }
-func (r *runnerRepoStub) DeleteStep(context.Context, uint) error { panic("unexpected DeleteStep call") }
-func (r *runnerRepoStub) DeleteStepsByFlow(context.Context, uint) error {
+func (r *runnerRepoStub) DeleteStep(context.Context, string) error {
+	panic("unexpected DeleteStep call")
+}
+func (r *runnerRepoStub) DeleteStepsByFlow(context.Context, string) error {
 	panic("unexpected DeleteStepsByFlow call")
 }
 
 func (r *runnerRepoStub) CreateEdge(context.Context, *FlowEdgePO) error {
 	panic("unexpected CreateEdge call")
 }
-func (r *runnerRepoStub) GetEdgeByID(context.Context, uint) (*FlowEdgePO, error) {
+func (r *runnerRepoStub) GetEdgeByID(context.Context, string) (*FlowEdgePO, error) {
 	panic("unexpected GetEdgeByID call")
 }
-func (r *runnerRepoStub) ListEdgesByFlow(context.Context, uint) ([]*FlowEdgePO, error) {
+func (r *runnerRepoStub) ListEdgesByFlow(context.Context, string) ([]*FlowEdgePO, error) {
 	panic("unexpected ListEdgesByFlow call")
 }
 func (r *runnerRepoStub) UpdateEdge(context.Context, *FlowEdgePO) error {
 	panic("unexpected UpdateEdge call")
 }
-func (r *runnerRepoStub) DeleteEdge(context.Context, uint) error { panic("unexpected DeleteEdge call") }
-func (r *runnerRepoStub) DeleteEdgesByFlow(context.Context, uint) error {
+func (r *runnerRepoStub) DeleteEdge(context.Context, string) error {
+	panic("unexpected DeleteEdge call")
+}
+func (r *runnerRepoStub) DeleteEdgesByFlow(context.Context, string) error {
 	panic("unexpected DeleteEdgesByFlow call")
 }
 
 func (r *runnerRepoStub) CreateRun(context.Context, *FlowRunPO) error {
 	panic("unexpected CreateRun call")
 }
-func (r *runnerRepoStub) GetRunByID(context.Context, uint) (*FlowRunPO, error) {
+func (r *runnerRepoStub) GetRunByID(context.Context, string) (*FlowRunPO, error) {
 	panic("unexpected GetRunByID call")
 }
-func (r *runnerRepoStub) ListRunsByFlow(context.Context, uint) ([]*FlowRunPO, error) {
+func (r *runnerRepoStub) ListRunsByFlow(context.Context, string) ([]*FlowRunPO, error) {
 	panic("unexpected ListRunsByFlow call")
 }
 func (r *runnerRepoStub) UpdateRun(_ context.Context, run *FlowRunPO) error {
@@ -165,17 +172,17 @@ func executeTwoStepFlow(t *testing.T, variableMapping string, downstreamHeaders 
 		http.DefaultTransport = originalTransport
 	})
 
-	repo := newRunnerRepoStub(1, 101, 202)
+	repo := newRunnerRepoStub("1", "101", "202")
 	runner := NewRunner(repo, "mock://flow")
 	run := &FlowRunPO{
-		ID:     1,
-		FlowID: 99,
+		ID:     "1",
+		FlowID: "99",
 		Status: RunStatusPending,
 	}
 	steps := []FlowStepPO{
 		{
-			ID:        101,
-			FlowID:    99,
+			ID:        "101",
+			FlowID:    "99",
 			ClientKey: "login",
 			Name:      "Login",
 			SortOrder: 0,
@@ -185,8 +192,8 @@ func executeTwoStepFlow(t *testing.T, variableMapping string, downstreamHeaders 
 			Asserts:   "status == 200",
 		},
 		{
-			ID:        202,
-			FlowID:    99,
+			ID:        "202",
+			FlowID:    "99",
 			ClientKey: "profile",
 			Name:      "Profile",
 			SortOrder: 1,
@@ -198,9 +205,9 @@ func executeTwoStepFlow(t *testing.T, variableMapping string, downstreamHeaders 
 	}
 	edges := []FlowEdgePO{
 		{
-			FlowID:          99,
-			SourceStepID:    101,
-			TargetStepID:    202,
+			FlowID:          "99",
+			SourceStepID:    "101",
+			TargetStepID:    "202",
 			VariableMapping: variableMapping,
 		},
 	}
@@ -222,7 +229,7 @@ func TestRunnerExecute_UsesExplicitEdgeMappings(t *testing.T) {
 	assert.Equal(t, RunStatusRunning, repo.updatedRuns[0].Status)
 	assert.Equal(t, RunStatusPassed, run.Status)
 
-	profileResult := repo.updatedResults[202]
+	profileResult := repo.updatedResults["202"]
 	require.NotNil(t, profileResult)
 	assert.Equal(t, RunStatusPassed, profileResult.Status)
 
@@ -240,7 +247,7 @@ func TestRunnerExecute_FailsWhenRenamedVariableHasNoEdgeMapping(t *testing.T) {
 
 	assert.Equal(t, RunStatusFailed, run.Status)
 
-	profileResult := repo.updatedResults[202]
+	profileResult := repo.updatedResults["202"]
 	require.NotNil(t, profileResult)
 	assert.Equal(t, RunStatusFailed, profileResult.Status)
 	assert.Equal(t, "unresolved variables: authToken", profileResult.ErrorMessage)
@@ -255,13 +262,13 @@ func TestRunnerExecute_KeepsLegacyGlobalVariablesWorking(t *testing.T) {
 
 	assert.Equal(t, RunStatusPassed, run.Status)
 
-	profileResult := repo.updatedResults[202]
+	profileResult := repo.updatedResults["202"]
 	require.NotNil(t, profileResult)
 	assert.Equal(t, RunStatusPassed, profileResult.Status)
 }
 
 func TestRunnerProcessCaptures_SupportsBodyPrefixAndArrayIndexes(t *testing.T) {
-	runner := NewRunner(newRunnerRepoStub(1), "mock://flow")
+	runner := NewRunner(newRunnerRepoStub("1"), "mock://flow")
 	variables := map[string]any{}
 	responseData := map[string]any{
 		"data": map[string]any{

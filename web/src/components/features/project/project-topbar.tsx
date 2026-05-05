@@ -3,8 +3,12 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, LayoutPanelTop, LogOut, Settings } from 'lucide-react';
+import { Bell, Command, HelpCircle, LayoutPanelTop, LogOut, Settings } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/common';
+import {
+  OPEN_COMMAND_PALETTE_EVENT,
+  OPEN_HELP_CENTER_EVENT,
+} from '@/components/features/project/project-onboarding-shell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,6 +61,54 @@ export function ProjectTopbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              noScale
+              className="hidden rounded-full border-border/60 px-3 text-text-muted md:inline-flex"
+              data-onboarding="command-palette"
+              onClick={() => {
+                window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT));
+              }}
+            >
+              <Command className="h-3.5 w-3.5" />
+              <span>{t('topbar.commandMenu')}</span>
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-[0.18em]">
+                Cmd+K
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('topbar.commandMenuHint')}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              isIcon
+              noScale
+              className="h-9 w-9 rounded-full"
+              data-onboarding="help-button"
+              aria-label={t('topbar.help')}
+              onClick={() => {
+                window.dispatchEvent(new Event(OPEN_HELP_CENTER_EVENT));
+              }}
+            >
+              <HelpCircle className="h-4 w-4 text-text-muted" />
+              <span className="sr-only">{t('topbar.help')}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('topbar.helpHint')}</p>
+          </TooltipContent>
+        </Tooltip>
+
         <LanguageSwitcher showTooltip />
 
         <DropdownMenu>

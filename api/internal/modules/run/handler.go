@@ -2,6 +2,7 @@ package run
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/request"
@@ -31,7 +32,7 @@ func (h *Handler) Name() string {
 }
 
 type RunRequest struct {
-	EnvironmentID *string             `json:"environment_id"`
+	EnvironmentID *string           `json:"environment_id"`
 	Variables     map[string]string `json:"variables"`
 }
 

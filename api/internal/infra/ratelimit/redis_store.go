@@ -8,10 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	infraRedis "github.com/kest-labs/kest/api/internal/infra/redis"
-	"github.com/kest-labs/kest/api/pkg/logger"
 	goRedis "github.com/redis/go-redis/v9"
 	"golang.org/x/time/rate"
+
+	infraRedis "github.com/kest-labs/kest/api/internal/infra/redis"
+	"github.com/kest-labs/kest/api/pkg/logger"
 )
 
 //go:embed tokenscript.lua

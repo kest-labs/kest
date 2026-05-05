@@ -95,8 +95,8 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 	requestService := &stubRequestService{}
 	service := NewService(collectionService, requestService).(*service)
 
-	parentID := uint(9)
-	result, err := service.importMarkdownDocument(context.Background(), 7, parentID, doc)
+	parentID := "9"
+	result, err := service.importMarkdownDocument(context.Background(), "7", parentID, doc)
 	if err != nil {
 		t.Fatalf("expected import to succeed, got %v", err)
 	}
@@ -123,12 +123,12 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		t.Fatal("expected first collection to be the root folder")
 	}
 	if rootFolder.ParentID == nil || *rootFolder.ParentID != parentID {
-		t.Fatalf("expected root folder parent_id %d, got %#v", parentID, rootFolder.ParentID)
+		t.Fatalf("expected root folder parent_id %s, got %#v", parentID, rootFolder.ParentID)
 	}
 
 	projectCollection := collectionService.created[1]
 	if projectCollection.ParentID == nil || *projectCollection.ParentID != result.RootFolderID {
-		t.Fatalf("expected module collection to be under root folder %d, got %#v", result.RootFolderID, projectCollection.ParentID)
+		t.Fatalf("expected module collection to be under root folder %s, got %#v", result.RootFolderID, projectCollection.ParentID)
 	}
 
 	if len(requestService.created) != 2 {
@@ -372,7 +372,7 @@ func TestImportMarkdownPropagatesInvalidParentError(t *testing.T) {
 		},
 	}
 
-	_, err := service.importMarkdownDocument(context.Background(), 1, 3, doc)
+	_, err := service.importMarkdownDocument(context.Background(), "1", "3", doc)
 	if !errors.Is(err, collection.ErrInvalidParent) {
 		t.Fatalf("expected collection.ErrInvalidParent, got %v", err)
 	}
@@ -399,10 +399,10 @@ func TestImportMarkdownAlwaysAppendsRequestsOnRepeatedImport(t *testing.T) {
 	requestService := &stubRequestService{}
 	service := NewService(collectionService, requestService).(*service)
 
-	if _, err := service.importMarkdownDocument(context.Background(), 1, 0, doc); err != nil {
+	if _, err := service.importMarkdownDocument(context.Background(), "1", "", doc); err != nil {
 		t.Fatalf("expected first import to succeed, got %v", err)
 	}
-	if _, err := service.importMarkdownDocument(context.Background(), 1, 0, doc); err != nil {
+	if _, err := service.importMarkdownDocument(context.Background(), "1", "", doc); err != nil {
 		t.Fatalf("expected second import to succeed, got %v", err)
 	}
 

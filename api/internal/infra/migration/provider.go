@@ -2,9 +2,10 @@
 package migration
 
 import (
-	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/google/wire"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/infra/events"
 )
 
 // ProviderSet provides migration components for Wire DI.

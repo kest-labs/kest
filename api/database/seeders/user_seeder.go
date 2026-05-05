@@ -1,8 +1,9 @@
 package seeders
 
 import (
-	"github.com/kest-labs/kest/api/internal/modules/user"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/modules/user"
 )
 
 type UserSeeder struct{}

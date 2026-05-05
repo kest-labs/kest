@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/internal/infra/config"
 )
 
 // TimeoutConfig holds timeout middleware configuration

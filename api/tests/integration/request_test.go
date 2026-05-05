@@ -7,8 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kest-labs/kest/api/pkg/request"
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/pkg/request"
 )
 
 func init() {

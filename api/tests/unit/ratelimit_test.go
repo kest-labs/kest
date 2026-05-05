@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/infra/ratelimit"
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/internal/infra/ratelimit"
 )
 
 func init() {

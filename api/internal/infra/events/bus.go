@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+
 	"github.com/kest-labs/kest/api/pkg/events"
 )
 

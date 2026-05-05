@@ -86,11 +86,11 @@ func TestValidateSaveGraph(t *testing.T) {
 func TestValidateStoredGraph_AllowsLegacyStepsWithoutClientKeys(t *testing.T) {
 	err := validateStoredGraph(
 		[]*FlowStepPO{
-			{ID: 11, ClientKey: "", SortOrder: 0},
-			{ID: 22, ClientKey: "", SortOrder: 1},
+			{ID: "11", ClientKey: "", SortOrder: 0},
+			{ID: "22", ClientKey: "", SortOrder: 1},
 		},
 		[]*FlowEdgePO{
-			{SourceStepID: 11, TargetStepID: 22},
+			{SourceStepID: "11", TargetStepID: "22"},
 		},
 	)
 	require.NoError(t, err)

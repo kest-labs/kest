@@ -5,8 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 )
 
 // ProjectStats holds aggregate counts for a project

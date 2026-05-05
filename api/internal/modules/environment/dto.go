@@ -7,7 +7,7 @@ import (
 
 // CreateEnvironmentRequest represents the request to create an environment
 type CreateEnvironmentRequest struct {
-	ProjectID string                   `json:"project_id"`
+	ProjectID   string                 `json:"project_id"`
 	Name        string                 `json:"name" binding:"required,max=50"`
 	DisplayName string                 `json:"display_name,omitempty" binding:"max=100"`
 	BaseURL     string                 `json:"base_url,omitempty" binding:"max=500"`
@@ -26,8 +26,8 @@ type UpdateEnvironmentRequest struct {
 
 // EnvironmentResponse represents the response for an environment
 type EnvironmentResponse struct {
-	ID string                   `json:"id"`
-	ProjectID string                   `json:"project_id"`
+	ID          string                 `json:"id"`
+	ProjectID   string                 `json:"project_id"`
 	Name        string                 `json:"name"`
 	DisplayName string                 `json:"display_name,omitempty"`
 	BaseURL     string                 `json:"base_url,omitempty"`

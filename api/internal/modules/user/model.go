@@ -3,8 +3,9 @@ package user
 import (
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/domain"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/domain"
 )
 
 // UserPO is the persistent object for database operations (internal to repository)

@@ -8,10 +8,10 @@ import (
 
 // CategoryPO represents an API category in the database
 type CategoryPO struct {
-	ID string           `gorm:"primaryKey" json:"id"`
-	ProjectID string           `gorm:"not null;index:idx_categories_project" json:"project_id"`
+	ID          string         `gorm:"primaryKey" json:"id"`
+	ProjectID   string         `gorm:"not null;index:idx_categories_project" json:"project_id"`
 	Name        string         `gorm:"size:255;not null" json:"name"`
-	ParentID *string          `gorm:"index:idx_categories_parent" json:"parent_id"`
+	ParentID    *string        `gorm:"index:idx_categories_parent" json:"parent_id"`
 	Description string         `gorm:"type:text" json:"description"`
 	SortOrder   int            `gorm:"default:0" json:"sort_order"`
 	CreatedAt   time.Time      `json:"created_at"`

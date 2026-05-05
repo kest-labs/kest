@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/app"
 	"github.com/kest-labs/kest/api/internal/bootstrap"
 	"github.com/kest-labs/kest/api/internal/infra/config"

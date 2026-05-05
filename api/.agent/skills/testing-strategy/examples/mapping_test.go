@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/kest-labs/kest/api/internal/domain"
 	"github.com/kest-labs/kest/api/internal/modules/user"
 )

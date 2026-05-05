@@ -21,7 +21,7 @@ func TestUserRegistration(t *testing.T) {
 			"password": "password123",
 		}).
 		Call().
-		AssertOk().
+		AssertCreated().
 		AssertJSONPath("data.username", "testuser").
 		AssertJSONPath("data.email", email)
 }
@@ -40,7 +40,7 @@ func TestUserLogin(t *testing.T) {
 			"password": password,
 		}).
 		Call().
-		AssertOk()
+		AssertCreated()
 
 	// 2. Login
 	tc.Post("/v1/login").

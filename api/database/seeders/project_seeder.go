@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/kest-labs/kest/api/internal/modules/project"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/modules/project"
 )
 
 type projectSeeder struct{}
@@ -35,7 +36,7 @@ func (s *projectSeeder) Run(db *gorm.DB) error {
 		return err
 	}
 
-	log.Printf("Created test project: %s (ID: %d)\n", p.Name, p.ID)
+	log.Printf("Created test project: %s (ID: %s)\n", p.Name, p.ID)
 	return nil
 }
 

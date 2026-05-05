@@ -2,6 +2,7 @@ package member
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/infra/middleware"
 )
 

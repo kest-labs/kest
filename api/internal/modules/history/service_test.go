@@ -26,7 +26,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 			entity_type TEXT NOT NULL,
 			entity_id TEXT NOT NULL,
 			project_id TEXT NOT NULL,
-			user_id INTEGER NOT NULL,
+			user_id TEXT NOT NULL,
 			source TEXT NOT NULL DEFAULT 'web',
 			source_event_id TEXT NOT NULL,
 			action TEXT NOT NULL,
@@ -66,7 +66,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 		},
 	}
 
-	first, err := svc.SyncHistoryFromCLI(context.Background(), "project-1", 7, req)
+	first, err := svc.SyncHistoryFromCLI(context.Background(), "project-1", "7", req)
 	if err != nil {
 		t.Fatalf("SyncHistoryFromCLI returned error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 		t.Fatalf("expected first sync to create one record, got %+v", first)
 	}
 
-	second, err := svc.SyncHistoryFromCLI(context.Background(), "project-1", 7, req)
+	second, err := svc.SyncHistoryFromCLI(context.Background(), "project-1", "7", req)
 	if err != nil {
 		t.Fatalf("SyncHistoryFromCLI second call returned error: %v", err)
 	}

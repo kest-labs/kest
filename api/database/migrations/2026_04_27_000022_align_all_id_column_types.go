@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 )
 
 func init() {

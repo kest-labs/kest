@@ -184,6 +184,5 @@ func TestLog_Close(t *testing.T) {
 	}
 
 	// Close again should not panic
-	err = l.Close()
-	// err may be nil since file is already nil
+	_ = l.Close()
 }

@@ -1,8 +1,9 @@
 package migrations
 
 import (
-	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 )
 
 func init() {
@@ -22,17 +23,11 @@ func (m *addCLISyncFieldsToHistory) Up(db *gorm.DB) error {
 		return nil
 	}
 
-	if err := db.Exec(`
-		ALTER TABLE history
-		ADD COLUMN IF NOT EXISTS source VARCHAR(32)
-	`).Error; err != nil {
+	if err := addColumnIfMissing(db, "history", "source", "VARCHAR(32)"); err != nil {
 		return err
 	}
 
-	if err := db.Exec(`
-		ALTER TABLE history
-		ADD COLUMN IF NOT EXISTS source_event_id VARCHAR(191)
-	`).Error; err != nil {
+	if err := addColumnIfMissing(db, "history", "source_event_id", "VARCHAR(191)"); err != nil {
 		return err
 	}
 
@@ -45,13 +40,15 @@ func (m *addCLISyncFieldsToHistory) Up(db *gorm.DB) error {
 		return err
 	}
 
-	if err := db.Exec(`
-		ALTER TABLE history
-		ALTER COLUMN source SET DEFAULT 'web',
-		ALTER COLUMN source SET NOT NULL,
-		ALTER COLUMN source_event_id SET NOT NULL
-	`).Error; err != nil {
-		return err
+	if db.Dialector.Name() != "sqlite" {
+		if err := db.Exec(`
+			ALTER TABLE history
+			ALTER COLUMN source SET DEFAULT 'web',
+			ALTER COLUMN source SET NOT NULL,
+			ALTER COLUMN source_event_id SET NOT NULL
+		`).Error; err != nil {
+			return err
+		}
 	}
 
 	return db.Exec(`
@@ -61,5 +58,11 @@ func (m *addCLISyncFieldsToHistory) Up(db *gorm.DB) error {
 }
 
 func (m *addCLISyncFieldsToHistory) Down(db *gorm.DB) error {
-	return db.Exec(`DROP INDEX IF EXISTS idx_history_project_source_event`).Error
+	if err := db.Exec(`DROP INDEX IF EXISTS idx_history_project_source_event`).Error; err != nil {
+		return err
+	}
+	if err := dropColumnIfExists(db, "history", "source_event_id"); err != nil {
+		return err
+	}
+	return dropColumnIfExists(db, "history", "source")
 }

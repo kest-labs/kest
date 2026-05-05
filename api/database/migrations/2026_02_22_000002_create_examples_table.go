@@ -1,9 +1,10 @@
 package migrations
 
 import (
+	"gorm.io/gorm"
+
 	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"github.com/kest-labs/kest/api/internal/modules/example"
-	"gorm.io/gorm"
 )
 
 func init() {

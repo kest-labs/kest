@@ -7,9 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/infra/events"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
+
+	"github.com/kest-labs/kest/api/internal/infra/events"
 )
 
 // Migrator coordinates all migration operations including run, rollback, and reset.

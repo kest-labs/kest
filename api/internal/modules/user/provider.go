@@ -1,8 +1,9 @@
 package user
 
 import (
-	"github.com/kest-labs/kest/api/internal/domain"
 	"github.com/google/wire"
+
+	"github.com/kest-labs/kest/api/internal/domain"
 )
 
 // ProviderSet is the provider set for this module

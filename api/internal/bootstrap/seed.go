@@ -3,9 +3,10 @@ package bootstrap
 import (
 	"log"
 
+	"gorm.io/gorm"
+
 	"github.com/kest-labs/kest/api/database/seeders"
 	_ "github.com/kest-labs/kest/api/database/seeders" // Import to trigger init()
-	"gorm.io/gorm"
 )
 
 // RunSeeders runs all registered database seeders with the given database connection

@@ -9,23 +9,23 @@ import (
 
 // ExamplePO is the persistent object for request examples
 type ExamplePO struct {
-	ID string           `gorm:"primaryKey"`
-	RequestID string           `gorm:"not null;index"`
-	Name        string         `gorm:"size:100;not null"`
-	Description string         `gorm:"size:500"`
-	URL         string         `gorm:"size:2000"` // Resolved URL with variables
-	Method      string         `gorm:"size:10"`
-	Headers     string         `gorm:"type:text"`    // JSON array
-	QueryParams string         `gorm:"type:text"`    // JSON array
-	Body        string         `gorm:"type:text"`    // Request body
-	BodyType    string         `gorm:"size:20"`      // none, json, form-data
-	Auth        string         `gorm:"type:text"`    // JSON object
+	ID          string `gorm:"primaryKey"`
+	RequestID   string `gorm:"not null;index"`
+	Name        string `gorm:"size:100;not null"`
+	Description string `gorm:"size:500"`
+	URL         string `gorm:"size:2000"` // Resolved URL with variables
+	Method      string `gorm:"size:10"`
+	Headers     string `gorm:"type:text"` // JSON array
+	QueryParams string `gorm:"type:text"` // JSON array
+	Body        string `gorm:"type:text"` // Request body
+	BodyType    string `gorm:"size:20"`   // none, json, form-data
+	Auth        string `gorm:"type:text"` // JSON object
 
 	// Response
-	ResponseStatus  int    `gorm:"default:0"`   // HTTP status code
-	ResponseHeaders string `gorm:"type:text"`    // JSON object
-	ResponseBody    string `gorm:"type:text"`    // Response body
-	ResponseTime    int64  `gorm:"default:0"`    // Response time in ms
+	ResponseStatus  int    `gorm:"default:0"` // HTTP status code
+	ResponseHeaders string `gorm:"type:text"` // JSON object
+	ResponseBody    string `gorm:"type:text"` // Response body
+	ResponseTime    int64  `gorm:"default:0"` // Response time in ms
 
 	IsDefault bool `gorm:"default:false"`
 	SortOrder int  `gorm:"default:0"`
@@ -42,17 +42,17 @@ func (ExamplePO) TableName() string {
 
 // Example is the domain entity
 type Example struct {
-	ID string                   `json:"id"`
-	RequestID string                   `json:"request_id"`
-	Name            string                 `json:"name"`
-	Description     string                 `json:"description"`
-	URL             string                 `json:"url"`
-	Method          string                 `json:"method"`
-	Headers         []KeyValue             `json:"headers"`
-	QueryParams     []KeyValue             `json:"query_params"`
-	Body            string                 `json:"body"`
-	BodyType        string                 `json:"body_type"`
-	Auth            *AuthConfig            `json:"auth,omitempty"`
+	ID          string      `json:"id"`
+	RequestID   string      `json:"request_id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	URL         string      `json:"url"`
+	Method      string      `json:"method"`
+	Headers     []KeyValue  `json:"headers"`
+	QueryParams []KeyValue  `json:"query_params"`
+	Body        string      `json:"body"`
+	BodyType    string      `json:"body_type"`
+	Auth        *AuthConfig `json:"auth,omitempty"`
 
 	// Response
 	ResponseStatus  int               `json:"response_status"`
@@ -60,26 +60,26 @@ type Example struct {
 	ResponseBody    string            `json:"response_body"`
 	ResponseTime    int64             `json:"response_time"`
 
-	IsDefault bool   `json:"is_default"`
-	SortOrder int    `json:"sort_order"`
+	IsDefault bool      `json:"is_default"`
+	SortOrder int       `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type KeyValue struct {
-	Key        string `json:"key"`
-	Value      string `json:"value"`
-	Type       string `json:"type,omitempty"`
-	Enabled    bool   `json:"enabled,omitempty"`
+	Key         string `json:"key"`
+	Value       string `json:"value"`
+	Type        string `json:"type,omitempty"`
+	Enabled     bool   `json:"enabled,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 
 type AuthConfig struct {
-	Type        string     `json:"type"`
-	Basic       *BasicAuth `json:"basic,omitempty"`
-	Bearer      *BearerToken `json:"bearer,omitempty"`
-	APIKey      *APIKeyAuth `json:"api_key,omitempty"`
-	OAuth2      *OAuth2Config `json:"oauth2,omitempty"`
+	Type   string        `json:"type"`
+	Basic  *BasicAuth    `json:"basic,omitempty"`
+	Bearer *BearerToken  `json:"bearer,omitempty"`
+	APIKey *APIKeyAuth   `json:"api_key,omitempty"`
+	OAuth2 *OAuth2Config `json:"oauth2,omitempty"`
 }
 
 type BasicAuth struct {
@@ -92,10 +92,10 @@ type BearerToken struct {
 }
 
 type APIKeyAuth struct {
-	Key      string `json:"key"`
-	Value    string `json:"value"`
-	In       string `json:"in"`
-	AddTo    string `json:"add_to"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	In    string `json:"in"`
+	AddTo string `json:"add_to"`
 }
 
 type OAuth2Config struct {

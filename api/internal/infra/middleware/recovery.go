@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/pkg/logger"
 	"github.com/kest-labs/kest/api/pkg/response"
-	"github.com/gin-gonic/gin"
 )
 
 // Recovery middleware handles panic recovery

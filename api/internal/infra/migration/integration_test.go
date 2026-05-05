@@ -5,13 +5,14 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kest-labs/kest/api/internal/infra/events"
-	"github.com/kest-labs/kest/api/internal/infra/migration/schema"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/kest-labs/kest/api/internal/infra/events"
+	"github.com/kest-labs/kest/api/internal/infra/migration/schema"
 )
 
 // Integration test for complete migration workflow:

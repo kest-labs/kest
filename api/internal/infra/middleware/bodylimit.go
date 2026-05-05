@@ -3,8 +3,9 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/internal/infra/config"
 )
 
 // BodyLimitConfig holds body limit middleware configuration

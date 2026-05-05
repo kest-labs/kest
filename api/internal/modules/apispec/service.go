@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/infra/config"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/infra/config"
 )
 
 var (

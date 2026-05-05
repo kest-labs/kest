@@ -9,8 +9,8 @@ import (
 
 // RequestPO is the persistent object for HTTP requests stored in collections
 type RequestPO struct {
-	ID string   `gorm:"primaryKey"`
-	CollectionID string   `gorm:"not null;index"`
+	ID           string `gorm:"primaryKey"`
+	CollectionID string `gorm:"not null;index"`
 	Name         string `gorm:"size:100;not null"`
 	Description  string `gorm:"size:500"`
 	Method       string `gorm:"size:10;not null;default:'GET'"` // GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
@@ -36,8 +36,8 @@ func (RequestPO) TableName() string {
 
 // Request is the domain entity
 type Request struct {
-	ID string              `json:"id"`
-	CollectionID string              `json:"collection_id"`
+	ID           string            `json:"id"`
+	CollectionID string            `json:"collection_id"`
 	Name         string            `json:"name"`
 	Description  string            `json:"description"`
 	Method       string            `json:"method"`
@@ -74,13 +74,7 @@ func (kv KeyValue) MarshalJSON() ([]byte, error) {
 		Description string `json:"description,omitempty"`
 	}
 
-	return json.Marshal(keyValueJSON{
-		Key:         kv.Key,
-		Value:       kv.Value,
-		Type:        kv.Type,
-		Enabled:     kv.Enabled,
-		Description: kv.Description,
-	})
+	return json.Marshal(keyValueJSON(kv))
 }
 
 // UnmarshalJSON defaults enabled to true when the field is omitted.

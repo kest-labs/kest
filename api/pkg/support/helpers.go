@@ -160,8 +160,7 @@ func Of[T any](value *T) Optional[T] {
 // Get returns the value or the default if nil
 func (o Optional[T]) Get(defaultVal T) T {
 	if o.value == nil {
-		var zero T
-		return zero
+		return defaultVal
 	}
 	return *o.value
 }

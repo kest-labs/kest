@@ -1,8 +1,9 @@
 package migrations
 
 import (
-	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 )
 
 func init() {
@@ -14,9 +15,9 @@ type addResponseHeadersToAPIExamplesTable struct {
 }
 
 func (m *addResponseHeadersToAPIExamplesTable) Up(db *gorm.DB) error {
-	return db.Exec("ALTER TABLE api_examples ADD COLUMN IF NOT EXISTS response_headers TEXT").Error
+	return addColumnIfMissing(db, "api_examples", "response_headers", "TEXT")
 }
 
 func (m *addResponseHeadersToAPIExamplesTable) Down(db *gorm.DB) error {
-	return db.Exec("ALTER TABLE api_examples DROP COLUMN IF EXISTS response_headers").Error
+	return dropColumnIfExists(db, "api_examples", "response_headers")
 }

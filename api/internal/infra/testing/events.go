@@ -296,8 +296,8 @@ func NewTestEventBus() *TestEventBus {
 	bus := events.NewEventBus()
 	recorder := NewEventRecorder()
 
-	// Subscribe recorder to all events
-	bus.Subscribe("*", recorder.Handler())
+	// "**" matches event names with any number of dot-separated segments.
+	bus.Subscribe("**", recorder.Handler())
 
 	return &TestEventBus{
 		EventBus: bus,

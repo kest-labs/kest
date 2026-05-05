@@ -8,7 +8,7 @@ import (
 
 // ProjectPO is the persistent object for database operations
 type ProjectPO struct {
-	ID string `gorm:"primaryKey"`
+	ID        string `gorm:"primaryKey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
@@ -26,7 +26,7 @@ func (ProjectPO) TableName() string {
 
 // Project is the domain entity used in service layer
 type Project struct {
-	ID string      `json:"id"`
+	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Slug      string    `json:"slug"`
 	Platform  string    `json:"platform"`

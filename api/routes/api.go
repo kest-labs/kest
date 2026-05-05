@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/app"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 )

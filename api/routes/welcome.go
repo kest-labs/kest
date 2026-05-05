@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/internal/infra/config"
 )
 
 // RegisterWelcome registers the welcome page route

@@ -2,6 +2,7 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/pkg/response"

@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/app"
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/health"

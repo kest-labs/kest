@@ -2,6 +2,7 @@ package importer
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/kest-labs/kest/api/internal/modules/collection"
@@ -9,8 +10,8 @@ import (
 )
 
 func TestImportPostmanCollectionCreatesSingleCollectionForAllRequests(t *testing.T) {
-	parentID := uint(9)
-	projectID := uint(7)
+	parentID := "9"
+	projectID := "7"
 	collectionService := &stubCollectionService{}
 	requestService := &stubRequestService{}
 	service := NewService(collectionService, requestService).(*service)
@@ -56,7 +57,7 @@ func TestImportPostmanCollectionCreatesSingleCollectionForAllRequests(t *testing
 		t.Fatalf("expected root collection name to be preserved, got %q", rootCollection.Name)
 	}
 	if rootCollection.ParentID == nil || *rootCollection.ParentID != parentID {
-		t.Fatalf("expected root collection parent to be %d, got %#v", parentID, rootCollection.ParentID)
+		t.Fatalf("expected root collection parent to be %s, got %#v", parentID, rootCollection.ParentID)
 	}
 	if rootCollection.IsFolder {
 		t.Fatal("expected imported root collection to be a request collection, got folder")
@@ -67,8 +68,8 @@ func TestImportPostmanCollectionCreatesSingleCollectionForAllRequests(t *testing
 	}
 
 	firstRequest := requestService.created[0]
-	if firstRequest.CollectionID != 1 {
-		t.Fatalf("expected first request to belong to root collection ID 1, got %d", firstRequest.CollectionID)
+	if firstRequest.CollectionID != "1" {
+		t.Fatalf("expected first request to belong to root collection ID 1, got %s", firstRequest.CollectionID)
 	}
 	if firstRequest.Name != "List Users" {
 		t.Fatalf("expected first request name to be preserved, got %q", firstRequest.Name)
@@ -81,8 +82,8 @@ func TestImportPostmanCollectionCreatesSingleCollectionForAllRequests(t *testing
 	}
 
 	secondRequest := requestService.created[1]
-	if secondRequest.CollectionID != 1 {
-		t.Fatalf("expected second request to belong to root collection ID 1, got %d", secondRequest.CollectionID)
+	if secondRequest.CollectionID != "1" {
+		t.Fatalf("expected second request to belong to root collection ID 1, got %s", secondRequest.CollectionID)
 	}
 	if secondRequest.Name != "Create User" {
 		t.Fatalf("expected second request name to be preserved, got %q", secondRequest.Name)
@@ -129,7 +130,7 @@ func TestImportPostmanCollectionFlattensNestedFoldersIntoSingleCollection(t *tes
 		},
 	}
 
-	if err := service.importPostmanCollection(context.Background(), 3, 0, pmCol); err != nil {
+	if err := service.importPostmanCollection(context.Background(), "3", "", pmCol); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
@@ -145,8 +146,8 @@ func TestImportPostmanCollectionFlattensNestedFoldersIntoSingleCollection(t *tes
 		if createdRequest.Name != expectedNames[i] {
 			t.Fatalf("expected request %d to be %q, got %q", i, expectedNames[i], createdRequest.Name)
 		}
-		if createdRequest.CollectionID != 1 {
-			t.Fatalf("expected request %q to belong to root collection ID 1, got %d", createdRequest.Name, createdRequest.CollectionID)
+		if createdRequest.CollectionID != "1" {
+			t.Fatalf("expected request %q to belong to root collection ID 1, got %s", createdRequest.Name, createdRequest.CollectionID)
 		}
 		if createdRequest.SortOrder != i {
 			t.Fatalf("expected request %q sort order %d, got %d", createdRequest.Name, i, createdRequest.SortOrder)
@@ -156,7 +157,7 @@ func TestImportPostmanCollectionFlattensNestedFoldersIntoSingleCollection(t *tes
 
 type stubCollectionService struct {
 	created   []*collection.CreateCollectionRequest
-	nextID string
+	nextID    int
 	createErr error
 }
 
@@ -167,53 +168,55 @@ func (s *stubCollectionService) Create(_ context.Context, req *collection.Create
 
 	s.nextID++
 	s.created = append(s.created, cloneCreateCollectionRequest(req))
+	id := stringID(s.nextID)
 
 	return &collection.Collection{
-		ID:          s.nextID,
+		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
 		ProjectID:   req.ProjectID,
-		ParentID:    cloneUintPtr(req.ParentID),
+		ParentID:    cloneStringPtr(req.ParentID),
 		IsFolder:    req.IsFolder,
 		SortOrder:   req.SortOrder,
 	}, nil
 }
 
-func (s *stubCollectionService) GetByID(context.Context, uint, uint) (*collection.Collection, error) {
+func (s *stubCollectionService) GetByID(context.Context, string, string) (*collection.Collection, error) {
 	return nil, nil
 }
 
-func (s *stubCollectionService) Update(context.Context, uint, uint, *collection.UpdateCollectionRequest) (*collection.Collection, error) {
+func (s *stubCollectionService) Update(context.Context, string, string, *collection.UpdateCollectionRequest) (*collection.Collection, error) {
 	return nil, nil
 }
 
-func (s *stubCollectionService) Delete(context.Context, uint, uint) error {
+func (s *stubCollectionService) Delete(context.Context, string, string) error {
 	return nil
 }
 
-func (s *stubCollectionService) List(context.Context, uint, int, int) ([]*collection.Collection, int64, error) {
+func (s *stubCollectionService) List(context.Context, string, int, int) ([]*collection.Collection, int64, error) {
 	return nil, 0, nil
 }
 
-func (s *stubCollectionService) GetTree(context.Context, uint) ([]*collection.CollectionTreeNode, error) {
+func (s *stubCollectionService) GetTree(context.Context, string) ([]*collection.CollectionTreeNode, error) {
 	return nil, nil
 }
 
-func (s *stubCollectionService) Move(context.Context, uint, uint, *collection.MoveCollectionRequest) (*collection.Collection, error) {
+func (s *stubCollectionService) Move(context.Context, string, string, *collection.MoveCollectionRequest) (*collection.Collection, error) {
 	return nil, nil
 }
 
 type stubRequestService struct {
 	created []*request.CreateRequestRequest
-	nextID string
+	nextID  int
 }
 
-func (s *stubRequestService) Create(_ context.Context, _ uint, req *request.CreateRequestRequest) (*request.Request, error) {
+func (s *stubRequestService) Create(_ context.Context, _ string, req *request.CreateRequestRequest) (*request.Request, error) {
 	s.nextID++
 	s.created = append(s.created, cloneCreateRequestRequest(req))
+	id := stringID(s.nextID)
 
 	return &request.Request{
-		ID:           s.nextID,
+		ID:           id,
 		CollectionID: req.CollectionID,
 		Name:         req.Name,
 		Description:  req.Description,
@@ -227,27 +230,27 @@ func (s *stubRequestService) Create(_ context.Context, _ uint, req *request.Crea
 	}, nil
 }
 
-func (s *stubRequestService) GetByID(context.Context, uint, uint, uint) (*request.Request, error) {
+func (s *stubRequestService) GetByID(context.Context, string, string, string) (*request.Request, error) {
 	return nil, nil
 }
 
-func (s *stubRequestService) Update(context.Context, uint, uint, uint, *request.UpdateRequestRequest) (*request.Request, error) {
+func (s *stubRequestService) Update(context.Context, string, string, string, *request.UpdateRequestRequest) (*request.Request, error) {
 	return nil, nil
 }
 
-func (s *stubRequestService) Delete(context.Context, uint, uint, uint) error {
+func (s *stubRequestService) Delete(context.Context, string, string, string) error {
 	return nil
 }
 
-func (s *stubRequestService) List(context.Context, uint, uint, int, int) ([]*request.Request, int64, error) {
+func (s *stubRequestService) List(context.Context, string, string, int, int) ([]*request.Request, int64, error) {
 	return nil, 0, nil
 }
 
-func (s *stubRequestService) Move(context.Context, uint, uint, uint, *request.MoveRequestRequest) (*request.Request, error) {
+func (s *stubRequestService) Move(context.Context, string, string, string, *request.MoveRequestRequest) (*request.Request, error) {
 	return nil, nil
 }
 
-func (s *stubRequestService) Rollback(context.Context, uint, uint, uint) (*request.Request, error) {
+func (s *stubRequestService) Rollback(context.Context, string, string, string) (*request.Request, error) {
 	return nil, nil
 }
 
@@ -260,7 +263,7 @@ func cloneCreateCollectionRequest(req *collection.CreateCollectionRequest) *coll
 		ProjectID:   req.ProjectID,
 		Name:        req.Name,
 		Description: req.Description,
-		ParentID:    cloneUintPtr(req.ParentID),
+		ParentID:    cloneStringPtr(req.ParentID),
 		IsFolder:    req.IsFolder,
 		SortOrder:   req.SortOrder,
 	}
@@ -289,11 +292,15 @@ func cloneCreateRequestRequest(req *request.CreateRequestRequest) *request.Creat
 	}
 }
 
-func cloneUintPtr(value *uint) *uint {
+func cloneStringPtr(value *string) *string {
 	if value == nil {
 		return nil
 	}
 
 	cloned := *value
 	return &cloned
+}
+
+func stringID(value int) string {
+	return strconv.Itoa(value)
 }

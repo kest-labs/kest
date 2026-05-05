@@ -1,5 +1,21 @@
 'use client';
 
+import {
+  closestCenter,
+  DndContext,
+  PointerSensor,
+  type DragEndEvent,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useQuery } from '@tanstack/react-query';
 import {
   startTransition,
@@ -24,6 +40,7 @@ import {
   FileType2,
   FolderOpen,
   FormInput,
+  GripVertical,
   MoreHorizontal,
   Plus,
   RefreshCw,
@@ -245,13 +262,15 @@ interface ImportDialogTarget {
 type ImportDialogKind = 'postman' | 'markdown';
 type ProjectTranslationFn = ScopedTranslations<'project'>;
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-const SECTION_ITEMS: RequestSection[] = [
+const PRIMARY_SECTION_ITEMS: RequestSection[] = [
   'params',
   'authorization',
   'headers',
   'body',
-  'scripts',
   'settings',
+];
+const OVERFLOW_SECTION_ITEMS: RequestSection[] = [
+  'scripts',
   'examples',
 ];
 const BODY_MODE_OPTIONS: BodyMode[] = [
@@ -2964,14 +2983,23 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       return;
     }
 
+    duplicateTab(activeTab.id);
+  };
+
+  const duplicateTab = (sourceTabId: string) => {
+    const sourceTab = tabs.find(tab => tab.id === sourceTabId);
+    if (!sourceTab) {
+      return;
+    }
+
     const duplicatedTab: RequestPageTab = {
-      ...activeTab,
+      ...sourceTab,
       id: createLocalId('request-tab'),
-      title: t('collections.workbench.copyTitle', { title: activeTab.title }),
+      title: t('collections.workbench.copyTitle', { title: sourceTab.title }),
       response: createEmptyResponse(),
       isSending: false,
-      paramsRows: activeTab.paramsRows.map(row => ({ ...row, id: createLocalId('kv') })),
-      headersRows: activeTab.headersRows.map(row => ({ ...row, id: createLocalId('kv') })),
+      paramsRows: sourceTab.paramsRows.map(row => ({ ...row, id: createLocalId('kv') })),
+      headersRows: sourceTab.headersRows.map(row => ({ ...row, id: createLocalId('kv') })),
     };
 
     startTransition(() => {
@@ -2989,6 +3017,10 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               : collection
           )
         );
+      }
+
+      if (duplicatedTab.collectionId) {
+        setActiveCollectionId(duplicatedTab.collectionId);
       }
 
       setActiveTabId(duplicatedTab.id);
@@ -3255,6 +3287,41 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     });
   };
 
+  const handleCloseOtherTabs = (tabId: string) => {
+    if (!openTabIds.includes(tabId)) {
+      return;
+    }
+
+    startTransition(() => {
+      setOpenTabIds([tabId]);
+      setActiveTabId(tabId);
+    });
+  };
+
+  const handleCloseAllTabs = () => {
+    startTransition(() => {
+      setOpenTabIds([]);
+      setActiveTabId(null);
+    });
+  };
+
+  const handleReorderOpenTabs = (activeId: string, overId: string) => {
+    if (activeId === overId) {
+      return;
+    }
+
+    setOpenTabIds(current => {
+      const activeIndex = current.indexOf(activeId);
+      const overIndex = current.indexOf(overId);
+
+      if (activeIndex === -1 || overIndex === -1) {
+        return current;
+      }
+
+      return arrayMove(current, activeIndex, overIndex);
+    });
+  };
+
   const handleRenameRequest = async () => {
     if (!renameDialogRequestTabId || renamingRequestTabId) {
       return;
@@ -3387,6 +3454,11 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                 activeTabId={activeTabId}
                 onSelectTab={tabId => selectRequest(tabId, tabMap.get(tabId)?.collectionId ?? null)}
                 onCloseTab={handleCloseTab}
+                onCloseOtherTabs={handleCloseOtherTabs}
+                onCloseAllTabs={handleCloseAllTabs}
+                onDuplicateTab={duplicateTab}
+                onCreateTab={createScratchpadRequest}
+                onReorderTabs={handleReorderOpenTabs}
               />
             </div>
             <EnvironmentSwitcher
@@ -5131,65 +5203,193 @@ function RequestTabs({
   activeTabId,
   onSelectTab,
   onCloseTab,
+  onCloseOtherTabs,
+  onCloseAllTabs,
+  onDuplicateTab,
+  onCreateTab,
+  onReorderTabs,
 }: {
   tabs: RequestPageTab[];
   activeTabId: string | null;
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
+  onCloseOtherTabs: (tabId: string) => void;
+  onCloseAllTabs: () => void;
+  onDuplicateTab: (tabId: string) => void;
+  onCreateTab: () => void;
+  onReorderTabs: (activeId: string, overId: string) => void;
 }) {
   const t = useT('project');
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    })
+  );
 
-  if (tabs.length === 0) {
-    return (
-      <div className="flex h-10 items-center rounded-xl border border-dashed border-border/60 bg-white/55 px-4 text-sm text-text-muted">
-        {t('collections.workbench.empty.noOpenTabs')}
-      </div>
-    );
-  }
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    onReorderTabs(String(active.id), String(over.id));
+  };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex min-w-max items-center gap-2 pr-2">
-        {tabs.map(tab => (
-          <div
-            key={tab.id}
-            className={cn(
-              'group inline-flex items-center rounded-xl border pr-1 text-sm transition-all',
-              tab.id === activeTabId
-                ? 'border-primary/30 bg-primary/10 text-text-main shadow-sm'
-                : 'border-border/60 bg-white/75 text-text-muted hover:border-border hover:bg-white hover:text-text-main'
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => onSelectTab(tab.id)}
-              className="inline-flex min-w-0 items-center gap-2 px-3 py-1.5"
-            >
-              <span
-                className={cn(
-                  'h-2 w-2 rounded-full',
-                  tab.id === activeTabId ? 'bg-primary' : 'bg-text-muted/40'
-                )}
-              />
-              <span className="truncate font-medium">{tab.title}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onCloseTab(tab.id)}
-              className={cn(
-                'rounded-lg p-1 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main',
-                tab.id === activeTabId
-                  ? 'opacity-100'
-                  : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
-              )}
-              aria-label={t('collections.workbench.closeTab', { title: tab.title })}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1 overflow-x-auto">
+        {tabs.length === 0 ? (
+          <div className="flex h-10 items-center rounded-xl border border-dashed border-border/60 bg-white/55 px-4 text-sm text-text-muted">
+            {t('collections.workbench.empty.noOpenTabs')}
           </div>
-        ))}
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToHorizontalAxis]}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={tabs.map(tab => tab.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <div className="flex min-w-max items-center gap-2 pr-2">
+                {tabs.map(tab => (
+                  <SortableRequestTab
+                    key={tab.id}
+                    tab={tab}
+                    isActive={tab.id === activeTabId}
+                    openTabCount={tabs.length}
+                    onSelectTab={onSelectTab}
+                    onCloseTab={onCloseTab}
+                    onCloseOtherTabs={onCloseOtherTabs}
+                    onCloseAllTabs={onCloseAllTabs}
+                    onDuplicateTab={onDuplicateTab}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-10 shrink-0 rounded-xl px-3"
+        onClick={onCreateTab}
+      >
+        <Plus className="h-4 w-4" />
+        {t('collections.workbench.actions.newQuickRequest')}
+      </Button>
     </div>
+  );
+}
+
+function SortableRequestTab({
+  tab,
+  isActive,
+  openTabCount,
+  onSelectTab,
+  onCloseTab,
+  onCloseOtherTabs,
+  onCloseAllTabs,
+  onDuplicateTab,
+}: {
+  tab: RequestPageTab;
+  isActive: boolean;
+  openTabCount: number;
+  onSelectTab: (tabId: string) => void;
+  onCloseTab: (tabId: string) => void;
+  onCloseOtherTabs: (tabId: string) => void;
+  onCloseAllTabs: () => void;
+  onDuplicateTab: (tabId: string) => void;
+}) {
+  const t = useT('project');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: tab.id,
+  });
+
+  return (
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+      <div
+        ref={setNodeRef}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+        }}
+        onContextMenu={event => {
+          event.preventDefault();
+          setMenuOpen(true);
+        }}
+        className={cn(
+          'group inline-flex items-center rounded-xl border pr-1 text-sm transition-all',
+          isActive
+            ? 'border-primary/30 bg-primary/10 text-text-main shadow-sm'
+            : 'border-border/60 bg-white/75 text-text-muted hover:border-border hover:bg-white hover:text-text-main',
+          isDragging && 'z-10 opacity-85 shadow-lg',
+          'touch-none'
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => onSelectTab(tab.id)}
+          className="inline-flex min-w-0 items-center gap-2 px-3 py-1.5"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-3.5 w-3.5 shrink-0 text-text-muted/70" />
+          <span className={cn('h-2 w-2 rounded-full', isActive ? 'bg-primary' : 'bg-text-muted/40')} />
+          <span className="truncate font-medium">{tab.title}</span>
+        </button>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            onClick={event => event.stopPropagation()}
+            className={cn(
+              'rounded-lg p-1 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main',
+              isActive
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+            )}
+            aria-label={t('collections.workbench.actions.moreActions')}
+            title={t('collections.workbench.actions.moreActions')}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <button
+          type="button"
+          onClick={() => onCloseTab(tab.id)}
+          className={cn(
+            'rounded-lg p-1 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main',
+            isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+          )}
+          aria-label={t('collections.workbench.closeTab', { title: tab.title })}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <DropdownMenuContent align="end" className="rounded-xl">
+        <DropdownMenuItem onClick={() => onCloseTab(tab.id)}>
+          {t('common.close')}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onCloseOtherTabs(tab.id)}
+          disabled={openTabCount <= 1}
+        >
+          {t('collections.workbench.actions.closeOthers')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onCloseAllTabs} disabled={openTabCount === 0}>
+          {t('collections.workbench.actions.closeAll')}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onDuplicateTab(tab.id)}>
+          {t('common.duplicate')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -5331,10 +5531,11 @@ function RequestSectionTabs({
   onSelectSection: (section: RequestSection) => void;
 }) {
   const t = useT('project');
+  const moreTabActive = OVERFLOW_SECTION_ITEMS.includes(activeSection);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {SECTION_ITEMS.map(item => (
+      {PRIMARY_SECTION_ITEMS.map(item => (
         <button
           key={item}
           type="button"
@@ -5349,6 +5550,35 @@ function RequestSectionTabs({
           {getSectionLabel(t, item)}
         </button>
       ))}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors',
+              moreTabActive
+                ? 'border-primary/30 bg-primary/10 text-primary shadow-sm'
+                : 'border-border/60 bg-white/70 text-text-muted hover:border-border hover:bg-white hover:text-text-main'
+            )}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+            {t('collections.workbench.actions.moreSections')}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-40 rounded-2xl">
+          {OVERFLOW_SECTION_ITEMS.map(item => (
+            <DropdownMenuItem
+              key={item}
+              onClick={() => onSelectSection(item)}
+              className={cn(
+                activeSection === item && 'bg-accent text-accent-foreground font-medium'
+              )}
+            >
+              {getSectionLabel(t, item)}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

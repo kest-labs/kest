@@ -9,10 +9,11 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
-	"github.com/kest-labs/kest/api/internal/infra/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/kest-labs/kest/api/internal/infra/config"
 )
 
 // NewDB creates a new database connection via Wire DI.

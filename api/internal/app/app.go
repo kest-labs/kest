@@ -1,6 +1,8 @@
 package app
 
 import (
+	"gorm.io/gorm"
+
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/email"
@@ -26,7 +28,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/system"
 	"github.com/kest-labs/kest/api/internal/modules/testcase"
 	"github.com/kest-labs/kest/api/internal/modules/user"
-	"gorm.io/gorm"
 )
 
 // Application holds all application dependencies injected via Wire.
@@ -66,25 +67,65 @@ type Handlers struct {
 
 // Modules returns a list of all active modules
 func (h *Handlers) Modules() []contracts.Module {
-	return []contracts.Module{
-		h.User,
-		h.Member,
-		h.Permission,
-		h.Audit,
-		h.Project,
-		h.ProjectInvite,
-		h.Collection,
-		h.Request,
-		h.Example,
-		h.Run,
-		h.History,
-		h.Export,
-		h.Importer,
-		h.APISpec,
-		h.Category,
-		h.Environment,
-		h.Flow,
-		h.TestCase,
-		h.System,
+	modules := make([]contracts.Module, 0, 19)
+
+	if h.User != nil {
+		modules = append(modules, h.User)
 	}
+	if h.Member != nil {
+		modules = append(modules, h.Member)
+	}
+	if h.Permission != nil {
+		modules = append(modules, h.Permission)
+	}
+	if h.Audit != nil {
+		modules = append(modules, h.Audit)
+	}
+	if h.Project != nil {
+		modules = append(modules, h.Project)
+	}
+	if h.ProjectInvite != nil {
+		modules = append(modules, h.ProjectInvite)
+	}
+	if h.Collection != nil {
+		modules = append(modules, h.Collection)
+	}
+	if h.Request != nil {
+		modules = append(modules, h.Request)
+	}
+	if h.Example != nil {
+		modules = append(modules, h.Example)
+	}
+	if h.Run != nil {
+		modules = append(modules, h.Run)
+	}
+	if h.History != nil {
+		modules = append(modules, h.History)
+	}
+	if h.Export != nil {
+		modules = append(modules, h.Export)
+	}
+	if h.Importer != nil {
+		modules = append(modules, h.Importer)
+	}
+	if h.APISpec != nil {
+		modules = append(modules, h.APISpec)
+	}
+	if h.Category != nil {
+		modules = append(modules, h.Category)
+	}
+	if h.Environment != nil {
+		modules = append(modules, h.Environment)
+	}
+	if h.Flow != nil {
+		modules = append(modules, h.Flow)
+	}
+	if h.TestCase != nil {
+		modules = append(modules, h.TestCase)
+	}
+	if h.System != nil {
+		modules = append(modules, h.System)
+	}
+
+	return modules
 }

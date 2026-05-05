@@ -1,8 +1,9 @@
 package seeders
 
 import (
-	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/modules/permission"
 )
 
 type RoleSeeder struct{}

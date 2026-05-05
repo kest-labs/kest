@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kest-labs/kest/api/internal/modules/audit"
 	"github.com/kest-labs/kest/api/pkg/handler"
 )

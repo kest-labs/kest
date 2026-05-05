@@ -5,6 +5,7 @@ package wiring
 
 import (
 	"github.com/google/wire"
+
 	"github.com/kest-labs/kest/api/internal/app"
 	"github.com/kest-labs/kest/api/internal/infra"
 	"github.com/kest-labs/kest/api/internal/modules/apispec"

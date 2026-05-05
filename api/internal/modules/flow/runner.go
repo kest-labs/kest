@@ -16,8 +16,8 @@ import (
 
 // StepEvent represents a real-time event during flow execution
 type StepEvent struct {
-	RunID string   `json:"run_id"`
-	StepID string   `json:"step_id"`
+	RunID    string `json:"run_id"`
+	StepID   string `json:"step_id"`
 	StepName string `json:"step_name"`
 	Status   string `json:"status"`
 	Data     any    `json:"data,omitempty"`

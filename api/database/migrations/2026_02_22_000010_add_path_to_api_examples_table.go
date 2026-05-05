@@ -1,8 +1,9 @@
 package migrations
 
 import (
-	"github.com/kest-labs/kest/api/internal/infra/migration"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/internal/infra/migration"
 )
 
 func init() {
@@ -14,9 +15,9 @@ type addPathToAPIExamplesTable struct {
 }
 
 func (m *addPathToAPIExamplesTable) Up(db *gorm.DB) error {
-	return db.Exec("ALTER TABLE api_examples ADD COLUMN IF NOT EXISTS path VARCHAR(500)").Error
+	return addColumnIfMissing(db, "api_examples", "path", "VARCHAR(500)")
 }
 
 func (m *addPathToAPIExamplesTable) Down(db *gorm.DB) error {
-	return db.Exec("ALTER TABLE api_examples DROP COLUMN IF EXISTS path").Error
+	return dropColumnIfExists(db, "api_examples", "path")
 }

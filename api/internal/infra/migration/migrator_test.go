@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/glebarez/sqlite"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
@@ -17,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/kest-labs/kest/api/internal/infra/events"
 )
 
 // testMigration is a simple migration for testing

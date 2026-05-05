@@ -3,8 +3,9 @@ package flow
 import (
 	"context"
 
-	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 )
 
 // Repository defines the data access interface for flows

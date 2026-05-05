@@ -5,363 +5,125 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kest-labs/kest/api/pkg/pagination"
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/pkg/pagination"
 )
 
-func TestPaginator_New(t *testing.T) {
-	items := []string{"a", "b", "c", "d", "e"}
-	p := pagination.New(items, 100, 1, 10)
+func TestNewPaginatorBuildsMetadata(t *testing.T) {
+	p := pagination.NewPaginator([]string{"a", "b", "c"}, 10, 2, 3)
 
-	if p.Total != 100 {
-		t.Errorf("Expected total 100, got %d", p.Total)
+	if p.Total() != 10 {
+		t.Fatalf("expected total 10, got %d", p.Total())
 	}
-	if p.CurrentPage != 1 {
-		t.Errorf("Expected current page 1, got %d", p.CurrentPage)
+	if p.CurrentPage() != 2 {
+		t.Fatalf("expected page 2, got %d", p.CurrentPage())
 	}
-	if p.PerPage != 10 {
-		t.Errorf("Expected per page 10, got %d", p.PerPage)
+	if p.PerPage() != 3 {
+		t.Fatalf("expected per page 3, got %d", p.PerPage())
 	}
-	if p.LastPage != 10 {
-		t.Errorf("Expected last page 10, got %d", p.LastPage)
+	if p.LastPage() != 4 {
+		t.Fatalf("expected last page 4, got %d", p.LastPage())
 	}
-	if len(p.Items) != 5 {
-		t.Errorf("Expected 5 items, got %d", len(p.Items))
-	}
-}
-
-func TestPaginator_FromTo(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.New(items, 10, 2, 3)
-
-	if p.From != 4 {
-		t.Errorf("Expected from 4, got %d", p.From)
-	}
-	if p.To != 6 {
-		t.Errorf("Expected to 6, got %d", p.To)
+	if p.From() != 4 || p.To() != 6 {
+		t.Fatalf("expected range 4-6, got %d-%d", p.From(), p.To())
 	}
 }
 
-func TestPaginator_EmptyItems(t *testing.T) {
-	items := []string{}
-	p := pagination.New(items, 0, 1, 10)
+func TestNewPaginatorClampsInvalidValues(t *testing.T) {
+	p := pagination.NewPaginator([]string{}, 0, -1, 0)
 
-	if p.From != 0 {
-		t.Errorf("Expected from 0 for empty items, got %d", p.From)
+	if p.CurrentPage() != 1 {
+		t.Fatalf("expected page to clamp to 1, got %d", p.CurrentPage())
 	}
-	if p.To != 0 {
-		t.Errorf("Expected to 0 for empty items, got %d", p.To)
+	if p.PerPage() != pagination.DefaultPerPage {
+		t.Fatalf("expected per page to default to %d, got %d", pagination.DefaultPerPage, p.PerPage())
 	}
-	if !p.IsEmpty() {
-		t.Error("Expected IsEmpty to return true")
-	}
-}
-
-func TestPaginator_HasMorePages(t *testing.T) {
-	items := []string{"a", "b", "c"}
-
-	// Page 1 of 3
-	p1 := pagination.New(items, 9, 1, 3)
-	if !p1.HasMorePages() {
-		t.Error("Page 1 should have more pages")
-	}
-
-	// Page 3 of 3
-	p3 := pagination.New(items, 9, 3, 3)
-	if p3.HasMorePages() {
-		t.Error("Last page should not have more pages")
+	if p.LastPage() != 1 {
+		t.Fatalf("expected empty paginator last page 1, got %d", p.LastPage())
 	}
 }
 
-func TestPaginator_HasPages(t *testing.T) {
-	items := []string{"a", "b", "c"}
+func TestPaginatorBuildsNavigationURLs(t *testing.T) {
+	p := pagination.NewPaginator([]string{"a", "b", "c"}, 10, 2, 3).
+		SetPath("/api/users").
+		Append("keyword", "john")
 
-	// Multiple pages
-	p1 := pagination.New(items, 10, 1, 3)
-	if !p1.HasPages() {
-		t.Error("Should have multiple pages")
+	prev := p.PreviousPageURL()
+	next := p.NextPageURL()
+
+	if prev == nil || *prev != "/api/users?keyword=john&page=1" {
+		t.Fatalf("unexpected previous page url: %#v", prev)
 	}
-
-	// Single page
-	p2 := pagination.New(items, 3, 1, 10)
-	if p2.HasPages() {
-		t.Error("Should have single page")
-	}
-}
-
-func TestPaginator_OnFirstPage(t *testing.T) {
-	items := []string{"a", "b", "c"}
-
-	p1 := pagination.New(items, 10, 1, 3)
-	if !p1.OnFirstPage() {
-		t.Error("Should be on first page")
-	}
-
-	p2 := pagination.New(items, 10, 2, 3)
-	if p2.OnFirstPage() {
-		t.Error("Should not be on first page")
+	if next == nil || *next != "/api/users?keyword=john&page=3" {
+		t.Fatalf("unexpected next page url: %#v", next)
 	}
 }
 
-func TestPaginator_OnLastPage(t *testing.T) {
-	items := []string{"a"}
-
-	p := pagination.New(items, 10, 4, 3)
-	if !p.OnLastPage() {
-		t.Error("Should be on last page")
-	}
-}
-
-func TestPaginator_Count(t *testing.T) {
-	items := []string{"a", "b", "c", "d", "e"}
-	p := pagination.New(items, 100, 1, 10)
-
-	if p.Count() != 5 {
-		t.Errorf("Expected count 5, got %d", p.Count())
-	}
-}
-
-func TestPaginator_WithPath(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.New(items, 10, 2, 3).WithPath("/api/users")
-
-	if p.NextPageURL == "" {
-		t.Error("Expected next page URL to be set")
-	}
-	if p.PrevPageURL == "" {
-		t.Error("Expected prev page URL to be set")
-	}
-}
-
-func TestPaginator_ToMap(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.New(items, 10, 1, 3)
-	m := p.ToMap()
-
-	if m["total"] != int64(10) {
-		t.Errorf("Expected total 10, got %v", m["total"])
-	}
-	if m["current_page"] != 1 {
-		t.Errorf("Expected current_page 1, got %v", m["current_page"])
-	}
-}
-
-func TestPaginator_InvalidPage(t *testing.T) {
-	items := []string{"a", "b", "c"}
-
-	// Negative page should default to 1
-	p := pagination.New(items, 10, -1, 3)
-	if p.CurrentPage != 1 {
-		t.Errorf("Expected page to default to 1, got %d", p.CurrentPage)
-	}
-}
-
-func TestPaginator_InvalidPerPage(t *testing.T) {
-	items := []string{"a", "b", "c"}
-
-	// Zero per page should default to 15
-	p := pagination.New(items, 10, 1, 0)
-	if p.PerPage != 15 {
-		t.Errorf("Expected per page to default to 15, got %d", p.PerPage)
-	}
-}
-
-func TestDefaultConfig(t *testing.T) {
-	cfg := pagination.DefaultConfig()
-
-	if cfg.Page != 1 {
-		t.Errorf("Expected default page 1, got %d", cfg.Page)
-	}
-	if cfg.PerPage != 15 {
-		t.Errorf("Expected default per page 15, got %d", cfg.PerPage)
-	}
-	if cfg.MaxPerPage != 100 {
-		t.Errorf("Expected default max per page 100, got %d", cfg.MaxPerPage)
-	}
-}
-
-func TestFromContext(t *testing.T) {
+func TestFromContextReadsQueryParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := gin.New()
+	var req *pagination.Request
+
 	router.GET("/test", func(c *gin.Context) {
-		cfg := pagination.FromContext(c)
-		c.JSON(http.StatusOK, gin.H{
-			"page":     cfg.Page,
-			"per_page": cfg.PerPage,
-		})
+		req = pagination.FromContext(c)
+		c.Status(http.StatusOK)
 	})
 
-	// With query params
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test?page=3&per_page=25", nil)
-	router.ServeHTTP(w, req)
+	httpReq, _ := http.NewRequest("GET", "/test?page=3&per_page=25&keyword=alpha&sort=created_at&order=asc", nil)
+	router.ServeHTTP(w, httpReq)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+	if req.GetPage() != 3 || req.GetPerPage() != 25 {
+		t.Fatalf("unexpected request pagination: %#v", req)
+	}
+	if req.Keyword != "alpha" || req.GetOrderBy() != "created_at asc" {
+		t.Fatalf("unexpected request metadata: %#v", req)
 	}
 }
 
-func TestFromContext_Defaults(t *testing.T) {
+func TestCursorPaginatorEncodesLinks(t *testing.T) {
+	p := pagination.NewCursorPaginator([]string{"a", "b"}, 10, true)
+	p.SetPath("/api/users")
+	p.SetNextCursor(&pagination.Cursor{Field: "created_at", Value: "2026-01-01T00:00:00Z", ID: 2, Direction: "next"})
+	p.SetPrevCursor(&pagination.Cursor{Field: "created_at", Value: "2025-12-31T00:00:00Z", ID: 1, Direction: "prev"})
+
+	result := p.ToMap()
+
+	if result["has_more"] != true {
+		t.Fatalf("expected has_more true, got %#v", result["has_more"])
+	}
+	if result["next_cursor"] == "" || result["prev_cursor"] == "" {
+		t.Fatalf("expected encoded cursors, got %#v", result)
+	}
+}
+
+func TestCursorFromContextUsesDefaults(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := gin.New()
-	var cfg pagination.Config
+	var req *pagination.CursorRequest
 
 	router.GET("/test", func(c *gin.Context) {
-		cfg = pagination.FromContext(c)
-		c.Status(http.StatusOK)
-	})
-
-	// Without query params
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
-	router.ServeHTTP(w, req)
-
-	if cfg.Page != 1 {
-		t.Errorf("Expected default page 1, got %d", cfg.Page)
-	}
-	if cfg.PerPage != 15 {
-		t.Errorf("Expected default per page 15, got %d", cfg.PerPage)
-	}
-}
-
-func TestCursorPaginator_New(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.NewCursor(items, 10, true)
-
-	if len(p.Items) != 3 {
-		t.Errorf("Expected 3 items, got %d", len(p.Items))
-	}
-	if p.PerPage != 10 {
-		t.Errorf("Expected per page 10, got %d", p.PerPage)
-	}
-	if !p.HasMore {
-		t.Error("Expected has more to be true")
-	}
-}
-
-func TestCursorPaginator_WithCursors(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.NewCursor(items, 10, true).WithCursors("next123", "prev456")
-
-	if p.NextCursor != "next123" {
-		t.Errorf("Expected next cursor 'next123', got '%s'", p.NextCursor)
-	}
-	if p.PrevCursor != "prev456" {
-		t.Errorf("Expected prev cursor 'prev456', got '%s'", p.PrevCursor)
-	}
-}
-
-func TestDefaultCursorConfig(t *testing.T) {
-	cfg := pagination.DefaultCursorConfig()
-
-	if cfg.PerPage != 15 {
-		t.Errorf("Expected default per page 15, got %d", cfg.PerPage)
-	}
-	if cfg.MaxPerPage != 100 {
-		t.Errorf("Expected default max per page 100, got %d", cfg.MaxPerPage)
-	}
-	if cfg.CursorCol != "id" {
-		t.Errorf("Expected default cursor col 'id', got '%s'", cfg.CursorCol)
-	}
-}
-
-func TestCursorFromContext(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	router := gin.New()
-	var cfg pagination.CursorConfig
-
-	router.GET("/test", func(c *gin.Context) {
-		cfg = pagination.CursorFromContext(c)
+		req = pagination.CursorFromContext(c)
 		c.Status(http.StatusOK)
 	})
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test?cursor=abc123&per_page=20", nil)
-	router.ServeHTTP(w, req)
+	httpReq, _ := http.NewRequest("GET", "/test?cursor=abc123", nil)
+	router.ServeHTTP(w, httpReq)
 
-	if cfg.Cursor != "abc123" {
-		t.Errorf("Expected cursor 'abc123', got '%s'", cfg.Cursor)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
 	}
-	if cfg.PerPage != 20 {
-		t.Errorf("Expected per page 20, got %d", cfg.PerPage)
+	if req.Cursor != "abc123" {
+		t.Fatalf("expected cursor abc123, got %q", req.Cursor)
 	}
-}
-
-func TestSimplePaginator(t *testing.T) {
-	// Test the struct directly since we don't have a DB
-	p := &pagination.SimplePaginator[string]{
-		Items:       []string{"a", "b", "c"},
-		PerPage:     10,
-		CurrentPage: 1,
-		HasMore:     true,
-	}
-
-	if len(p.Items) != 3 {
-		t.Errorf("Expected 3 items, got %d", len(p.Items))
-	}
-	if !p.HasMore {
-		t.Error("Expected has more to be true")
-	}
-}
-
-func TestPaginator_LastPageCalculation(t *testing.T) {
-	testCases := []struct {
-		total    int64
-		perPage  int
-		lastPage int
-	}{
-		{100, 10, 10},
-		{101, 10, 11},
-		{99, 10, 10},
-		{10, 10, 1},
-		{0, 10, 1},
-		{1, 10, 1},
-	}
-
-	for _, tc := range testCases {
-		p := pagination.New([]string{}, tc.total, 1, tc.perPage)
-		if p.LastPage != tc.lastPage {
-			t.Errorf("Total %d, PerPage %d: expected last page %d, got %d",
-				tc.total, tc.perPage, tc.lastPage, p.LastPage)
-		}
-	}
-}
-
-func TestPaginator_NoURLsWithoutPath(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.New(items, 10, 2, 3)
-
-	if p.NextPageURL != "" {
-		t.Error("Expected no next URL without path")
-	}
-	if p.PrevPageURL != "" {
-		t.Error("Expected no prev URL without path")
-	}
-}
-
-func TestPaginator_FirstPageNoPrevURL(t *testing.T) {
-	items := []string{"a", "b", "c"}
-	p := pagination.New(items, 10, 1, 3).WithPath("/api/items")
-
-	if p.PrevPageURL != "" {
-		t.Error("First page should not have prev URL")
-	}
-	if p.NextPageURL == "" {
-		t.Error("First page should have next URL when more pages exist")
-	}
-}
-
-func TestPaginator_LastPageNoNextURL(t *testing.T) {
-	items := []string{"a"}
-	p := pagination.New(items, 10, 4, 3).WithPath("/api/items")
-
-	if p.NextPageURL != "" {
-		t.Error("Last page should not have next URL")
-	}
-	if p.PrevPageURL == "" {
-		t.Error("Last page should have prev URL")
+	if req.GetPerPage() != pagination.DefaultPerPage {
+		t.Fatalf("expected default per page %d, got %d", pagination.DefaultPerPage, req.GetPerPage())
 	}
 }

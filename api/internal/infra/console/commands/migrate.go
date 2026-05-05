@@ -7,13 +7,14 @@ import (
 	"strconv"
 	"strings"
 
+	"gorm.io/gorm"
+
 	"github.com/kest-labs/kest/api/database/migrations"
 	"github.com/kest-labs/kest/api/internal/bootstrap"
 	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/console"
 	"github.com/kest-labs/kest/api/internal/infra/database"
 	"github.com/kest-labs/kest/api/internal/infra/migration"
-	"gorm.io/gorm"
 )
 
 // consoleOutputWriter implements migration.OutputWriter for console output.

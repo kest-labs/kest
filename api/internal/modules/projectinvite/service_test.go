@@ -18,7 +18,7 @@ func (r *testProjectInviteRepo) CreateInvitation(
 	invitation *ProjectInvitation,
 	_ string,
 ) error {
-	invitation.ID = 9
+	invitation.ID = "9"
 	invitation.CreatedAt = time.Now().UTC()
 	invitation.UpdatedAt = invitation.CreatedAt
 	r.invitation = invitation
@@ -27,7 +27,7 @@ func (r *testProjectInviteRepo) CreateInvitation(
 
 func (r *testProjectInviteRepo) ListInvitationsByProject(
 	_ context.Context,
-	_ uint,
+	_ string,
 ) ([]*ProjectInvitation, error) {
 	if r.invitation == nil {
 		return nil, nil
@@ -60,14 +60,14 @@ func (r *testProjectInviteRepo) UpdateInvitation(
 	return nil
 }
 
-func (r *testProjectInviteRepo) GetProjectSummary(_ context.Context, _ uint) (*ProjectSummary, error) {
+func (r *testProjectInviteRepo) GetProjectSummary(_ context.Context, _ string) (*ProjectSummary, error) {
 	return r.projectSummary, nil
 }
 
 func (r *testProjectInviteRepo) AcceptInvitation(
 	_ context.Context,
 	invitation *ProjectInvitation,
-	userID uint,
+	userID string,
 	acceptedAt time.Time,
 ) error {
 	if err := validateInvitationCanBeAccepted(invitation, acceptedAt); err != nil {
@@ -83,15 +83,15 @@ func TestCreateInvitationDefaults(t *testing.T) {
 	repo := &testProjectInviteRepo{}
 	svc := NewService(repo)
 
-	resp, err := svc.CreateInvitation(context.Background(), 12, 7, &CreateProjectInvitationRequest{
+	resp, err := svc.CreateInvitation(context.Background(), "12", "7", &CreateProjectInvitationRequest{
 		Role: memberRoleRead,
 	})
 	if err != nil {
 		t.Fatalf("CreateInvitation returned error: %v", err)
 	}
 
-	if resp.ProjectID != 12 {
-		t.Fatalf("expected project id 12, got %d", resp.ProjectID)
+	if resp.ProjectID != "12" {
+		t.Fatalf("expected project id 12, got %s", resp.ProjectID)
 	}
 	if resp.Role != memberRoleRead {
 		t.Fatalf("expected role %q, got %q", memberRoleRead, resp.Role)
@@ -113,8 +113,8 @@ func TestCreateInvitationDefaults(t *testing.T) {
 func TestAcceptInvitationRejectsAlreadyUsedUpLink(t *testing.T) {
 	repo := &testProjectInviteRepo{
 		invitation: &ProjectInvitation{
-			ID:        3,
-			ProjectID: 12,
+			ID:        "3",
+			ProjectID: "12",
 			Slug:      "pji_usedup",
 			Role:      memberRoleRead,
 			Status:    InvitationStatusActive,
@@ -124,7 +124,7 @@ func TestAcceptInvitationRejectsAlreadyUsedUpLink(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	if _, err := svc.AcceptInvitation(context.Background(), "pji_usedup", 99); err != ErrProjectInvitationUsedUp {
+	if _, err := svc.AcceptInvitation(context.Background(), "pji_usedup", "99"); err != ErrProjectInvitationUsedUp {
 		t.Fatalf("expected ErrProjectInvitationUsedUp, got %v", err)
 	}
 }
@@ -132,8 +132,8 @@ func TestAcceptInvitationRejectsAlreadyUsedUpLink(t *testing.T) {
 func TestAcceptInvitationReturnsRedirect(t *testing.T) {
 	repo := &testProjectInviteRepo{
 		invitation: &ProjectInvitation{
-			ID:        4,
-			ProjectID: 18,
+			ID:        "4",
+			ProjectID: "18",
 			Slug:      "pji_accept",
 			Role:      memberRoleWrite,
 			Status:    InvitationStatusActive,
@@ -142,15 +142,15 @@ func TestAcceptInvitationReturnsRedirect(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	resp, err := svc.AcceptInvitation(context.Background(), "pji_accept", 42)
+	resp, err := svc.AcceptInvitation(context.Background(), "pji_accept", "42")
 	if err != nil {
 		t.Fatalf("AcceptInvitation returned error: %v", err)
 	}
 
-	if resp.ProjectID != 18 {
-		t.Fatalf("expected project id 18, got %d", resp.ProjectID)
+	if resp.ProjectID != "18" {
+		t.Fatalf("expected project id 18, got %s", resp.ProjectID)
 	}
-	if resp.Member.UserID != 42 || resp.Member.Role != memberRoleWrite {
+	if resp.Member.UserID != "42" || resp.Member.Role != memberRoleWrite {
 		t.Fatalf("unexpected member payload: %#v", resp.Member)
 	}
 	if resp.RedirectTo != "/project/18" {

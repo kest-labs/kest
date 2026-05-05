@@ -4,35 +4,35 @@ import "time"
 
 // CreateCollectionRequest is the request body for creating a collection
 type CreateCollectionRequest struct {
-	Name        string `json:"name" binding:"required,min=1,max=100"`
-	Description string `json:"description" binding:"max=500"`
-	ProjectID string   `json:"project_id"`
-	ParentID *string  `json:"parent_id,omitempty"`
-	IsFolder    bool   `json:"is_folder"`
-	SortOrder   int    `json:"sort_order"`
+	Name        string  `json:"name" binding:"required,min=1,max=100"`
+	Description string  `json:"description" binding:"max=500"`
+	ProjectID   string  `json:"project_id"`
+	ParentID    *string `json:"parent_id,omitempty"`
+	IsFolder    bool    `json:"is_folder"`
+	SortOrder   int     `json:"sort_order"`
 }
 
 // UpdateCollectionRequest is the request body for updating a collection
 type UpdateCollectionRequest struct {
 	Name        *string `json:"name" binding:"omitempty,min=1,max=100"`
 	Description *string `json:"description" binding:"omitempty,max=500"`
-	ParentID *string   `json:"parent_id,omitempty"`
+	ParentID    *string `json:"parent_id,omitempty"`
 	SortOrder   *int    `json:"sort_order,omitempty"`
 }
 
 // MoveCollectionRequest is the request body for moving a collection
 type MoveCollectionRequest struct {
-	ParentID *string `json:"parent_id,omitempty"`
-	SortOrder *int  `json:"sort_order,omitempty"`
+	ParentID  *string `json:"parent_id,omitempty"`
+	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
 // CollectionResponse is the response for collection endpoints
 type CollectionResponse struct {
-	ID string      `json:"id"`
+	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	ProjectID string      `json:"project_id"`
-	ParentID *string     `json:"parent_id,omitempty"`
+	ProjectID   string    `json:"project_id"`
+	ParentID    *string   `json:"parent_id,omitempty"`
 	IsFolder    bool      `json:"is_folder"`
 	SortOrder   int       `json:"sort_order"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -41,11 +41,11 @@ type CollectionResponse struct {
 
 // CollectionTreeNode represents a collection in tree structure
 type CollectionTreeNode struct {
-	ID string                  `json:"id"`
+	ID           string                `json:"id"`
 	Name         string                `json:"name"`
 	Description  string                `json:"description"`
-	ProjectID string                  `json:"project_id"`
-	ParentID *string                 `json:"parent_id,omitempty"`
+	ProjectID    string                `json:"project_id"`
+	ParentID     *string               `json:"parent_id,omitempty"`
 	IsFolder     bool                  `json:"is_folder"`
 	SortOrder    int                   `json:"sort_order"`
 	Children     []*CollectionTreeNode `json:"children,omitempty"`

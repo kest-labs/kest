@@ -2,6 +2,7 @@ package run
 
 import (
 	"github.com/google/wire"
+
 	"github.com/kest-labs/kest/api/internal/contracts"
 )
 

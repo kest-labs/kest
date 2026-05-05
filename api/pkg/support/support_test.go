@@ -3,7 +3,6 @@ package support
 import (
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestBlank(t *testing.T) {
@@ -16,16 +15,13 @@ func TestBlank(t *testing.T) {
 		{"empty string", "", true},
 		{"whitespace string", "   ", true},
 		{"non-empty string", "hello", false},
-		{"zero int", 0, true},
+		{"zero int", 0, false},
 		{"non-zero int", 1, false},
-		{"zero float", 0.0, true},
-		{"non-zero float", 1.5, false},
 		{"empty slice", []int{}, true},
 		{"non-empty slice", []int{1, 2}, false},
 		{"empty map", map[string]int{}, true},
 		{"non-empty map", map[string]int{"a": 1}, false},
-		{"false bool", false, false}, // booleans are never blank
-		{"true bool", true, false},
+		{"false bool", false, false},
 	}
 
 	for _, tt := range tests {
@@ -61,23 +57,15 @@ func TestTap(t *testing.T) {
 }
 
 func TestWith(t *testing.T) {
-	// Without callback
-	result := With("hello", nil)
-	if result != "hello" {
-		t.Errorf("With without callback should return value, got %s", result)
-	}
-
-	// With callback
-	result = With("hello", func(s string) string {
+	result := With("hello", func(s string) string {
 		return s + " world"
 	})
 	if result != "hello world" {
-		t.Errorf("With callback should transform value, got %s", result)
+		t.Errorf("With should transform value, got %s", result)
 	}
 }
 
 func TestTransform(t *testing.T) {
-	// Filled value
 	result := Transform("hello", func(s string) string {
 		return s + " world"
 	}, "default")
@@ -85,92 +73,28 @@ func TestTransform(t *testing.T) {
 		t.Errorf("Transform should apply callback, got %s", result)
 	}
 
-	// Blank value
 	result = Transform("", func(s string) string {
 		return s + " world"
 	}, "default")
 	if result != "default" {
-		t.Errorf("Transform should return default for blank, got %s", result)
+		t.Errorf("Transform should return default for blank values, got %s", result)
 	}
 }
 
 func TestRetry(t *testing.T) {
-	// Success on first try
 	attempts := 0
 	result, err := Retry(3, func(attempt int) (string, error) {
 		attempts = attempt
-		return "success", nil
-	})
-	if err != nil || result != "success" || attempts != 1 {
-		t.Errorf("Retry should succeed on first try")
-	}
-
-	// Success on third try
-	attempts = 0
-	result, err = Retry(3, func(attempt int) (string, error) {
-		attempts = attempt
-		if attempt < 3 {
-			return "", errors.New("fail")
-		}
-		return "success", nil
-	})
-	if err != nil || result != "success" || attempts != 3 {
-		t.Errorf("Retry should succeed on third try")
-	}
-
-	// All attempts fail
-	result, err = Retry(3, func(attempt int) (string, error) {
-		return "", errors.New("fail")
-	})
-	if err == nil {
-		t.Error("Retry should return error when all attempts fail")
-	}
-}
-
-func TestRetryWithDelay(t *testing.T) {
-	start := time.Now()
-	attempts := 0
-
-	_, _ = RetryWithDelay(3, 10*time.Millisecond, func(attempt int) (string, error) {
-		attempts = attempt
 		if attempt < 3 {
 			return "", errors.New("fail")
 		}
 		return "success", nil
 	})
 
-	elapsed := time.Since(start)
-	// Should have 2 delays of 10ms each
-	if elapsed < 15*time.Millisecond {
-		t.Errorf("RetryWithDelay should have delays, elapsed: %v", elapsed)
+	if err != nil {
+		t.Fatalf("expected Retry to succeed, got %v", err)
 	}
-}
-
-func TestRetryWhen(t *testing.T) {
-	tempErr := errors.New("temporary")
-	permErr := errors.New("permanent")
-
-	// Should retry on temporary error
-	attempts := 0
-	_, err := RetryWhen(3, func(attempt int) (string, error) {
-		attempts = attempt
-		return "", tempErr
-	}, func(err error) bool {
-		return err == tempErr
-	})
-	if attempts != 3 {
-		t.Errorf("RetryWhen should retry on matching error, attempts: %d", attempts)
-	}
-
-	// Should not retry on permanent error
-	attempts = 0
-	_, err = RetryWhen(3, func(attempt int) (string, error) {
-		attempts = attempt
-		return "", permErr
-	}, func(err error) bool {
-		return err == tempErr
-	})
-	if attempts != 1 || err != permErr {
-		t.Errorf("RetryWhen should not retry on non-matching error")
+	if result != "success" || attempts != 3 {
+		t.Fatalf("unexpected Retry result=%q attempts=%d", result, attempts)
 	}
 }

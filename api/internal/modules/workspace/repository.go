@@ -1,8 +1,9 @@
 package workspace
 
 import (
-	"github.com/kest-labs/kest/api/pkg/dbutil"
 	"gorm.io/gorm"
+
+	"github.com/kest-labs/kest/api/pkg/dbutil"
 )
 
 // Repository defines the data access interface for workspace operations

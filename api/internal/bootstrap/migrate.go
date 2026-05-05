@@ -5,10 +5,11 @@ import (
 	"log"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/kest-labs/kest/api/database/migrations"
 	"github.com/kest-labs/kest/api/internal/infra/events"
 	"github.com/kest-labs/kest/api/internal/infra/migration"
-	"gorm.io/gorm"
 )
 
 // MigrationStatus represents the status of a migration.

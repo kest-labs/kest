@@ -8,8 +8,8 @@ import (
 // ========== Request DTOs ==========
 
 type CreateAPISpecRequest struct {
-	ProjectID string                    `json:"project_id"`
-	CategoryID *string                   `json:"category_id"`
+	ProjectID     string                  `json:"project_id"`
+	CategoryID    *string                 `json:"category_id"`
 	Method        string                  `json:"method" binding:"required,oneof=GET POST PUT DELETE PATCH HEAD OPTIONS"`
 	Path          string                  `json:"path" binding:"required,max=500"`
 	Summary       string                  `json:"summary" binding:"omitempty,max=500"`
@@ -27,7 +27,7 @@ type CreateAPISpecRequest struct {
 }
 
 type UpdateAPISpecRequest struct {
-	CategoryID *string                    `json:"category_id"`
+	CategoryID    *string                  `json:"category_id"`
 	Summary       *string                  `json:"summary" binding:"omitempty,max=500"`
 	Description   *string                  `json:"description"`
 	DocMarkdown   *string                  `json:"doc_markdown"`
@@ -42,9 +42,9 @@ type UpdateAPISpecRequest struct {
 }
 
 type BatchGenDocRequest struct {
-	CategoryID *string  `json:"category_id"`
-	Lang       string `json:"lang"`
-	Force      bool   `json:"force"`
+	CategoryID *string `json:"category_id"`
+	Lang       string  `json:"lang"`
+	Force      bool    `json:"force"`
 }
 
 type BatchGenDocResponse struct {
@@ -54,7 +54,7 @@ type BatchGenDocResponse struct {
 }
 
 type CreateAPIExampleRequest struct {
-	APISpecID string              `json:"api_spec_id"`
+	APISpecID      string            `json:"api_spec_id"`
 	Name           string            `json:"name" binding:"required,max=255"`
 	RequestHeaders map[string]string `json:"request_headers"`
 	RequestBody    json.RawMessage   `json:"request_body"`
@@ -66,9 +66,9 @@ type CreateAPIExampleRequest struct {
 // ========== Response DTOs ==========
 
 type APISpecResponse struct {
-	ID string                    `json:"id"`
-	ProjectID string                    `json:"project_id"`
-	CategoryID *string                   `json:"category_id,omitempty"`
+	ID             string                  `json:"id"`
+	ProjectID      string                  `json:"project_id"`
+	CategoryID     *string                 `json:"category_id,omitempty"`
 	Method         string                  `json:"method"`
 	Path           string                  `json:"path"`
 	Summary        string                  `json:"summary"`
@@ -95,8 +95,8 @@ type APISpecResponse struct {
 }
 
 type APIExampleResponse struct {
-	ID string              `json:"id"`
-	APISpecID string              `json:"api_spec_id"`
+	ID             string            `json:"id"`
+	APISpecID      string            `json:"api_spec_id"`
 	Name           string            `json:"name"`
 	RequestHeaders map[string]string `json:"request_headers,omitempty"`
 	RequestBody    json.RawMessage   `json:"request_body,omitempty"`
