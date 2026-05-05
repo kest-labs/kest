@@ -175,14 +175,15 @@ export function useCreateDemoProject() {
         },
       });
 
-      const collection = await collectionService.create(projectId, {
+      // Request endpoints can only live under non-folder collections.
+      const requestCollection = await collectionService.create(projectId, {
         name: 'Demo Requests',
         description: '开箱即用的电商 API 请求集合',
-        is_folder: true,
+        is_folder: false,
         sort_order: 1,
       });
 
-      await requestService.create(projectId, collection.id, {
+      await requestService.create(projectId, requestCollection.id, {
         name: 'List products',
         method: 'GET',
         url: '{{base_url}}/products?limit=3',
@@ -197,7 +198,7 @@ export function useCreateDemoProject() {
         sort_order: 1,
       });
 
-      await requestService.create(projectId, collection.id, {
+      await requestService.create(projectId, requestCollection.id, {
         name: 'Add item to cart',
         method: 'POST',
         url: '{{base_url}}/carts/add',
