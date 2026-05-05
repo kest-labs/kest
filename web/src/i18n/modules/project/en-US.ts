@@ -917,6 +917,10 @@ const messages: ProjectMessages = {
   topbar: {
     notifications: 'Notifications',
     notificationsEmpty: 'No notifications yet.',
+    help: 'Help',
+    helpHint: 'Open help, shortcuts, docs, and video entry points',
+    commandMenu: 'Command Menu',
+    commandMenuHint: 'Press Cmd/Ctrl + K to search and jump',
     profile: 'Profile',
     accountSettings: 'Account settings',
     logout: 'Logout',
@@ -1189,6 +1193,7 @@ const messages: ProjectMessages = {
     noProjectsYetTitle: 'No projects yet',
     noProjectsYetDescription:
       'Use the create action to seed the dashboard with your first project.',
+    demoProjectCreateFailed: 'Failed to create the demo project. Please retry.',
     twoWaysTitle: 'Two ways to start',
     twoWaysDescription:
       'Once a project exists, keep the first decision small: either model the API or probe it.',
@@ -1198,6 +1203,21 @@ const messages: ProjectMessages = {
     quickRequestTitle: '2. Quick Request',
     quickRequestDescription:
       'If you already know the endpoint, open the request workbench and send a probe immediately, then save it back into structured assets.',
+    demoCardTitle: 'Demo Project: E-commerce API',
+    demoCardDescription:
+      'Fork a ready-to-run e-commerce API project in one click so the first session is not an empty workspace.',
+    demoCardBadge: 'Ready to run',
+    demoCardApiSpecsTitle: 'Three real API specs included',
+    demoCardApiSpecsDescription:
+      'Comes with product list, product detail, and add-to-cart specs so docs, tests, and API design feel real immediately.',
+    demoCardRequestsTitle: 'Requests and quick debugging included',
+    demoCardRequestsDescription:
+      'Creates a Demo Requests collection automatically so users can send requests as soon as the project opens.',
+    demoCardRuntimeTitle: 'Runnable environment preconfigured',
+    demoCardRuntimeDescription:
+      'Points at a public demo API so the first project can execute requests and tests without extra setup.',
+    demoCardAction: 'Fork demo project',
+    demoCardSecondaryAction: 'Or create a blank project',
     previewSummaryFailed:
       'Some project signals failed to load. Retry this preview or open the workspace directly.',
     previewSummarySlow:
@@ -1279,6 +1299,57 @@ const messages: ProjectMessages = {
     apiSourceReadyDetail: 'API Specs are already in place and can drive generated coverage.',
     runtimeSetupReadyDetail: 'At least {count} environments are configured for execution.',
     notStarted: 'Not started',
+  },
+  commandPalette: {
+    title: 'Command Palette',
+    description: 'Search across projects, jump quickly, and run common actions.',
+    searchPlaceholder: 'Search projects, modules, or commands',
+    empty: 'No commands matched your search.',
+    createProject: 'Create project',
+    createProjectDescription: 'Open the create-project dialog',
+    switchLanguage: 'Switch language',
+    switchLanguageDescription: 'Switch to {language}',
+    openDocs: 'Open documentation',
+  },
+  helpCenter: {
+    title: 'Help Center',
+    description: 'Keep docs, video, shortcuts, and command entry points in one place.',
+    docsTitle: 'Documentation',
+    docsDescription: 'Jump straight into the Kest docs site for quick starts, API references, and workflows.',
+    videoTitle: 'Video',
+    videoDescription: 'Open the video entry point for a quick product walkthrough.',
+    commandTitle: 'Command palette',
+    commandDescription: 'Use Cmd/Ctrl + K to search projects, modules, and frequent actions.',
+    shortcutsTitle: 'Common shortcuts',
+    shortcutsDescription: 'Keep the most important navigation and help entry points visible.',
+    shortcutCommandPalette: 'Open command palette',
+    shortcutHelp: 'Open help center',
+    shortcutProjects: 'Jump to projects',
+    shortcutApiSpecs: 'Jump to current project API specs',
+  },
+  onboardingTour: {
+    title: 'First-use tour',
+    progress: 'Step {current} of {total}',
+    lockedCountdown: 'Skip unlocks in {seconds}s',
+    skip: 'Skip',
+    finish: 'Finish',
+    steps: {
+      sidebarTitle: 'Start from the project list',
+      sidebarDescription:
+        'The left rail keeps every project visible. Picking one immediately shows the next recommended move on the right.',
+      createProjectTitle: 'Creating a project is the first move',
+      createProjectDescription:
+        'New users should not start with a deep document. First create the container that all later actions live inside.',
+      demoTitle: 'Fork the demo project if you do not want to start from zero',
+      demoDescription:
+        'The demo project already includes an environment, specs, requests, and a test case so users can experience core value immediately.',
+      helpTitle: 'Do not bury help',
+      helpDescription:
+        'The help button in the top-right keeps shortcuts, docs, and video in one obvious place.',
+      commandTitle: 'Use Cmd/Ctrl + K for jump-and-act flows',
+      commandDescription:
+        'The command palette supports cross-project search, quick jumps, and frequent actions. It should feel like a default SaaS control surface.',
+    },
   },
   apiSpecsPage: {
     backToProjects: 'Back to Projects',
