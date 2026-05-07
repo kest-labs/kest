@@ -500,7 +500,13 @@ function EnvironmentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent
+        size="lg"
+        style={{
+          width: 'min(42rem, calc(100vw - 3rem))',
+          maxWidth: '42rem',
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {mode === 'create'

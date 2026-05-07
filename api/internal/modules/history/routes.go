@@ -18,7 +18,7 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
 		hist.GET("/:hid", h.Get).
 			Name("history.show").
-			WhereUUID("hid").
+			WhereUUIDOrNumber("hid").
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
 	})
 }
