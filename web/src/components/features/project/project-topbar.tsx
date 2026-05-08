@@ -12,6 +12,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -26,6 +31,7 @@ import { useLogout } from '@/hooks/use-auth';
 import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
 import { useAuthStore } from '@/store/auth-store';
+import { formatDate } from '@/utils';
 
 const buildInitials = (name: string) =>
   name

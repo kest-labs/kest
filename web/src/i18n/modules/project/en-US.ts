@@ -1096,6 +1096,10 @@ const messages: ProjectMessages = {
     inviteDialogDescription:
       'Create a shareable project invite that grants a predefined role after the invited user logs in.',
     inviteDialogErrorTitle: 'Cannot generate invite link',
+    inviteRecipientPlaceholder: 'Search user to notify in the navbar',
+    inviteRecipientHelp:
+      'Optional. Pick a user to show this invitation under their navbar bell; leave empty for a share-only link.',
+    selectedInviteRecipient: 'Selected recipient',
     selectRole: 'Select role',
     maxUses: 'Max uses',
     maxUsesPlaceholder: '1',
@@ -2089,6 +2093,7 @@ const messages: ProjectMessages = {
     signIn: 'Sign In',
     getStarted: 'Get Started',
     dashboard: 'Dashboard',
+    projects: 'Projects',
     profile: 'Profile',
   },
 };

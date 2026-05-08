@@ -1020,6 +1020,9 @@ const messages = {
     inviteDialogTitle: '生成邀请链接',
     inviteDialogDescription: '创建可分享的项目邀请，被邀请用户登录后会获得预设角色。',
     inviteDialogErrorTitle: '无法生成邀请链接',
+    inviteRecipientPlaceholder: '搜索用户以同步到导航栏铃铛',
+    inviteRecipientHelp: '可选。选择用户后，该邀请会显示在对方导航栏铃铛里；留空则只生成分享链接。',
+    selectedInviteRecipient: '已选接收人',
     selectRole: '选择角色',
     maxUses: '最大使用次数',
     maxUsesPlaceholder: '1',
@@ -1928,6 +1931,7 @@ const messages = {
     signIn: '登录',
     getStarted: '开始使用',
     dashboard: '控制台',
+    projects: '项目',
     profile: '个人资料',
   },
 };

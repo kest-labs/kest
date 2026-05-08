@@ -79,6 +79,27 @@ func (r *testProjectInviteRepo) GetProjectSummary(_ context.Context, projectID s
 	return r.projectSummary, nil
 }
 
+func (r *testProjectInviteRepo) ListPendingInvitationsForUser(
+	_ context.Context,
+	_ string,
+	_ time.Time,
+) ([]*PendingProjectInvitation, error) {
+	if r.invitation == nil || r.projectSummary == nil {
+		return nil, nil
+	}
+	return []*PendingProjectInvitation{
+		{
+			Invitation: r.invitation,
+			Project:    r.projectSummary,
+			Inviter: &InvitationUserSummary{
+				ID:       r.invitation.CreatedBy,
+				Username: "owner",
+				Email:    "owner@example.test",
+			},
+		},
+	}, nil
+}
+
 func (r *testProjectInviteRepo) AcceptInvitation(
 	_ context.Context,
 	invitation *ProjectInvitation,

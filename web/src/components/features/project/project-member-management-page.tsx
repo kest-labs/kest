@@ -275,18 +275,22 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   const [inviteRole, setInviteRole] = useState<ProjectInvitationRole>('read');
   const [inviteMaxUses, setInviteMaxUses] = useState('1');
   const [inviteExpiresAt, setInviteExpiresAt] = useState(createDefaultInviteExpiryInput());
+  const [inviteCandidateQuery, setInviteCandidateQuery] = useState('');
+  const [selectedInviteCandidate, setSelectedInviteCandidate] = useState<ApiUser | null>(null);
   const [inviteDialogError, setInviteDialogError] = useState<string | null>(null);
   const [generatedInvitation, setGeneratedInvitation] = useState<ProjectInvitation | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<ProjectInvitation | null>(null);
 
   const deferredSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const deferredCandidateQuery = useDeferredValue(candidateQuery.trim());
+  const deferredInviteCandidateQuery = useDeferredValue(inviteCandidateQuery.trim());
 
   const projectQuery = useProject(projectId);
   const projectStatsQuery = useProjectStats(projectId);
   const membersQuery = useProjectMembers(projectId);
   const memberRoleQuery = useProjectMemberRole(projectId);
   const userSearchQuery = useUserSearch(deferredCandidateQuery, 20);
+  const inviteUserSearchQuery = useUserSearch(deferredInviteCandidateQuery, 20);
   const updateMemberMutation = useUpdateProjectMember(projectId);
   const deleteMemberMutation = useDeleteProjectMember(projectId);
   const invitationsQuery = useProjectInvitations(
@@ -319,6 +323,10 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   const candidateResults = useMemo(
     () => (userSearchQuery.data ?? []).filter(candidate => !memberUserIds.has(candidate.id)),
     [memberUserIds, userSearchQuery.data]
+  );
+  const inviteCandidateResults = useMemo(
+    () => (inviteUserSearchQuery.data ?? []).filter(candidate => !memberUserIds.has(candidate.id)),
+    [inviteUserSearchQuery.data, memberUserIds]
   );
   const ownerCount = members.filter(member => member.role === 'owner').length;
   const adminCount = members.filter(member => member.role === 'admin').length;
@@ -357,6 +365,8 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
     setInviteRole('read');
     setInviteMaxUses('1');
     setInviteExpiresAt(createDefaultInviteExpiryInput());
+    setInviteCandidateQuery('');
+    setSelectedInviteCandidate(null);
     setInviteDialogError(null);
     setGeneratedInvitation(null);
   };
@@ -469,6 +479,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
         role: inviteRole,
         max_uses: parsedMaxUses,
         expires_at: expiresAt,
+        invited_user_id: selectedInviteCandidate?.id,
       });
       setGeneratedInvitation(invitation);
       setInviteDialogError(null);
@@ -1005,6 +1016,87 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                   <AlertDescription>{inviteDialogError}</AlertDescription>
                 </Alert>
               ) : null}
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="invite-member-search">{t('membersPage.inviteRecipient')}</Label>
+                  <Input
+                    id="invite-member-search"
+                    value={inviteCandidateQuery}
+                    onChange={event => {
+                      setInviteCandidateQuery(event.target.value);
+                      setInviteDialogError(null);
+                    }}
+                    placeholder={t('membersPage.inviteRecipientPlaceholder')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('membersPage.inviteRecipientHelp')}
+                  </p>
+                </div>
+
+                {deferredInviteCandidateQuery.length > 0 || selectedInviteCandidate ? (
+                  <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border p-3">
+                    {inviteUserSearchQuery.isFetching ? (
+                      <div className="space-y-2">
+                        {Array.from({ length: 2 }).map((_, index) => (
+                          <div key={index} className="h-14 animate-pulse rounded-xl bg-muted/50" />
+                        ))}
+                      </div>
+                    ) : inviteCandidateResults.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t('membersPage.noEligibleUsers')}
+                      </p>
+                    ) : (
+                      inviteCandidateResults.map(candidate => {
+                        const isSelected = selectedInviteCandidate?.id === candidate.id;
+
+                        return (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                            onClick={() => {
+                              setSelectedInviteCandidate(candidate);
+                              setInviteDialogError(null);
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-medium">{candidate.username}</div>
+                              <div className="truncate text-sm text-muted-foreground">
+                                {candidate.email}
+                              </div>
+                            </div>
+                            {isSelected ? (
+                              <Badge>{t('membersPage.selected')}</Badge>
+                            ) : (
+                              <Badge variant="outline">{t('membersPage.select')}</Badge>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : null}
+
+                {selectedInviteCandidate ? (
+                  <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">{t('membersPage.selectedInviteRecipient')}</div>
+                      <div className="truncate text-sm text-muted-foreground">
+                        {selectedInviteCandidate.username} · {selectedInviteCandidate.email}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedInviteCandidate(null)}
+                    >
+                      {t('common.clearSelection')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">

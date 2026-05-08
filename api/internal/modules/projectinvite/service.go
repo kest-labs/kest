@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kest-labs/kest/api/internal/modules/member"
+	idpkg "github.com/kest-labs/kest/api/pkg/id"
 )
 
 var (
@@ -18,6 +19,7 @@ var (
 	ErrProjectInvitationInvalidRole   = errors.New("invalid project invitation role")
 	ErrProjectInvitationInvalidUses   = errors.New("max_uses must be greater than or equal to 0")
 	ErrProjectInvitationInvalidExpiry = errors.New("expires_at must be in the future")
+	ErrProjectInvitationInvalidTarget = errors.New("invalid project invitation target user")
 	ErrProjectInvitationExpired       = errors.New("project invitation has expired")
 	ErrProjectInvitationRejected      = errors.New("project invitation has been rejected")
 	ErrProjectInvitationRevoked       = errors.New("project invitation has been revoked")
@@ -86,6 +88,15 @@ func (s *service) CreateInvitation(
 	}
 	if maxUses < 0 {
 		return nil, ErrProjectInvitationInvalidUses
+	}
+
+	targetUserID := strings.TrimSpace(req.TargetUserID)
+	if targetUserID != "" {
+		normalizedTargetUserID, err := idpkg.Parse(targetUserID)
+		if err != nil {
+			return nil, ErrProjectInvitationInvalidTarget
+		}
+		targetUserID = normalizedTargetUserID
 	}
 
 	expiresAt, err := normalizeInvitationExpiry(req.ExpiresAt, now)
@@ -250,6 +261,9 @@ func (s *service) AcceptInvitation(
 	if err := validateInvitationCanBeAccepted(invitation, now); err != nil {
 		return nil, err
 	}
+	if invitation.TargetUserID != "" && invitation.TargetUserID != userID {
+		return nil, ErrProjectInvitationNotFound
+	}
 
 	if err := s.repo.AcceptInvitation(ctx, invitation, userID, now); err != nil {
 		return nil, err
@@ -276,6 +290,15 @@ func (s *service) RejectInvitation(
 	}
 	if invitation == nil {
 		return nil, ErrProjectInvitationNotFound
+	}
+	if invitation.TargetUserID != "" {
+		if invitation.TargetUserID != userID {
+			return nil, ErrProjectInvitationNotFound
+		}
+		invitation.Status = InvitationStatusRevoked
+		if err := s.repo.UpdateInvitation(ctx, invitation); err != nil {
+			return nil, err
+		}
 	}
 
 	if !invitationMatchesRecipient(invitation, strings.TrimSpace(userID)) {
