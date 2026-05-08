@@ -43,8 +43,6 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			Name("projects.invitations.list").
 			WhereUUIDOrNumber("id").
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
-		auth.GET("/notifications/project-invitations", h.ListPendingInvitations).
-			Name("notifications.project_invitations")
 		auth.DELETE("/projects/:id/invitations/:inviteId", h.DeleteInvitation).
 			Name("projects.invitations.delete").
 			WhereUUIDOrNumber("id").
@@ -85,8 +83,7 @@ func (h *Handler) CreateInvitation(c *gin.Context) {
 		switch {
 		case errors.Is(err, ErrProjectInvitationInvalidRole),
 			errors.Is(err, ErrProjectInvitationInvalidUses),
-			errors.Is(err, ErrProjectInvitationInvalidExpiry),
-			errors.Is(err, ErrProjectInvitationInvalidTarget):
+			errors.Is(err, ErrProjectInvitationInvalidExpiry):
 			response.BadRequest(c, err.Error(), err)
 		default:
 			response.InternalServerError(c, err.Error(), err)
@@ -105,25 +102,6 @@ func (h *Handler) ListInvitations(c *gin.Context) {
 
 	baseURL := resolveInvitationBaseURL(c.Request)
 	invitations, err := h.service.ListInvitations(c.Request.Context(), projectID)
-	if err != nil {
-		response.InternalServerError(c, err.Error(), err)
-		return
-	}
-
-	for _, invitation := range invitations {
-		invitation.withBaseURL(baseURL)
-	}
-	response.Success(c, invitations)
-}
-
-func (h *Handler) ListPendingInvitations(c *gin.Context) {
-	userID, ok := handler.GetUserID(c)
-	if !ok {
-		return
-	}
-
-	baseURL := resolveInvitationBaseURL(c.Request)
-	invitations, err := h.service.ListPendingInvitations(c.Request.Context(), userID)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return

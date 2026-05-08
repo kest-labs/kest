@@ -22,7 +22,6 @@ type Repository interface {
 	GetInvitationBySlug(ctx context.Context, slug string) (*ProjectInvitation, error)
 	UpdateInvitation(ctx context.Context, invitation *ProjectInvitation) error
 	GetProjectSummary(ctx context.Context, projectID string) (*ProjectSummary, error)
-	ListPendingInvitationsForUser(ctx context.Context, userID string, now time.Time) ([]*PendingProjectInvitation, error)
 	AcceptInvitation(ctx context.Context, invitation *ProjectInvitation, userID string, acceptedAt time.Time) error
 	RevokeActiveInvitationsForUser(ctx context.Context, projectID, userID string) error
 	HasProjectMember(ctx context.Context, projectID, userID string) (bool, error)
@@ -162,87 +161,6 @@ func (r *repository) GetProjectSummary(ctx context.Context, projectID string) (*
 	}, nil
 }
 
-func (r *repository) ListPendingInvitationsForUser(
-	ctx context.Context,
-	userID string,
-	now time.Time,
-) ([]*PendingProjectInvitation, error) {
-	if strings.TrimSpace(userID) == "" {
-		return nil, nil
-	}
-
-	var poList []ProjectInvitationPO
-	if err := r.db.WithContext(ctx).
-		Where("target_user_id = ?", userID).
-		Where("status = ?", InvitationStatusActive).
-		Where("(expires_at IS NULL OR expires_at > ?)", now).
-		Where("(max_uses = 0 OR used_count < max_uses)").
-		Order("created_at DESC").
-		Limit(50).
-		Find(&poList).Error; err != nil {
-		return nil, err
-	}
-	if len(poList) == 0 {
-		return []*PendingProjectInvitation{}, nil
-	}
-
-	projectIDs := make([]string, 0, len(poList))
-	inviterIDs := make([]string, 0, len(poList))
-	for _, po := range poList {
-		projectIDs = append(projectIDs, po.ProjectID)
-		inviterIDs = append(inviterIDs, po.CreatedBy)
-	}
-
-	var projectPOs []project.ProjectPO
-	if err := r.db.WithContext(ctx).
-		Where("id IN ?", projectIDs).
-		Find(&projectPOs).Error; err != nil {
-		return nil, err
-	}
-	projectByID := make(map[string]*ProjectSummary, len(projectPOs))
-	for i := range projectPOs {
-		projectByID[projectPOs[i].ID] = &ProjectSummary{
-			ID:   projectPOs[i].ID,
-			Name: projectPOs[i].Name,
-			Slug: projectPOs[i].Slug,
-		}
-	}
-
-	var userPOs []user.UserPO
-	if err := r.db.WithContext(ctx).
-		Where("id IN ?", inviterIDs).
-		Find(&userPOs).Error; err != nil {
-		return nil, err
-	}
-	userByID := make(map[string]*InvitationUserSummary, len(userPOs))
-	for i := range userPOs {
-		userByID[userPOs[i].ID] = &InvitationUserSummary{
-			ID:       userPOs[i].ID,
-			Name:     userPOs[i].Nickname,
-			Email:    userPOs[i].Email,
-			Avatar:   userPOs[i].Avatar,
-			Username: userPOs[i].Username,
-			Nickname: userPOs[i].Nickname,
-		}
-	}
-
-	result := make([]*PendingProjectInvitation, 0, len(poList))
-	for i := range poList {
-		invitation := poList[i].toDomain()
-		projectSummary := projectByID[invitation.ProjectID]
-		if projectSummary == nil {
-			continue
-		}
-
-		result = append(result, &PendingProjectInvitation{
-			Invitation: invitation,
-			Project:    projectSummary,
-			Inviter:    userByID[invitation.CreatedBy],
-		})
-	}
-	return result, nil
-}
-
 func (r *repository) AcceptInvitation(
 	ctx context.Context,
 	invitation *ProjectInvitation,
@@ -270,9 +188,6 @@ func (r *repository) AcceptInvitation(
 				}
 			}
 			return err
-		}
-		if current.TargetUserID != "" && current.TargetUserID != userID {
-			return ErrProjectInvitationNotFound
 		}
 
 		var existing member.ProjectMemberPO

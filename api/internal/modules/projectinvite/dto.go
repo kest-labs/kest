@@ -92,7 +92,6 @@ func toProjectInvitationResponse(invitation *ProjectInvitation, now time.Time) *
 		ExpiresAt:     invitation.ExpiresAt,
 		LastUsedAt:    invitation.LastUsedAt,
 		CreatedBy:     invitation.CreatedBy,
-		TargetUserID:  invitation.TargetUserID,
 		CreatedAt:     invitation.CreatedAt,
 		UpdatedAt:     invitation.UpdatedAt,
 	}
