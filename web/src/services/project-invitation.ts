@@ -4,6 +4,7 @@ import type {
   CreateProjectInvitationRequest,
   ProjectInvitation,
   PublicProjectInvitation,
+  ReceivedProjectInvitation,
   RejectProjectInvitationResponse,
 } from '@/types/project-invitation';
 
@@ -21,6 +22,11 @@ export const projectInvitationService = {
 
   revoke: (projectId: number | string, invitationId: number | string) =>
     request.delete<void>(`/projects/${projectId}/invitations/${invitationId}`),
+
+  listReceived: () =>
+    request.get<ReceivedProjectInvitation[]>('/project-invitations/received', {
+      skipErrorHandler: true,
+    }),
 
   getDetail: (slug: string) =>
     request.get<PublicProjectInvitation>(`/project-invitations/${slug}`, {

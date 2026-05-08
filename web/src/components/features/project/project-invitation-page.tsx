@@ -30,6 +30,8 @@ const getStatusBadgeClassName = (status?: string) => {
   switch (status) {
     case 'active':
       return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'rejected':
+      return 'border-slate-200 bg-slate-100 text-slate-700';
     case 'used_up':
       return 'border-amber-200 bg-amber-50 text-amber-700';
     case 'revoked':
@@ -62,7 +64,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
 
   const handleAcceptInvitation = async () => {
     try {
-      const result = await acceptInvitationMutation.mutateAsync();
+      const result = await acceptInvitationMutation.mutateAsync(undefined);
       router.replace(result.redirect_to || buildProjectDetailRoute(result.project_id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
@@ -71,7 +73,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
 
   const handleRejectInvitation = async () => {
     try {
-      await rejectInvitationMutation.mutateAsync();
+      await rejectInvitationMutation.mutateAsync(undefined);
       setWasRejected(true);
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
@@ -99,6 +101,8 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
         return t('invitation.statusActive');
       case 'expired':
         return t('invitation.statusExpired');
+      case 'rejected':
+        return t('invitation.statusRejected');
       case 'revoked':
         return t('invitation.statusRevoked');
       case 'used_up':

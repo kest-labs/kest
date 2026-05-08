@@ -34,10 +34,16 @@ import {
   buildProjectCollectionsRoute,
   buildProjectDetailRoute,
   buildProjectEnvironmentsRoute,
+  buildProjectInviteRoute,
   buildProjectTestCasesRoute,
 } from '@/constants/routes';
 import { useCreateDemoProject } from '@/hooks/use-create-demo-project';
 import { apiSpecKeys, useApiSpecs } from '@/hooks/use-api-specs';
+import {
+  useAcceptProjectInvitation,
+  useMyProjectInvitations,
+  useRejectProjectInvitation,
+} from '@/hooks/use-project-invitations';
 import {
   projectKeys,
   useCreateProject,
@@ -52,6 +58,7 @@ import { apiSpecService } from '@/services/api-spec';
 import { projectService } from '@/services/project';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import type { ApiProject, CreateProjectRequest, UpdateProjectRequest } from '@/types/project';
+import type { ReceivedProjectInvitation } from '@/types/project-invitation';
 import { formatDate } from '@/utils';
 
 const PROJECTS_PAGE_SIZE = 1000;
@@ -123,6 +130,22 @@ const buildDashboardHref = (
 const buildQuickRequestHref = (projectId: number | string) =>
   `${buildProjectCollectionsRoute(projectId)}?quickRequest=1`;
 
+const getReceivedInvitationRoleLabel = (
+  t: ScopedTranslations<'project'>,
+  role: ReceivedProjectInvitation['role']
+) => {
+  switch (role) {
+    case 'admin':
+      return t('roles.admin');
+    case 'write':
+      return t('roles.write');
+    case 'read':
+      return t('roles.read');
+    default:
+      return t('roles.unknown');
+  }
+};
+
 export function ProjectDashboardPage() {
   const i18n = useT();
   const t = i18n.project;
@@ -144,6 +167,7 @@ export function ProjectDashboardPage() {
   const createProjectMutation = useCreateProject();
   const createDemoProjectMutation = useCreateDemoProject();
   const deleteProjectMutation = useDeleteProject();
+  const receivedInvitationsQuery = useMyProjectInvitations();
   const updateProjectMutation = useUpdateProject();
   const markFirstProjectCreated = useOnboardingStore.use.markFirstProjectCreated();
 
@@ -438,6 +462,11 @@ export function ProjectDashboardPage() {
 
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div className="space-y-6 p-4 md:p-6">
+          <PendingInvitationsPanel
+            invitations={receivedInvitationsQuery.data ?? []}
+            isLoading={receivedInvitationsQuery.isLoading}
+            isError={Boolean(receivedInvitationsQuery.error)}
+          />
           {selectedProject ? (
             <ProjectPreviewPanel
               project={selectedProject}
@@ -484,6 +513,152 @@ export function ProjectDashboardPage() {
         onConfirm={handleDeleteProject}
       />
     </div>
+  );
+}
+
+function PendingInvitationsPanel({
+  invitations,
+  isLoading,
+  isError,
+}: {
+  invitations: ReceivedProjectInvitation[];
+  isLoading: boolean;
+  isError: boolean;
+}) {
+  const t = useT('project');
+  const router = useRouter();
+  const acceptInvitationMutation = useAcceptProjectInvitation();
+  const rejectInvitationMutation = useRejectProjectInvitation();
+  const [actingOn, setActingOn] = useState<{
+    action: 'accept' | 'reject';
+    slug: string;
+  } | null>(null);
+
+  if (!isLoading && !isError && invitations.length === 0) {
+    return null;
+  }
+
+  const handleAccept = async (invitation: ReceivedProjectInvitation) => {
+    setActingOn({ action: 'accept', slug: invitation.slug });
+    try {
+      const result = await acceptInvitationMutation.mutateAsync(invitation.slug);
+      router.push(result.redirect_to || buildProjectDetailRoute(result.project_id));
+    } catch {
+      // Global HTTP error handling already surfaces failure feedback.
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const handleReject = async (invitation: ReceivedProjectInvitation) => {
+    setActingOn({ action: 'reject', slug: invitation.slug });
+    try {
+      await rejectInvitationMutation.mutateAsync(invitation.slug);
+    } catch {
+      // Global HTTP error handling already surfaces failure feedback.
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  return (
+    <Card className="border-primary/15 bg-linear-to-r from-primary/8 via-background to-background">
+      <CardHeader>
+        <CardTitle>{t('dashboardPage.pendingInvitationsTitle')}</CardTitle>
+        <CardDescription>{t('dashboardPage.pendingInvitationsDescription')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-28 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+              />
+            ))}
+          </div>
+        ) : isError ? (
+          <Alert>
+            <AlertTitle>{t('dashboardPage.pendingInvitationsLoadFailedTitle')}</AlertTitle>
+            <AlertDescription>
+              {t('dashboardPage.pendingInvitationsLoadFailedDescription')}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          invitations.map(invitation => {
+            const isAccepting = actingOn?.action === 'accept' && actingOn.slug === invitation.slug;
+            const isRejecting = actingOn?.action === 'reject' && actingOn.slug === invitation.slug;
+
+            return (
+              <div
+                key={invitation.id}
+                className="rounded-2xl border border-border/60 bg-background/80 p-4"
+              >
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-primary/20 bg-primary/10 text-primary"
+                      >
+                        {t('roles.badge', {
+                          role: getReceivedInvitationRoleLabel(t, invitation.role),
+                        })}
+                      </Badge>
+                      <Badge variant="outline">{invitation.project_slug}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold tracking-tight">
+                        {invitation.project_name}
+                      </p>
+                      <p className="mt-1 text-sm text-text-muted">
+                        {t('invitation.expiresLabel')}:{' '}
+                        {invitation.expires_at
+                          ? formatDate(invitation.expires_at, 'YYYY-MM-DD HH:mm')
+                          : t('invitation.never')}
+                      </p>
+                      <p className="text-sm text-text-muted">
+                        {t('membersPage.inviteCreated')}:{' '}
+                        {formatDate(invitation.created_at, 'YYYY-MM-DD HH:mm')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" asChild>
+                      <Link href={buildProjectInviteRoute(invitation.slug)}>
+                        {t('dashboardPage.reviewInvitation')}
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      loading={isRejecting}
+                      disabled={Boolean(actingOn) && !isRejecting}
+                      onClick={() => {
+                        void handleReject(invitation);
+                      }}
+                    >
+                      {t('invitation.reject')}
+                    </Button>
+                    <Button
+                      type="button"
+                      loading={isAccepting}
+                      disabled={Boolean(actingOn) && !isAccepting}
+                      onClick={() => {
+                        void handleAccept(invitation);
+                      }}
+                    >
+                      {t('invitation.accept')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -580,15 +755,21 @@ function ProjectDashboardWelcome({
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-text-muted">
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">{t('dashboardPage.demoCardApiSpecsTitle')}</p>
+              <p className="font-medium text-text-main">
+                {t('dashboardPage.demoCardApiSpecsTitle')}
+              </p>
               <p className="mt-1">{t('dashboardPage.demoCardApiSpecsDescription')}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">{t('dashboardPage.demoCardRequestsTitle')}</p>
+              <p className="font-medium text-text-main">
+                {t('dashboardPage.demoCardRequestsTitle')}
+              </p>
               <p className="mt-1">{t('dashboardPage.demoCardRequestsDescription')}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-              <p className="font-medium text-text-main">{t('dashboardPage.demoCardRuntimeTitle')}</p>
+              <p className="font-medium text-text-main">
+                {t('dashboardPage.demoCardRuntimeTitle')}
+              </p>
               <p className="mt-1">{t('dashboardPage.demoCardRuntimeDescription')}</p>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
@@ -733,12 +914,15 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
 
             <div className="flex flex-wrap gap-2">
               {isSlowPreview && !nextStep && !hasReadinessError ? (
-                <Link href={buildProjectCollectionsRoute(project.id)} className={navigationLinkClassName}>
-                    {t('projectDetail.quickRequest')}
+                <Link
+                  href={buildProjectCollectionsRoute(project.id)}
+                  className={navigationLinkClassName}
+                >
+                  {t('projectDetail.quickRequest')}
                 </Link>
               ) : null}
               <Link href={buildProjectDetailRoute(project.id)} className={navigationLinkClassName}>
-                  {t('projectDetail.openWorkspace')}
+                {t('projectDetail.openWorkspace')}
               </Link>
             </div>
           </div>
@@ -821,7 +1005,10 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                       {t('dashboardPage.recentApiSpecsDescription')}
                     </p>
                   </div>
-                  <Link href={buildProjectApiSpecsRoute(project.id)} className={navigationLinkClassName}>
+                  <Link
+                    href={buildProjectApiSpecsRoute(project.id)}
+                    className={navigationLinkClassName}
+                  >
                     {t('projectDetail.reviewApiSpecs')}
                   </Link>
                 </div>
@@ -877,8 +1064,11 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                   <Button type="button" variant="outline" size="sm" onClick={handleRetryPreview}>
                     {t('dashboardPage.retryPreview')}
                   </Button>
-                  <Link href={buildProjectDetailRoute(project.id)} className={navigationLinkClassName}>
-                      {t('projectDetail.openWorkspace')}
+                  <Link
+                    href={buildProjectDetailRoute(project.id)}
+                    className={navigationLinkClassName}
+                  >
+                    {t('projectDetail.openWorkspace')}
                   </Link>
                 </div>
               </Alert>
@@ -898,13 +1088,13 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                         href={buildProjectCollectionsRoute(project.id)}
                         className={navigationLinkClassName}
                       >
-                          {t('projectDetail.quickRequest')}
+                        {t('projectDetail.quickRequest')}
                       </Link>
                       <Link
                         href={buildProjectDetailRoute(project.id)}
                         className={navigationLinkClassName}
                       >
-                          {t('projectDetail.openWorkspace')}
+                        {t('projectDetail.openWorkspace')}
                       </Link>
                       <Button
                         type="button"

@@ -2285,12 +2285,12 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/import/postman
 |--------|----------|-------------|------|
 | `GET` | `/v1/projects/:id/members` | List project members | 🔒 |
 | `GET` | `/v1/projects/:id/members/me` | Get current user project role | 🔒 |
-| `POST` | `/v1/projects/:id/members` | Add project member directly | 🔒 |
 | `PATCH` | `/v1/projects/:id/members/:uid` | Update project member role | 🔒 |
 | `DELETE` | `/v1/projects/:id/members/:uid` | Remove project member | 🔒 |
-| `POST` | `/v1/projects/:id/invitations` | Create project invite link | 🔒 |
-| `GET` | `/v1/projects/:id/invitations` | List project invite links | 🔒 |
-| `DELETE` | `/v1/projects/:id/invitations/:inviteId` | Revoke project invite link | 🔒 |
+| `POST` | `/v1/projects/:id/invitations` | Create project invitation | 🔒 |
+| `GET` | `/v1/projects/:id/invitations` | List project invitations | 🔒 |
+| `DELETE` | `/v1/projects/:id/invitations/:inviteId` | Revoke project invitation | 🔒 |
+| `GET` | `/v1/project-invitations/received` | List current user project invitations | 🔒 |
 | `GET` | `/v1/project-invitations/:slug` | Get public project invitation | 🔓 |
 | `POST` | `/v1/project-invitations/:slug/accept` | Accept project invitation | 🔒 |
 | `POST` | `/v1/project-invitations/:slug/reject` | Reject project invitation | 🔒 |
@@ -2337,45 +2337,6 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
 ```bash
 curl -X GET 'http://localhost:8025/api/v1/projects/1/members/me' \
   -H 'Authorization: Bearer <token>'
-```
-
----
-
-### POST `/v1/projects/:id/members`
-
-**Add project member directly**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-
-#### Request Body
-
-```json
-{
-  "role": "read",
-  "user_id": 2
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `user_id` | `uint` | ✅ | Target user ID |
-| `role` | `string` | ✅ | One of `owner/admin/write/read` |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/members' \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"role":"read","user_id":2}'
 ```
 
 ---
@@ -2444,7 +2405,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
 
 ### POST `/v1/projects/:id/invitations`
 
-**Create project invite link**
+**Create project invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2455,6 +2416,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
 ```json
 {
   "expires_at": "2026-05-01T00:00:00Z",
+  "invited_user_id": "user_123",
   "max_uses": 1,
   "role": "read"
 }
@@ -2463,8 +2425,9 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `role` | `string` | ✅ | One of `admin/write/read` |
+| `invited_user_id` | `string` | ❌ | Directly invite a specific user account |
 | `expires_at` | `*time.Time` | ❌ | Expiration time in RFC3339 format |
-| `max_uses` | `*int` | ❌ | `0` means unlimited uses |
+| `max_uses` | `*int` | ❌ | `0` means unlimited uses for shareable links; direct invites are always single-use |
 
 #### Path Parameters
 
@@ -2478,14 +2441,14 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
 curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
-  -d '{"expires_at":"2026-05-01T00:00:00Z","max_uses":1,"role":"read"}'
+  -d '{"expires_at":"2026-05-01T00:00:00Z","invited_user_id":"user_123","role":"read"}'
 ```
 
 ---
 
 ### GET `/v1/projects/:id/invitations`
 
-**List project invite links**
+**List project invitations**
 
 | Property | Value |
 |----------|-------|
@@ -2508,7 +2471,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/invitations' \
 
 ### DELETE `/v1/projects/:id/invitations/:inviteId`
 
-**Revoke project invite link**
+**Revoke project invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2525,6 +2488,23 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/invitations' \
 
 ```bash
 curl -X DELETE 'http://localhost:8025/api/v1/projects/1/invitations/1' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### GET `/v1/project-invitations/received`
+
+**List current user project invitations**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Example
+
+```bash
+curl -X GET 'http://localhost:8025/api/v1/project-invitations/received' \
   -H 'Authorization: Bearer <token>'
 ```
 

@@ -48,6 +48,8 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			WhereUUIDOrNumber("id").
 			WhereUUID("inviteId").
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
+		auth.GET("/project-invitations/received", h.ListReceivedInvitations).
+			Name("project_invitations.received")
 
 		auth.POST("/project-invitations/:slug/accept", h.AcceptInvitation).
 			Name("project_invitations.accept")
@@ -134,6 +136,21 @@ func (h *Handler) DeleteInvitation(c *gin.Context) {
 	response.NoContent(c)
 }
 
+func (h *Handler) ListReceivedInvitations(c *gin.Context) {
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	invitations, err := h.service.ListReceivedInvitations(c.Request.Context(), userID)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, invitations)
+}
+
 func (h *Handler) GetInvitation(c *gin.Context) {
 	slug := c.Param("slug")
 	if slug == "" {
@@ -172,9 +189,11 @@ func (h *Handler) AcceptInvitation(c *gin.Context) {
 		case errors.Is(err, ErrProjectInvitationNotFound):
 			response.NotFound(c, err.Error(), err)
 		case errors.Is(err, ErrProjectInvitationExpired),
+			errors.Is(err, ErrProjectInvitationRejected),
 			errors.Is(err, ErrProjectInvitationRevoked),
 			errors.Is(err, ErrProjectInvitationUsedUp),
-			errors.Is(err, ErrProjectInvitationAlreadyMember):
+			errors.Is(err, ErrProjectInvitationAlreadyMember),
+			errors.Is(err, ErrProjectInvitationNotRecipient):
 			response.ErrorWithDetails(c, http.StatusConflict, err.Error(), err)
 		default:
 			response.InternalServerError(c, err.Error(), err)
@@ -199,11 +218,14 @@ func (h *Handler) RejectInvitation(c *gin.Context) {
 
 	result, err := h.service.RejectInvitation(c.Request.Context(), slug, userID)
 	if err != nil {
-		if errors.Is(err, ErrProjectInvitationNotFound) {
+		switch {
+		case errors.Is(err, ErrProjectInvitationNotFound):
 			response.NotFound(c, err.Error(), err)
-			return
+		case errors.Is(err, ErrProjectInvitationNotRecipient):
+			response.ErrorWithDetails(c, http.StatusConflict, err.Error(), err)
+		default:
+			response.InternalServerError(c, err.Error(), err)
 		}
-		response.InternalServerError(c, err.Error(), err)
 		return
 	}
 

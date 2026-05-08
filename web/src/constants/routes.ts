@@ -32,9 +32,8 @@ export const ROUTES = {
     PROJECT_HISTORIES: '/project/:projectId/histories',
     PROJECT_FLOWS: '/project/:projectId/flows',
     PROJECT_TEST_CASES: '/project/:projectId/test-cases',
+    PROFILE: '/console/profile',
     SETTINGS: '/console/settings',
-    USERS: '/console/users',
-    STYLEGUIDE: '/styleguide',
   },
 } as const;
 

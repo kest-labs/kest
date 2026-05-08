@@ -11,7 +11,6 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | `GET` | `/v1/projects/:id/members` | Require Project Role member | 🔒 |
-| `POST` | `/v1/projects/:id/members` | Create member | 🔒 |
 | `PATCH` | `/v1/projects/:id/members/:uid` | Update member | 🔒 |
 | `DELETE` | `/v1/projects/:id/members/:uid` | Delete member | 🔒 |
 
@@ -37,29 +36,6 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 ```bash
 curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
-  -H 'Authorization: Bearer <token>'
-```
-
----
-
-### POST `/v1/projects/:id/members`
-
-**Create member**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/members' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -112,4 +88,3 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
 ```
 
 ---
-

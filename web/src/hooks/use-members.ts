@@ -5,10 +5,7 @@ import { toast } from 'sonner';
 import { projectKeys } from '@/hooks/use-projects';
 import { useT } from '@/i18n/client';
 import { memberService } from '@/services/member';
-import type {
-  CreateProjectMemberRequest,
-  UpdateProjectMemberRequest,
-} from '@/types/member';
+import type { UpdateProjectMemberRequest } from '@/types/member';
 
 // Members 域的 React Query key。
 // 作用：统一管理项目成员列表和当前用户成员角色缓存。
@@ -47,21 +44,6 @@ const invalidateMemberProjectData = (
   queryClient.invalidateQueries({ queryKey: memberKeys.project(projectId) });
   queryClient.invalidateQueries({ queryKey: projectKeys.projectStats(projectId) });
 };
-
-// 创建成员 mutation。
-// 作用：成员创建后刷新成员列表、当前用户角色和项目成员统计。
-export function useCreateProjectMember(projectId: number | string) {
-  const queryClient = useQueryClient();
-  const t = useT();
-
-  return useMutation({
-    mutationFn: (data: CreateProjectMemberRequest) => memberService.create(projectId, data),
-    onSuccess: () => {
-      invalidateMemberProjectData(queryClient, projectId);
-      toast.success(t.project('toasts.memberAdded'));
-    },
-  });
-}
 
 // 更新成员角色 mutation。
 // 作用：角色更新后保持成员列表和项目统计同步。

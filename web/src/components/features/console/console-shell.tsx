@@ -7,11 +7,8 @@ import {
   BarChart3,
   Bell,
   FolderKanban,
-  Home,
   LogOut,
-  Palette,
-  Settings,
-  Users,
+  User,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -32,11 +29,8 @@ import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/utils';
 
 type NavTitleKey =
-  | 'nav.dashboard'
   | 'nav.projects'
-  | 'nav.users'
-  | 'nav.styleguide'
-  | 'nav.settings';
+  | 'nav.profile';
 
 interface NavItem {
   titleKey: NavTitleKey;
@@ -71,32 +65,17 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
   const mainNavItems: NavItem[] = [
     {
-      titleKey: 'nav.dashboard',
-      href: ROUTES.CONSOLE.HOME,
-      icon: Home,
-    },
-    {
       titleKey: 'nav.projects',
       href: ROUTES.CONSOLE.PROJECTS,
       icon: FolderKanban,
-    },
-    {
-      titleKey: 'nav.users',
-      href: ROUTES.CONSOLE.USERS,
-      icon: Users,
     },
   ];
 
   const secondaryNavItems: NavItem[] = [
     {
-      titleKey: 'nav.styleguide',
-      href: ROUTES.CONSOLE.STYLEGUIDE,
-      icon: Palette,
-    },
-    {
-      titleKey: 'nav.settings',
-      href: ROUTES.CONSOLE.SETTINGS,
-      icon: Settings,
+      titleKey: 'nav.profile',
+      href: ROUTES.CONSOLE.PROFILE,
+      icon: User,
     },
   ];
 
@@ -182,10 +161,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
-                <Link href={ROUTES.CONSOLE.SETTINGS}>{t('nav.profile')}</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
-                <Link href={ROUTES.CONSOLE.SETTINGS}>{t('nav.settings')}</Link>
+                <Link href={ROUTES.CONSOLE.PROFILE}>{t('nav.profile')}</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

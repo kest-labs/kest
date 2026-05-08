@@ -15,11 +15,6 @@ export interface ProjectMember {
   updated_at: string;
 }
 
-export interface CreateProjectMemberRequest {
-  user_id: string;
-  role: AssignableProjectMemberRole;
-}
-
 export interface UpdateProjectMemberRequest {
   role: AssignableProjectMemberRole;
 }

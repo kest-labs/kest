@@ -1,5 +1,6 @@
-import { AccountSettings } from '@/components/features/console/account-settings';
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/constants/routes';
 
 export default function SettingsPage() {
-  return <AccountSettings />;
+  redirect(ROUTES.CONSOLE.PROFILE);
 }

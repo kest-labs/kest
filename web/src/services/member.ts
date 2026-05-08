@@ -1,6 +1,5 @@
 import request from '@/http';
 import type {
-  CreateProjectMemberRequest,
   ProjectMember,
   UpdateProjectMemberRequest,
 } from '@/types/member';
@@ -20,9 +19,6 @@ export const memberService = {
 
   getMyRole: (projectId: number | string) =>
     request.get<ProjectMember>(`/projects/${projectId}/members/me`),
-
-  create: (projectId: number | string, data: CreateProjectMemberRequest) =>
-    request.post<ProjectMember>(`/projects/${projectId}/members`, normalizePayload(data)),
 
   update: (
     projectId: number | string,

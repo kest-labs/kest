@@ -19,9 +19,11 @@ var (
 	ErrProjectInvitationInvalidUses   = errors.New("max_uses must be greater than or equal to 0")
 	ErrProjectInvitationInvalidExpiry = errors.New("expires_at must be in the future")
 	ErrProjectInvitationExpired       = errors.New("project invitation has expired")
+	ErrProjectInvitationRejected      = errors.New("project invitation has been rejected")
 	ErrProjectInvitationRevoked       = errors.New("project invitation has been revoked")
 	ErrProjectInvitationUsedUp        = errors.New("project invitation has no remaining uses")
 	ErrProjectInvitationAlreadyMember = errors.New("user is already a member of this project")
+	ErrProjectInvitationNotRecipient  = errors.New("project invitation is not assigned to this user")
 )
 
 type Service interface {
@@ -32,6 +34,10 @@ type Service interface {
 		req *CreateProjectInvitationRequest,
 	) (*ProjectInvitationResponse, error)
 	ListInvitations(ctx context.Context, projectID string) ([]*ProjectInvitationResponse, error)
+	ListReceivedInvitations(
+		ctx context.Context,
+		userID string,
+	) ([]*ReceivedProjectInvitationResponse, error)
 	RevokeInvitation(ctx context.Context, projectID, invitationID string) error
 	GetInvitationDetail(
 		ctx context.Context,
@@ -72,6 +78,7 @@ func (s *service) CreateInvitation(
 		return nil, ErrProjectInvitationInvalidRole
 	}
 
+	invitedUserID := strings.TrimSpace(req.InvitedUserID)
 	now := time.Now().UTC()
 	maxUses := 1
 	if req.MaxUses != nil {
@@ -86,20 +93,43 @@ func (s *service) CreateInvitation(
 		return nil, err
 	}
 
+	if invitedUserID != "" {
+		isMember, err := s.repo.HasProjectMember(ctx, projectID, invitedUserID)
+		if err != nil {
+			return nil, err
+		}
+		if isMember {
+			return nil, ErrProjectInvitationAlreadyMember
+		}
+
+		// Direct invitations are one-to-one and always single-use. Replace any
+		// previously pending direct invite so the recipient sees a single action.
+		maxUses = 1
+		if err := s.repo.RevokeActiveInvitationsForUser(ctx, projectID, invitedUserID); err != nil {
+			return nil, err
+		}
+	}
+
 	rawToken, tokenPrefix, tokenHash, err := generateInvitationTokenMaterial()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate invitation token: %w", err)
 	}
 
+	var invitedUserIDPtr *string
+	if invitedUserID != "" {
+		invitedUserIDPtr = &invitedUserID
+	}
+
 	invitation := &ProjectInvitation{
-		ProjectID:   projectID,
-		TokenPrefix: tokenPrefix,
-		Slug:        rawToken,
-		Role:        role,
-		CreatedBy:   createdBy,
-		Status:      InvitationStatusActive,
-		MaxUses:     maxUses,
-		ExpiresAt:   expiresAt,
+		ProjectID:     projectID,
+		TokenPrefix:   tokenPrefix,
+		Slug:          rawToken,
+		Role:          role,
+		CreatedBy:     createdBy,
+		InvitedUserID: invitedUserIDPtr,
+		Status:        InvitationStatusActive,
+		MaxUses:       maxUses,
+		ExpiresAt:     expiresAt,
 	}
 
 	if err := s.repo.CreateInvitation(ctx, invitation, tokenHash); err != nil {
@@ -123,6 +153,36 @@ func (s *service) ListInvitations(
 	for _, invitation := range invitations {
 		result = append(result, toProjectInvitationResponse(invitation, now))
 	}
+	return result, nil
+}
+
+func (s *service) ListReceivedInvitations(
+	ctx context.Context,
+	userID string,
+) ([]*ReceivedProjectInvitationResponse, error) {
+	invitations, err := s.repo.ListInvitationsByInvitedUser(ctx, strings.TrimSpace(userID))
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	result := make([]*ReceivedProjectInvitationResponse, 0, len(invitations))
+	for _, invitation := range invitations {
+		if resolveInvitationStatus(invitation, now) != InvitationStatusActive {
+			continue
+		}
+
+		projectSummary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+		if err != nil {
+			return nil, err
+		}
+		if projectSummary == nil {
+			continue
+		}
+
+		result = append(result, toReceivedProjectInvitationResponse(invitation, projectSummary, now))
+	}
+
 	return result, nil
 }
 
@@ -182,6 +242,9 @@ func (s *service) AcceptInvitation(
 	if invitation == nil {
 		return nil, ErrProjectInvitationNotFound
 	}
+	if !invitationMatchesRecipient(invitation, userID) {
+		return nil, ErrProjectInvitationNotRecipient
+	}
 
 	now := time.Now().UTC()
 	if err := validateInvitationCanBeAccepted(invitation, now); err != nil {
@@ -205,7 +268,7 @@ func (s *service) AcceptInvitation(
 func (s *service) RejectInvitation(
 	ctx context.Context,
 	slug string,
-	_ string,
+	userID string,
 ) (*RejectProjectInvitationResponse, error) {
 	invitation, err := s.repo.GetInvitationBySlug(ctx, strings.TrimSpace(slug))
 	if err != nil {
@@ -215,6 +278,22 @@ func (s *service) RejectInvitation(
 		return nil, ErrProjectInvitationNotFound
 	}
 
+	if !invitationMatchesRecipient(invitation, strings.TrimSpace(userID)) {
+		return nil, ErrProjectInvitationNotRecipient
+	}
+
+	if invitation.InvitedUserID != nil {
+		switch resolveInvitationStatus(invitation, time.Now().UTC()) {
+		case InvitationStatusRejected:
+			return &RejectProjectInvitationResponse{Status: "rejected"}, nil
+		case InvitationStatusActive:
+			invitation.Status = InvitationStatusRejected
+			if err := s.repo.UpdateInvitation(ctx, invitation); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return &RejectProjectInvitationResponse{Status: "rejected"}, nil
 }
 
@@ -222,6 +301,8 @@ func validateInvitationCanBeAccepted(invitation *ProjectInvitation, now time.Tim
 	switch resolveInvitationStatus(invitation, now) {
 	case InvitationStatusActive:
 		return nil
+	case InvitationStatusRejected:
+		return ErrProjectInvitationRejected
 	case InvitationStatusRevoked:
 		return ErrProjectInvitationRevoked
 	case InvitationStatusExpired:
@@ -231,6 +312,14 @@ func validateInvitationCanBeAccepted(invitation *ProjectInvitation, now time.Tim
 	default:
 		return ErrProjectInvitationRevoked
 	}
+}
+
+func invitationMatchesRecipient(invitation *ProjectInvitation, userID string) bool {
+	if invitation == nil || invitation.InvitedUserID == nil {
+		return true
+	}
+
+	return strings.TrimSpace(*invitation.InvitedUserID) == strings.TrimSpace(userID)
 }
 
 func normalizeInvitationExpiry(expiresAt *time.Time, now time.Time) (*time.Time, error) {

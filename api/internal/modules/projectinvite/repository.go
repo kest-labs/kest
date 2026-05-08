@@ -17,11 +17,14 @@ import (
 type Repository interface {
 	CreateInvitation(ctx context.Context, invitation *ProjectInvitation, tokenHash string) error
 	ListInvitationsByProject(ctx context.Context, projectID string) ([]*ProjectInvitation, error)
+	ListInvitationsByInvitedUser(ctx context.Context, userID string) ([]*ProjectInvitation, error)
 	GetInvitationByProject(ctx context.Context, projectID, invitationID string) (*ProjectInvitation, error)
 	GetInvitationBySlug(ctx context.Context, slug string) (*ProjectInvitation, error)
 	UpdateInvitation(ctx context.Context, invitation *ProjectInvitation) error
 	GetProjectSummary(ctx context.Context, projectID string) (*ProjectSummary, error)
 	AcceptInvitation(ctx context.Context, invitation *ProjectInvitation, userID string, acceptedAt time.Time) error
+	RevokeActiveInvitationsForUser(ctx context.Context, projectID, userID string) error
+	HasProjectMember(ctx context.Context, projectID, userID string) (bool, error)
 }
 
 type repository struct {
@@ -47,7 +50,28 @@ func (r *repository) CreateInvitation(ctx context.Context, invitation *ProjectIn
 func (r *repository) ListInvitationsByProject(ctx context.Context, projectID string) ([]*ProjectInvitation, error) {
 	var poList []ProjectInvitationPO
 	if err := r.db.WithContext(ctx).
+		Preload("InvitedUser").
 		Where("project_id = ?", projectID).
+		Order("created_at DESC").
+		Find(&poList).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*ProjectInvitation, 0, len(poList))
+	for i := range poList {
+		result = append(result, poList[i].toDomain())
+	}
+	return result, nil
+}
+
+func (r *repository) ListInvitationsByInvitedUser(
+	ctx context.Context,
+	userID string,
+) ([]*ProjectInvitation, error) {
+	var poList []ProjectInvitationPO
+	if err := r.db.WithContext(ctx).
+		Preload("InvitedUser").
+		Where("invited_user_id = ?", userID).
 		Order("created_at DESC").
 		Find(&poList).Error; err != nil {
 		return nil, err
@@ -66,6 +90,7 @@ func (r *repository) GetInvitationByProject(
 ) (*ProjectInvitation, error) {
 	var po ProjectInvitationPO
 	if err := r.db.WithContext(ctx).
+		Preload("InvitedUser").
 		Where("project_id = ? AND id = ?", projectID, invitationID).
 		First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -79,6 +104,7 @@ func (r *repository) GetInvitationByProject(
 func (r *repository) GetInvitationBySlug(ctx context.Context, slug string) (*ProjectInvitation, error) {
 	var po ProjectInvitationPO
 	if err := r.db.WithContext(ctx).
+		Preload("InvitedUser").
 		Where("slug = ?", slug).
 		First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -95,13 +121,27 @@ func (r *repository) UpdateInvitation(ctx context.Context, invitation *ProjectIn
 		Model(&ProjectInvitationPO{}).
 		Where("id = ?", invitation.ID).
 		Updates(map[string]any{
-			"role":         po.Role,
-			"status":       po.Status,
-			"max_uses":     po.MaxUses,
-			"used_count":   po.UsedCount,
-			"expires_at":   po.ExpiresAt,
-			"last_used_at": po.LastUsedAt,
-			"updated_at":   time.Now().UTC(),
+			"role":            po.Role,
+			"status":          po.Status,
+			"invited_user_id": po.InvitedUserID,
+			"max_uses":        po.MaxUses,
+			"used_count":      po.UsedCount,
+			"expires_at":      po.ExpiresAt,
+			"last_used_at":    po.LastUsedAt,
+			"updated_at":      time.Now().UTC(),
+		}).Error
+}
+
+func (r *repository) RevokeActiveInvitationsForUser(
+	ctx context.Context,
+	projectID, userID string,
+) error {
+	return r.db.WithContext(ctx).
+		Model(&ProjectInvitationPO{}).
+		Where("project_id = ? AND invited_user_id = ? AND status = ?", projectID, userID, InvitationStatusActive).
+		Updates(map[string]any{
+			"status":     InvitationStatusRevoked,
+			"updated_at": time.Now().UTC(),
 		}).Error
 }
 
@@ -187,4 +227,16 @@ func looksLikeProjectMemberConflict(err error) bool {
 
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "unique") || strings.Contains(msg, "idx_project_user")
+}
+
+func (r *repository) HasProjectMember(ctx context.Context, projectID, userID string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).
+		Model(&member.ProjectMemberPO{}).
+		Where("project_id = ? AND user_id = ?", projectID, userID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

@@ -7,27 +7,29 @@ import (
 )
 
 type CreateProjectInvitationRequest struct {
-	Role      string     `json:"role" binding:"required,oneof=admin write read"`
-	ExpiresAt *time.Time `json:"expires_at"`
-	MaxUses   *int       `json:"max_uses"`
+	Role          string     `json:"role" binding:"required,oneof=admin write read"`
+	ExpiresAt     *time.Time `json:"expires_at"`
+	MaxUses       *int       `json:"max_uses"`
+	InvitedUserID string     `json:"invited_user_id,omitempty"`
 }
 
 type ProjectInvitationResponse struct {
-	ID            string     `json:"id"`
-	ProjectID     string     `json:"project_id"`
-	TokenPrefix   string     `json:"token_prefix"`
-	Slug          string     `json:"slug"`
-	Role          string     `json:"role"`
-	Status        string     `json:"status"`
-	InviteURL     string     `json:"invite_url"`
-	MaxUses       int        `json:"max_uses"`
-	UsedCount     int        `json:"used_count"`
-	RemainingUses *int       `json:"remaining_uses"`
-	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
-	LastUsedAt    *time.Time `json:"last_used_at,omitempty"`
-	CreatedBy     string     `json:"created_by"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            string                 `json:"id"`
+	ProjectID     string                 `json:"project_id"`
+	TokenPrefix   string                 `json:"token_prefix"`
+	Slug          string                 `json:"slug"`
+	Role          string                 `json:"role"`
+	Status        string                 `json:"status"`
+	InviteURL     string                 `json:"invite_url"`
+	InvitedUser   *ProjectInvitationUser `json:"invited_user,omitempty"`
+	MaxUses       int                    `json:"max_uses"`
+	UsedCount     int                    `json:"used_count"`
+	RemainingUses *int                   `json:"remaining_uses"`
+	ExpiresAt     *time.Time             `json:"expires_at,omitempty"`
+	LastUsedAt    *time.Time             `json:"last_used_at,omitempty"`
+	CreatedBy     string                 `json:"created_by"`
+	CreatedAt     time.Time              `json:"created_at"`
+	UpdatedAt     time.Time              `json:"updated_at"`
 }
 
 type PublicProjectInvitationResponse struct {
@@ -56,6 +58,20 @@ type RejectProjectInvitationResponse struct {
 	Status string `json:"status"`
 }
 
+type ReceivedProjectInvitationResponse struct {
+	ID          string     `json:"id"`
+	ProjectID   string     `json:"project_id"`
+	ProjectName string     `json:"project_name"`
+	ProjectSlug string     `json:"project_slug"`
+	Slug        string     `json:"slug"`
+	Role        string     `json:"role"`
+	Status      string     `json:"status"`
+	InviteURL   string     `json:"invite_url"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 func toProjectInvitationResponse(invitation *ProjectInvitation, now time.Time) *ProjectInvitationResponse {
 	if invitation == nil {
 		return nil
@@ -69,6 +85,7 @@ func toProjectInvitationResponse(invitation *ProjectInvitation, now time.Time) *
 		Role:          invitation.Role,
 		Status:        resolveInvitationStatus(invitation, now),
 		InviteURL:     buildProjectInvitationURL(invitation.Slug),
+		InvitedUser:   invitation.InvitedUser,
 		MaxUses:       invitation.MaxUses,
 		UsedCount:     invitation.UsedCount,
 		RemainingUses: remainingInvitationUses(invitation),
@@ -107,6 +124,30 @@ func toPublicProjectInvitationResponse(
 		ExpiresAt:     invitation.ExpiresAt,
 		RemainingUses: remainingInvitationUses(invitation),
 		RequiresAuth:  true,
+	}
+}
+
+func toReceivedProjectInvitationResponse(
+	invitation *ProjectInvitation,
+	project *ProjectSummary,
+	now time.Time,
+) *ReceivedProjectInvitationResponse {
+	if invitation == nil || project == nil {
+		return nil
+	}
+
+	return &ReceivedProjectInvitationResponse{
+		ID:          invitation.ID,
+		ProjectID:   project.ID,
+		ProjectName: project.Name,
+		ProjectSlug: project.Slug,
+		Slug:        invitation.Slug,
+		Role:        invitation.Role,
+		Status:      resolveInvitationStatus(invitation, now),
+		InviteURL:   buildProjectInvitationURL(invitation.Slug),
+		ExpiresAt:   invitation.ExpiresAt,
+		CreatedAt:   invitation.CreatedAt,
+		UpdatedAt:   invitation.UpdatedAt,
 	}
 }
 

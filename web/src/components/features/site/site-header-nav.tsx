@@ -37,10 +37,10 @@ export function SiteHeaderNav() {
   if (isAuthenticated && user) {
     return (
       <div className="flex items-center gap-4">
-        <Link href={ROUTES.CONSOLE.HOME}>
-          <Button variant="ghost" size="sm">{t('siteHeader.dashboard')}</Button>
+        <Link href={ROUTES.CONSOLE.PROJECTS}>
+          <Button variant="ghost" size="sm">{t('siteHeader.projects')}</Button>
         </Link>
-        <Link href={ROUTES.CONSOLE.SETTINGS}>
+        <Link href={ROUTES.CONSOLE.PROFILE}>
           <Button size="sm" variant="outline">{displayName}</Button>
         </Link>
       </div>

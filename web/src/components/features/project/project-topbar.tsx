@@ -20,9 +20,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, buildProjectInviteRoute } from '@/constants/routes';
+import { useMyProjectInvitations } from '@/hooks/use-project-invitations';
 import { useLogout } from '@/hooks/use-auth';
 import { useT } from '@/i18n/client';
+import type { ScopedTranslations } from '@/i18n/shared';
 import { useAuthStore } from '@/store/auth-store';
 
 const buildInitials = (name: string) =>
@@ -33,14 +35,34 @@ const buildInitials = (name: string) =>
     .map(part => part[0]?.toUpperCase() || '')
     .join('') || 'U';
 
+const getInvitationRoleLabel = (
+  t: ScopedTranslations<'project'>,
+  role: 'admin' | 'read' | 'write'
+) => {
+  switch (role) {
+    case 'admin':
+      return t('roles.admin');
+    case 'write':
+      return t('roles.write');
+    case 'read':
+      return t('roles.read');
+    default:
+      return t('roles.unknown');
+  }
+};
+
 export function ProjectTopbar() {
   const t = useT('project');
   const router = useRouter();
   const logout = useLogout();
   const user = useAuthStore.use.user();
+  const receivedInvitationsQuery = useMyProjectInvitations();
 
   const displayName = user?.nickname || user?.username || user?.email || 'User';
   const initials = useMemo(() => buildInitials(displayName), [displayName]);
+  const pendingInvitations = receivedInvitationsQuery.data ?? [];
+  const pendingInvitationCount = pendingInvitations.length;
+  const invitationPreview = pendingInvitations.slice(0, 3);
 
   const handleLogout = () => {
     logout();
@@ -119,10 +141,15 @@ export function ProjectTopbar() {
                   variant="ghost"
                   isIcon
                   noScale
-                  className="h-9 w-9 rounded-full"
+                  className="relative h-9 w-9 rounded-full"
                   aria-label={t('topbar.notifications')}
                 >
                   <Bell className="h-4 w-4 text-text-muted" />
+                  {pendingInvitationCount > 0 ? (
+                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                      {pendingInvitationCount > 9 ? '9+' : pendingInvitationCount}
+                    </span>
+                  ) : null}
                   <span className="sr-only">{t('topbar.notifications')}</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -134,9 +161,44 @@ export function ProjectTopbar() {
           <DropdownMenuContent align="end" className="w-72 rounded-xl p-1 shadow-premium">
             <DropdownMenuLabel>{t('topbar.notifications')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <div className="px-2 py-3 text-sm text-text-muted">
-              {t('topbar.notificationsEmpty')}
-            </div>
+            {receivedInvitationsQuery.isError ? (
+              <div className="px-2 py-3 text-sm text-text-muted">
+                {t('topbar.notificationsLoadFailed')}
+              </div>
+            ) : invitationPreview.length === 0 ? (
+              <div className="px-2 py-3 text-sm text-text-muted">
+                {t('topbar.notificationsEmpty')}
+              </div>
+            ) : (
+              <>
+                <div className="px-2 py-2 text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+                  {t('topbar.pendingInvitations', { count: pendingInvitationCount })}
+                </div>
+                {invitationPreview.map(invitation => (
+                  <DropdownMenuItem
+                    key={invitation.id}
+                    asChild
+                    className="cursor-pointer rounded-lg"
+                  >
+                    <Link href={buildProjectInviteRoute(invitation.slug)}>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{invitation.project_name}</div>
+                        <div className="truncate text-xs text-text-muted">
+                          {invitation.project_slug} · {getInvitationRoleLabel(t, invitation.role)}
+                        </div>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  asChild
+                  className="cursor-pointer rounded-lg text-primary focus:text-primary"
+                >
+                  <Link href={ROUTES.CONSOLE.PROJECTS}>{t('topbar.reviewInvitations')}</Link>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

@@ -100,12 +100,16 @@ Authorization: Bearer <kest_pat_...>
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | GET | `/projects/:id/members` | List members | Yes |
-| POST | `/projects/:id/members` | Invite member | Yes |
-| GET | `/projects/:id/members/:mid` | Get member | Yes |
-| PATCH | `/projects/:id/members/:mid` | Update role | Yes |
-| DELETE | `/projects/:id/members/:mid` | Remove member | Yes |
-| POST | `/projects/:id/members/accept` | Accept invitation | Yes |
-| DELETE | `/projects/:id/members/me` | Leave project | Yes |
+| GET | `/projects/:id/members/me` | Get current user role | Yes |
+| PATCH | `/projects/:id/members/:uid` | Update role | Yes |
+| DELETE | `/projects/:id/members/:uid` | Remove member | Yes |
+| POST | `/projects/:id/invitations` | Create invitation | Yes |
+| GET | `/projects/:id/invitations` | List invitations | Yes |
+| DELETE | `/projects/:id/invitations/:inviteId` | Revoke invitation | Yes |
+| GET | `/project-invitations/received` | List my invitations | Yes |
+| GET | `/project-invitations/:slug` | Get invitation detail | No |
+| POST | `/project-invitations/:slug/accept` | Accept invitation | Yes |
+| POST | `/project-invitations/:slug/reject` | Reject invitation | Yes |
 
 ### Permissions
 

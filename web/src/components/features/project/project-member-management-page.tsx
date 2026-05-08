@@ -55,7 +55,6 @@ import { buildApiPath } from '@/config/api';
 import { env } from '@/config/env';
 import { buildProjectDetailRoute, buildProjectInviteRoute } from '@/constants/routes';
 import {
-  useCreateProjectMember,
   useDeleteProjectMember,
   useProjectMemberRole,
   useProjectMembers,
@@ -158,6 +157,8 @@ const getInvitationStatusBadgeClassName = (status?: ProjectInvitationStatus) => 
   switch (status) {
     case 'active':
       return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'rejected':
+      return 'border-slate-200 bg-slate-100 text-slate-700';
     case 'used_up':
       return 'border-amber-200 bg-amber-50 text-amber-700';
     case 'revoked':
@@ -196,6 +197,8 @@ const getInvitationStatusLabel = (
       return t('invitation.statusActive');
     case 'expired':
       return t('invitation.statusExpired');
+    case 'rejected':
+      return t('invitation.statusRejected');
     case 'revoked':
       return t('invitation.statusRevoked');
     case 'used_up':
@@ -214,6 +217,25 @@ const getInvitationRemainingUsesLabel = (
   }
 
   return String(invitation.remaining_uses);
+};
+
+const getInvitationRecipientLabel = (
+  t: ScopedTranslations<'project'>,
+  invitation: Pick<ProjectInvitation, 'invited_user'>
+) => {
+  if (invitation.invited_user) {
+    return {
+      title: invitation.invited_user.username,
+      subtitle: invitation.invited_user.email,
+      badge: t('membersPage.directInvite'),
+    };
+  }
+
+  return {
+    title: t('membersPage.shareableInvite'),
+    subtitle: t('membersPage.shareableInviteDescription'),
+    badge: null,
+  };
 };
 
 function RoleBadge({ role }: { role?: ProjectMemberRole }) {
@@ -265,7 +287,6 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   const membersQuery = useProjectMembers(projectId);
   const memberRoleQuery = useProjectMemberRole(projectId);
   const userSearchQuery = useUserSearch(deferredCandidateQuery, 20);
-  const createMemberMutation = useCreateProjectMember(projectId);
   const updateMemberMutation = useUpdateProjectMember(projectId);
   const deleteMemberMutation = useDeleteProjectMember(projectId);
   const invitationsQuery = useProjectInvitations(
@@ -372,9 +393,9 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
     }
 
     try {
-      await createMemberMutation.mutateAsync({
-        user_id: selectedCandidate.id,
+      await createInvitationMutation.mutateAsync({
         role: newMemberRole,
+        invited_user_id: selectedCandidate.id,
       });
       setIsAddDialogOpen(false);
       resetAddDialog();
@@ -695,12 +716,15 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('membersPage.inviteRole')}</TableHead>
+                        <TableHead>{t('membersPage.inviteRecipient')}</TableHead>
                         <TableHead>{t('membersPage.inviteStatus')}</TableHead>
                         <TableHead>{t('membersPage.inviteRemaining')}</TableHead>
                         <TableHead>{t('membersPage.inviteUsed')}</TableHead>
                         <TableHead>{t('membersPage.inviteExpires')}</TableHead>
                         <TableHead>{t('membersPage.inviteCreated')}</TableHead>
-                        <TableHead className="text-right">{t('membersPage.inviteActions')}</TableHead>
+                        <TableHead className="text-right">
+                          {t('membersPage.inviteActions')}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -708,13 +732,30 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                         <TableRow key={invitation.id}>
                           <TableCell>
                             <div className="space-y-1">
-                              <Badge variant="outline">
-                                {getRoleLabel(t, invitation.role)}
-                              </Badge>
+                              <Badge variant="outline">{getRoleLabel(t, invitation.role)}</Badge>
                               <div className="font-mono text-xs text-muted-foreground">
                                 {invitation.token_prefix}
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const recipient = getInvitationRecipientLabel(t, invitation);
+
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium">{recipient.title}</span>
+                                    {recipient.badge ? (
+                                      <Badge variant="outline">{recipient.badge}</Badge>
+                                    ) : null}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {recipient.subtitle}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -724,9 +765,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                               {getInvitationStatusLabel(t, invitation.status)}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            {getInvitationRemainingUsesLabel(t, invitation)}
-                          </TableCell>
+                          <TableCell>{getInvitationRemainingUsesLabel(t, invitation)}</TableCell>
                           <TableCell>{invitation.used_count}</TableCell>
                           <TableCell>
                             {invitation.expires_at
@@ -766,7 +805,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                       {invitations.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={8}
                             className="py-10 text-center text-muted-foreground"
                           >
                             {t('membersPage.noInviteLinks')}
@@ -785,9 +824,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                   <CardTitle>{t('membersPage.projectMembers')}</CardTitle>
-                  <CardDescription>
-                    {t('membersPage.projectMembersDescription')}
-                  </CardDescription>
+                  <CardDescription>{t('membersPage.projectMembersDescription')}</CardDescription>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <div className="relative min-w-[240px]">
@@ -836,7 +873,9 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                         <TableHead>{t('membersPage.inviteRole')}</TableHead>
                         <TableHead>{t('membersPage.joined')}</TableHead>
                         <TableHead>{t('membersPage.updated')}</TableHead>
-                        <TableHead className="text-right">{t('membersPage.inviteActions')}</TableHead>
+                        <TableHead className="text-right">
+                          {t('membersPage.inviteActions')}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -878,7 +917,9 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                                 <div className="space-y-1">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-medium">{member.username}</span>
-                                    {isCurrentUser ? <Badge variant="outline">{t('membersPage.you')}</Badge> : null}
+                                    {isCurrentUser ? (
+                                      <Badge variant="outline">{t('membersPage.you')}</Badge>
+                                    ) : null}
                                     {member.role === 'owner' ? (
                                       <Badge variant="outline" className="gap-1">
                                         <Crown className="h-3 w-3" />
@@ -954,9 +995,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
         <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>{t('membersPage.inviteDialogTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('membersPage.inviteDialogDescription')}
-            </DialogDescription>
+            <DialogDescription>{t('membersPage.inviteDialogDescription')}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             <div className="space-y-5">
@@ -1003,9 +1042,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                     }}
                     placeholder={t('membersPage.maxUsesPlaceholder')}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t('membersPage.maxUsesHelp')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('membersPage.maxUsesHelp')}</p>
                 </div>
               </div>
 
@@ -1077,9 +1114,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
         <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>{t('membersPage.addMemberDialogTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('membersPage.addMemberDialogDescription')}
-            </DialogDescription>
+            <DialogDescription>{t('membersPage.addMemberDialogDescription')}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             <div className="space-y-5">
@@ -1114,9 +1149,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                 </div>
                 <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border p-3">
                   {deferredCandidateQuery.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t('membersPage.startTyping')}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t('membersPage.startTyping')}</p>
                   ) : userSearchQuery.isFetching ? (
                     <div className="space-y-2">
                       {Array.from({ length: 3 }).map((_, index) => (
@@ -1197,7 +1230,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
               onClick={() => {
                 void handleAddMember();
               }}
-              disabled={createMemberMutation.isPending || !canManageMembers}
+              disabled={createInvitationMutation.isPending || !canManageMembers}
             >
               <UserPlus className="h-4 w-4" />
               {t('membersPage.addMember')}
@@ -1309,9 +1342,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('membersPage.revokeInviteDialogTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('membersPage.revokeInviteDialogDescription')}
-            </DialogDescription>
+            <DialogDescription>{t('membersPage.revokeInviteDialogDescription')}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             <Alert>
