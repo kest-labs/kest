@@ -27,32 +27,28 @@ export function StatCard({
   className,
 }: StatCardProps) {
   const variantStyles = {
-    default: "bg-bg-surface border-border-subtle",
-    primary: "bg-linear-to-br from-primary/10 via-primary/5 to-transparent border-primary/20",
-    success: "bg-linear-to-br from-success/10 via-success/5 to-transparent border-success/20",
-    warning: "bg-linear-to-br from-warning/10 via-warning/5 to-transparent border-warning/20",
+    default: "bg-bg-canvas border-border-main",
+    primary: "bg-bg-canvas border-border-main",
+    success: "bg-bg-canvas border-border-main",
+    warning: "bg-bg-canvas border-border-main",
   }
 
   const iconStyles = {
-    default: "bg-muted text-text-muted",
-    primary: "bg-primary/10 text-primary",
-    success: "bg-success/10 text-success",
-    warning: "bg-warning/10 text-warning",
+    default: "bg-bg-subtle text-text-muted",
+    primary: "bg-primary text-primary-foreground",
+    success: "bg-bg-subtle text-success",
+    warning: "bg-bg-subtle text-warning",
   }
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border p-6 transition-all duration-300",
-        "hover:shadow-premium hover:-translate-y-0.5",
+        "rounded-md border p-6 transition-colors",
         variantStyles[variant],
         className
       )}
     >
-      {/* Glass effect overlay */}
-      <div className="absolute inset-0 bg-linear-to-br from-white/5 to-transparent pointer-events-none" />
-      
-      <div className="relative flex items-start justify-between">
+      <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium text-text-muted">{title}</p>
           <div className="flex items-baseline gap-2">
@@ -82,7 +78,7 @@ export function StatCard({
         
         <div
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-lg",
+            "flex h-10 w-10 items-center justify-center rounded-full",
             iconStyles[variant]
           )}
         >
@@ -96,14 +92,14 @@ export function StatCard({
 // Skeleton for loading states
 export function StatCardSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border-subtle bg-bg-surface p-6">
+    <div className="rounded-md border border-border-main bg-bg-canvas p-6">
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <div className="h-4 w-24 animate-pulse rounded bg-muted" />
           <div className="h-8 w-32 animate-pulse rounded bg-muted" />
           <div className="h-3 w-20 animate-pulse rounded bg-muted" />
         </div>
-        <div className="h-10 w-10 animate-pulse rounded-lg bg-muted" />
+        <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
       </div>
     </div>
   )

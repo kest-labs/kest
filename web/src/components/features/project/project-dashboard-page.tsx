@@ -67,7 +67,7 @@ const EMPTY_PROJECTS: ApiProject[] = [];
 type ProjectT = ScopedTranslations<'project'>;
 
 const navigationLinkClassName =
-  'inline-flex items-center gap-2 font-medium text-primary underline-offset-4 transition-colors hover:text-primary-deep hover:underline focus-ring rounded-md';
+  'inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-ring';
 
 interface DashboardStatusItem {
   label: string;
@@ -311,8 +311,8 @@ export function ProjectDashboardPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden lg:flex-row">
-      <aside className="w-full shrink-0 border-b border-border/60 bg-bg-surface/70 lg:w-[296px] lg:border-b-0 lg:border-r">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas lg:flex-row">
+      <aside className="w-full shrink-0 border-b border-border-main bg-bg-canvas lg:w-[296px] lg:border-b-0 lg:border-r">
         <div className="flex h-full max-h-[42vh] flex-col overflow-hidden lg:max-h-none">
           <div className="space-y-4 p-4">
             <div className="relative">
@@ -336,10 +336,10 @@ export function ProjectDashboardPage() {
             </Button>
           </div>
 
-          <Separator />
+          <Separator className="bg-border-main" />
 
           <div className="min-h-0 flex-1 overflow-y-auto p-3" data-onboarding="project-list">
-            <div className="mb-3 flex items-center justify-between px-2 text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
+            <div className="figma-caption mb-3 flex items-center justify-between px-2 text-text-muted">
               <span>{t('dashboardPage.projectsLabel')}</span>
               <span>{filteredProjects.length}</span>
             </div>
@@ -349,7 +349,7 @@ export function ProjectDashboardPage() {
                 {Array.from({ length: 6 }).map((_, index) => (
                   <div
                     key={index}
-                    className="rounded-2xl border border-border/60 bg-background/60 p-3"
+                    className="rounded-md border border-border-main bg-bg-surface p-3"
                   >
                     <div className="h-4 w-24 animate-pulse rounded bg-muted" />
                     <div className="mt-2 h-3 w-40 animate-pulse rounded bg-muted" />
@@ -397,10 +397,10 @@ export function ProjectDashboardPage() {
                       key={project.id}
                       onMouseEnter={() => prefetchProjectPreview(project.id)}
                       onTouchStart={() => prefetchProjectPreview(project.id)}
-                      className={`group w-full rounded-2xl border p-3 text-left transition-colors ${
+                      className={`group w-full rounded-md border p-3 text-left transition-colors ${
                         isActive
-                          ? 'border-primary/30 bg-primary/10 shadow-sm'
-                          : 'border-transparent bg-background/60 hover:border-border/60 hover:bg-background'
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border-main bg-bg-canvas hover:bg-bg-subtle'
                       }`}
                     >
                       <div className="flex items-start gap-2">
@@ -412,16 +412,30 @@ export function ProjectDashboardPage() {
                           className="min-w-0 flex-1 text-left"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-text-main">
+                            <p
+                              className={`truncate text-sm font-medium ${
+                                isActive ? 'text-primary-foreground' : 'text-text-main'
+                              }`}
+                            >
                               {project.name}
                             </p>
-                            <p className="truncate text-xs text-text-muted">{project.slug}</p>
+                            <p
+                              className={`truncate text-xs ${
+                                isActive ? 'text-primary-foreground/72' : 'text-text-muted'
+                              }`}
+                            >
+                              {project.slug}
+                            </p>
                           </div>
-                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
+                          <div
+                            className={`mt-3 flex flex-wrap gap-2 text-xs ${
+                              isActive ? 'text-primary-foreground/72' : 'text-text-muted'
+                            }`}
+                          >
                             {isActive ? (
                               <Badge
                                 variant="outline"
-                                className="border-primary/20 bg-primary/10 text-primary"
+                                className="border-white/24 bg-white/16 text-primary-foreground"
                               >
                                 {t('dashboardPage.selected')}
                               </Badge>
@@ -446,8 +460,8 @@ export function ProjectDashboardPage() {
                           stopPropagation
                           triggerClassName={
                             isActive
-                              ? 'h-8 w-8 shrink-0 rounded-full text-primary hover:bg-primary/10'
-                              : 'h-8 w-8 shrink-0 rounded-full text-text-muted hover:bg-muted'
+                              ? 'h-8 w-8 shrink-0 rounded-full text-primary-foreground hover:bg-white/16'
+                              : 'h-8 w-8 shrink-0 rounded-full text-text-muted hover:bg-bg-subtle'
                           }
                         />
                       </div>
@@ -562,7 +576,7 @@ function PendingInvitationsPanel({
   };
 
   return (
-    <Card className="border-primary/15 bg-linear-to-r from-primary/8 via-background to-background">
+    <Card className="border-border-main bg-bg-canvas">
       <CardHeader>
         <CardTitle>{t('dashboardPage.pendingInvitationsTitle')}</CardTitle>
         <CardDescription>{t('dashboardPage.pendingInvitationsDescription')}</CardDescription>
@@ -573,7 +587,7 @@ function PendingInvitationsPanel({
             {Array.from({ length: 2 }).map((_, index) => (
               <div
                 key={index}
-                className="h-28 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+                className="h-28 animate-pulse rounded-md border border-border-main bg-muted/40"
               />
             ))}
           </div>
@@ -592,14 +606,14 @@ function PendingInvitationsPanel({
             return (
               <div
                 key={invitation.id}
-                className="rounded-2xl border border-border/60 bg-background/80 p-4"
+                className="rounded-md border border-border-main bg-bg-canvas p-4"
               >
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="border-primary/20 bg-primary/10 text-primary"
+                        className="border-border-main bg-bg-subtle text-text-main"
                       >
                         {t('roles.badge', {
                           role: getReceivedInvitationRoleLabel(t, invitation.role),
@@ -680,11 +694,11 @@ function ProjectDashboardWelcome({
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-primary/10 bg-linear-to-br from-primary/10 via-transparent to-transparent">
+      <Card className="overflow-hidden border-border-main bg-bg-canvas">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-2">
-              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+              <Badge variant="outline" className="border-border-main bg-bg-subtle text-text-main">
                 {t('dashboardPage.startHere')}
               </Badge>
               <CardTitle className="text-2xl tracking-tight">
@@ -704,7 +718,7 @@ function ProjectDashboardWelcome({
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-border/60">
+        <Card className="border-border-main">
           <CardHeader>
             <CardTitle>{t('dashboardPage.createFirstProjectTitle')}</CardTitle>
             <CardDescription>{t('dashboardPage.createFirstProjectDescription')}</CardDescription>
@@ -721,7 +735,7 @@ function ProjectDashboardWelcome({
                   key={project.id}
                   type="button"
                   onClick={() => onOpenProject(project.id)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-background/70 px-4 py-3 text-left transition-colors hover:border-primary/20 hover:bg-background"
+                  className="flex w-full items-center justify-between rounded-md border border-border-main bg-bg-canvas px-4 py-3 text-left transition-colors hover:bg-bg-subtle"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{project.name}</p>
@@ -734,39 +748,39 @@ function ProjectDashboardWelcome({
         </Card>
 
         <Card
-          className="border-border/70 bg-linear-to-br from-amber-50 via-background to-cyan-50"
+          className="border-border-main bg-block-cream"
           data-onboarding="demo-project-card"
         >
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Boxes className="h-5 w-5 text-primary" />
+                  <Boxes className="h-5 w-5 text-text-main" />
                   {t('dashboardPage.demoCardTitle')}
                 </CardTitle>
                 <CardDescription className="mt-2">
                   {t('dashboardPage.demoCardDescription')}
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+              <Badge variant="outline" className="border-border-main bg-bg-canvas text-text-main">
                 {t('dashboardPage.demoCardBadge')}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-text-muted">
-            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <div className="rounded-md border border-border-main bg-bg-canvas p-4">
               <p className="font-medium text-text-main">
                 {t('dashboardPage.demoCardApiSpecsTitle')}
               </p>
               <p className="mt-1">{t('dashboardPage.demoCardApiSpecsDescription')}</p>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <div className="rounded-md border border-border-main bg-bg-canvas p-4">
               <p className="font-medium text-text-main">
                 {t('dashboardPage.demoCardRequestsTitle')}
               </p>
               <p className="mt-1">{t('dashboardPage.demoCardRequestsDescription')}</p>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <div className="rounded-md border border-border-main bg-bg-canvas p-4">
               <p className="font-medium text-text-main">
                 {t('dashboardPage.demoCardRuntimeTitle')}
               </p>
@@ -873,7 +887,7 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-border/60 bg-linear-to-r from-background via-background to-primary/5">
+      <Card className="overflow-hidden border-border-main bg-bg-canvas">
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
@@ -930,7 +944,7 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card className="border-border/60">
+        <Card className="border-border-main">
           <CardHeader>
             <CardTitle>{t('dashboardPage.progressTitle')}</CardTitle>
             <CardDescription>{t('dashboardPage.progressDescription')}</CardDescription>
@@ -958,12 +972,12 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                   {Array.from({ length: 3 }).map((_, index) => (
                     <div
                       key={index}
-                      className="h-18 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+                      className="h-18 animate-pulse rounded-md border border-border-main bg-muted/40"
                     />
                   ))}
                 </div>
                 {isSlowPreview ? (
-                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-border/70 bg-background/70 px-4 py-3 text-sm text-text-muted">
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-dashed border-border-main bg-bg-surface px-4 py-3 text-sm text-text-muted">
                     <span>{t('dashboardPage.stillLoadingReadiness')}</span>
                     <Button type="button" variant="outline" size="sm" onClick={handleRetryPreview}>
                       {t('common.refresh')}
@@ -975,7 +989,7 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
               readinessItems.map(item => (
                 <div
                   key={item.label}
-                  className="rounded-2xl border border-border/60 bg-background/70 p-4"
+                  className="rounded-md border border-border-main bg-bg-canvas p-4"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -991,11 +1005,11 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
             {apiSpecsQuery.isLoading ? (
               <div className="space-y-2 pt-2">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="h-14 animate-pulse rounded-2xl bg-muted" />
+                  <div key={index} className="h-14 animate-pulse rounded-md bg-muted" />
                 ))}
               </div>
             ) : apiSpecs.length > 0 ? (
-              <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
+              <div className="space-y-3 rounded-md border border-border-main bg-bg-surface p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-text-main">
@@ -1017,7 +1031,7 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
                   {apiSpecs.slice(0, 3).map(spec => (
                     <div
                       key={spec.id}
-                      className="flex items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-3"
+                      className="flex items-start justify-between gap-3 rounded-md border border-border-main bg-bg-canvas px-4 py-3"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">
@@ -1036,7 +1050,7 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-linear-to-br from-primary/5 via-background to-background">
+        <Card className="border-border-main bg-bg-canvas">
           <CardHeader>
             <CardTitle>
               {hasReadinessError
@@ -1075,11 +1089,11 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
             ) : !nextStep ? (
               <>
                 <div className="space-y-3">
-                  <div className="h-28 animate-pulse rounded-2xl border border-border/60 bg-muted/40" />
-                  <div className="h-40 animate-pulse rounded-2xl border border-border/60 bg-muted/40" />
+                  <div className="h-28 animate-pulse rounded-md border border-border-main bg-muted/40" />
+                  <div className="h-40 animate-pulse rounded-md border border-border-main bg-muted/40" />
                 </div>
                 {isSlowPreview ? (
-                  <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-background/70 p-4">
+                  <div className="space-y-3 rounded-md border border-dashed border-border-main bg-bg-surface p-4">
                     <p className="text-sm text-text-muted">
                       {t('dashboardPage.recommendationSlowDescription')}
                     </p>
@@ -1110,15 +1124,15 @@ function ProjectPreviewPanel({ project, onEdit }: { project: ApiProject; onEdit:
               </>
             ) : (
               <>
-                <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
+                <div className="rounded-md border border-border-main bg-bg-canvas p-4">
+                  <p className="figma-caption text-text-muted">
                     {t('dashboardPage.whyNow')}
                   </p>
                   <p className="mt-3 text-sm leading-6 text-text-muted">{nextStep.reason}</p>
                 </div>
 
-                <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
+                <div className="rounded-md border border-border-main bg-bg-canvas p-4">
+                  <p className="figma-caption text-text-muted">
                     {t('dashboardPage.unlockTitle')}
                   </p>
                   <div className="mt-3 space-y-3">
