@@ -289,11 +289,11 @@ const DEFAULT_JSON_PLACEHOLDER = '{\n  \n}';
 const DEFAULT_GRAPHQL_QUERY = 'query Example {\n  \n}';
 const DEFAULT_GRAPHQL_VARIABLES = '{\n  \n}';
 const METHOD_BADGE_STYLES: Record<RequestMethod, string> = {
-  GET: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  POST: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  PUT: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  PATCH: 'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
-  DELETE: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300',
+  GET: 'border-border-main bg-block-lime text-text-main',
+  POST: 'border-border-main bg-block-mint text-text-main',
+  PUT: 'border-border-main bg-block-cream text-text-main',
+  PATCH: 'border-border-main bg-block-lilac text-text-main',
+  DELETE: 'border-border-main bg-block-pink text-text-main',
 };
 
 const createLocalId = (prefix: string) =>
@@ -3444,8 +3444,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const importingKind = isAnyImportPending ? (importDialogTarget?.kind ?? null) : null;
 
   return (
-    <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,247,251,0.98))]">
-      <div className="border-b border-border/60 bg-white/80 backdrop-blur">
+    <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-bg-canvas">
+      <div className="border-b border-border-main bg-bg-canvas">
         <div className="px-4 py-3 md:px-6">
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 overflow-hidden">
@@ -3472,7 +3472,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
-        <aside className="h-[42dvh] min-h-[280px] w-full shrink-0 border-b border-border/60 bg-white/82 backdrop-blur xl:h-auto xl:min-h-0 xl:w-[320px] xl:border-b-0 xl:border-r">
+        <aside className="h-[42dvh] min-h-[280px] w-full shrink-0 border-b border-border-main bg-bg-surface xl:h-auto xl:min-h-0 xl:w-[320px] xl:border-b-0 xl:border-r">
           <CollectionsSidebar
             collections={collectionViews}
             activeCollectionId={activeCollectionId}
@@ -3515,14 +3515,14 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4 md:p-6">
           {activeTab ? (
             <div className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-4">
-              <Card className="gap-0 rounded-[28px] border-border/60 bg-white/90 py-0 shadow-[0_12px_44px_rgba(15,23,42,0.08)]">
-                <CardHeader className="gap-4 border-b border-border/60 py-5">
+              <Card className="gap-0 rounded-lg border-border-main bg-bg-canvas py-0 shadow-none">
+                <CardHeader className="gap-4 border-b border-border-main py-5">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="border-primary/20 bg-primary/10 text-primary"
+                          className="border-border-main bg-bg-surface text-text-main"
                         >
                           {t('collections.workbench.badges.apiRequest')}
                         </Badge>
@@ -3551,7 +3551,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                         type="button"
                         variant="outline"
                         isIcon
-                        className="h-10 w-10 rounded-2xl"
+                        className="h-10 w-10 rounded-full"
                         onClick={handleDuplicateTab}
                         aria-label={t('collections.workbench.actions.duplicateTab')}
                         title={t('collections.workbench.actions.duplicateTab')}
@@ -3562,7 +3562,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                         type="button"
                         variant="outline"
                         isIcon
-                        className="h-10 w-10 rounded-2xl"
+                        className="h-10 w-10 rounded-full"
                         onClick={handleSaveTab}
                         aria-label={t('collections.workbench.actions.saveTab')}
                         title={t('collections.workbench.actions.saveTab')}
@@ -3634,8 +3634,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
             </div>
           ) : (
             <div className="mx-auto flex min-h-full max-w-[960px] items-center justify-center">
-              <div className="w-full max-w-[680px] rounded-[28px] border border-dashed border-border/70 bg-white/72 px-8 py-16 text-center shadow-[0_20px_80px_rgba(15,23,42,0.05)]">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+              <div className="w-full max-w-[680px] rounded-lg border border-dashed border-border-main bg-bg-surface px-8 py-16 text-center shadow-none">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-main">
                   <FolderOpen className="h-6 w-6" />
                 </div>
                 <p className="mt-6 text-2xl font-semibold tracking-tight text-text-main">
@@ -3812,7 +3812,7 @@ function CollectionsSidebar({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="space-y-4 p-4">
         {isEmpty ? (
-          <div className="rounded-[24px] border border-dashed border-border/70 bg-white/70 p-4">
+          <div className="rounded-md border border-dashed border-border-main bg-bg-canvas p-4">
             <p className="text-sm font-semibold text-text-main">
               {t('collections.workbench.empty.sidebarTitle')}
             </p>
@@ -3921,8 +3921,8 @@ function CollectionsSidebar({
               <div
                 key={collection.id}
                 className={cn(
-                  'group/collection rounded-[18px] border border-transparent bg-white/55 p-1.5 transition-colors',
-                  isActiveCollection ? 'bg-primary/5' : 'hover:bg-white/80'
+                  'group/collection rounded-md border border-transparent bg-bg-canvas p-1.5 transition-colors',
+                  isActiveCollection ? 'border-border-main bg-block-lilac' : 'hover:bg-bg-subtle'
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -3931,7 +3931,7 @@ function CollectionsSidebar({
                     variant="ghost"
                     size="sm"
                     isIcon
-                    className="mt-0.5 h-8 w-8 rounded-xl"
+                    className="mt-0.5 h-8 w-8 rounded-full"
                     onClick={() => onToggleCollection(collection.id)}
                   >
                     {isExpanded ? (
@@ -3944,7 +3944,7 @@ function CollectionsSidebar({
                   <button
                     type="button"
                     onClick={() => onToggleCollection(collection.id)}
-                    className="min-w-0 flex-1 rounded-xl px-1 py-0.5 text-left"
+                    className="min-w-0 flex-1 rounded-md px-1 py-0.5 text-left"
                   >
                     <div className="flex items-center gap-2">
                       <span
@@ -4028,7 +4028,7 @@ function CollectionsSidebar({
       </div>
 
       {!isSearchMode && totalPages > 1 ? (
-        <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
+        <div className="flex items-center justify-between border-t border-border-main px-4 py-3">
           <Button
             type="button"
             variant="outline"
@@ -4081,14 +4081,14 @@ function SidebarRequestRow({
   return (
     <div
       className={cn(
-        'group/request flex items-center gap-1 rounded-xl transition-colors',
-        isActive ? 'bg-primary/10 text-text-main' : 'hover:bg-white/80'
+        'group/request flex items-center gap-1 rounded-md transition-colors',
+        isActive ? 'bg-block-lilac text-text-main' : 'hover:bg-bg-subtle'
       )}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="min-w-0 flex-1 rounded-xl px-3 py-1.5 text-left"
+        className="min-w-0 flex-1 rounded-md px-3 py-1.5 text-left"
       >
         <div className="flex items-center gap-2">
           {isScratchpad ? (
