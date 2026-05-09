@@ -312,7 +312,7 @@ export function ProjectOnboardingShell() {
 
             <div className="max-h-[55vh] space-y-2 overflow-y-auto">
               {filteredCommands.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border/70 p-4 text-sm text-text-muted">
+                <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-4 text-sm text-text-muted">
                   {t('commandPalette.empty')}
                 </div>
               ) : (
@@ -321,9 +321,11 @@ export function ProjectOnboardingShell() {
                     key={item.id}
                     type="button"
                     onClick={item.onSelect}
-                    className="flex w-full items-start gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-3 text-left transition-colors hover:border-primary/20 hover:bg-primary/5"
+                    className="flex w-full items-start gap-3 rounded-md border border-border-main bg-bg-canvas px-4 py-3 text-left transition-colors hover:bg-bg-subtle"
                   >
-                    <div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">{item.icon}</div>
+                    <div className="mt-0.5 rounded-md border border-border-main bg-bg-surface p-2 text-text-main">
+                      {item.icon}
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-main">{item.title}</p>
                       <p className="mt-1 truncate text-xs text-text-muted">{item.subtitle}</p>
@@ -348,9 +350,9 @@ export function ProjectOnboardingShell() {
                 href={DOCS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-border/60 bg-background/80 p-4 transition-colors hover:border-primary/20 hover:bg-primary/5"
+                className="rounded-md border border-border-main bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
               >
-                <BookOpenText className="h-5 w-5 text-primary" />
+                <BookOpenText className="h-5 w-5 text-text-main" />
                 <p className="mt-3 text-sm font-medium">{t('helpCenter.docsTitle')}</p>
                 <p className="mt-1 text-xs text-text-muted">{t('helpCenter.docsDescription')}</p>
               </a>
@@ -358,9 +360,9 @@ export function ProjectOnboardingShell() {
                 href={VIDEO_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-border/60 bg-background/80 p-4 transition-colors hover:border-primary/20 hover:bg-primary/5"
+                className="rounded-md border border-border-main bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
               >
-                <PlayCircle className="h-5 w-5 text-primary" />
+                <PlayCircle className="h-5 w-5 text-text-main" />
                 <p className="mt-3 text-sm font-medium">{t('helpCenter.videoTitle')}</p>
                 <p className="mt-1 text-xs text-text-muted">{t('helpCenter.videoDescription')}</p>
               </a>
@@ -370,15 +372,15 @@ export function ProjectOnboardingShell() {
                   setIsHelpOpen(false);
                   setIsCommandOpen(true);
                 }}
-                className="rounded-2xl border border-border/60 bg-background/80 p-4 text-left transition-colors hover:border-primary/20 hover:bg-primary/5"
+                className="rounded-md border border-border-main bg-bg-canvas p-4 text-left transition-colors hover:bg-bg-subtle"
               >
-                <Command className="h-5 w-5 text-primary" />
+                <Command className="h-5 w-5 text-text-main" />
                 <p className="mt-3 text-sm font-medium">{t('helpCenter.commandTitle')}</p>
                 <p className="mt-1 text-xs text-text-muted">{t('helpCenter.commandDescription')}</p>
               </button>
             </div>
 
-            <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+            <div className="rounded-md border border-border-main bg-bg-surface p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">{t('helpCenter.shortcutsTitle')}</p>
@@ -431,16 +433,16 @@ export function ProjectOnboardingShell() {
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4 py-2">
-            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <div className="rounded-md border border-border-main bg-block-lilac p-4">
               <p className="text-sm font-medium text-text-main">{currentTourStep.title}</p>
               <p className="mt-2 text-sm leading-6 text-text-muted">{currentTourStep.description}</p>
               {isTourLocked ? (
-                <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-primary">
+                <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-text-main">
                   {t('onboardingTour.lockedCountdown', { seconds: tourLockSeconds })}
                 </p>
               ) : null}
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-2 overflow-hidden rounded-full bg-bg-subtle">
               <div
                 className="h-full rounded-full bg-primary transition-all"
                 style={{ width: `${((tourStepIndex + 1) / tourSteps.length) * 100}%` }}
@@ -495,9 +497,9 @@ export function ProjectOnboardingShell() {
 
 function ShortcutRow({ label, keys }: { label: string; keys: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
+    <div className="flex items-center justify-between rounded-md border border-border-main bg-bg-canvas px-3 py-2">
       <span className="text-sm text-text-main">{label}</span>
-      <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-text-muted">{keys}</span>
+      <span className="rounded-md bg-bg-subtle px-2 py-1 text-xs font-medium text-text-muted">{keys}</span>
     </div>
   );
 }
