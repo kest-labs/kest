@@ -249,17 +249,17 @@ const getDocSourceLabel = (t: ProjectT, value?: ApiSpecDocSource | null) => {
 const getMethodBadgeClassName = (method: HttpMethod) => {
   switch (method) {
     case 'GET':
-      return 'border-emerald-200 bg-emerald-500/10 text-emerald-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     case 'POST':
-      return 'border-sky-200 bg-sky-500/10 text-sky-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     case 'PUT':
-      return 'border-amber-200 bg-amber-500/10 text-amber-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     case 'PATCH':
-      return 'border-violet-200 bg-violet-500/10 text-violet-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     case 'DELETE':
-      return 'border-rose-200 bg-rose-500/10 text-rose-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     default:
-      return 'border-slate-200 bg-slate-500/10 text-slate-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
   }
 };
 
@@ -428,7 +428,7 @@ function MethodBadge({ method }: { method: HttpMethod }) {
 function RoleBadge({ role }: { role?: ProjectMemberRole }) {
   const t = useT('project');
   return (
-    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+    <Badge variant="outline" className="border-border-main bg-bg-subtle text-text-main">
       {t('roles.badge', { role: getRoleLabel(t, role) })}
     </Badge>
   );
@@ -439,14 +439,14 @@ function RoleBadge({ role }: { role?: ProjectMemberRole }) {
 function CodeBlock({ value, emptyLabel }: { value?: string; emptyLabel: string }) {
   if (!value?.trim()) {
     return (
-      <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+      <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-4 text-sm text-muted-foreground">
         {emptyLabel}
       </div>
     );
   }
 
   return (
-    <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
+    <pre className="overflow-x-auto rounded-md border border-border-main bg-bg-surface p-4 text-xs leading-6 text-text-muted">
       <code>{value}</code>
     </pre>
   );
@@ -1978,9 +1978,8 @@ export function ApiSpecManagementPage({
     <>
       <main className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0yMCAxMmgxNnYxNkgyMHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PHBhdGggZD0iTTEyIDIwaDE2djE2SDEyeiIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS1vcGFjaXR5PSIuMDUiLz48L2c+PC9zdmc+')] opacity-50" />
-            <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="rounded-lg border border-border-main bg-block-cream p-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-3">
                 <Button
                   asChild
@@ -1996,7 +1995,7 @@ export function ApiSpecManagementPage({
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-3xl font-bold tracking-tight">{t('apiSpecsPage.title')}</h1>
-                    <Braces className="h-6 w-6 text-primary" />
+                    <Braces className="h-6 w-6 text-text-main" />
                     <RoleBadge role={currentRole} />
                   </div>
 
@@ -2100,8 +2099,8 @@ export function ApiSpecManagementPage({
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-            <Card className="overflow-hidden border-border/50 shadow-premium">
-              <CardHeader className="gap-4 border-b bg-muted/20">
+            <Card className="overflow-hidden border-border-main bg-bg-canvas">
+              <CardHeader className="gap-4 border-b border-border-main bg-bg-canvas">
                 <div>
                   <CardTitle>{t('apiSpecsPage.listTitle')}</CardTitle>
                   <CardDescription>
@@ -2344,8 +2343,8 @@ export function ApiSpecManagementPage({
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 shadow-premium">
-              <CardHeader className="gap-4 border-b bg-muted/20">
+            <Card className="border-border-main bg-bg-canvas">
+              <CardHeader className="gap-4 border-b border-border-main bg-bg-canvas">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <CardTitle>{t('apiSpecsPage.selectedSpecTitle')}</CardTitle>
@@ -2387,7 +2386,7 @@ export function ApiSpecManagementPage({
                   </Alert>
                 ) : (
                   <>
-                    <div className="rounded-2xl border border-primary/10 bg-linear-to-br from-primary/10 via-transparent to-white p-4">
+                    <div className="rounded-md border border-border-main bg-bg-surface p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
