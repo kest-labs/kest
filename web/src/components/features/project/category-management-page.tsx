@@ -114,7 +114,7 @@ function RoleBadge({ role }: { role?: ProjectMemberRole }) {
   const t = useT('project');
 
   return (
-    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+    <Badge variant="outline" className="border-border-main bg-bg-subtle text-text-main">
       {t('roles.badge', { role: getRoleLabel(t, role) })}
     </Badge>
   );
@@ -455,64 +455,63 @@ export function CategoryManagementPage({
     <>
       <main className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xOCAxOGgyNHYyNEgxOHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-50" />
-        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="space-y-3">
-            <Button asChild variant="link" className="h-auto px-0 text-sm text-muted-foreground">
-              <Link href={buildProjectDetailRoute(projectId)}>
-                <ArrowLeft className="h-4 w-4" />
-                {t('categoriesPage.backToProjectOverview')}
-              </Link>
-            </Button>
+          <div className="rounded-lg border border-border-main bg-block-cream p-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="space-y-3">
+                <Button asChild variant="link" className="h-auto px-0 text-sm text-muted-foreground">
+                  <Link href={buildProjectDetailRoute(projectId)}>
+                    <ArrowLeft className="h-4 w-4" />
+                    {t('categoriesPage.backToProjectOverview')}
+                  </Link>
+                </Button>
 
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">{t('categoriesPage.title')}</h1>
-                <Tags className="h-6 w-6 text-primary" />
-                <RoleBadge role={currentRole} />
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-3xl font-bold tracking-tight">{t('categoriesPage.title')}</h1>
+                    <Tags className="h-6 w-6 text-text-main" />
+                    <RoleBadge role={currentRole} />
+                  </div>
+                  <p className="max-w-4xl text-sm text-text-muted">
+                    {t('categoriesPage.description', {
+                      projectName,
+                      path: buildApiPath('/projects/:id/categories'),
+                    })}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="font-mono">
+                    {projectSlug}
+                  </Badge>
+                  <Badge variant="outline">
+                    {t('categoriesPage.countCategories', {
+                      count: projectStatsQuery.data?.category_count ?? totalCategories,
+                    })}
+                  </Badge>
+                  <Badge variant="outline">
+                    {t('categoriesPage.countSpecs', {
+                      count: projectStatsQuery.data?.api_spec_count ?? 0,
+                    })}
+                  </Badge>
+                  <Badge variant="outline">
+                    {t('categoriesPage.selectableParents', { count: parentOptions.length })}
+                  </Badge>
+                </div>
               </div>
-              <p className="max-w-4xl text-sm text-text-muted">
-                {t('categoriesPage.description', {
-                  projectName,
-                  path: buildApiPath('/projects/:id/categories'),
-                })}
-              </p>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="font-mono">
-                {projectSlug}
-              </Badge>
-              <Badge variant="outline">
-                {t('categoriesPage.countCategories', {
-                  count: projectStatsQuery.data?.category_count ?? totalCategories,
-                })}
-              </Badge>
-              <Badge variant="outline">
-                {t('categoriesPage.countSpecs', {
-                  count: projectStatsQuery.data?.api_spec_count ?? 0,
-                })}
-              </Badge>
-              <Badge variant="outline">
-                {t('categoriesPage.selectableParents', { count: parentOptions.length })}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" onClick={() => openCreateDialog()} disabled={!canWrite}>
+                  <Plus className="h-4 w-4" />
+                  {t('categoriesPage.createCategory')}
+                </Button>
+                <ActionMenu
+                  items={headerActionItems}
+                  ariaLabel={t('categoriesPage.openManagementActions')}
+                  triggerVariant="outline"
+                />
+              </div>
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" onClick={() => openCreateDialog()} disabled={!canWrite}>
-              <Plus className="h-4 w-4" />
-              {t('categoriesPage.createCategory')}
-            </Button>
-            <ActionMenu
-              items={headerActionItems}
-              ariaLabel={t('categoriesPage.openManagementActions')}
-              triggerVariant="outline"
-            />
-          </div>
-        </div>
-      </div>
 
       {!canWrite && memberRoleQuery.isSuccess ? (
         <Alert>
@@ -583,8 +582,8 @@ export function CategoryManagementPage({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <Card className="border-border/50 shadow-premium">
-          <CardHeader className="flex flex-col gap-3 border-b bg-muted/20 lg:flex-row lg:items-center lg:justify-between">
+        <Card className="border-border-main bg-bg-canvas">
+          <CardHeader className="flex flex-col gap-3 border-b border-border-main bg-bg-canvas lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>{t('categoriesPage.registryTitle')}</CardTitle>
               <CardDescription>
@@ -797,8 +796,8 @@ export function CategoryManagementPage({
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-premium">
-          <CardHeader className="border-b bg-muted/20">
+        <Card className="border-border-main bg-bg-canvas">
+          <CardHeader className="border-b border-border-main bg-bg-canvas">
             <CardTitle>{t('categoriesPage.detailTitle')}</CardTitle>
             <CardDescription>
               {t('categoriesPage.detailDescription', {
@@ -837,7 +836,7 @@ export function CategoryManagementPage({
               </Alert>
             ) : (
               <>
-                <div className="rounded-2xl border border-primary/10 bg-linear-to-br from-primary/10 via-transparent to-white p-4">
+                <div className="rounded-md border border-border-main bg-bg-surface p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
@@ -958,8 +957,8 @@ export function CategoryManagementPage({
         </Card>
       </div>
 
-      <Card className="border-border/50 shadow-premium">
-        <CardHeader className="border-b bg-muted/20">
+      <Card className="border-border-main bg-bg-canvas">
+        <CardHeader className="border-b border-border-main bg-bg-canvas">
           <CardTitle>{t('categoriesPage.connectedEndpointsTitle')}</CardTitle>
           <CardDescription>
             {t('categoriesPage.connectedEndpointsDescription')}
