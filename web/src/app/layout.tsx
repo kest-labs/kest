@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { cn } from "@/utils";
@@ -12,7 +12,14 @@ import { Analytics } from "@/components/analytics";
 import { getT } from "@/i18n/server";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-fallback",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -40,7 +47,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={cn(inter.className, "min-h-screen antialiased")}>
+      <body className={cn(inter.className, inter.variable, mono.variable, "min-h-screen antialiased")}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <LocalizedErrorBoundary
             fallbackTitle={t.common("errorBoundaryTitle")}

@@ -14,8 +14,8 @@
   --popover: var(--neutral-800);
   --popover-foreground: var(--neutral-50);
   
-  --primary: var(--neutral-200);
-  --primary-foreground: var(--neutral-900);
+  --primary: var(--neutral-0);
+  --primary-foreground: var(--neutral-1000);
   
   --secondary: var(--neutral-800);
   --secondary-foreground: var(--neutral-50);
@@ -36,9 +36,12 @@
   /* --- Semantic Design Tokens --- */
   
   /* Surfaces & Backgrounds (Dark Mode mapping) */
-  --bg-canvas: var(--neutral-950);
+  --bg-canvas: var(--neutral-1000);
   --bg-surface: var(--neutral-900);
   --bg-subtle: var(--neutral-800);
+  --bg-inverse: var(--neutral-0);
+  --bg-soft: var(--neutral-800);
+  --bg-overlay-scrim: var(--neutral-1000);
   
   --surface-1: var(--bg-canvas);
   --surface-2: var(--bg-surface);
@@ -46,19 +49,31 @@
 
   /* Text & Foregrounds */
   --text-main: var(--neutral-50);
-  --text-subtle: var(--neutral-300);
-  --text-muted: var(--neutral-500);
-  --text-on-brand: var(--neutral-0);
+  --text-subtle: var(--neutral-200);
+  --text-muted: var(--neutral-400);
+  --text-on-brand: var(--neutral-1000);
+  --text-inverse: var(--neutral-1000);
+  --text-on-inverse-soft: var(--neutral-0);
 
   /* Borders & Dividers */
   --border-main: var(--neutral-700);
-  --border-subtle: oklch(from var(--border-main) l c h / 0.5);
-  --border-strong: var(--neutral-500);
+  --border-subtle: oklch(from var(--border-main) l c h / 0.55);
+  --border-strong: var(--neutral-100);
 
   /* Brand / Primary */
-  --brand-main: var(--blue-400);
-  --brand-subtle: oklch(from var(--brand-main) l c h / 0.15);
-  --brand-strong: var(--blue-200);
+  --brand-main: var(--neutral-0);
+  --brand-subtle: var(--neutral-800);
+  --brand-strong: var(--neutral-0);
+
+  /* Marketing block colors stay pastel against dark chrome. */
+  --block-lime: var(--figma-lime);
+  --block-lilac: var(--figma-lilac);
+  --block-cream: var(--figma-cream);
+  --block-mint: var(--figma-mint);
+  --block-pink: var(--figma-pink);
+  --block-coral: var(--figma-coral);
+  --block-navy: var(--figma-navy);
+  --accent-magenta: var(--figma-magenta);
   
   /* State Colors */
   --success: var(--green-500);
@@ -73,8 +88,8 @@
   --info: var(--sky-500);
   --info-subtle: oklch(from var(--info) l c h / 0.15);
 
-  --highlight: var(--blue-400);
-  --highlight-subtle: oklch(from var(--highlight) l c h / 0.2);
+  --highlight: var(--figma-lime);
+  --highlight-subtle: oklch(from var(--highlight) l c h / 0.18);
 
   /* Others */
   --shadow-color: oklch(0 0 0);
@@ -82,7 +97,7 @@
   /* Legacy semantics maintained for compatibility */
   --primary-subtle: var(--brand-subtle);
   --primary-strong: var(--brand-strong);
-  --primary-deeper: var(--blue-100);
+  --primary-deeper: var(--neutral-0);
   
   --secondary-subtle: oklch(from var(--secondary) l c h / 0.15);
   --secondary-deeper: var(--neutral-700);
