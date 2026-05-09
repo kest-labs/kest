@@ -86,7 +86,7 @@ import {
   type ProjectInvitationRole,
   type ProjectInvitationStatus,
 } from '@/types/project-invitation';
-import { formatDate } from '@/utils';
+import { cn, formatDate } from '@/utils';
 
 const EMPTY_MEMBERS: ProjectMember[] = [];
 const EMPTY_INVITATIONS: ProjectInvitation[] = [];
@@ -156,17 +156,17 @@ const getAssignableRole = (role?: ProjectMemberRole): AssignableProjectMemberRol
 const getInvitationStatusBadgeClassName = (status?: ProjectInvitationStatus) => {
   switch (status) {
     case 'active':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+      return 'border-border-main bg-block-lime text-text-main';
     case 'rejected':
-      return 'border-slate-200 bg-slate-100 text-slate-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     case 'used_up':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
+      return 'border-border-main bg-block-cream text-text-main';
     case 'revoked':
-      return 'border-rose-200 bg-rose-50 text-rose-700';
+      return 'border-border-main bg-block-pink text-text-main';
     case 'expired':
-      return 'border-slate-200 bg-slate-100 text-slate-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     default:
-      return 'border-border bg-muted text-muted-foreground';
+      return 'border-border-main bg-bg-subtle text-text-muted';
   }
 };
 
@@ -242,7 +242,7 @@ function RoleBadge({ role }: { role?: ProjectMemberRole }) {
   const t = useT('project');
 
   return (
-    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+    <Badge variant="outline" className="border-border-main bg-bg-subtle text-text-main">
       {t('roles.badge', { role: getRoleLabel(t, role) })}
     </Badge>
   );
@@ -560,9 +560,8 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
     <>
       <main className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-linear-to-r from-primary/10 via-cyan-500/5 to-transparent p-6 transition-colors duration-500">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xOCAxOGgyNHYyNEgxOHoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-50" />
-            <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="rounded-lg border border-border-main bg-block-cream p-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-3">
                 <Button
                   asChild
@@ -578,7 +577,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-3xl font-bold tracking-tight">{t('membersPage.title')}</h1>
-                    <Users className="h-6 w-6 text-primary" />
+                    <Users className="h-6 w-6 text-text-main" />
                     <RoleBadge role={currentRole} />
                   </div>
                   <p className="max-w-4xl text-sm text-text-muted">
@@ -1035,7 +1034,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                 </div>
 
                 {deferredInviteCandidateQuery.length > 0 || selectedInviteCandidate ? (
-                  <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border p-3">
+                  <div className="max-h-56 space-y-2 overflow-y-auto rounded-md border border-border-main bg-bg-canvas p-3">
                     {inviteUserSearchQuery.isFetching ? (
                       <div className="space-y-2">
                         {Array.from({ length: 2 }).map((_, index) => (
@@ -1054,7 +1053,10 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                           <button
                             key={candidate.id}
                             type="button"
-                            className="flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                            className={cn(
+                              'flex w-full items-center justify-between rounded-md border border-border-main bg-bg-canvas px-3 py-3 text-left transition-colors hover:bg-bg-subtle',
+                              isSelected && 'bg-block-lime'
+                            )}
                             onClick={() => {
                               setSelectedInviteCandidate(candidate);
                               setInviteDialogError(null);
@@ -1079,7 +1081,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                 ) : null}
 
                 {selectedInviteCandidate ? (
-                  <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center justify-between rounded-md border border-border-main bg-bg-surface p-3">
                     <div className="min-w-0">
                       <div className="text-sm font-medium">{t('membersPage.selectedInviteRecipient')}</div>
                       <div className="truncate text-sm text-muted-foreground">
@@ -1152,7 +1154,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
               </div>
 
               {generatedInvitation ? (
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="rounded-md border border-border-main bg-bg-surface p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="space-y-1">
                       <div className="text-sm font-medium">{t('membersPage.inviteGenerated')}</div>
@@ -1239,7 +1241,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                       : t('membersPage.availableCount', { count: candidateResults.length })}
                   </span>
                 </div>
-                <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border p-3">
+                <div className="max-h-72 space-y-2 overflow-y-auto rounded-md border border-border-main bg-bg-canvas p-3">
                   {deferredCandidateQuery.length === 0 ? (
                     <p className="text-sm text-muted-foreground">{t('membersPage.startTyping')}</p>
                   ) : userSearchQuery.isFetching ? (
@@ -1260,7 +1262,10 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                         <button
                           key={candidate.id}
                           type="button"
-                          className="flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                          className={cn(
+                            'flex w-full items-center justify-between rounded-md border border-border-main bg-bg-canvas px-3 py-3 text-left transition-colors hover:bg-bg-subtle',
+                            isSelected && 'bg-block-lime'
+                          )}
                           onClick={() => {
                             setSelectedCandidate(candidate);
                             setAddDialogError(null);
@@ -1304,7 +1309,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
               </div>
 
               {selectedCandidate ? (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="rounded-md border border-border-main bg-bg-surface p-4">
                   <div className="text-sm font-medium">{t('membersPage.selectedUser')}</div>
                   <div className="mt-1 text-sm text-muted-foreground">
                     {selectedCandidate.username} · {selectedCandidate.email}
