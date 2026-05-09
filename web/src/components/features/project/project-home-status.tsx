@@ -33,26 +33,26 @@ export const getProjectHomeStatusLabel = (t: ProjectT, tone: ProjectHomeStatusTo
 export const getProjectHomeStatusBadgeClassName = (tone: ProjectHomeStatusTone) => {
   switch (tone) {
     case 'ready':
-      return 'border-emerald-200 bg-emerald-500/10 text-emerald-700';
+      return 'border-border-main bg-block-lime text-text-main';
     case 'available':
-      return 'border-sky-200 bg-sky-500/10 text-sky-700';
+      return 'border-border-main bg-block-mint text-text-main';
     case 'optional':
-      return 'border-slate-200 bg-slate-500/10 text-slate-700';
+      return 'border-border-main bg-bg-subtle text-text-main';
     default:
-      return 'border-amber-200 bg-amber-500/10 text-amber-700';
+      return 'border-border-main bg-block-cream text-text-main';
   }
 };
 
 export const getProjectHomeStatusAccentClassName = (tone: ProjectHomeStatusTone) => {
   switch (tone) {
     case 'ready':
-      return 'bg-emerald-500/10 text-emerald-700';
+      return 'border border-border-main bg-block-lime text-text-main';
     case 'available':
-      return 'bg-sky-500/10 text-sky-700';
+      return 'border border-border-main bg-block-mint text-text-main';
     case 'optional':
-      return 'bg-slate-500/10 text-slate-700';
+      return 'border border-border-main bg-bg-subtle text-text-main';
     default:
-      return 'bg-amber-500/10 text-amber-700';
+      return 'border border-border-main bg-block-cream text-text-main';
   }
 };
 

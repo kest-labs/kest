@@ -376,11 +376,11 @@ function ProjectModuleCardTile({
   const Icon = module.icon;
 
   return (
-    <Card className="border-border/60 shadow-none transition-colors hover:border-primary/30 hover:bg-primary/[0.03]">
+    <Card className="border-border-main bg-bg-canvas shadow-none transition-colors hover:bg-bg-subtle">
       <CardContent className="flex h-full flex-col p-5">
         <div className="flex items-start justify-between gap-3">
           <div
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${getProjectHomeStatusAccentClassName(module.status)}`}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md ${getProjectHomeStatusAccentClassName(module.status)}`}
           >
             <Icon className="h-5 w-5" />
           </div>
@@ -590,7 +590,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
     <>
       <main className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-6 p-4 md:p-6">
-          <section className="rounded-xl border border-border/60 bg-bg-surface p-5 md:p-6">
+          <section className="rounded-lg border border-border-main bg-block-cream p-5 md:p-6">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0 space-y-4">
                 <Button asChild variant="link" className="h-auto px-0 text-sm text-text-muted">
@@ -605,7 +605,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
                       {project?.name || `Project #${projectId}`}
                     </h1>
-                    <FolderKanban className="h-6 w-6 text-primary" />
+                    <FolderKanban className="h-6 w-6 text-text-main" />
                   </div>
 
                   {project ? (
@@ -654,7 +654,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     ariaLabel={t('projectDetail.openProjectActions')}
                     triggerVariant="ghost"
                     triggerSize="default"
-                    triggerClassName="h-10 w-10 rounded-lg border border-border/60 bg-background"
+                    triggerClassName="h-10 w-10 rounded-full border border-border-main bg-bg-canvas"
                   />
                 </div>
               ) : null}
@@ -670,12 +670,12 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
 
           {shouldShowOverview ? (
             <>
-              <section className="rounded-xl border border-border/60 bg-linear-to-br from-background via-background to-primary/5 p-5 md:p-6">
+              <section className="rounded-lg border border-border-main bg-block-lilac p-5 md:p-6">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="space-y-3">
                     <Badge
                       variant="outline"
-                      className="border-primary/20 bg-primary/10 text-primary"
+                      className="border-border-main bg-bg-canvas text-text-main"
                     >
                       {t('projectDetail.nextStep')}
                     </Badge>
@@ -702,7 +702,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-xl border border-border/60 bg-background/80 p-4">
+                <div className="mt-5 rounded-md border border-border-main bg-bg-canvas p-4">
                   <p className="text-sm font-medium text-text-main">
                     {t('projectDetail.whyThisAction')}
                   </p>
@@ -710,7 +710,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                 </div>
               </section>
 
-              <section className="rounded-xl border border-border/60 bg-background p-5">
+              <section className="rounded-lg border border-border-main bg-bg-canvas p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold tracking-tight">
@@ -722,7 +722,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {shouldShowWorkflowProgress ? (
-                      <div className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-sm font-medium text-primary">
+                      <div className="rounded-full border border-border-main bg-bg-subtle px-3 py-1 text-sm font-medium text-text-main">
                         {t('projectDetail.projectFlowProgress', {
                           percent: workflowCompletionPercent,
                           completed: completedWorkflowSteps,
@@ -753,7 +753,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-valuenow={workflowCompletionPercent}
-                      className="h-2 overflow-hidden rounded-full bg-muted"
+                      className="h-2 overflow-hidden rounded-full bg-bg-subtle"
                     >
                       <div
                         className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
@@ -777,13 +777,13 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           ) : null}
 
           <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <Card className="border-border/60 shadow-none">
+            <Card className="border-border-main bg-bg-canvas shadow-none">
               <CardHeader>
                 <CardTitle>{t('projectDetail.projectDetails')}</CardTitle>
                 <CardDescription>{t('projectDetail.projectDetailsDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="rounded-md border border-border-main bg-bg-surface p-4">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                     {t('common.projectId')}
                   </p>
@@ -791,7 +791,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     {project?.id ?? projectId}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="rounded-md border border-border-main bg-bg-surface p-4">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                     {t('projectDetail.platform')}
                   </p>
@@ -801,7 +801,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                       : i18n.common('loading')}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="rounded-md border border-border-main bg-bg-surface p-4">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                     {t('common.created')}
                   </p>
@@ -814,7 +814,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
               </CardContent>
             </Card>
 
-            <Card id="cli-sync" className="border-border/60 shadow-none">
+            <Card id="cli-sync" className="border-border-main bg-bg-canvas shadow-none">
               <CardHeader>
                 <CardTitle>{t('projectDetail.cliSync')}</CardTitle>
                 <CardDescription>{t('projectDetail.cliSyncDescription')}</CardDescription>
@@ -822,7 +822,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
 
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-border/60 bg-background p-4">
+                  <div className="rounded-md border border-border-main bg-bg-surface p-4">
                     <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                       {t('projectDetail.platformUrl')}
                     </p>
@@ -830,7 +830,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                       {cliPlatformUrl}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-border/60 bg-background p-4">
+                  <div className="rounded-md border border-border-main bg-bg-surface p-4">
                     <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                       {t('projectDetail.projectScope')}
                     </p>
@@ -870,7 +870,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                     <ShieldCheck className="h-4 w-4" />
                     <AlertTitle>{t('projectDetail.copyTokenTitle')}</AlertTitle>
                     <AlertDescription className="space-y-4">
-                      <div className="rounded-xl border bg-background p-4">
+                      <div className="rounded-md border border-border-main bg-bg-canvas p-4">
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
                             {t('projectDetail.cliToken')}
@@ -893,7 +893,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                         <code className="block break-all text-xs">{generatedCliToken.token}</code>
                       </div>
 
-                      <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl border bg-background p-4 text-xs">
+                      <pre className="overflow-x-auto whitespace-pre-wrap rounded-md border border-border-main bg-bg-canvas p-4 text-xs">
                         {cliConfigCommand}
                       </pre>
                     </AlertDescription>
