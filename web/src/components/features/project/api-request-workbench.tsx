@@ -4131,13 +4131,13 @@ function RequestItemActionsMenu({
           variant="ghost"
           size="sm"
           isIcon
-          className="mr-1 h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/request:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          className="mr-1 h-7 w-7 rounded-full opacity-0 transition-opacity group-hover/request:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
           aria-label={t('collections.workbench.actions.openRequestActions')}
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40 rounded-xl">
+      <DropdownMenuContent align="end" className="w-40 rounded-lg">
         <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
           {isRenaming
             ? t('collections.workbench.actions.renaming')
@@ -4191,13 +4191,13 @@ function CollectionActionsMenu({
           variant="ghost"
           size="sm"
           isIcon
-          className="h-8 w-8 rounded-xl opacity-0 transition-opacity group-hover/collection:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover/collection:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
           aria-label={t('collections.workbench.actions.openCollectionActions')}
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44 rounded-xl">
+      <DropdownMenuContent align="end" className="w-44 rounded-lg">
         <DropdownMenuItem disabled={isFolder || isCreatingRequest} onSelect={onCreateRequest}>
           {isCreatingRequest
             ? t('collections.workbench.actions.creating')
