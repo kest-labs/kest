@@ -31,16 +31,17 @@ export function ForgotPasswordForm() {
 
   return (
     <Card className="border-none bg-transparent shadow-none">
-      <CardHeader className="space-y-1 px-0">
-        <CardTitle className="text-2xl font-bold tracking-tight">
+      <CardHeader className="space-y-3 px-0">
+        <p className="figma-caption text-text-muted">{t.auth('loginBadge')}</p>
+        <CardTitle className="figma-headline text-text-main">
           {t.auth('resetPassword')}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base leading-7 text-text-subtle">
           {t.auth('resetPasswordDescription')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-0 pt-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="px-0 pt-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">{t.auth('email')}</Label>
             <Input
@@ -55,15 +56,15 @@ export function ForgotPasswordForm() {
             />
           </div>
 
-          <Button type="submit" className="w-full font-semibold" disabled={passwordResetMutation.isPending}>
+          <Button type="submit" className="w-full" disabled={passwordResetMutation.isPending}>
             {t.auth('sendResetLink')}
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="px-0 text-sm text-muted-foreground">
+      <CardFooter className="mt-3 px-0 text-sm text-muted-foreground">
         <Link
           href="/login"
-          className="font-medium text-primary transition-colors hover:text-primary-deep hover:underline"
+          className="font-medium text-text-main underline-offset-4 hover:underline"
         >
           {t.auth('backToSignIn')}
         </Link>
