@@ -84,14 +84,14 @@ export function ActionMenu({
           size={triggerSize}
           isIcon
           aria-label={ariaLabel}
-          className={cn('h-8 w-8 rounded-xl', triggerClassName)}
+          className={cn('h-8 w-8 rounded-full', triggerClassName)}
           onClick={handleTriggerPropagation}
           onPointerDown={handleTriggerPropagation}
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className={cn('w-48 rounded-xl', contentClassName)}>
+      <DropdownMenuContent align={align} className={cn('w-48 rounded-lg', contentClassName)}>
         {visibleItems.map((item) => {
           const Icon = item.icon;
 
