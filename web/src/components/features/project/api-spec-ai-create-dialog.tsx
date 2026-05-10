@@ -871,7 +871,7 @@ function ApiSpecAICreateDialogContent({
 
               <div className="border-t border-border-main px-4 py-4">
                 <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-            <Card className="border-border/60">
+            <Card className="border-border-main bg-bg-canvas shadow-none">
               <CardHeader>
                 <CardTitle className="text-base">
                   {t('apiSpecs.aiCreateDialog.sections.reviewTitle')}
@@ -953,7 +953,7 @@ function ApiSpecAICreateDialogContent({
                     </Select>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3">
+                  <div className="flex items-center justify-between rounded-md border border-border-main bg-bg-surface px-4 py-3">
                     <div>
                       <div className="text-sm font-medium">{t('common.public')}</div>
                       <div className="text-sm text-muted-foreground">
