@@ -52,7 +52,7 @@ function TooltipTrigger({
 }
 
 const tooltipVariants = cva(
-  "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-lg px-4 py-2 text-xs font-medium shadow-tooltip transition-all duration-500 " +
+  "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md border px-4 py-2 text-xs font-medium shadow-soft transition-all duration-500 " +
   "data-[state=delayed-open]:data-[side=top]:animate-[float-in-top_0.4s_ease-out] " +
   "data-[state=delayed-open]:data-[side=bottom]:animate-[float-in-bottom_0.4s_ease-out] " +
   "data-[state=delayed-open]:data-[side=left]:animate-[float-in-left_0.4s_ease-out] " +
@@ -65,10 +65,10 @@ const tooltipVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-popover/90 text-popover-foreground backdrop-blur-md border",
-        inverted: "bg-zinc-950/90 text-zinc-50 backdrop-blur-md border border-white/10 shadow-2xl",
-        primary: "bg-primary/90 text-primary-foreground backdrop-blur-md border border-primary/20 shadow-lg shadow-primary/10",
-        destructive: "bg-destructive/10 text-destructive backdrop-blur-md border border-destructive/20 shadow-lg shadow-destructive/5",
+        default: "border-border-main bg-popover text-popover-foreground",
+        inverted: "border-border-strong bg-primary text-primary-foreground shadow-none",
+        primary: "border-border-strong bg-primary text-primary-foreground shadow-none",
+        destructive: "border-border-main bg-block-pink text-text-main shadow-none",
       },
     },
     defaultVariants: {

@@ -43,7 +43,7 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
             <h2 className={cn('figma-display-lg mt-4', inverse ? 'text-text-inverse' : 'text-text-main')}>
               {content.title}
             </h2>
-            <p className={cn('figma-body-lg mt-5', inverse ? 'text-text-inverse/80' : 'text-neutral-950/75')}>
+            <p className={cn('figma-body-lg mt-5', inverse ? 'text-text-inverse/80' : 'text-text-subtle')}>
               {content.description}
             </p>
 
@@ -53,18 +53,18 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
                   key={point}
                   className={cn(
                     'flex items-start gap-3 rounded-md border px-4 py-3.5',
-                    inverse ? 'border-white/20 bg-white/10' : 'border-black/12 bg-white/55'
+                    inverse ? 'border-text-inverse/20 bg-text-inverse/10' : 'border-border-main bg-bg-canvas'
                   )}
                 >
                   <span
                     className={cn(
                       'mt-0.5 flex size-6 items-center justify-center rounded-full',
-                      inverse ? 'bg-white/15 text-white' : 'bg-black text-white'
+                      inverse ? 'bg-text-inverse/15 text-text-inverse' : 'bg-primary text-primary-foreground'
                     )}
                   >
                     <Check className="size-3.5" />
                   </span>
-                  <span className={cn('text-sm leading-6', inverse ? 'text-text-inverse' : 'text-neutral-950')}>
+                  <span className={cn('text-sm leading-6', inverse ? 'text-text-inverse' : 'text-text-main')}>
                     {point}
                   </span>
                 </div>
@@ -76,7 +76,7 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
                 asChild
                 size="xl"
                 variant={inverse ? 'secondary' : 'default'}
-                className={inverse ? 'bg-white text-black hover:bg-white/90' : ''}
+                className={inverse ? 'bg-bg-canvas text-text-main hover:bg-bg-canvas/90' : ''}
               >
                 <Link href={content.ctaHref} className="inline-flex items-center gap-2 whitespace-nowrap">
                   <span>{content.cta}</span>

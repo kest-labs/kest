@@ -25,19 +25,19 @@ export function StatsSection({ content }: StatsSectionProps) {
           <h2 className="figma-display-lg mt-4 text-text-main">
             {content.title}
           </h2>
-          <p className="figma-body-lg mt-5 max-w-3xl text-neutral-950/75">{content.description}</p>
+          <p className="figma-body-lg mt-5 max-w-3xl text-text-subtle">{content.description}</p>
           </div>
 
           <div className="mt-14 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {content.items.map((item) => (
-              <article key={item.label} className="rounded-md border border-black/12 bg-white/55 p-6">
+              <article key={item.label} className="rounded-md border border-border-main bg-bg-canvas p-6">
                 <p className="figma-display-lg text-text-main">
                   {item.value}
                 </p>
                 <p className="figma-caption mt-3 text-text-main">
                   {item.label}
                 </p>
-                <p className="mt-4 text-sm leading-7 text-neutral-950/75">{item.detail}</p>
+                <p className="mt-4 text-sm leading-7 text-text-subtle">{item.detail}</p>
               </article>
             ))}
           </div>

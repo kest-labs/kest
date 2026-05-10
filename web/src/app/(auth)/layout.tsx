@@ -40,33 +40,33 @@ export default function AuthLayout({ children }: PropsWithChildren) {
               return (
                 <div
                   key={feature.key}
-                  className="flex items-center gap-3 rounded-md border border-black/12 bg-white/45 p-4"
+                  className="flex items-center gap-3 rounded-md border border-border-main bg-bg-canvas p-4"
                 >
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-black text-white">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <IconComponent className="size-4" />
                   </div>
-                  <span className="text-sm font-medium leading-5 text-neutral-950">{t(feature.key)}</span>
+                  <span className="text-sm font-medium leading-5 text-text-main">{t(feature.key)}</span>
                 </div>
               );
             })}
           </div>
 
           <div className="mt-12 grid gap-3 xl:grid-cols-3">
-            <div className="rounded-md border border-black/12 bg-white/45 p-4">
+            <div className="rounded-md border border-border-main bg-bg-canvas p-4">
               <p className="figma-caption text-text-main">{t('auth.insight1Title')}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-950/75">{t('auth.insight1Description')}</p>
+              <p className="mt-3 text-sm leading-6 text-text-subtle">{t('auth.insight1Description')}</p>
             </div>
-            <div className="rounded-md border border-black/12 bg-block-mint p-4">
+            <div className="rounded-md border border-border-main bg-block-mint p-4">
               <p className="figma-caption text-text-main">{t('auth.insight2Title')}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-950/75">{t('auth.insight2Description')}</p>
+              <p className="mt-3 text-sm leading-6 text-text-subtle">{t('auth.insight2Description')}</p>
             </div>
-            <div className="rounded-md border border-black/12 bg-block-lime p-4">
+            <div className="rounded-md border border-border-main bg-block-lime p-4">
               <p className="figma-caption text-text-main">{t('auth.insight3Title')}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-950/75">{t('auth.insight3Description')}</p>
+              <p className="mt-3 text-sm leading-6 text-text-subtle">{t('auth.insight3Description')}</p>
             </div>
           </div>
 
-          <p className="figma-caption mt-12 text-neutral-950/70">{t('auth.trustNote')}</p>
+          <p className="figma-caption mt-12 text-text-muted">{t('auth.trustNote')}</p>
         </div>
       </aside>
 

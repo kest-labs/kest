@@ -27,7 +27,7 @@ export function FinalCta({ content }: FinalCtaProps) {
             <h2 className="figma-display-lg mt-4 text-text-main">
               {content.title}
             </h2>
-            <p className="figma-body-lg mt-5 max-w-3xl text-neutral-950/75">{content.description}</p>
+            <p className="figma-body-lg mt-5 max-w-3xl text-text-subtle">{content.description}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button asChild size="2xl">
                 <Link href="/register" className="inline-flex items-center gap-2 whitespace-nowrap">
@@ -38,12 +38,12 @@ export function FinalCta({ content }: FinalCtaProps) {
                 type="button"
                 variant="outline"
                 size="2xl"
-                className="border-black/20 bg-white/55"
+                className="border-border-main bg-bg-canvas"
               >
                 {content.secondaryCta}
               </Button>
             </div>
-            <p className="mt-6 text-sm leading-7 text-neutral-950/70">{content.pricingHint}</p>
+            <p className="mt-6 text-sm leading-7 text-text-subtle">{content.pricingHint}</p>
           </div>
         </div>
       </div>

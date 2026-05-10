@@ -69,7 +69,7 @@ const TimeColumn = ({
             className={cn(
               "size-8 shrink-0 flex items-center justify-center text-sm font-medium transition-all rounded-lg mb-2 last:mb-0 cursor-pointer",
               value === i 
-                ? "bg-primary text-primary-foreground font-bold shadow-md scale-110 z-10" 
+                ? "bg-primary text-primary-foreground font-bold ring-2 ring-primary/12 z-10" 
                 : "text-foreground/80 hover:bg-primary/10 hover:text-foreground"
             )}
           >

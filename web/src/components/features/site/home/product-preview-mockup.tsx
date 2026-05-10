@@ -127,11 +127,11 @@ function HeroMockup({ content }: { content: MarketingHeroMockupContent }) {
         <div className="rounded-md border border-border-main bg-bg-canvas p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-text-main">{content.resultsTitle}</p>
-            <span className="figma-caption rounded-pill bg-block-pink px-2.5 py-1 text-rose-700">
+            <span className="figma-caption rounded-pill bg-block-pink px-2.5 py-1 text-text-main">
               {content.statusLabel}
             </span>
           </div>
-          <p className="mt-3 text-sm font-semibold text-rose-700">{content.failedCheck}</p>
+          <p className="mt-3 text-sm font-semibold text-text-main">{content.failedCheck}</p>
           <p className="mt-2 text-sm leading-6 text-text-subtle">{content.failedHint}</p>
         </div>
 
@@ -178,15 +178,15 @@ function StoryMockup({
   }[variant];
 
   return (
-    <div className={cn('marketing-grid rounded-lg border p-5', inverse ? 'border-white/20 bg-white/10' : 'border-border-main bg-bg-canvas')}>
+    <div className={cn('marketing-grid rounded-lg border p-5', inverse ? 'border-text-inverse/20 bg-text-inverse/10' : 'border-border-main bg-bg-canvas')}>
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className={cn('flex size-10 items-center justify-center rounded-full', inverse ? 'bg-white/15 text-white' : 'bg-bg-soft text-text-main')}>
+          <div className={cn('flex size-10 items-center justify-center rounded-full', inverse ? 'bg-text-inverse/15 text-text-inverse' : 'bg-bg-soft text-text-main')}>
             {TitleIcon ? <TitleIcon className="size-5" /> : null}
           </div>
           <p className={cn('text-sm font-semibold', inverse ? 'text-text-inverse' : 'text-text-main')}>{content.title}</p>
         </div>
-        <div className={cn('flex items-center gap-2 rounded-pill border px-3 py-1 text-[11px] font-medium', inverse ? 'border-white/20 bg-white/10 text-white/75' : 'border-border-main bg-bg-canvas text-text-subtle')}>
+        <div className={cn('flex items-center gap-2 rounded-pill border px-3 py-1 text-[11px] font-medium', inverse ? 'border-text-inverse/20 bg-text-inverse/10 text-text-inverse/75' : 'border-border-main bg-bg-canvas text-text-subtle')}>
           <CheckCircle2 className="size-3.5 text-emerald-500" />
           <span className="size-1.5 rounded-full bg-emerald-500" />
         </div>
@@ -195,12 +195,12 @@ function StoryMockup({
       {variant === 'flow' ? (
         <div className="grid gap-3">
           {[0, 2, 4, 6].map((start) => (
-            <div key={content.lines[start]} className={cn('rounded-md border p-4', inverse ? 'border-white/20 bg-white/10' : 'border-border-main bg-bg-canvas')}>
+            <div key={content.lines[start]} className={cn('rounded-md border p-4', inverse ? 'border-text-inverse/20 bg-text-inverse/10' : 'border-border-main bg-bg-canvas')}>
               <div className="flex items-center gap-3">
-                <div className={cn('size-2.5 rounded-full', inverse ? 'bg-white' : 'bg-primary')} />
+                <div className={cn('size-2.5 rounded-full', inverse ? 'bg-text-inverse' : 'bg-primary')} />
                 <p className={cn('font-medium', inverse ? 'text-text-inverse' : 'text-text-main')}>{content.lines[start]}</p>
               </div>
-              <p className={cn('mt-2 pl-5 text-sm leading-6', inverse ? 'text-white/75' : 'text-text-subtle')}>{content.lines[start + 1]}</p>
+              <p className={cn('mt-2 pl-5 text-sm leading-6', inverse ? 'text-text-inverse/75' : 'text-text-subtle')}>{content.lines[start + 1]}</p>
             </div>
           ))}
         </div>
@@ -214,9 +214,9 @@ function StoryMockup({
               className={cn(
                 'rounded-md border px-4 py-3.5',
                 inverse
-                  ? 'border-white/20 bg-white/10'
+                  ? 'border-text-inverse/20 bg-text-inverse/10'
                   : index === 0
-                    ? 'border-rose-200 bg-rose-50'
+                    ? 'border-border-main bg-block-pink'
                     : 'border-border-main bg-bg-canvas'
               )}
             >
@@ -227,15 +227,15 @@ function StoryMockup({
       ) : null}
 
       {variant === 'ai' ? (
-        <div className="overflow-hidden rounded-md border border-slate-900/80 bg-slate-950">
-          <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-3 text-xs uppercase tracking-[0.24em] text-slate-400">
+        <div className="overflow-hidden rounded-md border border-border-strong bg-primary">
+          <div className="flex items-center gap-2 border-b border-text-inverse/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-text-inverse/65">
             <Bot className="size-4 text-block-lime" />
             {content.title}
           </div>
-          <div className="space-y-3 px-4 py-4 font-mono text-sm leading-6 text-slate-100">
+          <div className="space-y-3 px-4 py-4 font-mono text-sm leading-6 text-text-inverse">
             {content.lines.map((line, index) => (
               <div key={line} className="flex gap-3">
-                <span className="w-5 shrink-0 text-slate-500">{index + 1}</span>
+                <span className="w-5 shrink-0 text-text-inverse/45">{index + 1}</span>
                 <span>{line}</span>
               </div>
             ))}
