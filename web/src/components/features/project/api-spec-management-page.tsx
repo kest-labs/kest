@@ -2688,7 +2688,7 @@ export function ApiSpecManagementPage({
                       </TabsContent>
                     </Tabs>
 
-                    <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="rounded-md border border-border-main bg-bg-surface p-4">
                       <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                         <FileJson2 className="h-4 w-4" />
                         {t('apiSpecsPage.connectedEndpointsTitle')}
