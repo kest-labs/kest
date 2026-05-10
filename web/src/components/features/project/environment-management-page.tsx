@@ -1655,7 +1655,7 @@ export function EnvironmentManagementPage({
             ) : (
               <div className="overflow-hidden rounded-md border border-border-main">
                 <Table>
-                  <TableHeader className="bg-muted/10">
+                  <TableHeader className="bg-bg-surface">
                     <TableRow className="hover:bg-transparent">
                       <TableHead>{t('common.name')}</TableHead>
                       <TableHead>{t('common.displayName')}</TableHead>
@@ -1671,7 +1671,7 @@ export function EnvironmentManagementPage({
                         data-state={environment.id === activeEnvironmentId ? 'selected' : undefined}
                         className={cn(
                           'cursor-pointer transition-colors',
-                          environment.id === activeEnvironmentId ? 'bg-muted/50' : ''
+                          environment.id === activeEnvironmentId ? 'bg-bg-surface' : ''
                         )}
                         onClick={() => {
                           setSelectedEnvironmentId(environment.id);

@@ -1038,7 +1038,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                     {inviteUserSearchQuery.isFetching ? (
                       <div className="space-y-2">
                         {Array.from({ length: 2 }).map((_, index) => (
-                          <div key={index} className="h-14 animate-pulse rounded-md bg-muted/50" />
+                          <div key={index} className="h-14 animate-pulse rounded-md bg-bg-surface" />
                         ))}
                       </div>
                     ) : inviteCandidateResults.length === 0 ? (
@@ -1247,7 +1247,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                   ) : userSearchQuery.isFetching ? (
                     <div className="space-y-2">
                       {Array.from({ length: 3 }).map((_, index) => (
-                        <div key={index} className="h-14 animate-pulse rounded-md bg-muted/50" />
+                        <div key={index} className="h-14 animate-pulse rounded-md bg-bg-surface" />
                       ))}
                     </div>
                   ) : candidateResults.length === 0 ? (

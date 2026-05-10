@@ -632,7 +632,7 @@ export function CategoryManagementPage({
               <>
                 <div className="overflow-hidden rounded-md border border-border-main">
                   <Table>
-                    <TableHeader className="bg-muted/10">
+                    <TableHeader className="bg-bg-surface">
                     <TableRow className="hover:bg-transparent">
                         <TableHead>{t('categoriesPage.tableName')}</TableHead>
                         <TableHead>{t('categoriesPage.tableParent')}</TableHead>

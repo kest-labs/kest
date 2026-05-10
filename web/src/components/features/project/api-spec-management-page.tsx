@@ -2176,7 +2176,7 @@ export function ApiSpecManagementPage({
                   <>
                     <div className="overflow-hidden rounded-md border border-border-main">
                       <Table>
-                        <TableHeader className="bg-muted/10">
+                        <TableHeader className="bg-bg-surface">
                           <TableRow className="hover:bg-transparent">
                             <TableHead>{t('common.method')}</TableHead>
                             <TableHead>{t('common.path')}</TableHead>
@@ -2194,7 +2194,7 @@ export function ApiSpecManagementPage({
                               data-state={spec.id === activeSpecId ? 'selected' : undefined}
                               className={cn(
                                 'cursor-pointer transition-colors',
-                                spec.id === activeSpecId ? 'bg-muted/50' : ''
+                                spec.id === activeSpecId ? 'bg-bg-surface' : ''
                               )}
                               onClick={() => {
                                 setSelectedSpecId(spec.id);

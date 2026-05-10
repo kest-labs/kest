@@ -574,7 +574,7 @@
   }
 
   .markdown-content hr {
-    @apply border-0 border-t border-border/60;
+    @apply border-0 border-t border-border-main;
   }
 
   .markdown-content strong {
