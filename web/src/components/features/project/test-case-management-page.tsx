@@ -445,7 +445,7 @@ function MarkdownPreview({
           th: ({ className, ...props }) => (
             <th
               className={cn(
-                'border border-border/60 bg-muted/40 px-3 py-2 text-left font-semibold',
+                'border border-border-main bg-bg-surface px-3 py-2 text-left font-semibold',
                 className
               )}
               {...props}
@@ -453,7 +453,7 @@ function MarkdownPreview({
           ),
           td: ({ className, ...props }) => (
             <td
-              className={cn('border border-border/60 px-3 py-2 align-top', className)}
+              className={cn('border border-border-main px-3 py-2 align-top', className)}
               {...props}
             />
           ),
@@ -496,7 +496,7 @@ function SummaryField({
     !(typeof value === 'string' && value.trim().length === 0);
 
   return (
-    <div className="space-y-1 rounded-xl border border-border/60 bg-muted/15 p-3">
+    <div className="space-y-1 rounded-md border border-border-main bg-bg-canvas p-3">
       <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       <div className="text-sm font-medium text-foreground">
         {hasValue ? value : t('common.notSet')}
