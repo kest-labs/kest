@@ -658,7 +658,7 @@ function ApiSpecAICreateDialogContent({
         }
       }}
     >
-      <DialogHeader className="border-b border-border/60 px-6 pt-6 pb-4">
+      <DialogHeader className="border-b border-border-main px-6 pt-6 pb-4">
         <DialogTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
           {t('apiSpecs.aiCreateDialog.title')}
@@ -687,7 +687,7 @@ function ApiSpecAICreateDialogContent({
           </Alert>
         ) : null}
 
-        <div className="space-y-3 rounded-2xl border border-border/60 bg-background p-4">
+        <div className="space-y-3 rounded-md border border-border-main bg-bg-canvas p-4">
           <div>
             <p className="text-sm font-medium text-text-main">
               {t('apiSpecs.aiCreateDialog.sections.intentDescriptionCompact')}
@@ -733,7 +733,7 @@ function ApiSpecAICreateDialogContent({
           </div>
 
           <details
-            className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+            className="rounded-md border border-border-main bg-bg-surface px-4 py-3"
             open={showAdvancedOptions}
             onToggle={event =>
               setShowAdvancedOptions((event.currentTarget as HTMLDetailsElement).open)
@@ -786,7 +786,7 @@ function ApiSpecAICreateDialogContent({
                 </Select>
               </div>
 
-              <div className="md:col-span-2 flex items-center justify-between rounded-xl border border-border/60 bg-background px-4 py-3">
+              <div className="md:col-span-2 flex items-center justify-between rounded-md border border-border-main bg-bg-canvas px-4 py-3">
                 <div className="space-y-1">
                   <div className="text-sm font-medium">
                     {t('apiSpecs.aiCreateDialog.fields.useProjectConventions')}
