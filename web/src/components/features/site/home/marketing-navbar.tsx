@@ -108,7 +108,7 @@ export function MarketingNavbar({
       className={cn(
         'sticky top-0 z-50 border-b transition-all duration-300',
         scrolled
-          ? 'border-border-main bg-bg-canvas/92 backdrop-blur-xl'
+          ? 'border-border-main bg-bg-canvas'
           : 'border-transparent bg-bg-canvas'
       )}
     >

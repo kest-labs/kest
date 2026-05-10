@@ -30,7 +30,7 @@ export default function AuthLayout({ children }: PropsWithChildren) {
           <div className="my-16 max-w-3xl">
             <p className="figma-eyebrow text-text-main">{t('auth.heroEyebrow')}</p>
             <h1 className="figma-display-lg mt-5 text-text-main">{t('auth.heroTitle')}</h1>
-            <p className="figma-body-lg mt-6 max-w-xl text-neutral-950/75">{t('auth.heroSubtitle')}</p>
+            <p className="figma-body-lg mt-6 max-w-xl text-text-subtle">{t('auth.heroSubtitle')}</p>
           </div>
 
           <div className="grid gap-3 xl:grid-cols-2">
