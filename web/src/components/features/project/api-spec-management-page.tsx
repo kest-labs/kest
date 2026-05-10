@@ -1153,7 +1153,7 @@ export function BatchGenDocDialog({
               </Select>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border px-3 py-2">
+            <div className="flex items-center justify-between rounded-md border border-border-main bg-bg-surface px-3 py-2">
               <div className="space-y-1">
                 <Label htmlFor="batch-gen-force">{t('apiSpecsPage.batchForceLabel')}</Label>
                 <div className="text-xs text-muted-foreground">
