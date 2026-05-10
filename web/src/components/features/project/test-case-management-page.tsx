@@ -675,9 +675,9 @@ function TestCaseFormDialog({
         <DialogBody>
           {mode === 'edit' && isLoadingTestCase ? (
             <div className="space-y-3 py-2">
-              <div className="h-10 animate-pulse rounded-xl bg-muted" />
-              <div className="h-10 animate-pulse rounded-xl bg-muted" />
-              <div className="h-32 animate-pulse rounded-xl bg-muted" />
+              <div className="h-10 animate-pulse rounded-md bg-muted" />
+              <div className="h-10 animate-pulse rounded-md bg-muted" />
+              <div className="h-32 animate-pulse rounded-md bg-muted" />
             </div>
           ) : mode === 'edit' && !testCase ? (
             <Alert className="mt-2">
@@ -922,7 +922,7 @@ function DuplicateTestCaseDialog({
 
         <DialogBody>
           <form id="duplicate-test-case-form" onSubmit={handleSubmit} className="space-y-4 py-1">
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div className="rounded-md border border-border-main bg-bg-surface p-4 text-sm text-muted-foreground">
               {t('testCasesPage.duplicateSourceLabel')}
               {' '}
               <span className="font-medium text-foreground">
