@@ -32,7 +32,7 @@ export function ForgotPasswordForm() {
   return (
     <Card className="border-none bg-transparent shadow-none">
       <CardHeader className="space-y-3 px-0">
-        <p className="figma-caption text-text-muted">{t.auth('loginBadge')}</p>
+        <p className="figma-caption inline-flex w-fit rounded-full bg-highlight px-3 py-1 text-text-main">{t.auth('loginBadge')}</p>
         <CardTitle className="figma-headline text-text-main">
           {t.auth('resetPassword')}
         </CardTitle>
@@ -64,7 +64,7 @@ export function ForgotPasswordForm() {
       <CardFooter className="mt-3 px-0 text-sm text-muted-foreground">
         <Link
           href="/login"
-          className="font-medium text-text-main underline-offset-4 hover:underline"
+          className="font-medium text-blue-600 underline-offset-4 hover:underline"
         >
           {t.auth('backToSignIn')}
         </Link>

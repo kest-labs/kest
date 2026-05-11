@@ -87,7 +87,7 @@ export function RegisterForm() {
   return (
     <Card className="border-none bg-transparent shadow-none">
       <CardHeader className="space-y-3 px-0">
-        <p className="figma-caption text-text-muted">{t.auth('loginBadge')}</p>
+        <p className="figma-caption inline-flex w-fit rounded-full bg-highlight px-3 py-1 text-text-main">{t.auth('loginBadge')}</p>
         <CardTitle className="figma-headline text-text-main">
           {t.auth('createAccount')}
         </CardTitle>
@@ -169,7 +169,7 @@ export function RegisterForm() {
             ) : null}
           </div>
 
-          <div className="flex items-start space-x-2 pt-2">
+          <div className="flex items-start space-x-2 rounded-2xl border border-border-subtle bg-bg-subtle p-4">
             <Checkbox
               id="terms"
               checked={form.agreedToTerms}
@@ -200,7 +200,7 @@ export function RegisterForm() {
         {t.auth('hasAccount')}
         <Link
           href={returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : '/login'}
-          className="font-medium text-text-main underline-offset-4 hover:underline"
+          className="font-medium text-blue-600 underline-offset-4 hover:underline"
         >
           {t.auth('signIn')}
         </Link>

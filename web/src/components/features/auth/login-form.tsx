@@ -53,7 +53,7 @@ export function LoginForm() {
   return (
     <Card className="border-none bg-transparent shadow-none">
       <CardHeader className="space-y-3 px-0">
-        <p className="figma-caption text-text-muted">{t.auth('loginBadge')}</p>
+        <p className="figma-caption inline-flex w-fit rounded-full bg-highlight px-3 py-1 text-text-main">{t.auth('loginBadge')}</p>
         <CardTitle className="figma-headline text-text-main">{t.auth('welcomeBack')}</CardTitle>
         <CardDescription className="text-base leading-7 text-text-subtle">{t.auth('signInToContinue')}</CardDescription>
       </CardHeader>
@@ -76,7 +76,7 @@ export function LoginForm() {
               <Label htmlFor="password">{t.auth('password')}</Label>
               <Link
                 href="/forgot-password"
-                className="text-sm font-medium text-text-main underline-offset-4 hover:underline"
+                className="text-sm font-medium text-blue-600 underline-offset-4 hover:underline"
               >
                 {t.auth('forgotPassword')}
               </Link>
@@ -101,7 +101,7 @@ export function LoginForm() {
         {t.auth('noAccount')}
         <Link
           href={returnUrl ? `/register?returnUrl=${encodeURIComponent(returnUrl)}` : '/register'}
-          className="font-medium text-text-main underline-offset-4 hover:underline"
+          className="font-medium text-blue-600 underline-offset-4 hover:underline"
         >
           {t.auth('signUp')}
         </Link>

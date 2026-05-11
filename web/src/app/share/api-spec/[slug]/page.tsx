@@ -87,14 +87,14 @@ function CodePanel({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold tracking-tight text-text-main">{title}</h3>
+        <h3 className="text-sm font-semibold tracking-normal text-text-main">{title}</h3>
       </div>
       {value?.trim() ? (
-        <pre className="overflow-x-auto rounded-md border border-border-main bg-bg-surface p-5 text-xs leading-6 text-text-muted">
+        <pre className="overflow-x-auto rounded-xl border border-border-main bg-bg-subtle p-5 text-xs leading-6 text-text-muted">
           <code>{value}</code>
         </pre>
       ) : (
-        <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-5 text-sm text-text-muted">
+        <div className="rounded-xl border border-dashed border-border-main bg-bg-subtle p-5 text-sm text-text-muted">
           {emptyLabel}
         </div>
       )}
@@ -133,21 +133,21 @@ export default async function ApiSpecSharePage({
   return (
     <main className="min-h-screen bg-bg-canvas px-4 py-10 md:px-8 md:py-14">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <section className="overflow-hidden rounded-lg border border-border-main bg-bg-canvas">
-          <div className="border-b border-border-main bg-block-cream px-6 py-6 md:px-8 md:py-8">
+        <section className="overflow-hidden rounded-[1.75rem] border border-border-subtle bg-bg-canvas shadow-soft">
+          <div className="border-b border-border-subtle bg-block-lime px-6 py-6 md:px-8 md:py-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="bg-primary text-primary-foreground hover:bg-primary">{share.method}</Badge>
-                  <Badge variant="outline" className="border-border-main bg-bg-canvas text-text-main">
+                  <Badge variant="outline" className="border-border-strong bg-bg-canvas text-text-main">
                     v{share.version}
                   </Badge>
-                  <Badge variant="outline" className="border-border-main bg-bg-canvas text-text-main">
+                  <Badge variant="outline" className="border-border-strong bg-bg-canvas text-text-main">
                     {t('share.shared')}
                   </Badge>
                 </div>
                 <div>
-                  <h1 className="font-mono text-2xl font-semibold tracking-tight text-text-main md:text-3xl">
+                  <h1 className="font-mono text-2xl font-semibold tracking-normal text-text-main md:text-3xl">
                     {share.path}
                   </h1>
                   <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">
@@ -157,13 +157,13 @@ export default async function ApiSpecSharePage({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-md border border-border-main bg-bg-canvas px-4 py-3">
+                <div className="rounded-2xl border border-border-subtle bg-bg-canvas px-4 py-3">
                   <p className="figma-caption text-text-muted">{t('share.published')}</p>
                   <p className="mt-2 text-sm font-medium text-text-main">
                     {formatDate(share.shared_at, 'YYYY-MM-DD HH:mm')}
                   </p>
                 </div>
-                <div className="rounded-md border border-border-main bg-bg-canvas px-4 py-3">
+                <div className="rounded-2xl border border-border-subtle bg-bg-canvas px-4 py-3">
                   <p className="figma-caption text-text-muted">{t('share.updated')}</p>
                   <p className="mt-2 text-sm font-medium text-text-main">
                     {formatDate(share.updated_at, 'YYYY-MM-DD HH:mm')}
@@ -178,7 +178,7 @@ export default async function ApiSpecSharePage({
                   <Badge
                     key={tag}
                     variant="outline"
-                    className="rounded-full border-border-main bg-bg-canvas text-text-main"
+                    className="rounded-full border-border-strong bg-bg-canvas text-text-main"
                   >
                     {tag}
                   </Badge>
@@ -188,15 +188,15 @@ export default async function ApiSpecSharePage({
           </div>
 
           <div className="grid gap-4 px-6 py-6 md:grid-cols-3 md:px-8">
-            <div className="rounded-md border border-border-main bg-bg-surface p-4">
+            <div className="rounded-2xl border border-border-subtle bg-bg-subtle p-4">
               <p className="figma-caption text-text-muted">{t('share.docSource')}</p>
               <p className="mt-2 text-sm font-medium text-text-main">{share.doc_source || 'manual'}</p>
             </div>
-            <div className="rounded-md border border-border-main bg-bg-surface p-4">
+            <div className="rounded-2xl border border-border-subtle bg-bg-subtle p-4">
               <p className="figma-caption text-text-muted">{t('common.path')}</p>
               <p className="mt-2 font-mono text-sm text-text-main">{share.path}</p>
             </div>
-            <div className="rounded-md border border-border-main bg-bg-surface p-4">
+            <div className="rounded-2xl border border-border-subtle bg-bg-subtle p-4">
               <p className="figma-caption text-text-muted">{t('common.method')}</p>
               <p className="mt-2 text-sm font-medium text-text-main">{share.method}</p>
             </div>
@@ -205,7 +205,7 @@ export default async function ApiSpecSharePage({
 
         <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">
-            <Card className="border-border-main bg-bg-canvas">
+            <Card className="border-border-subtle bg-bg-canvas">
               <CardHeader>
                 <CardTitle>{t('share.descriptionTitle')}</CardTitle>
                 <CardDescription>{t('share.descriptionDescription')}</CardDescription>
@@ -216,7 +216,7 @@ export default async function ApiSpecSharePage({
             </Card>
 
             {hasDocSections ? (
-              <Card className="border-border-main bg-bg-canvas">
+              <Card className="border-border-subtle bg-bg-canvas">
                 <CardHeader>
                   <CardTitle>{t('share.publishedDocs')}</CardTitle>
                   <CardDescription>{t('share.publishedDocsDescription')}</CardDescription>
@@ -243,7 +243,7 @@ export default async function ApiSpecSharePage({
           </div>
 
           <div className="space-y-6">
-            <Card className="border-border-main bg-bg-canvas">
+            <Card className="border-border-subtle bg-bg-canvas">
               <CardHeader>
                 <CardTitle>{t('share.requestSchema')}</CardTitle>
                 <CardDescription>{t('share.requestSchemaDescription')}</CardDescription>
@@ -257,7 +257,7 @@ export default async function ApiSpecSharePage({
               </CardContent>
             </Card>
 
-            <Card className="border-border-main bg-bg-canvas">
+            <Card className="border-border-subtle bg-bg-canvas">
               <CardHeader>
                 <CardTitle>{t('common.parameters')}</CardTitle>
                 <CardDescription>{t('share.parametersDescription')}</CardDescription>
@@ -271,7 +271,7 @@ export default async function ApiSpecSharePage({
               </CardContent>
             </Card>
 
-            <Card className="border-border-main bg-bg-canvas">
+            <Card className="border-border-subtle bg-bg-canvas">
               <CardHeader>
                 <CardTitle>{t('common.responses')}</CardTitle>
                 <CardDescription>{t('share.responsesDescription')}</CardDescription>
