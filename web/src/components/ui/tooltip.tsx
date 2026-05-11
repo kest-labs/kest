@@ -52,7 +52,7 @@ function TooltipTrigger({
 }
 
 const tooltipVariants = cva(
-  "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md border px-4 py-2 text-xs font-medium shadow-soft transition-all duration-500 " +
+  "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md border px-4 py-2 text-xs font-medium shadow-tooltip transition-all duration-500 " +
   "data-[state=delayed-open]:data-[side=top]:animate-[float-in-top_0.4s_ease-out] " +
   "data-[state=delayed-open]:data-[side=bottom]:animate-[float-in-bottom_0.4s_ease-out] " +
   "data-[state=delayed-open]:data-[side=left]:animate-[float-in-left_0.4s_ease-out] " +

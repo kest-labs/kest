@@ -13,12 +13,12 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/utils"
 
 const textareaVariants = cva(
-  "placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex min-h-[80px] w-full rounded-md px-3.5 py-2 text-base shadow-none transition-all disabled:cursor-not-allowed disabled:opacity-50 md:text-sm input-depth focus-border resize-none",
+  "placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex min-h-[88px] w-full rounded-md px-4 py-3 text-base shadow-none transition-all disabled:cursor-not-allowed disabled:opacity-50 md:text-sm input-depth focus-border resize-none",
   {
     variants: {
       variant: {
-        outline: "border border-border-main bg-background hover:border-border-strong focus-visible:border-primary",
-        filled: "border border-transparent bg-bg-subtle hover:bg-secondary focus-visible:bg-background focus-visible:border-primary",
+        outline: "border border-border-strong bg-background hover:border-primary focus-visible:border-primary",
+        filled: "border border-border-main bg-bg-subtle hover:border-border-strong focus-visible:bg-background focus-visible:border-primary",
       },
       error: {
         true: "border-destructive focus-visible:border-destructive text-destructive placeholder:text-destructive/50",

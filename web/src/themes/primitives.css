@@ -20,15 +20,54 @@
   --neutral-950: oklch(0.1 0 0);
   --neutral-1000: oklch(0 0 0);
 
-  /* Figma-inspired editorial block palette */
-  --figma-lime: oklch(0.9 0.19 129);
-  --figma-lilac: oklch(0.88 0.08 306);
-  --figma-cream: oklch(0.96 0.05 88);
-  --figma-mint: oklch(0.91 0.09 168);
-  --figma-pink: oklch(0.9 0.09 352);
-  --figma-coral: oklch(0.83 0.13 42);
-  --figma-navy: oklch(0.22 0.07 275);
-  --figma-magenta: oklch(0.63 0.24 350);
+  /* Miro-inspired brand and board palette */
+  --miro-primary: #1c1c1e;
+  --miro-on-primary: #ffffff;
+  --miro-brand-yellow: #ffd02f;
+  --miro-brand-yellow-deep: #fcb900;
+  --miro-yellow-light: #fff4c4;
+  --miro-yellow-dark: #746019;
+  --miro-brand-blue: #4262ff;
+  --miro-blue-450: #5b76fe;
+  --miro-blue-pressed: #2a41b6;
+  --miro-brand-coral: #ff9999;
+  --miro-coral-light: #ffc6c6;
+  --miro-coral-dark: #600000;
+  --miro-brand-rose: #ffd8f4;
+  --miro-rose-light: #fde0f0;
+  --miro-brand-teal: #0fbcb0;
+  --miro-teal-light: #c3faf5;
+  --miro-moss-dark: #187574;
+  --miro-orange-light: #ffe6cd;
+  --miro-success-accent: #00b473;
+  --miro-canvas: #ffffff;
+  --miro-surface: #f7f8fa;
+  --miro-surface-soft: #fafbfc;
+  --miro-surface-yellow: #fff8e0;
+  --miro-surface-featured: #f5f3ff;
+  --miro-hairline: #e0e2e8;
+  --miro-hairline-soft: #eef0f3;
+  --miro-hairline-strong: #c7cad5;
+  --miro-ink-deep: #050038;
+  --miro-ink: #1c1c1e;
+  --miro-charcoal: #2c2c34;
+  --miro-slate: #555a6a;
+  --miro-steel: #6b6f7e;
+  --miro-stone: #8e91a0;
+  --miro-muted: #a5a8b5;
+  --miro-footer-bg: #1c1c1e;
+  --miro-on-dark: #ffffff;
+  --miro-on-dark-muted: #a5a8b5;
+
+  /* Legacy aliases kept while feature files still use block/figma names. */
+  --figma-lime: var(--miro-yellow-light);
+  --figma-lilac: var(--miro-surface-featured);
+  --figma-cream: var(--miro-orange-light);
+  --figma-mint: var(--miro-teal-light);
+  --figma-pink: var(--miro-rose-light);
+  --figma-coral: var(--miro-coral-light);
+  --figma-navy: var(--miro-ink-deep);
+  --figma-magenta: var(--miro-brand-blue);
 
   /* Brand (Blue) */
   --blue-50: oklch(0.97 0.01 250);
@@ -61,22 +100,22 @@
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
 
-  --font-size-display-xl: 5.375rem;
-  --font-size-display-lg: 4rem;
-  --font-size-headline: 1.625rem;
-  --font-size-subhead: 1.625rem;
-  --font-size-body-lg: 1.25rem;
-  --font-size-body: 1.125rem;
-  --font-size-body-sm: 1rem;
-  --font-size-caption: 0.75rem;
+  --font-size-display-xl: 5rem;
+  --font-size-display-lg: 3.75rem;
+  --font-size-headline: 1.75rem;
+  --font-size-subhead: 1.375rem;
+  --font-size-body-lg: 1.125rem;
+  --font-size-body: 1rem;
+  --font-size-body-sm: 0.875rem;
+  --font-size-caption: 0.8125rem;
 
-  --tracking-display-xl: -0.1075rem;
-  --tracking-display-lg: -0.06rem;
-  --tracking-headline: -0.01625rem;
-  --tracking-body: -0.01625rem;
-  --tracking-body-tight: -0.00875rem;
-  --tracking-eyebrow: 0.03375rem;
-  --tracking-caption: 0.0375rem;
+  --tracking-display-xl: 0;
+  --tracking-display-lg: 0;
+  --tracking-headline: 0;
+  --tracking-body: 0;
+  --tracking-body-tight: 0;
+  --tracking-eyebrow: 0;
+  --tracking-caption: 0;
 
   /* Spacing */
   --spacing-hair: 1px;
@@ -91,12 +130,14 @@
   --spacing-section: 6rem;
 
   /* Radius */
-  --radius-xs: 0.125rem;
+  --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 1.5rem;
-  --radius-xl: 2rem;
-  --radius-pill: 3.125rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-feature: 1.75rem;
+  --radius-pill: 9999px;
   --radius-full: 9999px;
 
   /* Motion / Animation */

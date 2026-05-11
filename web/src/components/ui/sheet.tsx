@@ -58,8 +58,8 @@ function SheetOverlay({
       data-slot="sheet-overlay"
       className={cn(
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-40",
-        backdrop === "blur" && "bg-black/20",
-        backdrop === "dim" && "bg-black/40",
+        backdrop === "blur" && "bg-bg-overlay-scrim/25",
+        backdrop === "dim" && "bg-bg-overlay-scrim/45",
         className
       )}
       {...props}
@@ -99,7 +99,7 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 flex size-7 cursor-pointer items-center justify-center rounded-full bg-bg-subtle text-muted-foreground transition-all hover:bg-bg-surface hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-50">
+        <SheetPrimitive.Close className="absolute right-4 top-4 flex size-7 cursor-pointer items-center justify-center rounded-full border border-border-main bg-bg-subtle text-muted-foreground transition-all hover:bg-bg-surface hover:text-foreground focus-ring disabled:cursor-not-allowed disabled:opacity-50">
           <XIcon className="size-4" />
           <span className="sr-only">{t.common('close')}</span>
         </SheetPrimitive.Close>

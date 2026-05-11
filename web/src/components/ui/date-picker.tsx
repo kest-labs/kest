@@ -55,7 +55,7 @@ const TimeColumn = ({
 
   return (
     <div className="flex flex-col items-center bg-bg-surface last:border-0 border-r border-border-main w-14 shrink-0 overflow-hidden">
-      <div className="text-xs font-bold text-muted-foreground/60 py-3 uppercase tracking-widest">{label}</div>
+      <div className="py-3 text-xs font-bold uppercase tracking-normal text-muted-foreground/60">{label}</div>
       <div 
         ref={scrollRef}
         className="h-[260px] w-full overflow-y-auto no-scrollbar flex flex-col items-center relative overscroll-contain"
@@ -129,7 +129,7 @@ export function DatePicker({
       <PopoverTrigger asChild>
         <button
           className={cn(
-            "flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-xs transition-all hover:border-border-strong focus:outline-hidden focus:border-primary items-center justify-between text-left font-normal input-depth cursor-pointer",
+            "flex h-11 w-full items-center justify-between rounded-md border border-border-strong bg-background px-4 py-2 text-left text-sm font-normal shadow-none transition-all hover:border-primary focus:outline-hidden focus:border-primary input-depth cursor-pointer",
             !date && "text-muted-foreground",
             isError && "border-destructive focus:border-destructive text-destructive",
             className
@@ -177,7 +177,7 @@ export function DatePicker({
           </div>
           <button 
             onClick={() => setOpen(false)}
-            className="px-6 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg shadow-button-primary hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+            className="cursor-pointer rounded-full bg-primary px-6 py-1.5 text-xs font-bold text-primary-foreground shadow-button-primary transition-all hover:brightness-110 active:scale-95"
           >
             {t.common('confirm')}
           </button>

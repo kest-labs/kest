@@ -109,7 +109,7 @@ export function Calendar({ selected, onSelect, onToday, className, showFooter = 
           <ChevronLeft className="size-4" />
         </button>
         <div 
-          className="flex items-center gap-1 font-semibold text-sm tracking-tight px-2 py-1 rounded-md transition-colors"
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold tracking-normal transition-colors"
         >
           {mode === "days" ? (
             <div className="flex items-center hover:bg-bg-subtle p-1 rounded-md transition-colors">
@@ -163,7 +163,7 @@ export function Calendar({ selected, onSelect, onToday, className, showFooter = 
       
       {mode === "days" ? (
         <>
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase font-medium text-muted-foreground/90 mb-2 tracking-widest">
+          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-medium uppercase tracking-normal text-muted-foreground/90">
             {weekDays.map(d => (
               <div key={d} className="py-1">
                 {d}
