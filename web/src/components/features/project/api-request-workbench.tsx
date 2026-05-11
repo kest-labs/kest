@@ -289,11 +289,11 @@ const DEFAULT_JSON_PLACEHOLDER = '{\n  \n}';
 const DEFAULT_GRAPHQL_QUERY = 'query Example {\n  \n}';
 const DEFAULT_GRAPHQL_VARIABLES = '{\n  \n}';
 const METHOD_BADGE_STYLES: Record<RequestMethod, string> = {
-  GET: 'border-border-main bg-block-lime text-text-main',
-  POST: 'border-border-main bg-block-mint text-text-main',
-  PUT: 'border-border-main bg-block-cream text-text-main',
-  PATCH: 'border-border-main bg-block-lilac text-text-main',
-  DELETE: 'border-border-main bg-block-pink text-text-main',
+  GET: 'border-border-subtle bg-block-lime text-text-main',
+  POST: 'border-border-subtle bg-block-mint text-text-main',
+  PUT: 'border-border-subtle bg-block-cream text-text-main',
+  PATCH: 'border-border-subtle bg-block-lilac text-text-main',
+  DELETE: 'border-border-subtle bg-block-pink text-text-main',
 };
 
 const createLocalId = (prefix: string) =>
@@ -3444,8 +3444,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const importingKind = isAnyImportPending ? (importDialogTarget?.kind ?? null) : null;
 
   return (
-    <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-bg-canvas">
-      <div className="border-b border-border-main bg-bg-canvas">
+    <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-bg-soft">
+      <div className="border-b border-border-subtle bg-bg-canvas">
         <div className="px-4 py-3 md:px-6">
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 overflow-hidden">
@@ -3472,7 +3472,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
-        <aside className="h-[42dvh] min-h-[280px] w-full shrink-0 border-b border-border-main bg-bg-surface xl:h-auto xl:min-h-0 xl:w-[320px] xl:border-b-0 xl:border-r">
+        <aside className="h-[42dvh] min-h-[280px] w-full shrink-0 border-b border-border-subtle bg-bg-soft xl:h-auto xl:min-h-0 xl:w-[320px] xl:border-b-0 xl:border-r">
           <CollectionsSidebar
             collections={collectionViews}
             activeCollectionId={activeCollectionId}
@@ -3515,14 +3515,14 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         <div className="min-h-0 min-w-0 flex-1 overflow-auto p-4 md:p-6">
           {activeTab ? (
             <div className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-4">
-              <Card className="gap-0 rounded-lg border-border-main bg-bg-canvas py-0 shadow-none">
-                <CardHeader className="gap-4 border-b border-border-main py-5">
+              <Card className="gap-0 rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+                <CardHeader className="gap-4 border-b border-border-subtle py-5">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="border-border-main bg-bg-surface text-text-main"
+                          className="border-border-subtle bg-bg-soft text-text-main"
                         >
                           {t('collections.workbench.badges.apiRequest')}
                         </Badge>
@@ -3539,7 +3539,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                         )}
                       </div>
                       <div>
-                        <CardTitle className="text-xl tracking-tight">{activeTab.title}</CardTitle>
+                        <CardTitle className="text-xl tracking-normal">{activeTab.title}</CardTitle>
                         <CardDescription className="mt-1">
                           {t('collections.workbench.runnerDescription')}
                         </CardDescription>
@@ -3634,11 +3634,11 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
             </div>
           ) : (
             <div className="mx-auto flex min-h-full max-w-[960px] items-center justify-center">
-              <div className="w-full max-w-[680px] rounded-lg border border-dashed border-border-main bg-bg-surface px-8 py-16 text-center shadow-none">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-main">
+              <div className="w-full max-w-[680px] rounded-[1.75rem] border border-dashed border-border-subtle bg-bg-soft px-8 py-16 text-center shadow-sm">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-border-subtle bg-highlight-subtle text-text-main">
                   <FolderOpen className="h-6 w-6" />
                 </div>
-                <p className="mt-6 text-2xl font-semibold tracking-tight text-text-main">
+                <p className="mt-6 text-2xl font-semibold tracking-normal text-text-main">
                   {t('collections.workbench.empty.workspaceTitle')}
                 </p>
                 <p className="mt-3 text-base leading-7 text-text-muted">
@@ -3812,7 +3812,7 @@ function CollectionsSidebar({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="space-y-4 p-4">
         {isEmpty ? (
-          <div className="rounded-md border border-dashed border-border-main bg-bg-canvas p-4">
+          <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-canvas p-4">
             <p className="text-sm font-semibold text-text-main">
               {t('collections.workbench.empty.sidebarTitle')}
             </p>
@@ -3921,8 +3921,8 @@ function CollectionsSidebar({
               <div
                 key={collection.id}
                 className={cn(
-                  'group/collection rounded-md border border-transparent bg-bg-canvas p-1.5 transition-colors',
-                  isActiveCollection ? 'border-border-main bg-block-lilac' : 'hover:bg-bg-subtle'
+                  'group/collection rounded-2xl border border-transparent bg-bg-canvas p-1.5 transition-colors',
+                  isActiveCollection ? 'border-border-subtle bg-block-lilac shadow-sm' : 'hover:bg-bg-subtle'
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -3944,7 +3944,7 @@ function CollectionsSidebar({
                   <button
                     type="button"
                     onClick={() => onToggleCollection(collection.id)}
-                    className="min-w-0 flex-1 rounded-md px-1 py-0.5 text-left"
+                    className="min-w-0 flex-1 rounded-xl px-1 py-0.5 text-left"
                   >
                     <div className="flex items-center gap-2">
                       <span
@@ -4004,7 +4004,7 @@ function CollectionsSidebar({
 
           {scratchpadTabs.length > 0 ? (
             <div className="pt-4">
-              <div className="mb-2 px-2 text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+              <div className="mb-2 px-2 text-xs font-medium uppercase tracking-normal text-text-muted">
                 {t('collections.workbench.quickRequests')}
               </div>
               <div className="space-y-1.5">
@@ -4028,7 +4028,7 @@ function CollectionsSidebar({
       </div>
 
       {!isSearchMode && totalPages > 1 ? (
-        <div className="flex items-center justify-between border-t border-border-main px-4 py-3">
+        <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3">
           <Button
             type="button"
             variant="outline"
@@ -4081,14 +4081,14 @@ function SidebarRequestRow({
   return (
     <div
       className={cn(
-        'group/request flex items-center gap-1 rounded-md transition-colors',
+        'group/request flex items-center gap-1 rounded-xl transition-colors',
         isActive ? 'bg-block-lilac text-text-main' : 'hover:bg-bg-subtle'
       )}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="min-w-0 flex-1 rounded-md px-3 py-1.5 text-left"
+        className="min-w-0 flex-1 rounded-xl px-3 py-1.5 text-left"
       >
         <div className="flex items-center gap-2">
           {isScratchpad ? (
@@ -4357,7 +4357,7 @@ function RenameCollectionDialog({
               value={value}
               onChange={event => onValueChange(event.target.value)}
               placeholder={t('collections.workbench.renameCollectionDialog.placeholder')}
-              className="rounded-md"
+              className="rounded-xl"
             />
           </div>
         </DialogBody>
@@ -4417,7 +4417,7 @@ function RenameRequestDialog({
               value={value}
               onChange={event => onValueChange(event.target.value)}
               placeholder={t('collections.workbench.renameRequestDialog.placeholder')}
-              className="rounded-md"
+              className="rounded-xl"
             />
           </div>
         </DialogBody>
@@ -4512,7 +4512,7 @@ function ExampleFormDialog({
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-md border border-border-main bg-bg-surface px-4 py-3">
+            <div className="flex items-center justify-between rounded-2xl border border-border-subtle bg-bg-soft px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-text-main">
                   {t('collections.workbench.examples.setDefaultTitle')}
@@ -4588,12 +4588,12 @@ function EditExampleDialog({
         <DialogBody>
           {isLoading && !example ? (
             <div className="space-y-3 py-1">
-              <div className="h-10 animate-pulse rounded-md bg-muted" />
-              <div className="h-28 animate-pulse rounded-md bg-muted" />
-              <div className="h-20 animate-pulse rounded-md bg-muted" />
+              <div className="h-10 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-28 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-20 animate-pulse rounded-2xl bg-muted" />
             </div>
           ) : !example ? (
-            <div className="rounded-md border border-border-main bg-block-pink p-4 text-sm text-text-main">
+            <div className="rounded-2xl border border-border-subtle bg-block-pink p-4 text-sm text-text-main">
               {t('collections.workbench.examples.loadFailed')}
             </div>
           ) : (
@@ -4627,7 +4627,7 @@ function EditExampleDialog({
                 />
               </div>
 
-              <div className="rounded-md border border-border-main bg-bg-surface p-4">
+              <div className="rounded-2xl border border-border-subtle bg-bg-soft p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-medium text-text-main">
@@ -4697,7 +4697,7 @@ function DeleteExampleDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className="rounded-md border border-border-main bg-block-pink p-4 text-sm leading-6 text-text-main">
+          <div className="rounded-2xl border border-border-subtle bg-block-pink p-4 text-sm leading-6 text-text-main">
             <span className="font-medium text-text-main">
               {exampleName || t('collections.workbench.examples.thisExample')}
             </span>{' '}
@@ -4757,20 +4757,20 @@ function ExampleDetailDialog({
         <DialogBody className="space-y-4 overflow-y-auto">
           {isLoading && !example ? (
             <div className="space-y-4 py-1">
-              <div className="h-28 animate-pulse rounded-md bg-muted" />
+              <div className="h-28 animate-pulse rounded-2xl bg-muted" />
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="h-44 animate-pulse rounded-md bg-muted" />
-                <div className="h-44 animate-pulse rounded-md bg-muted" />
+                <div className="h-44 animate-pulse rounded-2xl bg-muted" />
+                <div className="h-44 animate-pulse rounded-2xl bg-muted" />
               </div>
-              <div className="h-56 animate-pulse rounded-md bg-muted" />
+              <div className="h-56 animate-pulse rounded-2xl bg-muted" />
             </div>
           ) : isError && !example ? (
-            <div className="rounded-md border border-border-main bg-block-pink p-4 text-sm text-text-main">
+            <div className="rounded-2xl border border-border-subtle bg-block-pink p-4 text-sm text-text-main">
               {t('collections.workbench.examples.detailLoadFailed')}
             </div>
           ) : example ? (
             <>
-              <div className="rounded-md border border-border-main bg-bg-canvas p-5 shadow-none">
+              <div className="rounded-2xl border border-border-subtle bg-bg-canvas p-5 shadow-sm">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -4778,7 +4778,7 @@ function ExampleDetailDialog({
                       {example.is_default ? (
                         <Badge
                           variant="outline"
-                          className="border-border-main bg-block-lilac text-text-main"
+                          className="border-border-subtle bg-block-lilac text-text-main"
                         >
                           {t('collections.workbench.badges.default')}
                         </Badge>
@@ -4954,8 +4954,8 @@ function ExamplesPanel({
 
   return (
     <div className="space-y-4">
-      <Card className="border-border-main bg-bg-canvas py-0 shadow-none">
-        <CardHeader className="border-b border-border-main py-5">
+      <Card className="rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+        <CardHeader className="border-b border-border-subtle py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>{t('common.examples')}</CardTitle>
@@ -4989,7 +4989,7 @@ function ExamplesPanel({
         </CardHeader>
         <CardContent className="space-y-4 px-5 py-5">
           {!canCreateExamples ? (
-            <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-5">
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-soft p-5">
               <p className="text-sm font-semibold text-text-main">
                 {t('collections.workbench.examples.requiresSavedRequestTitle')}
               </p>
@@ -4998,7 +4998,7 @@ function ExamplesPanel({
               </p>
             </div>
           ) : !requestPersisted ? (
-            <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-5">
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-soft p-5">
               <p className="text-sm font-semibold text-text-main">
                 {t('collections.workbench.examples.requestNotPersistedTitle')}
               </p>
@@ -5011,19 +5011,19 @@ function ExamplesPanel({
           {isLoading ? (
             <div className="space-y-3">
               {[0, 1].map(item => (
-                <div key={item} className="rounded-md border border-border-main p-4">
+                <div key={item} className="rounded-2xl border border-border-subtle p-4">
                   <div className="h-5 w-48 animate-pulse rounded-full bg-muted" />
                   <div className="mt-3 h-4 w-72 animate-pulse rounded-full bg-muted" />
-                  <div className="mt-5 h-10 animate-pulse rounded-md bg-muted" />
+                  <div className="mt-5 h-10 animate-pulse rounded-2xl bg-muted" />
                 </div>
               ))}
             </div>
           ) : isError ? (
-            <div className="rounded-md border border-border-main bg-block-pink p-5 text-sm text-text-main">
+            <div className="rounded-2xl border border-border-subtle bg-block-pink p-5 text-sm text-text-main">
               {t('collections.workbench.examples.panelLoadFailed')}
             </div>
           ) : examples.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-5">
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-soft p-5">
               <p className="text-sm font-semibold text-text-main">
                 {t('collections.workbench.examples.emptyTitle')}
               </p>
@@ -5036,7 +5036,7 @@ function ExamplesPanel({
               {examples.map(example => (
                 <div
                   key={example.id}
-                  className="rounded-md border border-border-main bg-bg-canvas p-4 shadow-none"
+                  className="rounded-2xl border border-border-subtle bg-bg-canvas p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
@@ -5045,7 +5045,7 @@ function ExamplesPanel({
                         {example.is_default ? (
                           <Badge
                             variant="outline"
-                            className="border-border-main bg-block-lilac text-text-main"
+                            className="border-border-subtle bg-block-lilac text-text-main"
                           >
                             {t('collections.workbench.badges.default')}
                           </Badge>
@@ -5182,14 +5182,14 @@ function ExampleSnapshotBlock({
   tone?: 'light' | 'dark';
 }) {
   return (
-    <div className="rounded-md border border-border-main bg-bg-canvas p-4 shadow-none">
+    <div className="rounded-2xl border border-border-subtle bg-bg-canvas p-4 shadow-sm">
       <p className="text-sm font-medium text-text-main">{title}</p>
       <pre
         className={cn(
-          'mt-3 max-h-64 overflow-auto rounded-md border p-4 text-xs leading-6 whitespace-pre-wrap',
+          'mt-3 max-h-64 overflow-auto rounded-2xl border p-4 text-xs leading-6 whitespace-pre-wrap',
           tone === 'dark'
-            ? 'border-border-main bg-primary text-primary-foreground'
-            : 'border-border-main bg-bg-surface text-text-main'
+            ? 'border-border-subtle bg-primary text-primary-foreground'
+            : 'border-border-subtle bg-bg-soft text-text-main'
         )}
       >
         {value}
@@ -5240,7 +5240,7 @@ function RequestTabs({
     <div className="flex items-center gap-2">
       <div className="min-w-0 flex-1 overflow-x-auto">
         {tabs.length === 0 ? (
-          <div className="flex h-10 items-center rounded-md border border-dashed border-border-main bg-bg-surface px-4 text-sm text-text-muted">
+          <div className="flex h-10 items-center rounded-full border border-dashed border-border-subtle bg-bg-soft px-4 text-sm text-text-muted">
             {t('collections.workbench.empty.noOpenTabs')}
           </div>
         ) : (
@@ -5326,8 +5326,8 @@ function SortableRequestTab({
         className={cn(
           'group inline-flex items-center rounded-full border pr-1 text-sm transition-all',
           isActive
-            ? 'border-border-main bg-block-lilac text-text-main'
-            : 'border-border-main bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main',
+            ? 'border-border-subtle bg-block-lilac text-text-main'
+            : 'border-border-subtle bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main',
           isDragging && 'z-10 opacity-85',
           'touch-none'
         )}
@@ -5348,7 +5348,7 @@ function SortableRequestTab({
             type="button"
             onClick={event => event.stopPropagation()}
             className={cn(
-              'rounded-lg p-1 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main',
+              'rounded-lg p-1 text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main',
               isActive
                 ? 'opacity-100'
                 : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
@@ -5363,7 +5363,7 @@ function SortableRequestTab({
           type="button"
           onClick={() => onCloseTab(tab.id)}
           className={cn(
-            'rounded-lg p-1 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main',
+            'rounded-lg p-1 text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main',
             isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
           )}
           aria-label={t('collections.workbench.closeTab', { title: tab.title })}
@@ -5407,8 +5407,8 @@ function EnvironmentSwitcher({
   const t = useT('project');
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-main bg-bg-canvas px-2.5 py-1 shadow-none">
-      <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-text-muted">
+    <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-bg-canvas px-2.5 py-1 shadow-sm">
+      <span className="text-[10px] font-medium uppercase tracking-normal text-text-muted">
         {t('common.environment')}
       </span>
       <Select value={selectedEnvironmentId} onValueChange={onEnvironmentChange}>
@@ -5461,10 +5461,10 @@ function RequestToolbar({
   const t = useT('project');
 
   return (
-    <div className="rounded-md border border-border-main bg-bg-surface p-3 shadow-none">
+    <div className="rounded-2xl border border-border-subtle bg-bg-soft p-3 shadow-sm">
       <div className="grid gap-3 xl:grid-cols-[140px_minmax(0,1fr)_auto]">
         <Select value={tab.method} onValueChange={value => onMethodChange(value as RequestMethod)}>
-          <SelectTrigger className="h-11 w-full rounded-md border-border-main bg-bg-canvas font-semibold">
+          <SelectTrigger className="h-11 w-full rounded-xl border-border-subtle bg-bg-canvas font-semibold">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -5482,7 +5482,7 @@ function RequestToolbar({
           placeholder={t('collections.workbench.urlPlaceholder', {
             template: DEFAULT_REQUEST_TEMPLATE,
           })}
-          className="h-11 rounded-md border-border-main bg-bg-canvas px-4 text-sm shadow-none"
+          className="h-11 rounded-xl border-border-subtle bg-bg-canvas px-4 text-sm shadow-none"
         />
 
         <div className="flex flex-wrap gap-2">
@@ -5543,8 +5543,8 @@ function RequestSectionTabs({
           className={cn(
             'rounded-full border px-3 py-2 text-sm font-medium transition-colors',
             item === activeSection
-              ? 'border-border-main bg-block-lilac text-text-main'
-              : 'border-border-main bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main'
+              ? 'border-border-subtle bg-block-lilac text-text-main'
+              : 'border-border-subtle bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main'
           )}
         >
           {getSectionLabel(t, item)}
@@ -5557,8 +5557,8 @@ function RequestSectionTabs({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors',
               moreTabActive
-                ? 'border-border-main bg-block-lilac text-text-main'
-                : 'border-border-main bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main'
+                ? 'border-border-subtle bg-block-lilac text-text-main'
+                : 'border-border-subtle bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main'
             )}
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -5784,15 +5784,15 @@ function KeyValueEditor({
   };
 
   return (
-    <div className="rounded-lg border border-border-main bg-bg-canvas shadow-none">
-      <div className="flex flex-col gap-4 border-b border-border-main px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="rounded-2xl border border-border-subtle bg-bg-canvas shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-border-subtle px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-base font-semibold text-text-main">{title}</h3>
           <p className="mt-1 text-sm text-text-muted">{description}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-full border border-border-main bg-bg-surface p-1">
+          <div className="inline-flex rounded-full border border-border-subtle bg-bg-soft p-1">
             <button
               type="button"
               onClick={() => onModeChange('table')}
@@ -5837,14 +5837,14 @@ function KeyValueEditor({
             value={bulkValue}
             onChange={event => onBulkChange(event.target.value)}
             rows={10}
-            className="min-h-[220px] rounded-md font-mono text-sm"
+            className="min-h-[220px] rounded-xl font-mono text-sm"
             placeholder={t('collections.workbench.editors.bulkPlaceholder')}
           />
         </div>
       ) : (
         <div className="overflow-x-auto px-5 py-5">
           <div className="min-w-[760px] space-y-3">
-            <div className="grid grid-cols-[1.05fr_1.25fr_1fr_56px] gap-3 px-3 text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
+            <div className="grid grid-cols-[1.05fr_1.25fr_1fr_56px] gap-3 px-3 text-xs font-medium uppercase tracking-normal text-text-muted">
               <span>{t('collections.workbench.editors.key')}</span>
               <span>{t('collections.workbench.editors.value')}</span>
               <span>{t('common.description')}</span>
@@ -5857,19 +5857,19 @@ function KeyValueEditor({
                   value={row.key}
                   onChange={event => updateRow(row.id, { key: event.target.value })}
                   placeholder={t('collections.workbench.editors.keyPlaceholder')}
-                  className="rounded-md"
+                  className="rounded-xl"
                 />
                 <Input
                   value={row.value}
                   onChange={event => updateRow(row.id, { value: event.target.value })}
                   placeholder="1"
-                  className="rounded-md"
+                  className="rounded-xl"
                 />
                 <Input
                   value={row.description}
                   onChange={event => updateRow(row.id, { description: event.target.value })}
                   placeholder={t('collections.workbench.editors.descriptionPlaceholder')}
-                  className="rounded-md"
+                  className="rounded-xl"
                 />
                 <Button
                   type="button"
@@ -5904,8 +5904,8 @@ function AuthorizationPanel({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-      <Card className="border-border-main bg-bg-canvas py-0 shadow-none">
-        <CardHeader className="border-b border-border-main py-5">
+      <Card className="rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+        <CardHeader className="border-b border-border-subtle py-5">
           <CardTitle>{t('collections.workbench.sections.authorization')}</CardTitle>
           <CardDescription>{t('collections.workbench.authorization.description')}</CardDescription>
         </CardHeader>
@@ -5918,7 +5918,7 @@ function AuthorizationPanel({
               value={mode}
               onValueChange={nextValue => onModeChange(nextValue as AuthorizationMode)}
             >
-              <SelectTrigger id="request-auth-mode" className="rounded-md">
+              <SelectTrigger id="request-auth-mode" className="rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -5933,8 +5933,8 @@ function AuthorizationPanel({
         </CardContent>
       </Card>
 
-      <Card className="border-border-main bg-bg-canvas py-0 shadow-none">
-        <CardHeader className="border-b border-border-main py-5">
+      <Card className="rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+        <CardHeader className="border-b border-border-subtle py-5">
           <CardTitle>{t('collections.workbench.authorization.credentialsTitle')}</CardTitle>
           <CardDescription>
             {t('collections.workbench.authorization.credentialsDescription')}
@@ -5942,7 +5942,7 @@ function AuthorizationPanel({
         </CardHeader>
         <CardContent className="space-y-4 px-5 py-5">
           {mode === 'none' ? (
-            <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-5 text-sm text-text-muted">
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-soft p-5 text-sm text-text-muted">
               {t('collections.workbench.authorization.noneDescription')}
             </div>
           ) : (
@@ -5953,7 +5953,7 @@ function AuthorizationPanel({
                 value={value}
                 onChange={event => onValueChange(event.target.value)}
                 placeholder={getAuthCredentialPlaceholder(t, mode)}
-                className="rounded-md"
+                className="rounded-xl"
               />
             </div>
           )}
@@ -6118,8 +6118,8 @@ function BodyEditor({
   };
 
   return (
-    <div className="rounded-lg border border-border-main bg-bg-canvas shadow-none">
-      <div className="border-b border-border-main px-5 py-5">
+    <div className="rounded-2xl border border-border-subtle bg-bg-canvas shadow-sm">
+      <div className="border-b border-border-subtle px-5 py-5">
         <div>
           <h3 className="text-base font-semibold text-text-main">
             {t('collections.workbench.sections.body')}
@@ -6141,8 +6141,8 @@ function BodyEditor({
                 className={cn(
                   'inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors',
                   option === mode
-                    ? 'border-border-main bg-primary text-primary-foreground'
-                    : 'border-border-main bg-bg-surface text-text-main hover:bg-bg-subtle'
+                    ? 'border-border-subtle bg-primary text-primary-foreground'
+                    : 'border-border-subtle bg-bg-soft text-text-main hover:bg-bg-subtle'
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -6159,7 +6159,7 @@ function BodyEditor({
             value={value}
             onChange={event => onValueChange(event.target.value)}
             rows={14}
-            className="min-h-[280px] rounded-md font-mono text-sm"
+            className="min-h-[280px] rounded-xl font-mono text-sm"
             placeholder={
               mode === 'json'
                 ? DEFAULT_JSON_PLACEHOLDER
@@ -6201,7 +6201,7 @@ function BodyEditor({
               >
                 <div
                   className={cn(
-                    'grid gap-3 px-3 text-xs font-medium uppercase tracking-[0.16em] text-text-muted',
+                    'grid gap-3 px-3 text-xs font-medium uppercase tracking-normal text-text-muted',
                     usesFileRows
                       ? 'grid-cols-[1fr_140px_1.35fr_1fr_56px]'
                       : 'grid-cols-[1.05fr_1.25fr_1fr_56px]'
@@ -6230,7 +6230,7 @@ function BodyEditor({
                         value={row.key}
                         onChange={event => updateStructuredRow(row.id, { key: event.target.value })}
                         placeholder={t('collections.workbench.editors.keyPlaceholder')}
-                        className="rounded-md"
+                        className="rounded-xl"
                       />
 
                       {usesFileRows ? (
@@ -6240,7 +6240,7 @@ function BodyEditor({
                             handleStructuredTypeChange(row.id, nextValue as BodyValueType)
                           }
                         >
-                          <SelectTrigger className="rounded-md">
+                          <SelectTrigger className="rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -6255,9 +6255,9 @@ function BodyEditor({
                       ) : null}
 
                       {usesFileRows && row.type === 'file' ? (
-                        <div className="space-y-2 rounded-md border border-border-main bg-bg-surface px-3 py-2">
+                        <div className="space-y-2 rounded-2xl border border-border-subtle bg-bg-soft px-3 py-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border-main bg-bg-canvas px-3 py-1.5 text-xs font-medium text-text-main transition-colors hover:bg-bg-subtle">
+                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border-subtle bg-bg-canvas px-3 py-1.5 text-xs font-medium text-text-main transition-colors hover:bg-bg-subtle">
                               <Upload className="h-3.5 w-3.5" />
                               {selectedFile
                                 ? t('collections.workbench.body.replaceFile')
@@ -6317,7 +6317,7 @@ function BodyEditor({
                               ? t('collections.workbench.body.formValuePlaceholder')
                               : t('collections.workbench.body.urlEncodedValuePlaceholder')
                           }
-                          className="rounded-md"
+                          className="rounded-xl"
                         />
                       )}
 
@@ -6327,7 +6327,7 @@ function BodyEditor({
                           updateStructuredRow(row.id, { description: event.target.value })
                         }
                         placeholder={t('collections.workbench.editors.descriptionPlaceholder')}
-                        className="rounded-md"
+                        className="rounded-xl"
                       />
                       <Button
                         type="button"
@@ -6348,7 +6348,7 @@ function BodyEditor({
 
         {mode === 'binary' && binaryValue ? (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-md border border-dashed border-border-main bg-bg-surface p-5">
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-soft p-5">
               <div className="flex flex-wrap items-center gap-3">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
                   <Upload className="h-4 w-4" />
@@ -6404,7 +6404,7 @@ function BodyEditor({
                 value={binaryValue.content_type ?? ''}
                 onChange={event => updateBinaryValue({ content_type: event.target.value })}
                 placeholder="application/octet-stream"
-                className="rounded-md font-mono"
+                className="rounded-xl font-mono"
               />
             </div>
           </div>
@@ -6421,7 +6421,7 @@ function BodyEditor({
                 value={graphqlValue.operation_name ?? ''}
                 onChange={event => updateGraphqlValue({ operation_name: event.target.value })}
                 placeholder={t('collections.workbench.body.operationNamePlaceholder')}
-                className="rounded-md"
+                className="rounded-xl"
               />
             </div>
 
@@ -6435,7 +6435,7 @@ function BodyEditor({
                   value={graphqlValue.query}
                   onChange={event => updateGraphqlValue({ query: event.target.value })}
                   rows={14}
-                  className="min-h-[280px] rounded-md font-mono text-sm"
+                  className="min-h-[280px] rounded-xl font-mono text-sm"
                   placeholder={DEFAULT_GRAPHQL_QUERY}
                 />
               </div>
@@ -6451,7 +6451,7 @@ function BodyEditor({
                     updateGraphqlValue({ variables_text: event.target.value })
                   }
                   rows={14}
-                  className="min-h-[280px] rounded-md font-mono text-sm"
+                  className="min-h-[280px] rounded-xl font-mono text-sm"
                   placeholder={DEFAULT_GRAPHQL_VARIABLES}
                 />
               </div>
@@ -6473,8 +6473,8 @@ function ScriptsPanel({
   const t = useT('project');
 
   return (
-    <Card className="border-border-main bg-bg-canvas py-0 shadow-none">
-      <CardHeader className="border-b border-border-main py-5">
+    <Card className="rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+      <CardHeader className="border-b border-border-subtle py-5">
         <CardTitle>{t('collections.workbench.sections.scripts')}</CardTitle>
         <CardDescription>{t('collections.workbench.scripts.description')}</CardDescription>
       </CardHeader>
@@ -6483,7 +6483,7 @@ function ScriptsPanel({
           value={value}
           onChange={event => onValueChange(event.target.value)}
           rows={14}
-          className="min-h-[280px] rounded-md font-mono text-sm"
+          className="min-h-[280px] rounded-xl font-mono text-sm"
           placeholder={t('collections.workbench.scripts.placeholder')}
         />
       </CardContent>
@@ -6524,8 +6524,8 @@ function SettingsPanel({
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       {settingItems.map(item => (
-        <Card key={item.key} className="border-border-main bg-bg-canvas py-0 shadow-none">
-          <CardHeader className="border-b border-border-main py-5">
+        <Card key={item.key} className="rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+          <CardHeader className="border-b border-border-subtle py-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <CardTitle>{item.title}</CardTitle>
@@ -6562,11 +6562,11 @@ function ResponsePanel({
     .join('\n');
 
   return (
-    <Card className="min-h-[320px] gap-0 rounded-lg border-border-main bg-bg-canvas py-0 shadow-none">
-      <CardHeader className="gap-4 border-b border-border-main py-5">
+    <Card className="min-h-[320px] gap-0 rounded-2xl border-border-subtle bg-bg-canvas py-0 shadow-sm">
+      <CardHeader className="gap-4 border-b border-border-subtle py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle className="text-xl tracking-tight">{t('common.response')}</CardTitle>
+            <CardTitle className="text-xl tracking-normal">{t('common.response')}</CardTitle>
             <CardDescription className="mt-1">
               {t('collections.workbench.response.description')}
             </CardDescription>
@@ -6604,8 +6604,8 @@ function ResponsePanel({
 
       <CardContent className="flex min-h-[260px] flex-1 flex-col px-5 py-5">
         {isSending ? (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed border-border-main bg-bg-surface text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-main border-t-primary" />
+          <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border-subtle bg-bg-soft text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-subtle border-t-primary" />
             <p className="mt-4 text-sm font-medium text-text-main">
               {t('collections.workbench.response.sendingTitle')}
             </p>
@@ -6614,14 +6614,14 @@ function ResponsePanel({
             </p>
           </div>
         ) : response.error ? (
-          <div className="flex flex-1 flex-col justify-center rounded-md border border-border-main bg-block-pink p-6">
+          <div className="flex flex-1 flex-col justify-center rounded-2xl border border-border-subtle bg-block-pink p-6">
             <p className="text-sm font-semibold text-text-main">
               {t('collections.workbench.response.errorTitle')}
             </p>
             <p className="mt-2 text-sm leading-6 text-text-main">{response.error}</p>
           </div>
         ) : response.status === null ? (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed border-border-main bg-bg-surface text-center">
+          <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border-subtle bg-bg-soft text-center">
             <p className="text-base font-semibold text-text-main">
               {t('collections.workbench.response.emptyTitle')}
             </p>
@@ -6632,8 +6632,8 @@ function ResponsePanel({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
             {responseHeaders ? (
-              <div className="rounded-md border border-border-main bg-bg-surface p-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+              <div className="rounded-2xl border border-border-subtle bg-bg-soft p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-normal text-text-muted">
                   {t('common.headers')}
                 </p>
                 <pre className="overflow-auto text-xs leading-6 text-text-main">
@@ -6641,7 +6641,7 @@ function ResponsePanel({
                 </pre>
               </div>
             ) : null}
-            <pre className="flex-1 overflow-auto rounded-md border border-border-main bg-bg-surface p-5 text-sm leading-6 text-text-main">
+            <pre className="flex-1 overflow-auto rounded-2xl border border-border-subtle bg-bg-soft p-5 text-sm leading-6 text-text-main">
               {response.body || t('collections.workbench.response.emptyBody')}
             </pre>
           </div>
@@ -6653,7 +6653,7 @@ function ResponsePanel({
 
 function MetricBadge({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-full border border-border-main bg-bg-surface px-3 py-1.5 text-sm">
+    <div className="rounded-full border border-border-subtle bg-bg-soft px-3 py-1.5 text-sm">
       <span className="text-text-muted">{label}: </span>
       <span className="font-medium text-text-main">{value}</span>
     </div>
@@ -6664,7 +6664,7 @@ function MethodBadge({ method, compact = false }: { method: RequestMethod; compa
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border font-semibold tracking-[0.14em]',
+        'inline-flex items-center rounded-full border font-semibold tracking-normal',
         compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]',
         METHOD_BADGE_STYLES[method]
       )}
