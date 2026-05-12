@@ -35,11 +35,11 @@ export const getProjectHomeStatusBadgeClassName = (tone: ProjectHomeStatusTone) 
     case 'ready':
       return 'border-border-strong bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]';
     case 'available':
-      return 'border-border-subtle bg-block-mint text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'optional':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     default:
-      return 'border-border-subtle bg-block-cream text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
   }
 };
 
@@ -48,11 +48,11 @@ export const getProjectHomeStatusAccentClassName = (tone: ProjectHomeStatusTone)
     case 'ready':
       return 'border border-border-strong bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]';
     case 'available':
-      return 'border border-border-subtle bg-block-mint text-text-main';
+      return 'border border-border-subtle bg-bg-surface text-text-main';
     case 'optional':
       return 'border border-border-subtle bg-bg-subtle text-text-main';
     default:
-      return 'border border-border-subtle bg-block-cream text-text-main';
+      return 'border border-border-subtle bg-bg-surface text-text-main';
   }
 };
 

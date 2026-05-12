@@ -1978,7 +1978,7 @@ export function ApiSpecManagementPage({
     <>
       <main className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="rounded-lg border border-border-subtle bg-block-cream p-6">
+          <div className="rounded-lg border border-border-subtle bg-bg-surface p-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-3">
                 <Button
@@ -2435,13 +2435,13 @@ export function ApiSpecManagementPage({
                       <TabsContent value="overview" className="space-y-4">
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('common.projectId')}
                             </div>
                             <div className="mt-2 font-mono text-sm">{selectedSpec.project_id}</div>
                           </div>
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('apiSpecsPage.categoryId')}
                             </div>
                             <div className="mt-2 font-mono text-sm">
@@ -2449,7 +2449,7 @@ export function ApiSpecManagementPage({
                             </div>
                           </div>
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('common.created')}
                             </div>
                             <div className="mt-2 text-sm">
@@ -2457,7 +2457,7 @@ export function ApiSpecManagementPage({
                             </div>
                           </div>
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('common.updated')}
                             </div>
                             <div className="mt-2 text-sm">
@@ -2495,7 +2495,7 @@ export function ApiSpecManagementPage({
                       <TabsContent value="docs" className="space-y-4">
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('common.docSource')}
                             </div>
                             <div className="mt-2 text-sm">
@@ -2503,7 +2503,7 @@ export function ApiSpecManagementPage({
                             </div>
                           </div>
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('apiSpecsPage.updatedDefault')}
                             </div>
                             <div className="mt-2 text-sm">
@@ -2513,7 +2513,7 @@ export function ApiSpecManagementPage({
                             </div>
                           </div>
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                            <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                            <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('apiSpecsPage.updatedLocalized')}
                             </div>
                             <div className="mt-2 text-sm">

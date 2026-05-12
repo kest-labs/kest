@@ -33,9 +33,9 @@ const getStatusBadgeClassName = (status?: string) => {
     case 'rejected':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     case 'used_up':
-      return 'border-border-subtle bg-block-cream text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'revoked':
-      return 'border-border-subtle bg-block-pink text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'expired':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     default:
@@ -116,7 +116,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
     <main className="min-h-screen bg-bg-canvas px-4 py-10 sm:px-6">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <Card className="overflow-hidden rounded-xl border-border-subtle bg-bg-canvas">
-          <CardHeader className="gap-4 border-b border-border-subtle bg-block-lime">
+          <CardHeader className="gap-4 border-b border-border-subtle bg-bg-surface">
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="outline" className={getStatusBadgeClassName(invitation?.status)}>
                 {getInvitationStatusLabel(invitation?.status)}

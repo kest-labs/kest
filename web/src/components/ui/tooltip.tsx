@@ -52,7 +52,7 @@ function TooltipTrigger({
 }
 
 const tooltipVariants = cva(
-  "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md border px-4 py-2 text-xs font-medium shadow-modal transition-all duration-200 " +
+  "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md border px-4 py-2 text-xs font-medium shadow-modal transition-colors duration-200 " +
   "data-[state=delayed-open]:data-[side=top]:animate-[float-in-top_0.2s_ease-out] " +
   "data-[state=delayed-open]:data-[side=bottom]:animate-[float-in-bottom_0.2s_ease-out] " +
   "data-[state=delayed-open]:data-[side=left]:animate-[float-in-left_0.2s_ease-out] " +
@@ -68,7 +68,7 @@ const tooltipVariants = cva(
         default: "border-border-main bg-popover text-popover-foreground",
         inverted: "border-border-strong bg-primary text-primary-foreground shadow-none",
         primary: "border-border-strong bg-primary text-primary-foreground shadow-none",
-        destructive: "border-border-main bg-block-pink text-text-main shadow-none",
+        destructive: "border-border-main bg-error-subtle text-destructive shadow-none",
       },
     },
     defaultVariants: {

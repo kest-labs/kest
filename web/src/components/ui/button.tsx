@@ -31,15 +31,15 @@ const buttonVariants = cva(
           "border border-border-main bg-secondary text-secondary-foreground shadow-none hover:bg-secondary active:bg-secondary-deeper",
         ghost:
           "rounded-md text-foreground hover:bg-transparent active:bg-secondary",
-        link: "text-brand underline-offset-4 hover:underline",
+        link: "text-brand underline-offset-4 hover:underline active:text-brand-strong",
       },
       size: {
         xs: "h-8 px-3 text-xs",
         sm: "h-9 px-4 text-sm",
-        default: "h-10 px-6 py-3",
-        lg: "h-11 px-6 py-3",
-        xl: "h-11 px-6 py-3",
-        "2xl": "h-11 px-6 py-3",
+        default: "min-h-11 px-6 py-3",
+        lg: "min-h-11 px-6 py-3",
+        xl: "min-h-11 px-6 py-3",
+        "2xl": "min-h-11 px-6 py-3",
       },
       isIcon: {
         true: "size-9 rounded-full border border-border-main bg-bg-canvas p-0 text-text-main",

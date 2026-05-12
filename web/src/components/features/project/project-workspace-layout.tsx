@@ -91,7 +91,7 @@ export function ProjectWorkspaceLayout({
                     <div
                       className={cn(
                         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-                        isActive ? 'bg-text-inverse/16 text-primary-foreground' : 'bg-highlight-subtle text-text-main'
+                        isActive ? 'bg-text-inverse/16 text-primary-foreground' : 'bg-bg-surface text-text-main'
                       )}
                     >
                       <Icon className="h-3 w-3" />
@@ -113,7 +113,7 @@ export function ProjectWorkspaceLayout({
                       <Icon className="h-3 w-3" />
                     </div>
                     <span>{getProjectModuleCopy(t, item.i18nKey, 'shortLabel')}</span>
-                    <span className="text-[10px] font-medium uppercase tracking-normal text-text-muted/80">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.03125rem] text-text-muted/80">
                       {t('common.soon')}
                     </span>
                   </div>
@@ -205,7 +205,7 @@ export function ProjectWorkspaceLayout({
                         className={cn(
                           'flex shrink-0 items-center justify-center rounded-xl',
                           isDesktopNavCollapsed ? 'h-8 w-8' : 'h-8 w-8',
-                          isActive ? 'bg-text-inverse/16 text-primary-foreground' : 'bg-highlight-subtle text-text-main'
+                          isActive ? 'bg-text-inverse/16 text-primary-foreground' : 'bg-bg-surface text-text-main'
                         )}
                       >
                         <Icon className="h-3.5 w-3.5" />
@@ -257,7 +257,7 @@ export function ProjectWorkspaceLayout({
                           {!isDesktopNavCollapsed ? (
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium">{label}</p>
-                              <p className="mt-1 text-[10px] font-medium uppercase tracking-normal text-text-muted/80">
+                              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.03125rem] text-text-muted/80">
                                 {t('common.soon')}
                               </p>
                             </div>

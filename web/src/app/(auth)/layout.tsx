@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: PropsWithChildren) {
   return (
     <div className="grid min-h-svh bg-bg-canvas lg:grid-cols-[1.05fr_0.95fr]">
       <aside className="hidden p-6 lg:block">
-        <div className="figma-color-block figma-color-block-lime flex min-h-full flex-col justify-between">
+        <div className="flex min-h-full flex-col justify-between rounded-xl border border-border-subtle bg-bg-surface p-8 md:p-10">
           <div>
             <Logo className="h-[42px] w-[129px] text-black" role="img" aria-label={t('auth.brandName')} />
           </div>
@@ -56,7 +56,7 @@ export default function AuthLayout({ children }: PropsWithChildren) {
               <p className="figma-caption text-text-main">{t('auth.insight1Title')}</p>
               <p className="mt-3 text-sm leading-6 text-text-subtle">{t('auth.insight1Description')}</p>
             </div>
-            <div className="rounded-xl border border-border-subtle bg-block-mint p-4">
+            <div className="rounded-xl border border-border-subtle bg-bg-canvas p-4">
               <p className="figma-caption text-text-main">{t('auth.insight2Title')}</p>
               <p className="mt-3 text-sm leading-6 text-text-subtle">{t('auth.insight2Description')}</p>
             </div>

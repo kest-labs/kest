@@ -65,7 +65,7 @@ export function MarketingFooter({ brandName, content }: MarketingFooterProps) {
               <p className="mt-4 text-base leading-7 text-text-inverse/70">{content.tagline}</p>
             </div>
             <div className="mt-6">
-              <p className="figma-caption text-text-inverse/60">{content.socialsTitle}</p>
+              <p className="text-base font-medium leading-6 text-text-inverse">{content.socialsTitle}</p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {content.socials.map((social) => {
                   const Icon = socialIcons[social.label as keyof typeof socialIcons];
@@ -83,13 +83,13 @@ export function MarketingFooter({ brandName, content }: MarketingFooterProps) {
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <span className="rounded-md bg-bg-canvas px-4 py-2 text-sm font-medium text-text-main">
+              <span className="rounded-md bg-bg-canvas px-4 py-2 text-[13px] font-semibold leading-[1.4] text-text-main">
                 {content.appStoreLabel}
               </span>
-              <span className="rounded-md bg-bg-canvas px-4 py-2 text-sm font-medium text-text-main">
+              <span className="rounded-md bg-bg-canvas px-4 py-2 text-[13px] font-semibold leading-[1.4] text-text-main">
                 {content.googlePlayLabel}
               </span>
-              <span className="rounded-md border border-text-inverse/20 px-4 py-2 text-sm text-text-inverse/80">
+              <span className="rounded-md border border-border-main bg-bg-canvas px-4 py-2 text-[13px] leading-[1.4] text-text-main">
                 {content.reviewBadgeLabel}
               </span>
             </div>
@@ -98,7 +98,7 @@ export function MarketingFooter({ brandName, content }: MarketingFooterProps) {
           <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-6">
             {content.columns.map((column) => (
               <div key={column.title}>
-                <p className="figma-caption text-text-inverse/60">{column.title}</p>
+                <p className="text-base font-medium leading-6 text-text-inverse">{column.title}</p>
                 <div className="mt-4 space-y-3">
                   {column.links.map((link) => (
                     <FooterLink

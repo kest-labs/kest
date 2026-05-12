@@ -22,7 +22,7 @@ export function HeroSection({ content }: HeroSectionProps) {
       <div className="container relative">
         <div className="flex flex-col gap-12 lg:gap-14">
           <div className="mx-auto max-w-5xl text-center">
-            <div className="figma-caption inline-flex items-center rounded-full bg-[var(--miro-surface-yellow)] px-3 py-1.5 text-[var(--miro-yellow-dark)]">
+            <div className="inline-flex items-center rounded-full bg-[var(--miro-surface-yellow)] px-3 py-1.5 text-[13px] font-semibold leading-[1.4] text-[var(--miro-yellow-dark)]">
               {content.badge}
             </div>
 

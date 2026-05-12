@@ -125,11 +125,11 @@
 
   /* Theme-aware Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(5, 0, 56, 0.04);
-  --shadow: 0 4px 14px -10px rgba(5, 0, 56, 0.12);
-  --shadow-md: 0 8px 22px -14px rgba(5, 0, 56, 0.16);
-  --shadow-lg: 0 12px 32px -18px rgba(5, 0, 56, 0.18);
-  --shadow-xl: 0 18px 44px -24px rgba(5, 0, 56, 0.22);
-  --shadow-2xl: 0 24px 60px -32px rgba(5, 0, 56, 0.24);
+  --shadow: 0 4px 12px 0 rgba(5, 0, 56, 0.06);
+  --shadow-md: 0 4px 12px 0 rgba(5, 0, 56, 0.06);
+  --shadow-lg: 0 12px 32px -4px rgba(5, 0, 56, 0.08);
+  --shadow-xl: 0 16px 48px -8px rgba(5, 0, 56, 0.12);
+  --shadow-2xl: 0 16px 48px -8px rgba(5, 0, 56, 0.12);
   --shadow-inner: inset 0 1px 0 0 oklch(1 0 0 / 0.45);
   --shadow-button: none;
   --shadow-button-primary: none;
@@ -149,8 +149,6 @@
   --font-figma-mono: var(--font-marketing-sans);
 
   /* Animations & Easings */
-  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-soft-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @layer base {
@@ -246,40 +244,36 @@
     }
   }
   @keyframes float-in-top {
-    0% { transform: scale(0.95) translateY(12px); opacity: 0; }
-    70% { transform: scale(1.02) translateY(-2px); opacity: 1; }
-    100% { transform: scale(1) translateY(0); }
+    0% { transform: translateY(12px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
   }
   @keyframes float-in-bottom {
-    0% { transform: scale(0.95) translateY(-12px); opacity: 0; }
-    70% { transform: scale(1.02) translateY(2px); opacity: 1; }
-    100% { transform: scale(1) translateY(0); }
+    0% { transform: translateY(-12px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
   }
   @keyframes float-in-left {
-    0% { transform: scale(0.95) translateX(12px); opacity: 0; }
-    70% { transform: scale(1.02) translateX(-2px); opacity: 1; }
-    100% { transform: scale(1) translateX(0); }
+    0% { transform: translateX(12px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
   }
   @keyframes float-in-right {
-    0% { transform: scale(0.95) translateX(-12px); opacity: 0; }
-    70% { transform: scale(1.02) translateX(2px); opacity: 1; }
-    100% { transform: scale(1) translateX(0); }
+    0% { transform: translateX(-12px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
   }
   
-  @keyframes float-out-top { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95) translateY(4px); } }
-  @keyframes float-out-bottom { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95) translateY(-4px); } }
-  @keyframes float-out-left { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95) translateX(4px); } }
-  @keyframes float-out-right { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95) translateX(-4px); } }
+  @keyframes float-out-top { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(4px); } }
+  @keyframes float-out-bottom { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-4px); } }
+  @keyframes float-out-left { 0% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(4px); } }
+  @keyframes float-out-right { 0% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(-4px); } }
 }
 
 @layer utilities {
   .focus-ring {
-    @apply outline-hidden ring-offset-background focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-0 aria-invalid:ring-destructive aria-invalid:border-destructive transition-all;
+    @apply outline-hidden ring-offset-background focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-0 aria-invalid:ring-destructive aria-invalid:border-destructive transition-colors;
   }
 
   /* Border-only focus for inputs */
   .focus-border {
-    @apply outline-hidden focus-visible:border-primary aria-invalid:border-destructive transition-all duration-200;
+    @apply outline-hidden focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand aria-invalid:border-destructive transition-colors duration-200;
   }
 
   .button-lighting {
@@ -314,7 +308,6 @@
   .interactive {
     @apply transition-colors duration-200 cursor-pointer select-none;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    @apply active:brightness-95 active:duration-100;
     backface-visibility: hidden;
     transform: translateZ(0); 
   }
@@ -322,7 +315,6 @@
   .interactive-subtle {
     @apply transition-colors duration-200 cursor-pointer select-none;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    @apply active:brightness-95 active:duration-100;
     backface-visibility: hidden;
     transform: translateZ(0);
   }
@@ -334,7 +326,6 @@
   .interactive-no-scale {
     @apply transition-colors duration-200 cursor-pointer select-none;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    @apply active:brightness-90 active:duration-100;
     backface-visibility: hidden;
     transform: translateZ(0);
   }
@@ -446,30 +437,6 @@
   }
 
   .marketing-shell {
-    --miro-primary: #1c1c1e;
-    --miro-on-primary: #ffffff;
-    --miro-brand-yellow: #ffd02f;
-    --miro-brand-blue: #4262ff;
-    --miro-brand-blue-pressed: #2a41b6;
-    --miro-canvas: #ffffff;
-    --miro-surface: #f7f8fa;
-    --miro-surface-soft: #fafbfc;
-    --miro-surface-yellow: #fff8e0;
-    --miro-hairline: #e0e2e8;
-    --miro-hairline-soft: #eef0f3;
-    --miro-hairline-strong: #c7cad5;
-    --miro-ink: #1c1c1e;
-    --miro-slate: #555a6a;
-    --miro-steel: #6b6f7e;
-    --miro-muted: #a5a8b5;
-    --miro-footer-bg: #1c1c1e;
-    --miro-footer-link: #a5a8b5;
-    --miro-rose: #fde0f0;
-    --miro-teal: #c3faf5;
-    --miro-coral: #ffc6c6;
-    --miro-yellow-soft: #fff4c4;
-    --miro-mint: #d8f8ea;
-
     --background: var(--miro-canvas);
     --foreground: var(--miro-ink);
     --card: var(--miro-canvas);
@@ -490,7 +457,7 @@
     --ring: var(--miro-brand-blue);
 
     --bg-canvas: var(--miro-canvas);
-    --bg-surface: var(--miro-canvas);
+    --bg-surface: var(--miro-surface);
     --bg-subtle: var(--miro-surface);
     --bg-inverse: var(--miro-footer-bg);
     --bg-soft: var(--miro-surface-soft);
@@ -502,82 +469,27 @@
     --border-main: var(--miro-hairline);
     --border-subtle: var(--miro-hairline-soft);
     --border-strong: var(--miro-hairline-strong);
-    --brand-main: var(--miro-primary);
+    --brand-main: var(--miro-brand-blue);
     --brand-subtle: var(--miro-surface);
-    --brand-strong: var(--miro-primary);
+    --brand-strong: var(--miro-blue-pressed);
     --highlight: var(--miro-brand-yellow);
-    --highlight-subtle: var(--miro-yellow-soft);
+    --highlight-subtle: var(--miro-yellow-light);
 
-    --block-lime: var(--miro-yellow-soft);
-    --block-lilac: #f5f3ff;
-    --block-cream: #ffe6cd;
-    --block-mint: var(--miro-teal);
-    --block-pink: var(--miro-rose);
-    --block-coral: var(--miro-coral);
-    --block-navy: #050038;
+    --block-lime: var(--miro-yellow-light);
+    --block-lilac: var(--miro-surface-featured);
+    --block-cream: var(--miro-orange-light);
+    --block-mint: var(--miro-teal-light);
+    --block-pink: var(--miro-rose-light);
+    --block-coral: var(--miro-coral-light);
+    --block-navy: var(--miro-ink-deep);
 
     background: var(--bg-canvas);
-  }
-
-  .marketing-grid {
-    background-image:
-      linear-gradient(to right, color-mix(in srgb, var(--border-main), transparent 45%) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in srgb, var(--border-main), transparent 45%) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: center;
   }
 
   .marketing-panel {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 1rem;
-    box-shadow: var(--shadow-soft);
-  }
-
-  .figma-color-block {
-    border-radius: 1.75rem;
-    padding: 2rem;
-  }
-
-  @media (min-width: 768px) {
-    .figma-color-block {
-      padding: 2.5rem;
-    }
-  }
-
-  .figma-color-block-lime {
-    background: var(--block-lime);
-    color: var(--text-main);
-  }
-
-  .figma-color-block-lilac {
-    background: var(--block-lilac);
-    color: var(--text-main);
-  }
-
-  .figma-color-block-cream {
-    background: var(--block-cream);
-    color: var(--text-main);
-  }
-
-  .figma-color-block-mint {
-    background: var(--block-mint);
-    color: var(--text-main);
-  }
-
-  .figma-color-block-pink {
-    background: var(--block-pink);
-    color: var(--text-main);
-  }
-
-  .figma-color-block-coral {
-    background: var(--block-coral);
-    color: var(--text-main);
-  }
-
-  .figma-color-block-navy {
-    background: var(--miro-primary);
-    color: var(--text-inverse);
   }
 
   .markdown-content {

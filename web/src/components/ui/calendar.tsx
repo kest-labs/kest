@@ -163,7 +163,7 @@ export function Calendar({ selected, onSelect, onToday, className, showFooter = 
       
       {mode === "days" ? (
         <>
-          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-medium uppercase tracking-normal text-muted-foreground/90">
+          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-medium uppercase tracking-[0.03125rem] text-muted-foreground/90">
             {weekDays.map(d => (
               <div key={d} className="py-1">
                 {d}

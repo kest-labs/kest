@@ -75,7 +75,7 @@ function NavItem({
     >
       {item.label}
       {item.placeholder ? (
-        <span className="figma-caption rounded-full bg-highlight px-2 py-0.5 text-text-main">
+        <span className="rounded-full bg-[var(--miro-surface-yellow)] px-2.5 py-1 text-[13px] font-semibold leading-[1.4] text-[var(--miro-yellow-dark)]">
           {docsSoonLabel}
         </span>
       ) : null}
@@ -162,7 +162,7 @@ export function MarketingNavbar({
 
         <div
           className={cn(
-            'overflow-hidden transition-all duration-200 lg:hidden',
+            'overflow-hidden transition-[max-height,padding] duration-200 lg:hidden',
             open ? 'max-h-[28rem] pb-5' : 'max-h-0'
           )}
         >

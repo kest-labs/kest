@@ -1,4 +1,5 @@
 import type { MarketingLogoItem } from './types';
+import { cn } from '@/utils';
 
 /**
  * @component LogoCloud
@@ -14,6 +15,14 @@ export interface LogoCloudProps {
   logos: MarketingLogoItem[];
 }
 
+const logoToneClass: Record<NonNullable<MarketingLogoItem['tone']>, string> = {
+  ink: 'text-text-main',
+  blue: 'text-brand',
+  teal: 'text-[var(--miro-moss-dark)]',
+  coral: 'text-[var(--miro-coral-dark)]',
+  yellow: 'text-[var(--miro-yellow-dark)]',
+};
+
 export function LogoCloud({ title, logos }: LogoCloudProps) {
   return (
     <section className="border-y border-border-main bg-bg-canvas py-8 text-text-main">
@@ -26,9 +35,15 @@ export function LogoCloud({ title, logos }: LogoCloudProps) {
             {logos.map((logo) => (
               <div
                 key={logo.name}
-                className="figma-caption flex min-h-[100px] items-center justify-center bg-transparent px-3 text-center text-text-muted"
+                className={cn(
+                  'flex min-h-[100px] items-center justify-center bg-transparent px-3 text-center text-base font-medium leading-none tracking-normal',
+                  logoToneClass[logo.tone ?? 'ink']
+                )}
               >
-                {logo.name}
+                <span className="inline-flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-current" />
+                  {logo.name}
+                </span>
               </div>
             ))}
           </div>

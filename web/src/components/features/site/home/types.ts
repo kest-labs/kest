@@ -49,6 +49,7 @@ export interface MarketingHeroContent {
 
 export interface MarketingLogoItem {
   name: string;
+  tone?: 'ink' | 'blue' | 'teal' | 'coral' | 'yellow';
 }
 
 export type MarketingFeatureIconKey =
@@ -119,6 +120,7 @@ export interface MarketingPricingTier {
 }
 
 export interface MarketingPricingFeatureRow {
+  section?: string;
   feature: string;
   free: string;
   starter: string;

@@ -2,6 +2,7 @@ import type { ScopedTranslations } from '@/i18n/shared';
 import type {
   MarketingChromeContent,
   MarketingFeatureSectionContent,
+  MarketingLogoItem,
   MarketingPageContent,
   MarketingStorySectionContent,
 } from './types';
@@ -11,17 +12,17 @@ type MarketingTranslator = ScopedTranslations<'marketing'>;
 // 统一维护对外文档站地址，避免导航和 footer 分别写死多个链接。
 const API_DOCS_URL = 'https://kest-docs.vercel.app';
 
-const logoNames = [
-  'NORTHSTACK',
-  'VECTORLAB',
-  'AURORA API',
-  'SHIPYARD',
-  'LATTICE',
-  'STACKPORT',
-  'TRACEGRID',
-  'MERIDIAN',
-  'UNIT 47',
-  'ORBITAL',
+const logoNames: MarketingLogoItem[] = [
+  { name: 'NORTHSTACK', tone: 'ink' },
+  { name: 'VECTORLAB', tone: 'blue' },
+  { name: 'AURORA API', tone: 'teal' },
+  { name: 'SHIPYARD', tone: 'coral' },
+  { name: 'LATTICE', tone: 'yellow' },
+  { name: 'STACKPORT', tone: 'ink' },
+  { name: 'TRACEGRID', tone: 'blue' },
+  { name: 'MERIDIAN', tone: 'teal' },
+  { name: 'UNIT 47', tone: 'coral' },
+  { name: 'ORBITAL', tone: 'yellow' },
 ];
 
 // 组装营销站顶部导航和 footer 文案。
@@ -229,6 +230,122 @@ function buildStorySections(t: MarketingTranslator): MarketingStorySectionConten
   ];
 }
 
+function buildComparisonRows(t: MarketingTranslator) {
+  const sections = [
+    {
+      section: t('pricing.comparison.flows'),
+      rows: [
+        ['Flow canvas', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Request dependencies', t('pricing.values.limited'), t('pricing.values.included'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Step health signals', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Variable capture', t('pricing.values.limited'), t('pricing.values.included'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Shared flow templates', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Branch comparison', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Reusable environments', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Collection nesting', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Flow comments', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Run queue', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Scheduled checks', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Reusable assertions', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Team libraries', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Flow import', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Flow export', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Visual diff', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Workspace graph', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Context replay', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Shared scratchpads', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Flow approvals', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+      ],
+    },
+    {
+      section: t('pricing.comparison.history'),
+      rows: [
+        ['Run history retention', t('pricing.values.sevenDays'), t('pricing.values.thirtyDays'), t('pricing.values.unlimited'), t('pricing.values.unlimited')],
+        ['Failure timeline', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Response snapshots', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Latency trends', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Change markers', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Environment timeline', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Request replay', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Regression baselines', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Artifact retention', t('pricing.values.limited'), t('pricing.values.thirtyDays'), t('pricing.values.unlimited'), t('pricing.values.custom')],
+        ['Team activity feed', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Run annotations', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Exportable reports', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Webhook events', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Incident links', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Historical search', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Status archive', t('pricing.values.sevenDays'), t('pricing.values.thirtyDays'), t('pricing.values.unlimited'), t('pricing.values.unlimited')],
+        ['Run ownership', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Saved filters', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Timeline sharing', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Audit timeline', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+      ],
+    },
+    {
+      section: t('pricing.comparison.ai'),
+      rows: [
+        ['AI failure summary', t('pricing.values.limited'), t('pricing.values.included'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Root-cause hints', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Context-aware prompts', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Last-green comparison', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Suggested remaps', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Schema explanation', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Run summarization', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Workflow generation', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Prompt controls', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Sensitive-field masking', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Custom diagnosis rules', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['AI handoff notes', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['Spec drafting', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Error clustering', t('pricing.values.limited'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Team prompt library', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['AI usage controls', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Model routing', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Private context windows', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Diagnostic exports', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.included'), t('pricing.values.custom')],
+        ['AI review queue', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+      ],
+    },
+    {
+      section: t('pricing.comparison.governance'),
+      rows: [
+        ['Workspace roles', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Project permissions', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['SSO', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Audit logs', t('pricing.values.limited'), t('pricing.values.thirtyDays'), t('pricing.values.unlimited'), t('pricing.values.custom')],
+        ['Data retention policy', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Environment secrets', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Deployment controls', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Domain controls', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['SCIM', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.custom')],
+        ['Legal hold', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Priority support', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Workspace templates', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Approval policies', t('pricing.values.limited'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Compliance exports', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Private deployment', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.custom')],
+        ['Custom onboarding', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.priority'), t('pricing.values.custom')],
+        ['Security review', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Admin analytics', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Dedicated workspace controls', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Enterprise success plan', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.custom')],
+      ],
+    },
+  ];
+
+  return sections.flatMap(({ section, rows }) =>
+    rows.map(([feature, free, starter, business, enterprise], index) => ({
+      section: index === 0 ? section : undefined,
+      feature,
+      free,
+      starter,
+      business,
+      enterprise,
+    }))
+  );
+}
+
 export function buildMarketingPageContent(t: MarketingTranslator): MarketingPageContent {
   return {
     hero: {
@@ -272,7 +389,7 @@ export function buildMarketingPageContent(t: MarketingTranslator): MarketingPage
       },
     },
     logosTitle: t('logos.title'),
-    logos: logoNames.map((name) => ({ name })),
+    logos: logoNames.map((logo) => ({ name: logo.name, tone: logo.tone })),
     features: buildFeatureSection(t),
     sections: buildStorySections(t),
     pricing: {
@@ -336,36 +453,7 @@ export function buildMarketingPageContent(t: MarketingTranslator): MarketingPage
         },
       ],
       comparisonTitle: t('pricing.comparisonTitle'),
-      comparisonRows: [
-        {
-          feature: t('pricing.comparison.flows'),
-          free: t('pricing.values.basic'),
-          starter: t('pricing.values.standard'),
-          business: t('pricing.values.advanced'),
-          enterprise: t('pricing.values.custom'),
-        },
-        {
-          feature: t('pricing.comparison.history'),
-          free: t('pricing.values.sevenDays'),
-          starter: t('pricing.values.thirtyDays'),
-          business: t('pricing.values.unlimited'),
-          enterprise: t('pricing.values.unlimited'),
-        },
-        {
-          feature: t('pricing.comparison.ai'),
-          free: t('pricing.values.limited'),
-          starter: t('pricing.values.included'),
-          business: t('pricing.values.priority'),
-          enterprise: t('pricing.values.custom'),
-        },
-        {
-          feature: t('pricing.comparison.governance'),
-          free: t('pricing.values.basic'),
-          starter: t('pricing.values.team'),
-          business: t('pricing.values.advanced'),
-          enterprise: t('pricing.values.custom'),
-        },
-      ],
+      comparisonRows: buildComparisonRows(t),
     },
     stats: {
       eyebrow: t('stats.eyebrow'),

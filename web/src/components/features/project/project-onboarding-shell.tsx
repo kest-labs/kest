@@ -312,7 +312,7 @@ export function ProjectOnboardingShell() {
 
             <div className="max-h-[55vh] space-y-2 overflow-y-auto">
               {filteredCommands.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-soft p-4 text-sm text-text-muted">
+                <div className="rounded-xl border border-dashed border-border-subtle bg-bg-soft p-4 text-sm text-text-muted">
                   {t('commandPalette.empty')}
                 </div>
               ) : (
@@ -321,9 +321,9 @@ export function ProjectOnboardingShell() {
                     key={item.id}
                     type="button"
                     onClick={item.onSelect}
-                    className="flex w-full items-start gap-3 rounded-2xl border border-border-subtle bg-bg-canvas px-4 py-3 text-left transition-colors hover:bg-bg-subtle"
+                    className="flex w-full items-start gap-3 rounded-xl border border-border-subtle bg-bg-canvas px-4 py-3 text-left transition-colors hover:bg-bg-subtle"
                   >
-                    <div className="mt-0.5 rounded-xl border border-border-subtle bg-highlight-subtle p-2 text-text-main">
+                    <div className="mt-0.5 rounded-xl border border-border-subtle bg-bg-surface p-2 text-text-main">
                       {item.icon}
                     </div>
                     <div className="min-w-0">
@@ -350,7 +350,7 @@ export function ProjectOnboardingShell() {
                 href={DOCS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-border-subtle bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
+                className="rounded-xl border border-border-subtle bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
               >
                 <BookOpenText className="h-5 w-5 text-text-main" />
                 <p className="mt-3 text-sm font-medium">{t('helpCenter.docsTitle')}</p>
@@ -360,7 +360,7 @@ export function ProjectOnboardingShell() {
                 href={VIDEO_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-border-subtle bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
+                className="rounded-xl border border-border-subtle bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
               >
                 <PlayCircle className="h-5 w-5 text-text-main" />
                 <p className="mt-3 text-sm font-medium">{t('helpCenter.videoTitle')}</p>
@@ -372,7 +372,7 @@ export function ProjectOnboardingShell() {
                   setIsHelpOpen(false);
                   setIsCommandOpen(true);
                 }}
-                className="rounded-2xl border border-border-subtle bg-bg-canvas p-4 text-left transition-colors hover:bg-bg-subtle"
+                className="rounded-xl border border-border-subtle bg-bg-canvas p-4 text-left transition-colors hover:bg-bg-subtle"
               >
                 <Command className="h-5 w-5 text-text-main" />
                 <p className="mt-3 text-sm font-medium">{t('helpCenter.commandTitle')}</p>
@@ -380,7 +380,7 @@ export function ProjectOnboardingShell() {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-border-subtle bg-bg-soft p-4">
+            <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">{t('helpCenter.shortcutsTitle')}</p>
@@ -433,18 +433,18 @@ export function ProjectOnboardingShell() {
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4 py-2">
-            <div className="rounded-2xl border border-border-subtle bg-block-lilac p-4">
+            <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
               <p className="text-sm font-medium text-text-main">{currentTourStep.title}</p>
               <p className="mt-2 text-sm leading-6 text-text-muted">{currentTourStep.description}</p>
               {isTourLocked ? (
-                <p className="mt-3 text-xs font-medium uppercase tracking-normal text-text-main">
+                <p className="mt-3 text-xs font-medium uppercase tracking-[0.03125rem] text-text-main">
                   {t('onboardingTour.lockedCountdown', { seconds: tourLockSeconds })}
                 </p>
               ) : null}
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-bg-subtle">
               <div
-                className="h-full rounded-full bg-primary transition-all"
+                className="h-full rounded-full bg-primary transition-[width]"
                 style={{ width: `${((tourStepIndex + 1) / tourSteps.length) * 100}%` }}
               />
             </div>
@@ -499,7 +499,7 @@ function ShortcutRow({ label, keys }: { label: string; keys: string }) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-canvas px-3 py-2">
       <span className="text-sm text-text-main">{label}</span>
-      <span className="rounded-full bg-highlight-subtle px-2 py-1 text-xs font-medium text-text-main">{keys}</span>
+      <span className="rounded-full bg-bg-surface px-2 py-1 text-xs font-medium text-text-main">{keys}</span>
     </div>
   );
 }

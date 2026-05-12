@@ -61,9 +61,9 @@
   --border-strong: var(--miro-hairline-strong);
 
   /* Brand / Primary */
-  --brand-main: var(--miro-primary);
+  --brand-main: var(--miro-brand-blue);
   --brand-subtle: var(--miro-surface);
-  --brand-strong: var(--miro-primary);
+  --brand-strong: var(--miro-blue-pressed);
 
   /* Marketing block colors */
   --block-lime: var(--miro-yellow-light);
@@ -77,16 +77,16 @@
   
   /* State Colors */
   --success: var(--miro-success-accent);
-  --success-subtle: oklch(from var(--success) l c h / 0.1);
+  --success-subtle: var(--miro-teal-light);
   
-  --warning: var(--yellow-500);
-  --warning-subtle: oklch(from var(--warning) l c h / 0.1);
+  --warning: var(--miro-brand-yellow-deep);
+  --warning-subtle: var(--miro-surface-yellow);
   
   --error: var(--miro-coral-dark);
   --error-subtle: var(--miro-brand-red);
   
   --info: var(--miro-brand-blue);
-  --info-subtle: oklch(from var(--info) l c h / 0.1);
+  --info-subtle: var(--miro-surface-featured);
 
   --highlight: var(--miro-brand-yellow);
   --highlight-subtle: var(--miro-yellow-light);
@@ -97,10 +97,10 @@
   
   /* Legacy semantics maintained for compatibility */
   --primary-subtle: var(--brand-subtle);
-  --primary-strong: var(--brand-strong);
+  --primary-strong: var(--miro-charcoal);
   --primary-deeper: var(--miro-primary);
   
-  --secondary-subtle: oklch(from var(--secondary) l c h / 0.1);
+  --secondary-subtle: var(--miro-surface-soft);
   --secondary-deeper: var(--miro-hairline-soft);
   
   --background-subtle: var(--bg-canvas);

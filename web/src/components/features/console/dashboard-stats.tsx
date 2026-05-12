@@ -28,9 +28,9 @@ export function StatCard({
 }: StatCardProps) {
   const variantStyles = {
     default: "bg-bg-canvas border-border-subtle",
-    primary: "bg-block-lime border-border-subtle",
-    success: "bg-block-mint border-border-subtle",
-    warning: "bg-block-cream border-border-subtle",
+    primary: "bg-bg-surface border-border-subtle",
+    success: "bg-bg-surface border-border-subtle",
+    warning: "bg-bg-surface border-border-subtle",
   }
 
   const iconStyles = {

@@ -252,9 +252,9 @@ const getRunStatusBadgeClassName = (status?: string) => {
     case 'pass':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     case 'fail':
-      return 'border-border-subtle bg-block-pink text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'error':
-      return 'border-border-subtle bg-block-cream text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'running':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     default:
@@ -497,7 +497,7 @@ function SummaryField({
 
   return (
     <div className="space-y-1 rounded-md border border-border-subtle bg-bg-canvas p-3">
-      <div className="text-xs uppercase tracking-normal text-muted-foreground">{label}</div>
+      <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{label}</div>
       <div className="text-sm font-medium text-foreground">
         {hasValue ? value : t('common.notSet')}
       </div>
@@ -1372,7 +1372,7 @@ function DeleteTestCaseDialog({
         </DialogHeader>
 
         <DialogBody>
-          <div className="rounded-md border border-border-subtle bg-block-pink p-4">
+          <div className="rounded-md border border-border-subtle bg-bg-surface p-4">
             <div className="text-sm text-muted-foreground">
               {t('testCasesPage.deleteTargetDescription', {
                 name: testCase?.name || t('testCasesPage.deleteFallbackTarget'),
@@ -1944,7 +1944,7 @@ export function TestCaseManagementPage({
     <>
       <main className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="rounded-lg border border-border-subtle bg-block-cream p-6">
+          <div className="rounded-lg border border-border-subtle bg-bg-surface p-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-3">
                 <Button asChild variant="link" className="h-auto px-0 text-sm text-muted-foreground">

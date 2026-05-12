@@ -748,7 +748,7 @@ function ProjectDashboardWelcome({
         </Card>
 
         <Card
-          className="border-border-subtle bg-block-cream"
+          className="border-border-subtle bg-bg-surface"
           data-onboarding="demo-project-card"
         >
           <CardHeader>

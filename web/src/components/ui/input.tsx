@@ -16,12 +16,12 @@ import { DatePicker } from "./date-picker"
 import { cn } from "@/utils"
 
 const inputVariants = cva(
-  "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-11 w-full min-w-0 rounded-md px-4 py-3 text-base shadow-none transition-colors file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50 md:text-sm input-depth outline-hidden focus-visible:border-2 focus-visible:border-brand",
+  "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-11 w-full min-w-0 rounded-md border px-4 py-3 text-base shadow-none transition-colors file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50 md:text-sm input-depth outline-hidden focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand",
   {
     variants: {
       variant: {
-        outline: "border border-border-strong bg-bg-canvas hover:border-border-strong",
-        filled: "border border-border-main bg-bg-surface hover:border-border-strong focus-visible:bg-bg-canvas",
+        outline: "border-border-strong bg-bg-canvas hover:border-border-strong",
+        filled: "border-border-main bg-bg-surface hover:border-border-strong focus-visible:bg-bg-canvas",
       },
       error: {
         true: "border-destructive bg-error-subtle focus-visible:border-destructive text-destructive placeholder:text-destructive/60",
@@ -211,7 +211,7 @@ function ColorPicker({ className, value, onChange, disabled, error, errorText, .
       <div 
         onClick={handleTrigger}
           className={cn(
-          "flex h-11 w-full items-center gap-3 rounded-md border border-border-strong bg-background px-4 py-2 shadow-none transition-all hover:border-primary cursor-pointer input-depth focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/12",
+          "flex h-11 w-full cursor-pointer items-center gap-3 rounded-md border border-border-strong bg-background px-4 py-2 shadow-none transition-colors hover:border-border-strong input-depth focus-within:border-brand focus-within:ring-1 focus-within:ring-brand",
           disabled && "opacity-50 cursor-not-allowed",
           isError && "border-destructive focus-within:border-destructive",
           className
@@ -221,7 +221,7 @@ function ColorPicker({ className, value, onChange, disabled, error, errorText, .
           className="size-5 rounded-full border border-border-strong/20 shadow-none shrink-0" 
           style={{ backgroundColor: color }}
         />
-        <span className="font-mono text-sm font-medium uppercase tracking-normal text-foreground/80 first-letter:uppercase">
+        <span className="font-mono text-sm font-medium uppercase tracking-[0.03125rem] text-foreground/80 first-letter:uppercase">
           {color}
         </span>
         <input 

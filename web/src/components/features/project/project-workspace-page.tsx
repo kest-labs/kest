@@ -2207,7 +2207,7 @@ function EnvironmentsWorkspaceSection({
                         <Globe className="h-6 w-6" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-lg font-semibold text-text-main">
+                        <p className="text-lg font-medium text-text-main">
                           {t('environments.noEnvironmentsYet')}
                         </p>
                         <p className="max-w-2xl text-sm leading-6 text-text-muted">
@@ -3299,7 +3299,7 @@ function ResourceSidebar({
               <p className="figma-caption text-text-muted">
                 {moduleShortLabel}
               </p>
-              <h2 className="mt-2 text-lg font-semibold tracking-normal">{title}</h2>
+              <h2 className="mt-2 text-lg font-medium tracking-normal">{title}</h2>
               <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
             </div>
             <Badge variant="outline">{count}</Badge>
@@ -3460,7 +3460,7 @@ function ResourceContent({
               {moduleLabel}
             </Badge>
             <div>
-              <h2 className="text-2xl font-semibold tracking-normal">{currentTitle}</h2>
+              <h2 className="text-2xl font-medium tracking-normal">{currentTitle}</h2>
               <p className="mt-2 max-w-4xl text-sm leading-6 text-text-muted">{description}</p>
             </div>
           </div>
@@ -3514,7 +3514,7 @@ function GuideState({
           <Icon className="h-6 w-6" />
         </div>
         <div className="space-y-2">
-          <p className="text-lg font-semibold text-text-main">{title}</p>
+          <p className="text-lg font-medium text-text-main">{title}</p>
           <p className="max-w-2xl text-sm leading-6 text-text-muted">{description}</p>
         </div>
         {actionHref && actionLabel ? (
@@ -3541,12 +3541,12 @@ function ApiSpecsGuideState({
   return (
     <Card className="min-w-0 border-border-subtle">
       <CardContent className="space-y-6 py-8">
-        <div className="flex flex-col items-start gap-4 rounded-lg border border-border-subtle bg-block-cream p-6">
+        <div className="flex flex-col items-start gap-4 rounded-lg border border-border-subtle bg-bg-surface p-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Bot className="h-6 w-6" />
           </div>
           <div className="space-y-2">
-            <p className="text-2xl font-semibold tracking-normal text-text-main">
+            <p className="text-2xl font-medium tracking-normal text-text-main">
               {t('apiSpecs.guideTitle')}
             </p>
             <p className="max-w-3xl text-sm leading-6 text-text-muted">
@@ -3567,7 +3567,7 @@ function ApiSpecsGuideState({
 
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="rounded-md border border-border-subtle bg-bg-canvas p-5">
-            <p className="text-sm font-semibold text-text-main">
+            <p className="text-sm font-medium text-text-main">
               {t('apiSpecs.captureIntentTitle')}
             </p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
@@ -3575,13 +3575,13 @@ function ApiSpecsGuideState({
             </p>
           </div>
           <div className="rounded-md border border-border-subtle bg-bg-canvas p-5">
-            <p className="text-sm font-semibold text-text-main">{t('apiSpecs.reviewDraftTitle')}</p>
+            <p className="text-sm font-medium text-text-main">{t('apiSpecs.reviewDraftTitle')}</p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               {t('apiSpecs.reviewDraftDescription')}
             </p>
           </div>
           <div className="rounded-md border border-border-subtle bg-bg-canvas p-5">
-            <p className="text-sm font-semibold text-text-main">
+            <p className="text-sm font-medium text-text-main">
               {t('apiSpecs.moveToTestingTitle')}
             </p>
             <p className="mt-2 text-sm leading-6 text-text-muted">

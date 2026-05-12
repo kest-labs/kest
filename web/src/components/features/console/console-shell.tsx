@@ -153,7 +153,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-56 rounded-xl border-border-subtle bg-bg-canvas p-1">
-              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-normal text-text-muted">
+              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
                 {displayName}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

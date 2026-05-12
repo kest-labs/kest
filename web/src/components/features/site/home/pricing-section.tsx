@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils';
@@ -28,8 +29,10 @@ function PricingTierCard({ tier }: { tier: MarketingPricingTier }) {
           {tier.badge ? (
             <span
               className={cn(
-                'figma-caption rounded-full px-2.5 py-1',
-                tier.enterprise ? 'bg-highlight text-text-main' : 'bg-highlight text-text-main'
+                'rounded-full px-2.5 py-1 text-[13px] font-semibold leading-[1.4]',
+                tier.enterprise
+                  ? 'bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]'
+                  : 'bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]'
               )}
             >
               {tier.badge}
@@ -92,7 +95,7 @@ export function PricingSection({ content }: PricingSectionProps) {
           <span className="px-4 py-2 text-sm font-medium text-text-main">
             {content.annualLabel}
           </span>
-          <span className="rounded-sm bg-highlight px-2 py-2 text-[13px] font-medium text-text-main">
+          <span className="rounded-sm bg-highlight px-1.5 py-0.5 text-[13px] font-semibold leading-[1.4] text-text-main">
             {content.discountLabel}
           </span>
         </div>
@@ -120,13 +123,22 @@ export function PricingSection({ content }: PricingSectionProps) {
               </thead>
               <tbody>
                 {content.comparisonRows.map(row => (
-                  <tr key={row.feature} className="border-b border-border-subtle last:border-b-0">
-                    <td className="px-5 py-4 font-medium text-text-main">{row.feature}</td>
-                    <td className="px-5 py-4 text-text-subtle">{row.free}</td>
-                    <td className="px-5 py-4 text-text-subtle">{row.starter}</td>
-                    <td className="px-5 py-4 text-text-subtle">{row.business}</td>
-                    <td className="px-5 py-4 text-text-subtle">{row.enterprise}</td>
-                  </tr>
+                  <Fragment key={`${row.section ?? 'row'}-${row.feature}`}>
+                    {row.section ? (
+                      <tr className="border-b border-border-subtle bg-bg-surface">
+                        <td colSpan={5} className="px-5 py-3 text-[11px] font-semibold uppercase leading-[1.4] tracking-[0.03125rem] text-text-main">
+                          {row.section}
+                        </td>
+                      </tr>
+                    ) : null}
+                    <tr className="border-b border-border-subtle last:border-b-0">
+                      <td className="px-5 py-4 font-medium text-text-main">{row.feature}</td>
+                      <td className="px-5 py-4 text-text-subtle">{row.free}</td>
+                      <td className="px-5 py-4 text-text-subtle">{row.starter}</td>
+                      <td className="px-5 py-4 text-text-subtle">{row.business}</td>
+                      <td className="px-5 py-4 text-text-subtle">{row.enterprise}</td>
+                    </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

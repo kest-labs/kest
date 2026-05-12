@@ -49,7 +49,7 @@ export default function I18nTestPage() {
             <div className="flex items-center gap-3 rounded-md border border-border-main bg-bg-surface p-3 transition-colors">
               <CheckCircle2 className="w-5 h-5 text-success" />
               <div className="flex-1">
-                <p className="mb-1 text-sm font-medium uppercase tracking-normal text-muted-foreground">{"t('title')"}</p>
+                <p className="mb-1 text-sm font-medium uppercase tracking-[0.03125rem] text-muted-foreground">{"t('title')"}</p>
                 <p className="text-xl font-medium">{tLevel1('title')}</p>
               </div>
             </div>
@@ -60,7 +60,7 @@ export default function I18nTestPage() {
         </Card>
 
         {/* Level 2 Scope */}
-        <Card className="overflow-hidden border-border-main bg-block-mint transition-colors duration-200 hover:border-border-strong">
+        <Card className="overflow-hidden border-border-main bg-bg-surface transition-colors duration-200 hover:border-border-strong">
           <CardHeader className="border-b border-border-main bg-bg-canvas">
              <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -75,11 +75,11 @@ export default function I18nTestPage() {
           <CardContent className="pt-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="rounded-md border border-border-main bg-bg-canvas p-4 transition-colors">
-                <p className="mb-1 text-xs font-medium uppercase tracking-normal text-muted-foreground">{"t('title')"}</p>
+                <p className="mb-1 text-xs font-medium uppercase tracking-[0.03125rem] text-muted-foreground">{"t('title')"}</p>
                 <p className="text-lg font-medium">{tLevel2('title')}</p>
               </div>
               <div className="rounded-md border border-border-main bg-bg-canvas p-4 transition-colors">
-                <p className="mb-1 text-xs font-medium uppercase tracking-normal text-muted-foreground">{"t('message')"}</p>
+                <p className="mb-1 text-xs font-medium uppercase tracking-[0.03125rem] text-muted-foreground">{"t('message')"}</p>
                 <p className="text-lg font-medium">{tLevel2('message')}</p>
               </div>
             </div>
@@ -90,7 +90,7 @@ export default function I18nTestPage() {
         </Card>
 
         {/* Level 4 Scope - Deepest */}
-        <Card className="group relative overflow-hidden border-border-main bg-block-cream transition-colors duration-200 hover:border-border-strong">
+        <Card className="group relative overflow-hidden border-border-main bg-bg-surface transition-colors duration-200 hover:border-border-strong">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Layers className="w-40 h-40 -mr-10 -mt-10 rotate-12" />
           </div>

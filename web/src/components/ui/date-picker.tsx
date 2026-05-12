@@ -129,7 +129,7 @@ export function DatePicker({
       <PopoverTrigger asChild>
         <button
           className={cn(
-            "flex h-11 w-full items-center justify-between rounded-md border border-border-strong bg-background px-4 py-2 text-left text-sm font-normal shadow-none transition-all hover:border-primary focus:outline-hidden focus:border-primary input-depth cursor-pointer",
+            "flex h-11 w-full cursor-pointer items-center justify-between rounded-md border border-border-strong bg-background px-4 py-2 text-left text-sm font-normal shadow-none transition-colors hover:border-border-strong focus:border-brand focus:outline-hidden focus:ring-1 focus:ring-brand input-depth",
             !date && "text-muted-foreground",
             isError && "border-destructive focus:border-destructive text-destructive",
             className
@@ -170,7 +170,7 @@ export function DatePicker({
                 const now = new Date()
                 setDate?.(now)
               }}
-              className="hover:text-primary transition-colors duration-200 text-xs font-medium px-3 py-1.5 rounded-md hover:bg-primary/5 cursor-pointer text-foreground/90 active:text-primary-strong"
+              className="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium text-foreground/90 transition-colors duration-200 hover:bg-brand/8 hover:text-brand active:text-brand-strong"
             >
               {t.common('now')}
             </button>

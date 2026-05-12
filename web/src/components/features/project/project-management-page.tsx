@@ -182,7 +182,7 @@ export function ProjectManagementPage() {
 
   return (
     <div className="flex-1 space-y-8 p-4 pt-5 md:p-6">
-      <div className="rounded-[1.75rem] border border-border-subtle bg-block-lime p-6">
+      <div className="rounded-xl border border-border-subtle bg-bg-surface p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ export function ProjectManagementPage() {
         )}
       </div>
 
-      <Card className="overflow-hidden rounded-2xl border-border-subtle bg-bg-canvas">
+      <Card className="overflow-hidden rounded-xl border-border-subtle bg-bg-canvas">
         <CardHeader className="flex flex-col gap-3 border-b border-border-subtle bg-bg-soft md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>{t('projectsPage.cardTitle')}</CardTitle>
@@ -295,13 +295,13 @@ export function ProjectManagementPage() {
 
           {projectsQuery.isLoading ? (
             <div className="space-y-3">
-              <div className="h-14 animate-pulse rounded-2xl bg-muted" />
-              <div className="h-14 animate-pulse rounded-2xl bg-muted" />
-              <div className="h-14 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-14 animate-pulse rounded-xl bg-muted" />
+              <div className="h-14 animate-pulse rounded-xl bg-muted" />
+              <div className="h-14 animate-pulse rounded-xl bg-muted" />
             </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-2xl border border-border-subtle">
+              <div className="overflow-hidden rounded-xl border border-border-subtle">
                 <Table>
                   <TableHeader className="bg-bg-soft">
                     <TableRow className="hover:bg-transparent">
@@ -411,7 +411,7 @@ export function ProjectManagementPage() {
                 </Table>
               </div>
 
-              <div className="rounded-2xl border border-border-subtle bg-bg-soft p-4">
+              <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                   <BarChart3 className="h-4 w-4" />
                   {t('projectsPage.connectedEndpoints')}

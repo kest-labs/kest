@@ -156,13 +156,13 @@ const getAssignableRole = (role?: ProjectMemberRole): AssignableProjectMemberRol
 const getInvitationStatusBadgeClassName = (status?: ProjectInvitationStatus) => {
   switch (status) {
     case 'active':
-      return 'border-border-subtle bg-block-lime text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'rejected':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     case 'used_up':
-      return 'border-border-subtle bg-block-cream text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'revoked':
-      return 'border-border-subtle bg-block-pink text-text-main';
+      return 'border-border-subtle bg-bg-surface text-text-main';
     case 'expired':
       return 'border-border-subtle bg-bg-subtle text-text-main';
     default:
@@ -560,7 +560,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
     <>
       <main className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="rounded-lg border border-border-subtle bg-block-cream p-6">
+          <div className="rounded-lg border border-border-subtle bg-bg-surface p-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-3">
                 <Button
@@ -1055,7 +1055,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                             type="button"
                             className={cn(
                               'flex w-full items-center justify-between rounded-md border border-border-subtle bg-bg-canvas px-3 py-3 text-left transition-colors hover:bg-bg-subtle',
-                              isSelected && 'bg-block-lime'
+                              isSelected && 'bg-bg-surface'
                             )}
                             onClick={() => {
                               setSelectedInviteCandidate(candidate);
@@ -1264,7 +1264,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                           type="button"
                           className={cn(
                             'flex w-full items-center justify-between rounded-md border border-border-subtle bg-bg-canvas px-3 py-3 text-left transition-colors hover:bg-bg-subtle',
-                            isSelected && 'bg-block-lime'
+                            isSelected && 'bg-bg-surface'
                           )}
                           onClick={() => {
                             setSelectedCandidate(candidate);

@@ -25,12 +25,12 @@ export function ThemeToggle() {
       <DropdownMenuTrigger asChild>
         <Button variant="outline" isIcon noScale>
           <Sun
-            className={`h-[1.2rem] w-[1.2rem] transition-all ${
+            className={`h-[1.2rem] w-[1.2rem] transition-colors ${
               resolvedTheme === "dark" ? "-rotate-90 scale-0" : "rotate-0 scale-100"
             }`}
           />
           <Moon
-            className={`absolute h-[1.2rem] w-[1.2rem] transition-all ${
+            className={`absolute h-[1.2rem] w-[1.2rem] transition-colors ${
               resolvedTheme === "dark" ? "rotate-0 scale-100" : "rotate-90 scale-0"
             }`}
           />

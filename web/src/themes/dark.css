@@ -29,8 +29,8 @@
   --destructive: var(--miro-coral-light);
   --destructive-foreground: var(--neutral-0);
   
-  --border: color-mix(in srgb, var(--miro-on-primary), transparent 78%);
-  --input: color-mix(in srgb, var(--miro-on-primary), transparent 72%);
+  --border: var(--miro-steel);
+  --input: var(--miro-stone);
   --ring: var(--miro-brand-blue);
 
   /* --- Semantic Design Tokens --- */
@@ -38,9 +38,9 @@
   /* Surfaces & Backgrounds (Dark Mode mapping) */
   --bg-canvas: var(--miro-primary);
   --bg-surface: var(--miro-charcoal);
-  --bg-subtle: color-mix(in srgb, var(--miro-on-primary), transparent 90%);
+  --bg-subtle: var(--miro-charcoal);
   --bg-inverse: var(--miro-on-primary);
-  --bg-soft: color-mix(in srgb, var(--miro-on-primary), transparent 92%);
+  --bg-soft: var(--miro-ink-deep);
   --bg-overlay-scrim: var(--miro-primary);
   
   --surface-1: var(--bg-canvas);
@@ -49,21 +49,21 @@
 
   /* Text & Foregrounds */
   --text-main: var(--miro-on-primary);
-  --text-subtle: color-mix(in srgb, var(--miro-on-primary), transparent 18%);
+  --text-subtle: var(--miro-on-dark-muted);
   --text-muted: var(--miro-on-dark-muted);
   --text-on-brand: var(--miro-primary);
   --text-inverse: var(--miro-primary);
   --text-on-inverse-soft: var(--miro-on-primary);
 
   /* Borders & Dividers */
-  --border-main: color-mix(in srgb, var(--miro-on-primary), transparent 78%);
-  --border-subtle: color-mix(in srgb, var(--miro-on-primary), transparent 88%);
-  --border-strong: color-mix(in srgb, var(--miro-on-primary), transparent 48%);
+  --border-main: var(--miro-steel);
+  --border-subtle: var(--miro-charcoal);
+  --border-strong: var(--miro-stone);
 
   /* Brand / Primary */
-  --brand-main: var(--miro-primary);
-  --brand-subtle: color-mix(in srgb, var(--miro-on-primary), transparent 88%);
-  --brand-strong: var(--miro-primary);
+  --brand-main: var(--miro-brand-blue);
+  --brand-subtle: var(--miro-ink-deep);
+  --brand-strong: var(--miro-blue-pressed);
 
   /* Marketing block colors stay pastel against dark chrome. */
   --block-lime: var(--miro-yellow-light);
@@ -77,30 +77,30 @@
   
   /* State Colors */
   --success: var(--miro-success-accent);
-  --success-subtle: oklch(from var(--success) l c h / 0.15);
+  --success-subtle: var(--miro-moss-dark);
   
-  --warning: var(--yellow-500);
-  --warning-subtle: oklch(from var(--warning) l c h / 0.15);
+  --warning: var(--miro-brand-yellow-deep);
+  --warning-subtle: var(--miro-yellow-dark);
   
   --error: var(--miro-coral-light);
-  --error-subtle: color-mix(in srgb, var(--miro-coral-light), transparent 82%);
+  --error-subtle: var(--miro-coral-dark);
   
   --info: var(--miro-brand-blue);
-  --info-subtle: oklch(from var(--info) l c h / 0.15);
+  --info-subtle: var(--miro-ink-deep);
 
   --highlight: var(--miro-brand-yellow);
-  --highlight-subtle: color-mix(in srgb, var(--miro-brand-yellow), transparent 78%);
+  --highlight-subtle: var(--miro-yellow-light);
 
   /* Others */
   --shadow-color: oklch(0 0 0);
   
   /* Legacy semantics maintained for compatibility */
   --primary-subtle: var(--brand-subtle);
-  --primary-strong: var(--brand-strong);
+  --primary-strong: var(--miro-charcoal);
   --primary-deeper: var(--miro-charcoal);
   
-  --secondary-subtle: oklch(from var(--secondary) l c h / 0.15);
-  --secondary-deeper: color-mix(in srgb, var(--miro-on-primary), transparent 82%);
+  --secondary-subtle: var(--miro-charcoal);
+  --secondary-deeper: var(--miro-ink-deep);
   
   --background-subtle: var(--bg-surface);
 }

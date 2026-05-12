@@ -20,30 +20,28 @@ export interface ProductStorySectionProps {
 }
 
 const blockToneClass: Record<MarketingBlockTone, string> = {
-  lime: 'figma-color-block-lime',
-  lilac: 'figma-color-block-lilac',
-  cream: 'figma-color-block-cream',
-  mint: 'figma-color-block-mint',
-  pink: 'figma-color-block-pink',
-  coral: 'figma-color-block-coral',
-  navy: 'figma-color-block-navy',
+  lime: 'bg-block-lime',
+  lilac: 'bg-block-lilac',
+  cream: 'bg-block-cream',
+  mint: 'bg-block-mint',
+  pink: 'bg-block-pink',
+  coral: 'bg-block-coral',
+  navy: 'bg-block-lilac',
 };
 
 export function ProductStorySection({ content, reverse = false }: ProductStorySectionProps) {
-  const inverse = content.blockTone === 'navy';
-
   return (
     <section id={content.id} className="bg-bg-canvas py-12 sm:py-16 lg:py-[4.5rem]">
       <div className="container">
-        <div className={cn('figma-color-block flex flex-col gap-10 lg:gap-12', blockToneClass[content.blockTone])}>
-          <div className={cn('max-w-3xl', reverse ? 'xl:self-end' : '')}>
-            <p className={cn('figma-eyebrow', inverse ? 'text-text-inverse' : 'text-text-main')}>
+        <div className={cn('grid items-center gap-10 lg:gap-12 xl:grid-cols-2', reverse ? 'xl:[&>*:first-child]:order-2' : '')}>
+          <div className="max-w-3xl">
+            <p className="figma-eyebrow text-text-main">
               {content.eyebrow}
             </p>
-            <h2 className={cn('figma-display-lg mt-4', inverse ? 'text-text-inverse' : 'text-text-main')}>
+            <h2 className="figma-display-lg mt-4 text-text-main">
               {content.title}
             </h2>
-            <p className={cn('figma-body-lg mt-5', inverse ? 'text-text-inverse/80' : 'text-text-subtle')}>
+            <p className="figma-body-lg mt-5 text-text-subtle">
               {content.description}
             </p>
 
@@ -52,19 +50,14 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
                 <div
                   key={point}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl border px-4 py-3.5',
-                    inverse ? 'border-text-inverse/24 bg-text-inverse/12' : 'border-border-subtle bg-bg-canvas'
+                    'flex items-start gap-3 rounded-xl border border-border-subtle px-4 py-3.5',
+                    blockToneClass[content.blockTone]
                   )}
                 >
-                  <span
-                    className={cn(
-                      'mt-0.5 flex size-6 items-center justify-center rounded-full',
-                      inverse ? 'bg-text-inverse/18 text-text-inverse' : 'bg-primary text-primary-foreground'
-                    )}
-                  >
+                  <span className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Check className="size-3.5" />
                   </span>
-                  <span className={cn('text-sm leading-6', inverse ? 'text-text-inverse' : 'text-text-main')}>
+                  <span className="text-sm leading-6 text-text-main">
                     {point}
                   </span>
                 </div>
@@ -75,8 +68,7 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
               <Button
                 asChild
                 size="xl"
-                variant={inverse ? 'secondary' : 'default'}
-                className={inverse ? 'bg-bg-canvas text-text-main hover:bg-bg-canvas/90' : 'bg-primary text-primary-foreground hover:bg-primary/95'}
+                className="bg-primary text-primary-foreground hover:bg-primary active:bg-primary-strong"
               >
                 <Link href={content.ctaHref} className="inline-flex items-center gap-2 whitespace-nowrap">
                   <span>{content.cta}</span>
@@ -88,8 +80,7 @@ export function ProductStorySection({ content, reverse = false }: ProductStorySe
           <ProductPreviewMockup
             variant={content.variant}
             content={content.mockup}
-            inverse={inverse}
-            className={cn(reverse ? 'xl:self-end' : '', 'w-full')}
+            className="w-full"
           />
         </div>
       </div>

@@ -1519,7 +1519,7 @@ export function EnvironmentManagementPage({
     <>
       <main className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-8 p-6 pt-6">
-          <div className="rounded-lg border border-border-subtle bg-block-cream p-6">
+          <div className="rounded-lg border border-border-subtle bg-bg-surface p-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="space-y-3">
                 <Button asChild variant="link" className="h-auto px-0 text-sm text-muted-foreground">
@@ -1812,19 +1812,19 @@ export function EnvironmentManagementPage({
                   <TabsContent value="overview" className="space-y-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                        <div className="text-xs uppercase tracking-normal text-muted-foreground">{t('environments.environmentId')}</div>
+                        <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{t('environments.environmentId')}</div>
                         <div className="mt-2 font-mono text-sm">{selectedEnvironment.id}</div>
                       </div>
                       <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                        <div className="text-xs uppercase tracking-normal text-muted-foreground">{t('common.projectId')}</div>
+                        <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{t('common.projectId')}</div>
                         <div className="mt-2 font-mono text-sm">{selectedEnvironment.project_id}</div>
                       </div>
                       <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                        <div className="text-xs uppercase tracking-normal text-muted-foreground">{t('common.created')}</div>
+                        <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{t('common.created')}</div>
                         <div className="mt-2 text-sm">{formatDate(selectedEnvironment.created_at, 'YYYY-MM-DD HH:mm')}</div>
                       </div>
                       <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                        <div className="text-xs uppercase tracking-normal text-muted-foreground">{t('common.updated')}</div>
+                        <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{t('common.updated')}</div>
                         <div className="mt-2 text-sm">{formatDate(selectedEnvironment.updated_at, 'YYYY-MM-DD HH:mm')}</div>
                       </div>
                     </div>

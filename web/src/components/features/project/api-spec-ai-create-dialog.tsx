@@ -298,7 +298,7 @@ function PreviewSummary({ draft }: { draft: ApiSpecAIDraft }) {
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-md border border-border-subtle bg-bg-canvas p-3">
-          <p className="text-xs font-medium uppercase tracking-normal text-text-muted">
+          <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
             {t('common.request')}
           </p>
           <p className="mt-2 text-sm text-text-main">
@@ -313,7 +313,7 @@ function PreviewSummary({ draft }: { draft: ApiSpecAIDraft }) {
           </p>
         </div>
         <div className="rounded-md border border-border-subtle bg-bg-canvas p-3">
-          <p className="text-xs font-medium uppercase tracking-normal text-text-muted">
+          <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
             {t('common.responses')}
           </p>
           <p className="mt-2 text-sm text-text-main">

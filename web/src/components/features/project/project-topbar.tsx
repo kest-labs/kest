@@ -142,7 +142,7 @@ export function ProjectTopbar() {
                 >
                   <Bell className="h-4 w-4 text-text-main" />
                   {pendingInvitationCount > 0 ? (
-                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
                       {pendingInvitationCount > 9 ? '9+' : pendingInvitationCount}
                     </span>
                   ) : null}
@@ -167,7 +167,7 @@ export function ProjectTopbar() {
               </div>
             ) : (
               <>
-                <div className="px-2 py-2 text-xs font-medium uppercase tracking-normal text-text-muted">
+                <div className="px-2 py-2 text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
                   {t('topbar.pendingInvitations', { count: pendingInvitationCount })}
                 </div>
                 {invitationPreview.map(invitation => (
@@ -224,7 +224,7 @@ export function ProjectTopbar() {
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-56 rounded-xl border-border-subtle bg-bg-canvas p-1">
-            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-normal text-text-muted">
+            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
               {displayName}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
