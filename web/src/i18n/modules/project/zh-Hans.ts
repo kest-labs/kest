@@ -1103,7 +1103,7 @@ const messages = {
     optional: '可选',
   },
   dashboardPage: {
-    teamTitle: '个人团队',
+    teamTitle: '所有项目',
     teamOwnerBadge: '团队所有者',
     projectCount: '{count} 个项目',
     activeProjectCount: '{count} 个启用中',

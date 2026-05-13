@@ -870,9 +870,9 @@ function ApiSpecsWorkspaceSection({
   const [isAICreateOpen, setIsAICreateOpen] = useState(autoOpenAICreate ?? false);
   const [editingSpecId, setEditingSpecId] = useState<string | number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApiSpec | null>(null);
-  const [suppressedSelectedSpecId, setSuppressedSelectedSpecId] = useState<
-    number | string | null
-  >(null);
+  const [suppressedSelectedSpecId, setSuppressedSelectedSpecId] = useState<number | string | null>(
+    null
+  );
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBatchGenOpen, setIsBatchGenOpen] = useState(false);
@@ -1413,7 +1413,7 @@ function ApiSpecsWorkspaceSection({
                     ]}
                     ariaLabel={t('common.openActions')}
                     stopPropagation
-                    triggerClassName="h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100"
+                    triggerClassName="h-6 w-6 rounded-md opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
                   />
                 }
               />
@@ -2089,7 +2089,7 @@ function EnvironmentsWorkspaceSection({
                     ]}
                     ariaLabel={t('common.openActions')}
                     stopPropagation
-                    triggerClassName="h-7 w-7 rounded-lg opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100"
+                    triggerClassName="h-6 w-6 rounded-md opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
                   />
                 }
               />
@@ -3260,12 +3260,10 @@ function WorkspaceFrame({
 }
 
 function ResourceSidebar({
-  module,
   title,
-  description,
-  count,
   loading,
   error,
+  count,
   children,
   emptyState,
   searchValue,
@@ -3287,34 +3285,24 @@ function ResourceSidebar({
   headerActions?: React.ReactNode;
 }) {
   const t = useT('project');
-  const moduleMeta = getProjectWorkspaceModuleMeta(module);
-  const moduleShortLabel = getProjectModuleCopy(t, moduleMeta.i18nKey, 'shortLabel');
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="space-y-4 p-4">
-        <div className="rounded-md border border-border-subtle bg-bg-soft p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="figma-caption text-text-muted">
-                {moduleShortLabel}
-              </p>
-              <h2 className="mt-2 text-lg font-medium tracking-normal">{title}</h2>
-              <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
-            </div>
-            <Badge variant="outline">{count}</Badge>
-          </div>
-          {headerActions ? <div className="mt-4 flex flex-wrap gap-2">{headerActions}</div> : null}
+      <div className="space-y-2 px-3 py-2">
+        <div className="flex min-h-8 items-center">
+          <h2 className="truncate text-sm font-medium tracking-normal text-text-main">{title}</h2>
         </div>
+
+        {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
 
         {onSearchChange ? (
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
             <Input
               value={searchValue}
               onChange={event => onSearchChange(event.target.value)}
               placeholder={searchPlaceholder}
-              className="pl-9"
+              className="h-8 pl-8 text-sm"
             />
           </div>
         ) : null}
@@ -3324,12 +3312,12 @@ function ResourceSidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {loading ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {Array.from({ length: 7 }).map((_, index) => (
-              <div key={index} className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                <div className="mt-2 h-3 w-full animate-pulse rounded bg-muted" />
-                <div className="mt-3 h-3 w-20 animate-pulse rounded bg-muted" />
+              <div key={index} className="rounded-md border border-border-subtle bg-bg-canvas p-3">
+                <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
+                <div className="mt-1.5 h-2.5 w-full animate-pulse rounded bg-muted" />
+                <div className="mt-2 h-2.5 w-20 animate-pulse rounded bg-muted" />
               </div>
             ))}
           </div>
@@ -3341,7 +3329,7 @@ function ResourceSidebar({
         ) : count === 0 ? (
           emptyState
         ) : (
-          <div className="space-y-2">{children}</div>
+          <div className="space-y-1.5">{children}</div>
         )}
       </div>
     </div>
@@ -3368,7 +3356,7 @@ function ResourceListItem({
   return (
     <div
       className={cn(
-        'group/resource rounded-md border px-4 py-3 transition-colors',
+        'group/resource rounded-md border px-3 py-2 transition-colors',
         active
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-border-subtle bg-bg-canvas hover:bg-bg-subtle'
@@ -3379,7 +3367,7 @@ function ResourceListItem({
         <Link href={href} className="min-w-0 flex-1">
           <p
             className={cn(
-              'truncate text-sm font-medium',
+              'truncate text-[13px] font-medium leading-5',
               active ? 'text-primary-foreground' : 'text-text-main'
             )}
           >
@@ -3387,7 +3375,7 @@ function ResourceListItem({
           </p>
           <p
             className={cn(
-              'mt-1 line-clamp-2 text-xs leading-5',
+              'mt-0.5 line-clamp-1 text-xs leading-4',
               active ? 'text-primary-foreground/72' : 'text-text-muted'
             )}
           >
@@ -3396,7 +3384,7 @@ function ResourceListItem({
           {meta ? (
             <div
               className={cn(
-                'mt-3 flex flex-wrap gap-2 text-xs',
+                'mt-1.5 flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden text-[11px] leading-4 [&_[data-slot=badge]]:px-1.5 [&_[data-slot=badge]]:py-0 [&_[data-slot=badge]]:text-[11px] [&_[data-slot=badge]]:font-medium [&_[data-slot=badge]]:leading-4 [&_span]:min-w-0 [&_span]:truncate',
                 active ? 'text-primary-foreground/72' : 'text-text-muted'
               )}
             >
@@ -3404,7 +3392,7 @@ function ResourceListItem({
             </div>
           ) : null}
         </Link>
-        {actionsMenu ? <div className="shrink-0">{actionsMenu}</div> : null}
+        {actionsMenu ? <div className="-mr-1 shrink-0">{actionsMenu}</div> : null}
       </div>
     </div>
   );
@@ -3414,16 +3402,14 @@ function ResourceContent({
   projectId,
   projectName,
   module,
-  currentTitle,
-  description,
   actions,
   children,
 }: {
   projectId: number | string;
   projectName: string;
   module: ProjectWorkspaceModule;
-  currentTitle: string;
-  description: string;
+  currentTitle?: string;
+  description?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -3433,43 +3419,37 @@ function ResourceContent({
 
   return (
     <main className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="space-y-4 border-b border-border-subtle bg-bg-canvas px-4 py-4 md:px-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle bg-bg-canvas px-4 py-2 md:px-6">
+        <Breadcrumb className="min-w-0">
+          <BreadcrumbList className="flex-nowrap">
+            <BreadcrumbItem className="min-w-0 shrink-0">
               <BreadcrumbLink asChild>
                 <Link href="/project">{t('common.projects')}</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem>
+            <BreadcrumbItem className="min-w-0 shrink">
               <BreadcrumbLink asChild>
-                <Link href={buildProjectDetailRoute(projectId)}>{projectName}</Link>
+                <Link href={buildProjectDetailRoute(projectId)} className="truncate">
+                  {projectName}
+                </Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem>
+            <BreadcrumbItem className="min-w-0 shrink-0">
               <BreadcrumbPage>{moduleLabel}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="space-y-2">
-            <Badge variant="outline" className="border-border-subtle bg-bg-subtle text-text-main">
-              {moduleLabel}
-            </Badge>
-            <div>
-              <h2 className="text-2xl font-medium tracking-normal">{currentTitle}</h2>
-              <p className="mt-2 max-w-4xl text-sm leading-6 text-text-muted">{description}</p>
-            </div>
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 [&_[data-slot=button]]:h-8 [&_[data-slot=button]]:min-h-8 [&_[data-slot=button]]:px-3 [&_[data-slot=button]]:py-1.5 [&_[data-slot=button]]:text-xs [&_[data-slot=button][data-slot=button]]:gap-1.5 [&_[data-slot=button]>svg]:h-3.5 [&_[data-slot=button]>svg]:w-3.5">
+            {actions}
           </div>
-
-          {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
-        </div>
+        ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">{children}</div>
     </main>
   );
 }
@@ -3567,9 +3547,7 @@ function ApiSpecsGuideState({
 
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="rounded-md border border-border-subtle bg-bg-canvas p-5">
-            <p className="text-sm font-medium text-text-main">
-              {t('apiSpecs.captureIntentTitle')}
-            </p>
+            <p className="text-sm font-medium text-text-main">{t('apiSpecs.captureIntentTitle')}</p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               {t('apiSpecs.captureIntentDescription')}
             </p>
@@ -3581,9 +3559,7 @@ function ApiSpecsGuideState({
             </p>
           </div>
           <div className="rounded-md border border-border-subtle bg-bg-canvas p-5">
-            <p className="text-sm font-medium text-text-main">
-              {t('apiSpecs.moveToTestingTitle')}
-            </p>
+            <p className="text-sm font-medium text-text-main">{t('apiSpecs.moveToTestingTitle')}</p>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               {t('apiSpecs.moveToTestingDescription')}
             </p>

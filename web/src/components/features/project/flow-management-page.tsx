@@ -1110,7 +1110,9 @@ const HttpStepNode = ({ data, selected }: NodeProps) => {
     <div
       className={cn(
         'w-[240px] rounded-xl border bg-bg-canvas p-4 transition-colors',
-        selected ? 'border-border-subtle bg-bg-surface ring-2 ring-primary/15' : 'border-border-subtle'
+        selected
+          ? 'border-border-subtle bg-bg-surface ring-2 ring-primary/15'
+          : 'border-border-subtle'
       )}
     >
       <Handle
@@ -3672,7 +3674,10 @@ export function ProjectFlowManagementPage({
                   lineWidth={1.2}
                   color="var(--border-main)"
                 />
-                <Panel position="top-right" className="!m-4 flex max-w-[min(90vw,360px)] flex-col items-end gap-3">
+                <Panel
+                  position="top-right"
+                  className="!m-4 flex max-w-[min(90vw,360px)] flex-col items-end gap-3"
+                >
                   {isCanvasToolsOpen ? (
                     <div className="w-[min(90vw,320px)] rounded-xl border border-border-subtle bg-bg-canvas p-3">
                       <div className="flex items-center justify-between gap-3">
@@ -3763,9 +3768,7 @@ export function ProjectFlowManagementPage({
                               <PlusIcon className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('flowPage.zoomIn')}
-                          </TooltipContent>
+                          <TooltipContent side="left">{t('flowPage.zoomIn')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -3781,9 +3784,7 @@ export function ProjectFlowManagementPage({
                               <Minus className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('flowPage.zoomOut')}
-                          </TooltipContent>
+                          <TooltipContent side="left">{t('flowPage.zoomOut')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -3799,9 +3800,7 @@ export function ProjectFlowManagementPage({
                               <Share2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('flowPage.fitView')}
-                          </TooltipContent>
+                          <TooltipContent side="left">{t('flowPage.fitView')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -3835,9 +3834,7 @@ export function ProjectFlowManagementPage({
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('common.delete')}
-                          </TooltipContent>
+                          <TooltipContent side="left">{t('common.delete')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -3853,9 +3850,7 @@ export function ProjectFlowManagementPage({
                               <Redo2 className="h-4 w-4 rotate-180" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('flowPage.undo')}
-                          </TooltipContent>
+                          <TooltipContent side="left">{t('flowPage.undo')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -3871,9 +3866,7 @@ export function ProjectFlowManagementPage({
                               <Redo2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('flowPage.redo')}
-                          </TooltipContent>
+                          <TooltipContent side="left">{t('flowPage.redo')}</TooltipContent>
                         </Tooltip>
                       </div>
                     </div>
@@ -3891,9 +3884,7 @@ export function ProjectFlowManagementPage({
                           <CircleHelp className="h-5 w-5" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="left">
-                        {t('flowPage.openCanvasTools')}
-                      </TooltipContent>
+                      <TooltipContent side="left">{t('flowPage.openCanvasTools')}</TooltipContent>
                     </Tooltip>
                   )}
                 </Panel>
@@ -3917,9 +3908,7 @@ export function ProjectFlowManagementPage({
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="left">
-                {t('flowPage.openFlowSettings')}
-              </TooltipContent>
+              <TooltipContent side="left">{t('flowPage.openFlowSettings')}</TooltipContent>
             </Tooltip>
           </aside>
         ) : (
@@ -3938,9 +3927,7 @@ export function ProjectFlowManagementPage({
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="left">
-                  {t('flowPage.closeFlowSettings')}
-                </TooltipContent>
+                <TooltipContent side="left">{t('flowPage.closeFlowSettings')}</TooltipContent>
               </Tooltip>
             </div>
             <div className="max-h-[calc(72vh-57px)] min-h-[320px] overflow-y-auto p-4">
@@ -3995,60 +3982,44 @@ export function ProjectFlowManagementPage({
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                {t('flowPage.expandFlowItems')}
-              </TooltipContent>
+              <TooltipContent side="right">{t('flowPage.expandFlowItems')}</TooltipContent>
             </Tooltip>
           </aside>
         ) : null}
 
         <main className="flex min-w-0 flex-1 flex-col">
-          <div className="space-y-4 border-b border-border-subtle bg-bg-canvas px-4 py-4 md:px-6">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
+          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle bg-bg-canvas px-4 py-2 md:px-6">
+            <Breadcrumb className="min-w-0">
+              <BreadcrumbList className="flex-nowrap">
+                <BreadcrumbItem className="min-w-0 shrink-0">
                   <BreadcrumbLink asChild>
                     <Link href="/project">{t('common.projects')}</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
-                <BreadcrumbItem>
+                <BreadcrumbItem className="min-w-0 shrink">
                   <BreadcrumbLink asChild>
-                    <Link href={buildProjectDetailRoute(projectId)}>{projectName}</Link>
+                    <Link href={buildProjectDetailRoute(projectId)} className="truncate">
+                      {projectName}
+                    </Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
-                <BreadcrumbItem>
+                <BreadcrumbItem className="min-w-0 shrink-0">
                   <BreadcrumbPage>{t('modules.flows.label')}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
 
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-2">
-                <Badge variant="outline" className="border-border-subtle bg-bg-canvas text-text-main">
-                  {t('modules.flows.label')}
-                </Badge>
-                <div>
-                  <h2 className="text-2xl font-medium tracking-normal">
-                    {selectedFlowQuery.data?.name || t('flowPage.heroTitleFallback')}
-                  </h2>
-                  <p className="mt-2 max-w-4xl text-sm leading-6 text-text-muted">
-                    {t('flowPage.heroDescription')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={handleRefresh}>
-                  <RefreshCw className="h-4 w-4" />
-                  {t('common.refresh')}
-                </Button>
-                <Button type="button" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
-                  <Plus className="h-4 w-4" />
-                  {t('flowPage.create')}
-                </Button>
-              </div>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2 [&_[data-slot=button]]:h-8 [&_[data-slot=button]]:min-h-8 [&_[data-slot=button]]:px-3 [&_[data-slot=button]]:py-1.5 [&_[data-slot=button]]:text-xs [&_[data-slot=button]>svg]:h-3.5 [&_[data-slot=button]>svg]:w-3.5">
+              <Button type="button" variant="outline" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4" />
+                {t('common.refresh')}
+              </Button>
+              <Button type="button" onClick={() => setIsCreateOpen(true)} disabled={!canEdit}>
+                <Plus className="h-4 w-4" />
+                {t('flowPage.create')}
+              </Button>
             </div>
           </div>
 
@@ -4095,9 +4066,7 @@ export function ProjectFlowManagementPage({
                 </p>
               </div>
               <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
-                <p className="text-sm font-medium text-text-main">
-                  {t('flowPage.openShortcuts')}
-                </p>
+                <p className="text-sm font-medium text-text-main">{t('flowPage.openShortcuts')}</p>
                 <p className="mt-2 font-mono text-xs text-text-muted">
                   {t('flowPage.shortcutOpenHelp')}
                 </p>

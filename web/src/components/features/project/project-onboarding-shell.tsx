@@ -3,14 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  BookOpenText,
-  Command,
-  Globe,
-  PlayCircle,
-  Search,
-  Sparkles,
-} from 'lucide-react';
+import { BookOpenText, Command, Globe, PlayCircle, Search, Sparkles } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,8 +15,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { PROJECT_WORKSPACE_MODULES, buildProjectWorkspaceRoute } from '@/components/features/project/project-navigation';
-import { buildProjectDetailRoute, ROUTES } from '@/constants/routes';
+import {
+  PROJECT_WORKSPACE_MODULES,
+  buildProjectWorkspaceRoute,
+} from '@/components/features/project/project-navigation';
+import { buildProjectCategoriesRoute, ROUTES } from '@/constants/routes';
 import { useLocale } from '@/hooks/use-locale';
 import { useProjects } from '@/hooks/use-projects';
 import { useT } from '@/i18n/client';
@@ -219,7 +215,7 @@ export function ProjectOnboardingShell() {
     subtitle: project.slug,
     icon: <Search className="h-4 w-4" />,
     onSelect: () => {
-      router.push(buildProjectDetailRoute(project.id));
+      router.push(buildProjectCategoriesRoute(project.id));
       setIsCommandOpen(false);
     },
   }));
@@ -246,7 +242,9 @@ export function ProjectOnboardingShell() {
       icon: <Sparkles className="h-4 w-4" />,
       onSelect: () => {
         setIsCommandOpen(false);
-        const button = document.querySelector('[data-onboarding="create-project"]') as HTMLButtonElement | null;
+        const button = document.querySelector(
+          '[data-onboarding="create-project"]'
+        ) as HTMLButtonElement | null;
         button?.click();
       },
     },
@@ -274,13 +272,15 @@ export function ProjectOnboardingShell() {
     },
   ];
 
-  const filteredCommands = [...utilityCommands, ...projectCommands, ...workspaceCommands].filter(item => {
-    const query = commandQuery.trim().toLowerCase();
-    if (!query) {
-      return true;
+  const filteredCommands = [...utilityCommands, ...projectCommands, ...workspaceCommands].filter(
+    item => {
+      const query = commandQuery.trim().toLowerCase();
+      if (!query) {
+        return true;
+      }
+      return `${item.title} ${item.subtitle}`.toLowerCase().includes(query);
     }
-    return `${item.title} ${item.subtitle}`.toLowerCase().includes(query);
-  });
+  );
 
   const closeTour = () => {
     setIsTourOpen(false);
@@ -290,10 +290,7 @@ export function ProjectOnboardingShell() {
   return (
     <>
       <Dialog open={isCommandOpen} onOpenChange={setIsCommandOpen}>
-        <DialogContent
-          hideCloseButton
-          className="!w-[min(40rem,calc(100vw-4rem))] !max-w-[40rem]"
-        >
+        <DialogContent hideCloseButton className="!w-[min(40rem,calc(100vw-4rem))] !max-w-[40rem]">
           <DialogHeader>
             <DialogTitle>{t('commandPalette.title')}</DialogTitle>
             <DialogDescription>{t('commandPalette.description')}</DialogDescription>
@@ -384,7 +381,9 @@ export function ProjectOnboardingShell() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">{t('helpCenter.shortcutsTitle')}</p>
-                  <p className="mt-1 text-xs text-text-muted">{t('helpCenter.shortcutsDescription')}</p>
+                  <p className="mt-1 text-xs text-text-muted">
+                    {t('helpCenter.shortcutsDescription')}
+                  </p>
                 </div>
                 <LanguageSwitcher />
               </div>
@@ -435,7 +434,9 @@ export function ProjectOnboardingShell() {
           <DialogBody className="space-y-4 py-2">
             <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
               <p className="text-sm font-medium text-text-main">{currentTourStep.title}</p>
-              <p className="mt-2 text-sm leading-6 text-text-muted">{currentTourStep.description}</p>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                {currentTourStep.description}
+              </p>
               {isTourLocked ? (
                 <p className="mt-3 text-xs font-medium uppercase tracking-[0.03125rem] text-text-main">
                   {t('onboardingTour.lockedCountdown', { seconds: tourLockSeconds })}
@@ -484,7 +485,11 @@ export function ProjectOnboardingShell() {
 
       <div className="sr-only">
         <Link href={ROUTES.CONSOLE.PROJECTS}>Projects</Link>
-        <button type="button" data-onboarding="command-palette" onClick={() => setIsCommandOpen(true)}>
+        <button
+          type="button"
+          data-onboarding="command-palette"
+          onClick={() => setIsCommandOpen(true)}
+        >
           Open command palette
         </button>
         <button type="button" data-onboarding="help-button" onClick={() => setIsHelpOpen(true)}>
@@ -499,7 +504,9 @@ function ShortcutRow({ label, keys }: { label: string; keys: string }) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-canvas px-3 py-2">
       <span className="text-sm text-text-main">{label}</span>
-      <span className="rounded-full bg-bg-surface px-2 py-1 text-xs font-medium text-text-main">{keys}</span>
+      <span className="rounded-full bg-bg-surface px-2 py-1 text-xs font-medium text-text-main">
+        {keys}
+      </span>
     </div>
   );
 }

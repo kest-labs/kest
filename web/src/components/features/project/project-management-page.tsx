@@ -44,7 +44,6 @@ import { buildApiPath } from '@/config/api';
 import {
   buildProjectApiSpecsRoute,
   buildProjectCategoriesRoute,
-  buildProjectDetailRoute,
   buildProjectEnvironmentsRoute,
   buildProjectMembersRoute,
   buildProjectTestCasesRoute,
@@ -88,7 +87,7 @@ export function ProjectManagementPage() {
   const projects = projectsQuery.data?.items ?? EMPTY_PROJECTS;
   // 这里仍然是当前页本地过滤：
   // 后端项目列表接口目前只有分页，没有 search 参数。
-  const filteredProjects = projects.filter((project) => {
+  const filteredProjects = projects.filter(project => {
     if (!searchQuery.trim()) {
       return true;
     }
@@ -104,8 +103,8 @@ export function ProjectManagementPage() {
   const canGoPrev = page > 1;
   const canGoNext = page < (projectsQuery.data?.meta.pages || 1);
   const totalProjects = projectsQuery.data?.meta.total || 0;
-  const activeOnPage = projects.filter((project) => project.status === 1).length;
-  const inactiveOnPage = projects.filter((project) => project.status === 0).length;
+  const activeOnPage = projects.filter(project => project.status === 1).length;
+  const inactiveOnPage = projects.filter(project => project.status === 0).length;
 
   const projectsPath = buildApiPath('/projects');
   const projectDetailPath = buildApiPath('/projects/:id');
@@ -173,7 +172,7 @@ export function ProjectManagementPage() {
       setDeleteTarget(null);
 
       if (shouldStepBackPage) {
-        setPage((currentPage) => currentPage - 1);
+        setPage(currentPage => currentPage - 1);
       }
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
@@ -284,13 +283,11 @@ export function ProjectManagementPage() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <Input
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={event => setSearchQuery(event.target.value)}
               placeholder={t('projectsPage.filterPlaceholder')}
               leftIcon={<Search className="size-4" />}
             />
-            <div className="text-xs text-muted-foreground">
-              {t('projectsPage.localFilterNote')}
-            </div>
+            <div className="text-xs text-muted-foreground">{t('projectsPage.localFilterNote')}</div>
           </div>
 
           {projectsQuery.isLoading ? (
@@ -314,11 +311,11 @@ export function ProjectManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProjects.map((project) => (
+                    {filteredProjects.map(project => (
                       <TableRow key={project.id} className="transition-colors hover:bg-bg-subtle">
                         <TableCell className="min-w-[220px]">
                           <Link
-                            href={buildProjectDetailRoute(project.id)}
+                            href={buildProjectCategoriesRoute(project.id)}
                             className="block rounded-xl px-2 py-1 transition-colors hover:bg-bg-subtle"
                           >
                             <div className="space-y-1">
@@ -329,7 +326,9 @@ export function ProjectManagementPage() {
                             </div>
                           </Link>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{project.slug}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {project.slug}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">
                             {resolvePlatformLabel(project.platform) || t('projectForm.notSet')}
@@ -346,7 +345,7 @@ export function ProjectManagementPage() {
                                 key: `overview-${project.id}`,
                                 label: t('projectsPage.overview'),
                                 icon: BarChart3,
-                                href: buildProjectDetailRoute(project.id),
+                                href: buildProjectCategoriesRoute(project.id),
                               },
                               {
                                 key: `api-specs-${project.id}`,
@@ -435,7 +434,7 @@ export function ProjectManagementPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setPage((currentPage) => currentPage - 1)}
+                  onClick={() => setPage(currentPage => currentPage - 1)}
                   disabled={!canGoPrev}
                 >
                   {i18n.common('previous')}
@@ -449,7 +448,7 @@ export function ProjectManagementPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setPage((currentPage) => currentPage + 1)}
+                  onClick={() => setPage(currentPage => currentPage + 1)}
                   disabled={!canGoNext}
                 >
                   {i18n.common('next')}
@@ -466,7 +465,7 @@ export function ProjectManagementPage() {
         mode={formMode}
         project={editingProject}
         isSubmitting={createProjectMutation.isPending || updateProjectMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           setIsFormOpen(open);
           if (!open) {
             setEditingProject(null);
@@ -479,7 +478,7 @@ export function ProjectManagementPage() {
         open={Boolean(deleteTarget)}
         project={deleteTarget}
         isDeleting={deleteProjectMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDeleteTarget(null);
           }

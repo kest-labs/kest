@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   Copy,
   Crown,
   Link2,
@@ -21,6 +20,14 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -238,21 +245,14 @@ const getInvitationRecipientLabel = (
   };
 };
 
-function RoleBadge({ role }: { role?: ProjectMemberRole }) {
-  const t = useT('project');
-
-  return (
-    <Badge variant="outline" className="border-border-subtle bg-bg-subtle text-text-main">
-      {t('roles.badge', { role: getRoleLabel(t, role) })}
-    </Badge>
-  );
-}
-
 function MembersTableSkeleton() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="h-14 animate-pulse rounded-md border border-border-subtle bg-bg-soft" />
+        <div
+          key={index}
+          className="h-14 animate-pulse rounded-md border border-border-subtle bg-bg-soft"
+        />
       ))}
     </div>
   );
@@ -340,8 +340,6 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
     { value: 'write', label: getRoleLabel(t, 'write') },
     { value: 'read', label: getRoleLabel(t, 'read') },
   ];
-  const membersPath = buildApiPath('/projects/:id/members');
-  const membersMePath = buildApiPath('/projects/:id/members/me');
   const invitationsPath = buildApiPath('/projects/:id/invitations');
   const isRefreshing =
     projectQuery.isFetching ||
@@ -559,73 +557,52 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   return (
     <>
       <main className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto">
-        <div className="space-y-8 p-6 pt-6">
-          <div className="rounded-lg border border-border-subtle bg-bg-surface p-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-3">
-                <Button
-                  asChild
-                  variant="link"
-                  className="h-auto px-0 text-sm text-muted-foreground"
-                >
-                  <Link href={buildProjectDetailRoute(projectId)}>
-                    <ArrowLeft className="h-4 w-4" />
-                    {t('common.backToProjectOverview')}
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle bg-bg-canvas px-4 py-2 md:px-6">
+          <Breadcrumb className="min-w-0">
+            <BreadcrumbList className="flex-nowrap">
+              <BreadcrumbItem className="min-w-0 shrink-0">
+                <BreadcrumbLink asChild>
+                  <Link href="/project">{t('common.projects')}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="min-w-0 shrink">
+                <BreadcrumbLink asChild>
+                  <Link href={buildProjectDetailRoute(projectId)} className="truncate">
+                    {project?.name || `#${projectId}`}
                   </Link>
-                </Button>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="min-w-0 shrink-0">
+                <BreadcrumbPage>{t('membersPage.title')}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-3xl font-medium tracking-normal">{t('membersPage.title')}</h1>
-                    <Users className="h-6 w-6 text-text-main" />
-                    <RoleBadge role={currentRole} />
-                  </div>
-                  <p className="max-w-4xl text-sm text-text-muted">
-                    {t('membersPage.description', {
-                      membersPath,
-                      membersMePath,
-                    })}
-                  </p>
-                </div>
-
-                {project ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="font-mono">
-                      {project.slug}
-                    </Badge>
-                    <Badge variant="outline">{project.name}</Badge>
-                    <Badge variant="outline">
-                      {t('membersPage.memberCount', {
-                        count: projectStatsQuery.data?.member_count ?? members.length,
-                      })}
-                    </Badge>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="button" onClick={handleOpenInviteDialog} disabled={!canManageMembers}>
-                  <Link2 className="h-4 w-4" />
-                  {t('membersPage.generateInviteLink')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleOpenAddDialog}
-                  disabled={!canManageMembers}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  {t('membersPage.addMember')}
-                </Button>
-                <ActionMenu
-                  items={headerActionItems}
-                  ariaLabel={t('membersPage.openMemberActions')}
-                  triggerVariant="outline"
-                />
-              </div>
-            </div>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 [&_[data-slot=button]]:h-8 [&_[data-slot=button]]:min-h-8 [&_[data-slot=button]]:px-3 [&_[data-slot=button]]:py-1.5 [&_[data-slot=button]]:text-xs [&_[data-slot=button]>svg]:h-3.5 [&_[data-slot=button]>svg]:w-3.5">
+            <Button type="button" onClick={handleOpenInviteDialog} disabled={!canManageMembers}>
+              <Link2 className="h-4 w-4" />
+              {t('membersPage.generateInviteLink')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleOpenAddDialog}
+              disabled={!canManageMembers}
+            >
+              <UserPlus className="h-4 w-4" />
+              {t('membersPage.addMember')}
+            </Button>
+            <ActionMenu
+              items={headerActionItems}
+              ariaLabel={t('membersPage.openMemberActions')}
+              triggerVariant="outline"
+            />
           </div>
+        </div>
 
+        <div className="space-y-6 p-4 md:p-5">
           {!canManageMembers && memberRoleQuery.isSuccess ? (
             <Alert>
               <ShieldCheck className="h-4 w-4" />
@@ -1083,7 +1060,9 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                 {selectedInviteCandidate ? (
                   <div className="flex items-center justify-between rounded-md border border-border-subtle bg-bg-soft p-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium">{t('membersPage.selectedInviteRecipient')}</div>
+                      <div className="text-sm font-medium">
+                        {t('membersPage.selectedInviteRecipient')}
+                      </div>
                       <div className="truncate text-sm text-muted-foreground">
                         {selectedInviteCandidate.username} · {selectedInviteCandidate.email}
                       </div>

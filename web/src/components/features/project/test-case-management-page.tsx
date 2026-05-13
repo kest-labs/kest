@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  ArrowLeft,
   Boxes,
   Copy,
   FileJson2,
@@ -24,12 +23,17 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  ActionMenu,
-  type ActionMenuItem,
-} from '@/components/features/project/action-menu';
+import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import {
   Dialog,
   DialogBody,
@@ -87,10 +91,7 @@ import {
 } from '@/hooks/use-test-cases';
 import type { ApiSpec } from '@/types/api-spec';
 import type { ProjectEnvironment } from '@/types/environment';
-import {
-  PROJECT_MEMBER_WRITE_ROLES,
-  type ProjectMemberRole,
-} from '@/types/member';
+import { PROJECT_MEMBER_WRITE_ROLES } from '@/types/member';
 import type {
   CreateTestCaseFromSpecRequest,
   CreateTestCaseRequest,
@@ -150,21 +151,6 @@ interface RunDraft {
   globalVars: string;
   variableKeys: string;
 }
-
-const getRoleLabel = (t: ProjectT, role?: ProjectMemberRole) => {
-  switch (role) {
-    case 'owner':
-      return t('roles.owner');
-    case 'admin':
-      return t('roles.admin');
-    case 'write':
-      return t('roles.write');
-    case 'read':
-      return t('roles.read');
-    default:
-      return t('roles.unknown');
-  }
-};
 
 const formatJson = (value: unknown) => {
   if (value === undefined || value === null) {
@@ -294,13 +280,8 @@ const getTestCaseFormDraft = (testCase?: ProjectTestCase | null): TestCaseFormDr
   extractVars: formatJson(testCase?.extract_vars),
 });
 
-const getDuplicateDraft = (
-  t: ProjectT,
-  testCase?: ProjectTestCase | null
-): DuplicateDraft => ({
-  name: testCase
-    ? t('testCasesPage.duplicateName', { name: testCase.name })
-    : '',
+const getDuplicateDraft = (t: ProjectT, testCase?: ProjectTestCase | null): DuplicateDraft => ({
+  name: testCase ? t('testCasesPage.duplicateName', { name: testCase.name }) : '',
 });
 
 const getDefaultFromSpecName = (t: ProjectT, apiSpec?: ApiSpec | null) =>
@@ -325,16 +306,6 @@ const getRunDraft = (): RunDraft => ({
   variableKeys: '',
 });
 
-function RoleBadge({ role }: { role?: ProjectMemberRole }) {
-  const t = useT('project');
-
-  return (
-    <Badge variant="outline" className="border-border-subtle bg-bg-subtle text-text-main">
-      {t('roles.badge', { role: getRoleLabel(t, role) })}
-    </Badge>
-  );
-}
-
 function MethodBadge({ method }: { method?: string }) {
   const t = useT('project');
 
@@ -355,13 +326,7 @@ function RunStatusBadge({ status }: { status?: string }) {
   );
 }
 
-function CodeBlock({
-  value,
-  emptyLabel,
-}: {
-  value?: string;
-  emptyLabel: string;
-}) {
+function CodeBlock({ value, emptyLabel }: { value?: string; emptyLabel: string }) {
   if (!value?.trim()) {
     return (
       <div className="rounded-md border border-dashed border-border-subtle bg-bg-soft p-4 text-sm text-muted-foreground">
@@ -377,13 +342,7 @@ function CodeBlock({
   );
 }
 
-function MarkdownPreview({
-  value,
-  emptyLabel,
-}: {
-  value?: string;
-  emptyLabel: string;
-}) {
+function MarkdownPreview({ value, emptyLabel }: { value?: string; emptyLabel: string }) {
   if (!value?.trim()) {
     return (
       <div className="rounded-md border border-dashed border-border-subtle bg-bg-soft p-4 text-sm text-muted-foreground">
@@ -482,13 +441,7 @@ function JsonPreview({
   );
 }
 
-function SummaryField({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | number | null;
-}) {
+function SummaryField({ label, value }: { label: string; value?: string | number | null }) {
   const t = useT('project');
   const hasValue =
     value !== undefined &&
@@ -529,11 +482,8 @@ function TestCaseFormDialog({
   const [draft, setDraft] = useState<TestCaseFormDraft>(() => getTestCaseFormDraft(testCase));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const updateDraft = <K extends keyof TestCaseFormDraft>(
-    key: K,
-    value: TestCaseFormDraft[K]
-  ) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+  const updateDraft = <K extends keyof TestCaseFormDraft>(key: K, value: TestCaseFormDraft[K]) => {
+    setDraft(current => ({ ...current, [key]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -562,33 +512,45 @@ function TestCaseFormDialog({
     try {
       headers = parseStringRecordInput(t, draft.headers, t('testCasesPage.headersJsonLabel'));
     } catch (error) {
-      nextErrors.headers = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.headersJsonLabel') });
+      nextErrors.headers =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.headersJsonLabel') });
     }
 
     try {
-      queryParams = parseStringRecordInput(t, draft.queryParams, t('testCasesPage.queryParamsJsonLabel'));
+      queryParams = parseStringRecordInput(
+        t,
+        draft.queryParams,
+        t('testCasesPage.queryParamsJsonLabel')
+      );
     } catch (error) {
-      nextErrors.queryParams = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.queryParamsJsonLabel') });
+      nextErrors.queryParams =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.queryParamsJsonLabel') });
     }
 
     try {
-      pathParams = parseStringRecordInput(t, draft.pathParams, t('testCasesPage.pathParamsJsonLabel'));
+      pathParams = parseStringRecordInput(
+        t,
+        draft.pathParams,
+        t('testCasesPage.pathParamsJsonLabel')
+      );
     } catch (error) {
-      nextErrors.pathParams = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.pathParamsJsonLabel') });
+      nextErrors.pathParams =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.pathParamsJsonLabel') });
     }
 
     try {
       requestBody = parseJsonInput(t, draft.requestBody, t('testCasesPage.requestBodyJsonLabel'));
     } catch (error) {
-      nextErrors.requestBody = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.requestBodyJsonLabel') });
+      nextErrors.requestBody =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.requestBodyJsonLabel') });
     }
 
     try {
@@ -599,9 +561,10 @@ function TestCaseFormDialog({
         'array'
       );
     } catch (error) {
-      nextErrors.assertions = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.assertionsJsonLabel') });
+      nextErrors.assertions =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.assertionsJsonLabel') });
     }
 
     try {
@@ -612,9 +575,10 @@ function TestCaseFormDialog({
         'array'
       );
     } catch (error) {
-      nextErrors.extractVars = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.extractVarsJsonLabel') });
+      nextErrors.extractVars =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.extractVarsJsonLabel') });
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -682,9 +646,7 @@ function TestCaseFormDialog({
           ) : mode === 'edit' && !testCase ? (
             <Alert className="mt-2">
               <AlertTitle>{t('testCasesPage.formLoadFailedTitle')}</AlertTitle>
-              <AlertDescription>
-                {t('testCasesPage.formLoadFailedDescription')}
-              </AlertDescription>
+              <AlertDescription>{t('testCasesPage.formLoadFailedDescription')}</AlertDescription>
             </Alert>
           ) : (
             <form id="test-case-form" onSubmit={handleSubmit} className="space-y-5 py-1">
@@ -694,14 +656,14 @@ function TestCaseFormDialog({
                   <Select
                     value={draft.apiSpecId || 'none'}
                     disabled={mode === 'edit'}
-                    onValueChange={(value) => updateDraft('apiSpecId', value === 'none' ? '' : value)}
+                    onValueChange={value => updateDraft('apiSpecId', value === 'none' ? '' : value)}
                   >
                     <SelectTrigger id="test-case-api-spec" className="w-full">
                       <SelectValue placeholder={t('testCasesPage.selectApiSpec')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{t('testCasesPage.selectApiSpec')}</SelectItem>
-                      {apiSpecs.map((spec) => (
+                      {apiSpecs.map(spec => (
                         <SelectItem key={spec.id} value={String(spec.id)}>
                           {spec.method} {spec.path}
                         </SelectItem>
@@ -718,7 +680,7 @@ function TestCaseFormDialog({
                   <Input
                     id="test-case-env"
                     value={draft.env}
-                    onChange={(event) => updateDraft('env', event.target.value)}
+                    onChange={event => updateDraft('env', event.target.value)}
                     placeholder={t('testCasesPage.environmentPlaceholder')}
                     root
                   />
@@ -731,7 +693,7 @@ function TestCaseFormDialog({
                   <Input
                     id="test-case-name"
                     value={draft.name}
-                    onChange={(event) => updateDraft('name', event.target.value)}
+                    onChange={event => updateDraft('name', event.target.value)}
                     placeholder={t('testCasesPage.namePlaceholder')}
                     errorText={errors.name}
                     root
@@ -743,7 +705,7 @@ function TestCaseFormDialog({
                   <Input
                     id="test-case-description"
                     value={draft.description}
-                    onChange={(event) => updateDraft('description', event.target.value)}
+                    onChange={event => updateDraft('description', event.target.value)}
                     placeholder={t('testCasesPage.descriptionPlaceholder')}
                     root
                   />
@@ -756,7 +718,7 @@ function TestCaseFormDialog({
                   <Textarea
                     id="test-case-headers"
                     value={draft.headers}
-                    onChange={(event) => updateDraft('headers', event.target.value)}
+                    onChange={event => updateDraft('headers', event.target.value)}
                     placeholder={rawT.raw('testCasesPage.headersJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.headers}
@@ -765,11 +727,13 @@ function TestCaseFormDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="test-case-query-params">{t('testCasesPage.queryParamsJsonLabel')}</Label>
+                  <Label htmlFor="test-case-query-params">
+                    {t('testCasesPage.queryParamsJsonLabel')}
+                  </Label>
                   <Textarea
                     id="test-case-query-params"
                     value={draft.queryParams}
-                    onChange={(event) => updateDraft('queryParams', event.target.value)}
+                    onChange={event => updateDraft('queryParams', event.target.value)}
                     placeholder={rawT.raw('testCasesPage.queryParamsJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.queryParams}
@@ -780,11 +744,13 @@ function TestCaseFormDialog({
 
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="test-case-path-params">{t('testCasesPage.pathParamsJsonLabel')}</Label>
+                  <Label htmlFor="test-case-path-params">
+                    {t('testCasesPage.pathParamsJsonLabel')}
+                  </Label>
                   <Textarea
                     id="test-case-path-params"
                     value={draft.pathParams}
-                    onChange={(event) => updateDraft('pathParams', event.target.value)}
+                    onChange={event => updateDraft('pathParams', event.target.value)}
                     placeholder={rawT.raw('testCasesPage.pathParamsJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.pathParams}
@@ -793,11 +759,13 @@ function TestCaseFormDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="test-case-request-body">{t('testCasesPage.requestBodyJsonLabel')}</Label>
+                  <Label htmlFor="test-case-request-body">
+                    {t('testCasesPage.requestBodyJsonLabel')}
+                  </Label>
                   <Textarea
                     id="test-case-request-body"
                     value={draft.requestBody}
-                    onChange={(event) => updateDraft('requestBody', event.target.value)}
+                    onChange={event => updateDraft('requestBody', event.target.value)}
                     placeholder={rawT.raw('testCasesPage.requestBodyJsonPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     errorText={errors.requestBody}
@@ -812,7 +780,7 @@ function TestCaseFormDialog({
                   <Textarea
                     id="test-case-pre-script"
                     value={draft.preScript}
-                    onChange={(event) => updateDraft('preScript', event.target.value)}
+                    onChange={event => updateDraft('preScript', event.target.value)}
                     placeholder={t('testCasesPage.preScriptPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     root
@@ -824,7 +792,7 @@ function TestCaseFormDialog({
                   <Textarea
                     id="test-case-post-script"
                     value={draft.postScript}
-                    onChange={(event) => updateDraft('postScript', event.target.value)}
+                    onChange={event => updateDraft('postScript', event.target.value)}
                     placeholder={t('testCasesPage.postScriptPlaceholder')}
                     className="min-h-28 font-mono text-xs"
                     root
@@ -834,11 +802,13 @@ function TestCaseFormDialog({
 
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="test-case-assertions">{t('testCasesPage.assertionsJsonLabel')}</Label>
+                  <Label htmlFor="test-case-assertions">
+                    {t('testCasesPage.assertionsJsonLabel')}
+                  </Label>
                   <Textarea
                     id="test-case-assertions"
                     value={draft.assertions}
-                    onChange={(event) => updateDraft('assertions', event.target.value)}
+                    onChange={event => updateDraft('assertions', event.target.value)}
                     placeholder={rawT.raw('testCasesPage.assertionsJsonPlaceholder')}
                     className="min-h-32 font-mono text-xs"
                     errorText={errors.assertions}
@@ -847,11 +817,13 @@ function TestCaseFormDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="test-case-extract-vars">{t('testCasesPage.extractVarsJsonLabel')}</Label>
+                  <Label htmlFor="test-case-extract-vars">
+                    {t('testCasesPage.extractVarsJsonLabel')}
+                  </Label>
                   <Textarea
                     id="test-case-extract-vars"
                     value={draft.extractVars}
-                    onChange={(event) => updateDraft('extractVars', event.target.value)}
+                    onChange={event => updateDraft('extractVars', event.target.value)}
                     placeholder={rawT.raw('testCasesPage.extractVarsJsonPlaceholder')}
                     className="min-h-32 font-mono text-xs"
                     errorText={errors.extractVars}
@@ -915,27 +887,26 @@ function DuplicateTestCaseDialog({
       <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>{t('testCasesPage.duplicateDialogTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('testCasesPage.duplicateDialogDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('testCasesPage.duplicateDialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           <form id="duplicate-test-case-form" onSubmit={handleSubmit} className="space-y-4 py-1">
             <div className="rounded-md border border-border-subtle bg-bg-soft p-4 text-sm text-muted-foreground">
-              {t('testCasesPage.duplicateSourceLabel')}
-              {' '}
+              {t('testCasesPage.duplicateSourceLabel')}{' '}
               <span className="font-medium text-foreground">
                 {testCase?.name || t('testCasesPage.unknownTestCase')}
               </span>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="duplicate-test-case-name">{t('testCasesPage.duplicateNameLabel')}</Label>
+              <Label htmlFor="duplicate-test-case-name">
+                {t('testCasesPage.duplicateNameLabel')}
+              </Label>
               <Input
                 id="duplicate-test-case-name"
                 value={draft.name}
-                onChange={(event) => setDraft({ name: event.target.value })}
+                onChange={event => setDraft({ name: event.target.value })}
                 placeholder={t('testCasesPage.duplicateNamePlaceholder')}
                 errorText={error}
                 root
@@ -978,7 +949,7 @@ function CreateFromSpecDialog({
 }) {
   const t = useT('project');
   const initialSpec = useMemo(
-    () => apiSpecs.find((spec) => spec.id === initialSpecId) ?? null,
+    () => apiSpecs.find(spec => spec.id === initialSpecId) ?? null,
     [apiSpecs, initialSpecId]
   );
   const [draft, setDraft] = useState<FromSpecDraft>(() =>
@@ -994,7 +965,7 @@ function CreateFromSpecDialog({
   const specExamples = specExamplesQuery.data?.items ?? [];
 
   const selectedSpec = useMemo(
-    () => apiSpecs.find((spec) => spec.id === selectedSpecId),
+    () => apiSpecs.find(spec => spec.id === selectedSpecId),
     [apiSpecs, selectedSpecId]
   );
 
@@ -1025,8 +996,7 @@ function CreateFromSpecDialog({
       name: trimmedName,
       env: trimmedEnv || undefined,
       use_example: draft.useExample,
-      example_id:
-        draft.useExample && draft.exampleId !== 'auto' ? draft.exampleId : undefined,
+      example_id: draft.useExample && draft.exampleId !== 'auto' ? draft.exampleId : undefined,
     });
   };
 
@@ -1035,9 +1005,7 @@ function CreateFromSpecDialog({
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{t('testCasesPage.fromSpecDialogTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('testCasesPage.fromSpecDialogDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('testCasesPage.fromSpecDialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
@@ -1057,8 +1025,8 @@ function CreateFromSpecDialog({
               <Label htmlFor="from-spec-api-spec">{t('testCasesPage.apiSpecLabel')}</Label>
               <Select
                 value={draft.apiSpecId || 'none'}
-                onValueChange={(value) =>
-                  setDraft((current) => ({
+                onValueChange={value =>
+                  setDraft(current => ({
                     ...current,
                     apiSpecId: value === 'none' ? '' : value,
                     exampleId: 'auto',
@@ -1066,7 +1034,7 @@ function CreateFromSpecDialog({
                       value !== 'none' && !current.name.trim()
                         ? getDefaultFromSpecName(
                             t,
-                            apiSpecs.find((spec) => String(spec.id) === value) ?? null
+                            apiSpecs.find(spec => String(spec.id) === value) ?? null
                           )
                         : current.name,
                   }))
@@ -1077,7 +1045,7 @@ function CreateFromSpecDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('testCasesPage.selectApiSpec')}</SelectItem>
-                  {apiSpecs.map((spec) => (
+                  {apiSpecs.map(spec => (
                     <SelectItem key={spec.id} value={String(spec.id)}>
                       {spec.method} {spec.path}
                     </SelectItem>
@@ -1091,9 +1059,13 @@ function CreateFromSpecDialog({
 
             {selectedSpec ? (
               <div className="rounded-md border border-border-subtle bg-bg-soft p-4 text-sm">
-                <div className="font-medium text-foreground">{selectedSpec.method} {selectedSpec.path}</div>
+                <div className="font-medium text-foreground">
+                  {selectedSpec.method} {selectedSpec.path}
+                </div>
                 <div className="mt-1 text-muted-foreground">
-                  {selectedSpec.summary || selectedSpec.description || t('common.noSummaryProvided')}
+                  {selectedSpec.summary ||
+                    selectedSpec.description ||
+                    t('common.noSummaryProvided')}
                 </div>
               </div>
             ) : null}
@@ -1104,7 +1076,9 @@ function CreateFromSpecDialog({
                 <Input
                   id="from-spec-name"
                   value={draft.name}
-                  onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                  onChange={event =>
+                    setDraft(current => ({ ...current, name: event.target.value }))
+                  }
                   placeholder={t('testCasesPage.fromSpecNamePlaceholder')}
                   errorText={errors.name}
                   root
@@ -1116,7 +1090,7 @@ function CreateFromSpecDialog({
                 <Input
                   id="from-spec-env"
                   value={draft.env}
-                  onChange={(event) => setDraft((current) => ({ ...current, env: event.target.value }))}
+                  onChange={event => setDraft(current => ({ ...current, env: event.target.value }))}
                   placeholder={t('testCasesPage.environmentPlaceholder')}
                   root
                 />
@@ -1136,8 +1110,8 @@ function CreateFromSpecDialog({
                 <Switch
                   id="from-spec-use-example"
                   checked={draft.useExample}
-                  onCheckedChange={(checked) =>
-                    setDraft((current) => ({
+                  onCheckedChange={checked =>
+                    setDraft(current => ({
                       ...current,
                       useExample: checked,
                       exampleId: 'auto',
@@ -1151,16 +1125,14 @@ function CreateFromSpecDialog({
                   <Label htmlFor="from-spec-example">{t('common.examples')}</Label>
                   <Select
                     value={draft.exampleId}
-                    onValueChange={(value) =>
-                      setDraft((current) => ({ ...current, exampleId: value }))
-                    }
+                    onValueChange={value => setDraft(current => ({ ...current, exampleId: value }))}
                   >
                     <SelectTrigger id="from-spec-example" className="w-full">
                       <SelectValue placeholder={t('testCasesPage.useFirstExample')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="auto">{t('testCasesPage.useFirstExample')}</SelectItem>
-                      {specExamples.map((example) => (
+                      {specExamples.map(example => (
                         <SelectItem key={example.id} value={String(example.id)}>
                           {t('testCasesPage.exampleOption', {
                             name: example.name,
@@ -1172,7 +1144,9 @@ function CreateFromSpecDialog({
                   </Select>
 
                   {specExamplesQuery.isLoading ? (
-                    <p className="text-xs text-muted-foreground">{t('testCasesPage.loadingExamples')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('testCasesPage.loadingExamples')}
+                    </p>
                   ) : null}
                 </div>
               ) : null}
@@ -1228,9 +1202,10 @@ function RunTestCaseDialog({
         'object'
       );
     } catch (error) {
-      nextErrors.globalVars = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.globalVarsJsonLabel') });
+      nextErrors.globalVars =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.globalVarsJsonLabel') });
     }
 
     try {
@@ -1240,9 +1215,10 @@ function RunTestCaseDialog({
         t('testCasesPage.variableKeysJsonLabel')
       );
     } catch (error) {
-      nextErrors.variableKeys = error instanceof Error
-        ? error.message
-        : t('common.parseFailed', { label: t('testCasesPage.variableKeysJsonLabel') });
+      nextErrors.variableKeys =
+        error instanceof Error
+          ? error.message
+          : t('common.parseFailed', { label: t('testCasesPage.variableKeysJsonLabel') });
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -1262,9 +1238,7 @@ function RunTestCaseDialog({
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{t('testCasesPage.runDialogTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('testCasesPage.runDialogDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('testCasesPage.runDialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
@@ -1285,14 +1259,14 @@ function RunTestCaseDialog({
               <Label htmlFor="run-test-case-env">{t('testCasesPage.overrideEnvironment')}</Label>
               <Select
                 value={draft.envId}
-                onValueChange={(value) => setDraft((current) => ({ ...current, envId: value }))}
+                onValueChange={value => setDraft(current => ({ ...current, envId: value }))}
               >
                 <SelectTrigger id="run-test-case-env" className="w-full">
                   <SelectValue placeholder={t('testCasesPage.useTestCaseEnv')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('testCasesPage.useTestCaseEnv')}</SelectItem>
-                  {environments.map((environment) => (
+                  {environments.map(environment => (
                     <SelectItem key={environment.id} value={String(environment.id)}>
                       {environment.name}
                     </SelectItem>
@@ -1303,11 +1277,15 @@ function RunTestCaseDialog({
 
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="run-test-case-global-vars">{t('testCasesPage.globalVarsJsonLabel')}</Label>
+                <Label htmlFor="run-test-case-global-vars">
+                  {t('testCasesPage.globalVarsJsonLabel')}
+                </Label>
                 <Textarea
                   id="run-test-case-global-vars"
                   value={draft.globalVars}
-                  onChange={(event) => setDraft((current) => ({ ...current, globalVars: event.target.value }))}
+                  onChange={event =>
+                    setDraft(current => ({ ...current, globalVars: event.target.value }))
+                  }
                   placeholder={rawT.raw('testCasesPage.globalVarsJsonPlaceholder')}
                   className="min-h-32 font-mono text-xs"
                   errorText={errors.globalVars}
@@ -1316,12 +1294,14 @@ function RunTestCaseDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="run-test-case-variable-keys">{t('testCasesPage.variableKeysJsonLabel')}</Label>
+                <Label htmlFor="run-test-case-variable-keys">
+                  {t('testCasesPage.variableKeysJsonLabel')}
+                </Label>
                 <Textarea
                   id="run-test-case-variable-keys"
                   value={draft.variableKeys}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, variableKeys: event.target.value }))
+                  onChange={event =>
+                    setDraft(current => ({ ...current, variableKeys: event.target.value }))
                   }
                   placeholder={rawT.raw('testCasesPage.variableKeysJsonPlaceholder')}
                   className="min-h-32 font-mono text-xs"
@@ -1366,9 +1346,7 @@ function DeleteTestCaseDialog({
       <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>{t('testCasesPage.deleteDialogTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('testCasesPage.deleteDialogDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('testCasesPage.deleteDialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
@@ -1391,7 +1369,12 @@ function DeleteTestCaseDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button type="button" variant="destructive" loading={isDeleting} onClick={() => void onConfirm()}>
+          <Button
+            type="button"
+            variant="destructive"
+            loading={isDeleting}
+            onClick={() => void onConfirm()}
+          >
             {t('common.delete')}
           </Button>
         </DialogFooter>
@@ -1417,7 +1400,7 @@ function RunDetailDialog({
   const runQuery = useTestCaseRun(
     projectId,
     testCaseId ?? undefined,
-    open ? runId ?? undefined : undefined
+    open ? (runId ?? undefined) : undefined
   );
   const run = runQuery.data;
 
@@ -1426,9 +1409,7 @@ function RunDetailDialog({
       <DialogContent size="xl">
         <DialogHeader>
           <DialogTitle>{t('testCasesPage.runDetailDialogTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('testCasesPage.runDetailDialogDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('testCasesPage.runDetailDialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
@@ -1474,9 +1455,18 @@ function RunDetailDialog({
 
                 <TabsContent value="request" className="space-y-4">
                   <div className="grid gap-3 md:grid-cols-3">
-                    <SummaryField label={t('common.method')} value={run.request?.method || t('testCasesPage.notApplicable')} />
-                    <SummaryField label={t('common.url')} value={run.request?.url || t('testCasesPage.notApplicable')} />
-                    <SummaryField label={t('common.headers')} value={Object.keys(run.request?.headers || {}).length} />
+                    <SummaryField
+                      label={t('common.method')}
+                      value={run.request?.method || t('testCasesPage.notApplicable')}
+                    />
+                    <SummaryField
+                      label={t('common.url')}
+                      value={run.request?.url || t('testCasesPage.notApplicable')}
+                    />
+                    <SummaryField
+                      label={t('common.headers')}
+                      value={Object.keys(run.request?.headers || {}).length}
+                    />
                   </div>
                   <JsonPreview
                     title={t('testCasesPage.requestHeadersTitle')}
@@ -1492,7 +1482,10 @@ function RunDetailDialog({
 
                 <TabsContent value="response" className="space-y-4">
                   <div className="grid gap-3 md:grid-cols-2">
-                    <SummaryField label={t('common.httpStatus')} value={run.response?.status || t('testCasesPage.notApplicable')} />
+                    <SummaryField
+                      label={t('common.httpStatus')}
+                      value={run.response?.status || t('testCasesPage.notApplicable')}
+                    />
                     <SummaryField
                       label={t('common.headers')}
                       value={Object.keys(run.response?.headers || {}).length}
@@ -1527,8 +1520,14 @@ function RunDetailDialog({
                         <div className="flex flex-wrap items-center gap-2">
                           <RunStatusBadge status={assertion.passed ? 'pass' : 'fail'} />
                           <Badge variant="outline">{assertion.type}</Badge>
-                          {assertion.operator ? <Badge variant="outline">{assertion.operator}</Badge> : null}
-                          {assertion.path ? <Badge variant="outline" className="font-mono">{assertion.path}</Badge> : null}
+                          {assertion.operator ? (
+                            <Badge variant="outline">{assertion.operator}</Badge>
+                          ) : null}
+                          {assertion.path ? (
+                            <Badge variant="outline" className="font-mono">
+                              {assertion.path}
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                           <JsonPreview
@@ -1635,9 +1634,7 @@ export function TestCaseManagementPage({
   const selectableTestCases =
     suppressedSelectedTestCaseId === null
       ? testCases
-      : testCases.filter(
-          (testCase) => String(testCase.id) !== String(suppressedSelectedTestCaseId)
-        );
+      : testCases.filter(testCase => String(testCase.id) !== String(suppressedSelectedTestCaseId));
   const effectiveSelectedTestCaseId =
     selectedTestCaseId !== null &&
     suppressedSelectedTestCaseId !== null &&
@@ -1646,9 +1643,9 @@ export function TestCaseManagementPage({
       : selectedTestCaseId;
   const resolvedSelectedTestCaseId =
     effectiveSelectedTestCaseId !== null &&
-    selectableTestCases.some((testCase) => testCase.id === effectiveSelectedTestCaseId)
+    selectableTestCases.some(testCase => testCase.id === effectiveSelectedTestCaseId)
       ? effectiveSelectedTestCaseId
-      : selectableTestCases[0]?.id ?? null;
+      : (selectableTestCases[0]?.id ?? null);
   const isImplicitSelection = resolvedSelectedTestCaseId !== selectedTestCaseId;
   const effectiveDetailTab: DetailTab = isImplicitSelection ? 'overview' : detailTab;
   const effectiveHistoryStatus: HistoryFilterStatus = isImplicitSelection ? 'all' : historyStatus;
@@ -1681,24 +1678,23 @@ export function TestCaseManagementPage({
   const runHistory = runHistoryQuery.data?.items ?? EMPTY_RUNS;
   const activeTestCase =
     activeTestCaseQuery.data ??
-    selectableTestCases.find((testCase) => testCase.id === resolvedSelectedTestCaseId) ??
+    selectableTestCases.find(testCase => testCase.id === resolvedSelectedTestCaseId) ??
     null;
   const formTarget = formTargetQuery.data ?? null;
 
   const apiSpecsById = useMemo(
-    () =>
-      new Map(apiSpecs.map((apiSpec) => [apiSpec.id, apiSpec])),
+    () => new Map(apiSpecs.map(apiSpec => [apiSpec.id, apiSpec])),
     [apiSpecs]
   );
 
   const environmentOptions = useMemo(() => {
     const values = new Set<string>();
 
-    environments.forEach((environment) => {
+    environments.forEach(environment => {
       values.add(environment.name);
     });
 
-    testCases.forEach((testCase) => {
+    testCases.forEach(testCase => {
       if (testCase.env) {
         values.add(testCase.env);
       }
@@ -1709,8 +1705,8 @@ export function TestCaseManagementPage({
 
   const totalTestCases = testCasesQuery.data?.meta.total ?? 0;
   const totalPages = testCasesQuery.data?.meta.total_pages ?? 1;
-  const linkedApiSpecsCount = new Set(testCases.map((testCase) => testCase.api_spec_id)).size;
-  const environmentsInPage = new Set(testCases.map((testCase) => testCase.env).filter(Boolean)).size;
+  const linkedApiSpecsCount = new Set(testCases.map(testCase => testCase.api_spec_id)).size;
+  const environmentsInPage = new Set(testCases.map(testCase => testCase.env).filter(Boolean)).size;
   const currentPageAssertionCount = testCases.reduce(
     (total, testCase) => total + (testCase.assertions?.length ?? 0),
     0
@@ -1718,7 +1714,9 @@ export function TestCaseManagementPage({
 
   const activeSpec = activeTestCase ? apiSpecsById.get(activeTestCase.api_spec_id) : undefined;
   const latestHistoryRun = runHistory[0] ?? null;
-  const autoOpenSpec = autoOpenFromSpecSpecId ? apiSpecsById.get(autoOpenFromSpecSpecId) : undefined;
+  const autoOpenSpec = autoOpenFromSpecSpecId
+    ? apiSpecsById.get(autoOpenFromSpecSpecId)
+    : undefined;
 
   const clearGenerationIntent = () => {
     if (!searchParams?.size) {
@@ -1753,9 +1751,7 @@ export function TestCaseManagementPage({
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (
-    payload: CreateTestCaseRequest | UpdateTestCaseRequest
-  ) => {
+  const handleFormSubmit = async (payload: CreateTestCaseRequest | UpdateTestCaseRequest) => {
     try {
       if (formMode === 'create') {
         const created = await createTestCaseMutation.mutateAsync(payload as CreateTestCaseRequest);
@@ -1838,8 +1834,7 @@ export function TestCaseManagementPage({
       resolvedSelectedTestCaseId !== null &&
       String(resolvedSelectedTestCaseId) === String(deletedId);
     const fallbackTestCaseId =
-      selectableTestCases.find((testCase) => String(testCase.id) !== String(deletedId))?.id ??
-      null;
+      selectableTestCases.find(testCase => String(testCase.id) !== String(deletedId))?.id ?? null;
     const shouldStepBackPage = testCases.length === 1 && page > 1;
 
     try {
@@ -1852,7 +1847,7 @@ export function TestCaseManagementPage({
       setSelectedTestCaseId(fallbackTestCaseId);
 
       if (shouldStepBackPage) {
-        setPage((currentPage) => currentPage - 1);
+        setPage(currentPage => currentPage - 1);
       }
     } catch {
       if (isDeletingSelectedTestCase) {
@@ -1943,721 +1938,745 @@ export function TestCaseManagementPage({
   return (
     <>
       <main className="h-full min-h-0 overflow-y-auto">
-        <div className="space-y-8 p-6 pt-6">
-          <div className="rounded-lg border border-border-subtle bg-bg-surface p-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-3">
-                <Button asChild variant="link" className="h-auto px-0 text-sm text-muted-foreground">
-                  <Link href={buildProjectDetailRoute(projectId)}>
-                    <ArrowLeft className="h-4 w-4" />
-                    {t('testCasesPage.backToProjectOverview')}
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle bg-bg-canvas px-4 py-2 md:px-6">
+          <Breadcrumb className="min-w-0">
+            <BreadcrumbList className="flex-nowrap">
+              <BreadcrumbItem className="min-w-0 shrink-0">
+                <BreadcrumbLink asChild>
+                  <Link href="/project">{t('common.projects')}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="min-w-0 shrink">
+                <BreadcrumbLink asChild>
+                  <Link href={buildProjectDetailRoute(projectId)} className="truncate">
+                    {projectQuery.data?.name || `#${projectId}`}
                   </Link>
-                </Button>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="min-w-0 shrink-0">
+                <BreadcrumbPage>{t('testCasesPage.title')}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-3xl font-medium tracking-normal">{t('testCasesPage.title')}</h1>
-                    <FlaskConical className="h-6 w-6 text-text-main" />
-                  </div>
-                  <p className="max-w-3xl text-sm text-text-muted">
-                    {t('testCasesPage.description', {
-                      listPath: buildApiPath('/projects/:id/test-cases'),
-                      runPath: buildApiPath('/projects/:id/test-cases/:tcid/run'),
-                      historyPath: buildApiPath('/projects/:id/test-cases/:tcid/runs'),
-                    })}
-                  </p>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 [&_[data-slot=button]]:h-8 [&_[data-slot=button]]:min-h-8 [&_[data-slot=button]]:px-3 [&_[data-slot=button]]:py-1.5 [&_[data-slot=button]]:text-xs [&_[data-slot=button]>svg]:h-3.5 [&_[data-slot=button]>svg]:w-3.5">
+            <Button type="button" onClick={openCreateDialog} disabled={!canCreate}>
+              <Plus className="h-4 w-4" />
+              {t('testCasesPage.create')}
+            </Button>
+            <ActionMenu
+              items={headerActionItems}
+              ariaLabel={t('testCasesPage.openManagementActions')}
+              triggerVariant="outline"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-6 p-4 md:p-5">
+          {projectRole === 'read' ? (
+            <Alert>
+              <AlertTitle>{t('testCasesPage.readOnlyTitle')}</AlertTitle>
+              <AlertDescription>{t('testCasesPage.readOnlyDescription')}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          {apiSpecs.length === 0 ? (
+            <Alert>
+              <AlertTitle>{t('testCasesPage.noApiSpecsTitle')}</AlertTitle>
+              <AlertDescription>
+                {t('testCasesPage.noApiSpecsDescription')}
+                <div className="mt-3">
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`${buildProjectApiSpecsRoute(projectId)}?ai=create`}>
+                      <FileJson2 className="h-4 w-4" />
+                      {t('testCasesPage.aiDraftSpecButton')}
+                    </Link>
+                  </Button>
                 </div>
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">
-                    {t('testCasesPage.projectBadge', {
-                      name: projectQuery.data?.name || `#${projectId}`,
-                    })}
-                  </Badge>
-                  <Badge variant="outline">{t('testCasesPage.totalCount', { count: totalTestCases })}</Badge>
-                  <RoleBadge role={projectRole} />
-                </div>
-              </div>
+          {flowSource === 'ai' && autoOpenSpec ? (
+            <Alert>
+              <AlertTitle>{t('testCasesPage.aiSpecReadyTitle')}</AlertTitle>
+              <AlertDescription>
+                {t('testCasesPage.aiSpecReadyDescription', {
+                  spec: `${autoOpenSpec.method} ${autoOpenSpec.path}`,
+                })}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="button" onClick={openCreateDialog} disabled={!canCreate}>
-                  <Plus className="h-4 w-4" />
-                  {t('testCasesPage.create')}
-                </Button>
-                <ActionMenu
-                  items={headerActionItems}
-                  ariaLabel={t('testCasesPage.openManagementActions')}
-                  triggerVariant="outline"
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {testCasesQuery.isLoading ? (
+              <>
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+              </>
+            ) : (
+              <>
+                <StatCard
+                  title={t('testCasesPage.totalTitle')}
+                  value={totalTestCases}
+                  description={t('testCasesPage.totalDescription', { pages: totalPages })}
+                  icon={FlaskConical}
+                  variant="primary"
                 />
-              </div>
-            </div>
+                <StatCard
+                  title={t('testCasesPage.currentPageTitle')}
+                  value={testCases.length}
+                  description={t('testCasesPage.currentPageDescription', {
+                    page: testCasesQuery.data?.meta.page || page,
+                  })}
+                  icon={Boxes}
+                  variant="success"
+                />
+                <StatCard
+                  title={t('testCasesPage.linkedSpecsTitle')}
+                  value={linkedApiSpecsCount}
+                  description={t('testCasesPage.linkedSpecsDescription')}
+                  icon={FileJson2}
+                  variant="warning"
+                />
+                <StatCard
+                  title={t('testCasesPage.assertionsTitle')}
+                  value={currentPageAssertionCount}
+                  description={t('testCasesPage.assertionsDescription', {
+                    count: environmentsInPage,
+                  })}
+                  icon={ShieldCheck}
+                />
+              </>
+            )}
           </div>
 
-        {projectRole === 'read' ? (
-          <Alert>
-            <AlertTitle>{t('testCasesPage.readOnlyTitle')}</AlertTitle>
-            <AlertDescription>
-              {t('testCasesPage.readOnlyDescription')}
-            </AlertDescription>
-          </Alert>
-        ) : null}
+          <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+            <Card className="border-border-subtle bg-bg-canvas">
+              <CardHeader className="border-b border-border-subtle bg-bg-canvas">
+                <CardTitle>{t('testCasesPage.listTitle')}</CardTitle>
+                <CardDescription>
+                  {t('testCasesPage.listDescription', {
+                    path: buildApiPath('/projects/:id/test-cases'),
+                  })}
+                </CardDescription>
+              </CardHeader>
 
-        {apiSpecs.length === 0 ? (
-          <Alert>
-            <AlertTitle>{t('testCasesPage.noApiSpecsTitle')}</AlertTitle>
-            <AlertDescription>
-              {t('testCasesPage.noApiSpecsDescription')}
-              <div className="mt-3">
-                <Button asChild size="sm" variant="outline">
-                  <Link href={`${buildProjectApiSpecsRoute(projectId)}?ai=create`}>
-                    <FileJson2 className="h-4 w-4" />
-                    {t('testCasesPage.aiDraftSpecButton')}
-                  </Link>
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        ) : null}
+              <CardContent className="space-y-4 pt-6">
+                <div className="grid gap-3 xl:grid-cols-[1.25fr_0.85fr_0.85fr]">
+                  <Input
+                    value={keyword}
+                    onChange={event => {
+                      setKeyword(event.target.value);
+                      setPage(1);
+                    }}
+                    placeholder={t('testCasesPage.searchPlaceholder')}
+                    leftIcon={<Search className="h-4 w-4" />}
+                    root
+                  />
 
-        {flowSource === 'ai' && autoOpenSpec ? (
-          <Alert>
-            <AlertTitle>{t('testCasesPage.aiSpecReadyTitle')}</AlertTitle>
-            <AlertDescription>
-              {t('testCasesPage.aiSpecReadyDescription', {
-                spec: `${autoOpenSpec.method} ${autoOpenSpec.path}`,
-              })}
-            </AlertDescription>
-          </Alert>
-        ) : null}
+                  <Select
+                    value={apiSpecFilter}
+                    onValueChange={value => {
+                      setApiSpecFilter(value);
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t('testCasesPage.filterByApiSpec')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('testCasesPage.allApiSpecs')}</SelectItem>
+                      {apiSpecs.map(spec => (
+                        <SelectItem key={spec.id} value={String(spec.id)}>
+                          {spec.method} {spec.path}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {testCasesQuery.isLoading ? (
-            <>
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-            </>
-          ) : (
-            <>
-              <StatCard
-                title={t('testCasesPage.totalTitle')}
-                value={totalTestCases}
-                description={t('testCasesPage.totalDescription', { pages: totalPages })}
-                icon={FlaskConical}
-                variant="primary"
-              />
-              <StatCard
-                title={t('testCasesPage.currentPageTitle')}
-                value={testCases.length}
-                description={t('testCasesPage.currentPageDescription', {
-                  page: testCasesQuery.data?.meta.page || page,
-                })}
-                icon={Boxes}
-                variant="success"
-              />
-              <StatCard
-                title={t('testCasesPage.linkedSpecsTitle')}
-                value={linkedApiSpecsCount}
-                description={t('testCasesPage.linkedSpecsDescription')}
-                icon={FileJson2}
-                variant="warning"
-              />
-              <StatCard
-                title={t('testCasesPage.assertionsTitle')}
-                value={currentPageAssertionCount}
-                description={t('testCasesPage.assertionsDescription', {
-                  count: environmentsInPage,
-                })}
-                icon={ShieldCheck}
-              />
-            </>
-          )}
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <Card className="border-border-subtle bg-bg-canvas">
-            <CardHeader className="border-b border-border-subtle bg-bg-canvas">
-              <CardTitle>{t('testCasesPage.listTitle')}</CardTitle>
-              <CardDescription>
-                {t('testCasesPage.listDescription', {
-                  path: buildApiPath('/projects/:id/test-cases'),
-                })}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid gap-3 xl:grid-cols-[1.25fr_0.85fr_0.85fr]">
-                <Input
-                  value={keyword}
-                  onChange={(event) => {
-                    setKeyword(event.target.value);
-                    setPage(1);
-                  }}
-                  placeholder={t('testCasesPage.searchPlaceholder')}
-                  leftIcon={<Search className="h-4 w-4" />}
-                  root
-                />
-
-                <Select
-                  value={apiSpecFilter}
-                  onValueChange={(value) => {
-                    setApiSpecFilter(value);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('testCasesPage.filterByApiSpec')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('testCasesPage.allApiSpecs')}</SelectItem>
-                    {apiSpecs.map((spec) => (
-                      <SelectItem key={spec.id} value={String(spec.id)}>
-                        {spec.method} {spec.path}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={envFilter}
-                  onValueChange={(value) => {
-                    setEnvFilter(value);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('testCasesPage.filterByEnv')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('testCasesPage.allEnvironments')}</SelectItem>
-                    {environmentOptions.map((environmentName) => (
-                      <SelectItem key={environmentName} value={environmentName}>
-                        {environmentName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {testCasesQuery.isError ? (
-                <Alert>
-                  <AlertTitle>{t('testCasesPage.loadFailedTitle')}</AlertTitle>
-                  <AlertDescription>
-                    {t('testCasesPage.loadFailedDescription')}
-                  </AlertDescription>
-                </Alert>
-              ) : testCases.length === 0 ? (
-                <div className="rounded-md border border-dashed border-border-subtle bg-bg-soft p-8 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <FlaskConical className="h-6 w-6" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-medium">{t('testCasesPage.emptyTitle')}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {deferredKeyword || apiSpecFilter !== 'all' || envFilter !== 'all'
-                      ? t('testCasesPage.emptyFilteredDescription')
-                      : t('testCasesPage.emptyDefaultDescription')}
-                  </p>
-                  {canCreate ? (
-                    <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                      <Button type="button" onClick={openCreateDialog}>
-                        <Plus className="h-4 w-4" />
-                        {t('testCasesPage.create')}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => setIsFromSpecOpen(true)}>
-                        <FileJson2 className="h-4 w-4" />
-                        {t('testCasesPage.generateFromSpec')}
-                      </Button>
-                    </div>
-                  ) : null}
+                  <Select
+                    value={envFilter}
+                    onValueChange={value => {
+                      setEnvFilter(value);
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t('testCasesPage.filterByEnv')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('testCasesPage.allEnvironments')}</SelectItem>
+                      {environmentOptions.map(environmentName => (
+                        <SelectItem key={environmentName} value={environmentName}>
+                          {environmentName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <>
-                  <div className="overflow-hidden rounded-md border border-border-subtle">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('common.name')}</TableHead>
-                          <TableHead>{t('testCasesPage.tableApiSpec')}</TableHead>
-                          <TableHead>{t('testCasesPage.tableEnv')}</TableHead>
-                          <TableHead>{t('testCasesPage.tableAssertions')}</TableHead>
-                          <TableHead>{t('common.updated')}</TableHead>
-                          <TableHead className="text-right">{t('common.actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {testCases.map((testCase) => {
-                          const linkedSpec = apiSpecsById.get(testCase.api_spec_id);
-                          const isActive = testCase.id === activeTestCase?.id;
 
-                          return (
-                            <TableRow
-                              key={testCase.id}
-                              className={cn(
-                                'cursor-pointer transition-colors hover:bg-bg-soft',
-                                isActive && 'bg-bg-subtle'
-                              )}
-                              onClick={() => selectTestCase(testCase.id)}
-                            >
-                              <TableCell>
-                                <div className="space-y-2">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-medium">{testCase.name}</span>
-                                    <MethodBadge method={testCase.method} />
-                                  </div>
-                                  <div className="font-mono text-xs text-muted-foreground">
-                                    {testCase.path || linkedSpec?.path || t('testCasesPage.pathUnavailable')}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  {linkedSpec
-                                    ? `${linkedSpec.method} ${linkedSpec.path}`
-                                    : t('testCasesPage.specFallback', { id: testCase.api_spec_id })}
-                                </div>
-                              </TableCell>
-                              <TableCell>{testCase.env || t('common.notSet')}</TableCell>
-                              <TableCell>{testCase.assertions?.length ?? 0}</TableCell>
-                              <TableCell>{formatDate(testCase.updated_at)}</TableCell>
-                              <TableCell className="text-right">
-                                <ActionMenu
-                                  items={[
-                                    {
-                                      key: `test-case-view-${testCase.id}`,
-                                      label: t('common.view'),
-                                      onSelect: () => selectTestCase(testCase.id),
-                                    },
-                                    {
-                                      key: `test-case-edit-${testCase.id}`,
-                                      label: t('common.edit'),
-                                      icon: Pencil,
-                                      disabled: !canWrite,
-                                      onSelect: () => {
-                                        selectTestCase(testCase.id);
-                                        openEditDialog(testCase);
-                                      },
-                                    },
-                                    {
-                                      key: `test-case-run-${testCase.id}`,
-                                      label: t('testCasesPage.run'),
-                                      icon: Play,
-                                      disabled: !canWrite,
-                                      onSelect: () => {
-                                        selectTestCase(testCase.id);
-                                        setRunTarget(testCase);
-                                      },
-                                    },
-                                    {
-                                      key: `test-case-duplicate-${testCase.id}`,
-                                      label: t('common.duplicate'),
-                                      icon: Copy,
-                                      disabled: !canWrite,
-                                      onSelect: () => {
-                                        selectTestCase(testCase.id);
-                                        setDuplicateTarget(testCase);
-                                      },
-                                    },
-                                    {
-                                      key: `test-case-delete-${testCase.id}`,
-                                      label: t('common.delete'),
-                                      icon: Trash2,
-                                      destructive: true,
-                                      disabled: !canWrite,
-                                      onSelect: () => {
-                                        selectTestCase(testCase.id);
-                                        setDeleteTarget(testCase);
-                                      },
-                                    },
-                                  ]}
-                                  ariaLabel={t('testCasesPage.openActionsFor', { name: testCase.name })}
-                                  stopPropagation
-                                />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      {t('testCasesPage.pageSummary', {
-                        page: testCasesQuery.data?.meta.page || page,
-                        pages: totalPages,
-                        total: totalTestCases,
-                      })}
+                {testCasesQuery.isError ? (
+                  <Alert>
+                    <AlertTitle>{t('testCasesPage.loadFailedTitle')}</AlertTitle>
+                    <AlertDescription>{t('testCasesPage.loadFailedDescription')}</AlertDescription>
+                  </Alert>
+                ) : testCases.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border-subtle bg-bg-soft p-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <FlaskConical className="h-6 w-6" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-                        disabled={page <= 1}
-                      >
-                        {t('common.previous')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          setPage((currentPage) => Math.min(totalPages, currentPage + 1))
-                        }
-                        disabled={page >= totalPages}
-                      >
-                        {t('common.next')}
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border-subtle bg-bg-canvas">
-            <CardHeader className="border-b border-border-subtle bg-bg-canvas">
-              <CardTitle>{t('testCasesPage.detailTitle')}</CardTitle>
-              <CardDescription>
-                {t('testCasesPage.detailDescription', {
-                  path: buildApiPath('/projects/:id/test-cases/:tcid'),
-                })}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4 pt-6">
-              {activeTestCaseQuery.isLoading && !activeTestCase ? (
-                <div className="space-y-3">
-                  <div className="h-10 animate-pulse rounded-md bg-muted" />
-                  <div className="h-28 animate-pulse rounded-md bg-muted" />
-                  <div className="h-56 animate-pulse rounded-md bg-muted" />
-                </div>
-              ) : !activeTestCase ? (
-                <Alert>
-                  <AlertTitle>{t('testCasesPage.noSelectionTitle')}</AlertTitle>
-                  <AlertDescription>
-                    {t('testCasesPage.noSelectionDescription')}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  <div className="rounded-md border border-border-subtle bg-bg-soft p-5">
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-xl font-medium">{activeTestCase.name}</h2>
-                          <MethodBadge method={activeTestCase.method} />
-                          {effectiveLatestRunResult ? <RunStatusBadge status={effectiveLatestRunResult.status} /> : null}
-                        </div>
-
-                        <div className="font-mono text-sm text-muted-foreground">
-                          {activeTestCase.path || activeSpec?.path || t('testCasesPage.pathUnavailable')}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline">
-                            {t('testCasesPage.apiSpecBadge', {
-                              spec: activeSpec
-                                ? `${activeSpec.method} ${activeSpec.path}`
-                                : `#${activeTestCase.api_spec_id}`,
-                            })}
-                          </Badge>
-                          <Badge variant="outline">
-                            {t('testCasesPage.envBadge', {
-                              env: activeTestCase.env || t('common.notSet'),
-                            })}
-                          </Badge>
-                          <Badge variant="outline">
-                            {t('testCasesPage.assertionsBadge', {
-                              count: activeTestCase.assertions?.length ?? 0,
-                            })}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="mt-4 text-lg font-medium">{t('testCasesPage.emptyTitle')}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {deferredKeyword || apiSpecFilter !== 'all' || envFilter !== 'all'
+                        ? t('testCasesPage.emptyFilteredDescription')
+                        : t('testCasesPage.emptyDefaultDescription')}
+                    </p>
+                    {canCreate ? (
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                        <Button type="button" onClick={openCreateDialog}>
+                          <Plus className="h-4 w-4" />
+                          {t('testCasesPage.create')}
+                        </Button>
                         <Button
                           type="button"
-                          onClick={() => setRunTarget(activeTestCase)}
-                          disabled={!canWrite}
+                          variant="outline"
+                          onClick={() => setIsFromSpecOpen(true)}
                         >
-                          <Play className="h-4 w-4" />
-                          {t('testCasesPage.run')}
+                          <FileJson2 className="h-4 w-4" />
+                          {t('testCasesPage.generateFromSpec')}
                         </Button>
-                        <ActionMenu
-                          items={detailActionItems}
-                          ariaLabel={t('testCasesPage.openSelectedActions')}
-                          triggerVariant="outline"
-                        />
                       </div>
-                    </div>
+                    ) : null}
                   </div>
+                ) : (
+                  <>
+                    <div className="overflow-hidden rounded-md border border-border-subtle">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t('common.name')}</TableHead>
+                            <TableHead>{t('testCasesPage.tableApiSpec')}</TableHead>
+                            <TableHead>{t('testCasesPage.tableEnv')}</TableHead>
+                            <TableHead>{t('testCasesPage.tableAssertions')}</TableHead>
+                            <TableHead>{t('common.updated')}</TableHead>
+                            <TableHead className="text-right">{t('common.actions')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {testCases.map(testCase => {
+                            const linkedSpec = apiSpecsById.get(testCase.api_spec_id);
+                            const isActive = testCase.id === activeTestCase?.id;
 
-                  {activeTestCase.description ? (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">{t('common.description')}</div>
-                      <MarkdownPreview
-                        value={activeTestCase.description}
-                        emptyLabel={t('common.noDescriptionProvided')}
-                      />
-                    </div>
-                  ) : null}
-
-                    <Tabs
-                    value={effectiveDetailTab}
-                    onValueChange={(value) => setDetailTab(value as DetailTab)}
-                    className="space-y-4"
-                  >
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="overview">{t('common.overview')}</TabsTrigger>
-                      <TabsTrigger value="request">{t('testCasesPage.tabsRequest')}</TabsTrigger>
-                      <TabsTrigger value="runs">{t('testCasesPage.tabsRuns')}</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="overview" className="space-y-4">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <SummaryField label={t('common.created')} value={formatDate(activeTestCase.created_at)} />
-                        <SummaryField label={t('common.updated')} value={formatDate(activeTestCase.updated_at)} />
-                        <SummaryField label={t('testCasesPage.createdBy')} value={activeTestCase.created_by} />
-                        <SummaryField label={t('testCasesPage.apiSpecIdLabel')} value={activeTestCase.api_spec_id} />
-                      </div>
-
-                      <div className="grid gap-4 xl:grid-cols-2">
-                        <JsonPreview
-                          title={t('testCasesPage.tableAssertions')}
-                          value={activeTestCase.assertions}
-                          emptyLabel={t('testCasesPage.assertionsEmpty')}
-                        />
-                        <JsonPreview
-                          title={t('testCasesPage.extractVariables')}
-                          value={activeTestCase.extract_vars}
-                          emptyLabel={t('testCasesPage.extractVariablesEmpty')}
-                        />
-                      </div>
-
-                      <div className="grid gap-4 xl:grid-cols-2">
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium">{t('testCasesPage.preScript')}</div>
-                          <CodeBlock
-                            value={activeTestCase.pre_script}
-                            emptyLabel={t('testCasesPage.preScriptEmpty')}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium">{t('testCasesPage.postScript')}</div>
-                          <CodeBlock
-                            value={activeTestCase.post_script}
-                            emptyLabel={t('testCasesPage.postScriptEmpty')}
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="request" className="space-y-4">
-                      <div className="grid gap-4 xl:grid-cols-2">
-                        <JsonPreview
-                          title={t('common.headers')}
-                          value={activeTestCase.headers}
-                          emptyLabel={t('testCasesPage.headersEmpty')}
-                        />
-                        <JsonPreview
-                          title={t('testCasesPage.queryParamsTitle')}
-                          value={activeTestCase.query_params}
-                          emptyLabel={t('testCasesPage.queryParamsEmpty')}
-                        />
-                      </div>
-
-                      <div className="grid gap-4 xl:grid-cols-2">
-                        <JsonPreview
-                          title={t('testCasesPage.pathParamsTitle')}
-                          value={activeTestCase.path_params}
-                          emptyLabel={t('testCasesPage.pathParamsEmpty')}
-                        />
-                        <JsonPreview
-                          title={t('common.requestBody')}
-                          value={activeTestCase.request_body}
-                          emptyLabel={t('testCasesPage.requestBodyEmpty')}
-                        />
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="runs" className="space-y-4">
-                      {effectiveLatestRunResult ? (
-                        <div className="rounded-md border border-border-subtle bg-bg-soft p-4">
-                          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div className="space-y-1">
-                              <div className="text-sm font-medium">{t('testCasesPage.latestAdHocRun')}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {t('testCasesPage.latestAdHocRunDescription')}
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <RunStatusBadge status={effectiveLatestRunResult.status} />
-                              <Badge variant="outline">
-                                {t('testCasesPage.durationMs', {
-                                  value: effectiveLatestRunResult.duration_ms,
-                                })}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                            <JsonPreview
-                              title={t('common.request')}
-                              value={effectiveLatestRunResult.request}
-                              emptyLabel={t('testCasesPage.noRequestPayloadReturned')}
-                            />
-                            <JsonPreview
-                              title={t('common.response')}
-                              value={effectiveLatestRunResult.response}
-                              emptyLabel={t('testCasesPage.noResponsePayloadReturned')}
-                            />
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="text-sm text-muted-foreground">
-                          {t('testCasesPage.totalRuns', {
-                            count: runHistoryQuery.data?.meta.total ?? 0,
+                            return (
+                              <TableRow
+                                key={testCase.id}
+                                className={cn(
+                                  'cursor-pointer transition-colors hover:bg-bg-soft',
+                                  isActive && 'bg-bg-subtle'
+                                )}
+                                onClick={() => selectTestCase(testCase.id)}
+                              >
+                                <TableCell>
+                                  <div className="space-y-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="font-medium">{testCase.name}</span>
+                                      <MethodBadge method={testCase.method} />
+                                    </div>
+                                    <div className="font-mono text-xs text-muted-foreground">
+                                      {testCase.path ||
+                                        linkedSpec?.path ||
+                                        t('testCasesPage.pathUnavailable')}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    {linkedSpec
+                                      ? `${linkedSpec.method} ${linkedSpec.path}`
+                                      : t('testCasesPage.specFallback', {
+                                          id: testCase.api_spec_id,
+                                        })}
+                                  </div>
+                                </TableCell>
+                                <TableCell>{testCase.env || t('common.notSet')}</TableCell>
+                                <TableCell>{testCase.assertions?.length ?? 0}</TableCell>
+                                <TableCell>{formatDate(testCase.updated_at)}</TableCell>
+                                <TableCell className="text-right">
+                                  <ActionMenu
+                                    items={[
+                                      {
+                                        key: `test-case-view-${testCase.id}`,
+                                        label: t('common.view'),
+                                        onSelect: () => selectTestCase(testCase.id),
+                                      },
+                                      {
+                                        key: `test-case-edit-${testCase.id}`,
+                                        label: t('common.edit'),
+                                        icon: Pencil,
+                                        disabled: !canWrite,
+                                        onSelect: () => {
+                                          selectTestCase(testCase.id);
+                                          openEditDialog(testCase);
+                                        },
+                                      },
+                                      {
+                                        key: `test-case-run-${testCase.id}`,
+                                        label: t('testCasesPage.run'),
+                                        icon: Play,
+                                        disabled: !canWrite,
+                                        onSelect: () => {
+                                          selectTestCase(testCase.id);
+                                          setRunTarget(testCase);
+                                        },
+                                      },
+                                      {
+                                        key: `test-case-duplicate-${testCase.id}`,
+                                        label: t('common.duplicate'),
+                                        icon: Copy,
+                                        disabled: !canWrite,
+                                        onSelect: () => {
+                                          selectTestCase(testCase.id);
+                                          setDuplicateTarget(testCase);
+                                        },
+                                      },
+                                      {
+                                        key: `test-case-delete-${testCase.id}`,
+                                        label: t('common.delete'),
+                                        icon: Trash2,
+                                        destructive: true,
+                                        disabled: !canWrite,
+                                        onSelect: () => {
+                                          selectTestCase(testCase.id);
+                                          setDeleteTarget(testCase);
+                                        },
+                                      },
+                                    ]}
+                                    ariaLabel={t('testCasesPage.openActionsFor', {
+                                      name: testCase.name,
+                                    })}
+                                    stopPropagation
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            );
                           })}
-                          {latestHistoryRun
-                            ? ` • ${t('testCasesPage.latestPersistedAt', {
-                                value: formatDate(latestHistoryRun.created_at),
-                              })}`
-                            : ''}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        {t('testCasesPage.pageSummary', {
+                          page: testCasesQuery.data?.meta.page || page,
+                          pages: totalPages,
+                          total: totalTestCases,
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setPage(currentPage => Math.max(1, currentPage - 1))}
+                          disabled={page <= 1}
+                        >
+                          {t('common.previous')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            setPage(currentPage => Math.min(totalPages, currentPage + 1))
+                          }
+                          disabled={page >= totalPages}
+                        >
+                          {t('common.next')}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border-subtle bg-bg-canvas">
+              <CardHeader className="border-b border-border-subtle bg-bg-canvas">
+                <CardTitle>{t('testCasesPage.detailTitle')}</CardTitle>
+                <CardDescription>
+                  {t('testCasesPage.detailDescription', {
+                    path: buildApiPath('/projects/:id/test-cases/:tcid'),
+                  })}
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-6">
+                {activeTestCaseQuery.isLoading && !activeTestCase ? (
+                  <div className="space-y-3">
+                    <div className="h-10 animate-pulse rounded-md bg-muted" />
+                    <div className="h-28 animate-pulse rounded-md bg-muted" />
+                    <div className="h-56 animate-pulse rounded-md bg-muted" />
+                  </div>
+                ) : !activeTestCase ? (
+                  <Alert>
+                    <AlertTitle>{t('testCasesPage.noSelectionTitle')}</AlertTitle>
+                    <AlertDescription>{t('testCasesPage.noSelectionDescription')}</AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <div className="rounded-md border border-border-subtle bg-bg-soft p-5">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-medium">{activeTestCase.name}</h2>
+                            <MethodBadge method={activeTestCase.method} />
+                            {effectiveLatestRunResult ? (
+                              <RunStatusBadge status={effectiveLatestRunResult.status} />
+                            ) : null}
+                          </div>
+
+                          <div className="font-mono text-sm text-muted-foreground">
+                            {activeTestCase.path ||
+                              activeSpec?.path ||
+                              t('testCasesPage.pathUnavailable')}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">
+                              {t('testCasesPage.apiSpecBadge', {
+                                spec: activeSpec
+                                  ? `${activeSpec.method} ${activeSpec.path}`
+                                  : `#${activeTestCase.api_spec_id}`,
+                              })}
+                            </Badge>
+                            <Badge variant="outline">
+                              {t('testCasesPage.envBadge', {
+                                env: activeTestCase.env || t('common.notSet'),
+                              })}
+                            </Badge>
+                            <Badge variant="outline">
+                              {t('testCasesPage.assertionsBadge', {
+                                count: activeTestCase.assertions?.length ?? 0,
+                              })}
+                            </Badge>
+                          </div>
                         </div>
+
                         <div className="flex flex-wrap items-center gap-2">
-                          <Select
-                            value={effectiveHistoryStatus}
-                            onValueChange={(value) => {
-                              setHistoryStatus(value as HistoryFilterStatus);
-                              setHistoryPage(1);
-                            }}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder={t('testCasesPage.filterRunStatus')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">{t('testCasesPage.allStatuses')}</SelectItem>
-                              <SelectItem value="pass">{t('testCasesPage.statusPassed')}</SelectItem>
-                              <SelectItem value="fail">{t('testCasesPage.statusFailed')}</SelectItem>
-                              <SelectItem value="error">{t('testCasesPage.statusError')}</SelectItem>
-                            </SelectContent>
-                          </Select>
                           <Button
                             type="button"
-                            variant="outline"
-                            onClick={() => void runHistoryQuery.refetch()}
-                            loading={runHistoryQuery.isFetching && !runHistoryQuery.isLoading}
+                            onClick={() => setRunTarget(activeTestCase)}
+                            disabled={!canWrite}
                           >
-                            <RefreshCw className="h-4 w-4" />
-                            {t('testCasesPage.refreshHistory')}
+                            <Play className="h-4 w-4" />
+                            {t('testCasesPage.run')}
                           </Button>
+                          <ActionMenu
+                            items={detailActionItems}
+                            ariaLabel={t('testCasesPage.openSelectedActions')}
+                            triggerVariant="outline"
+                          />
                         </div>
                       </div>
+                    </div>
 
-                      {runHistoryQuery.isError ? (
-                        <Alert>
-                          <AlertTitle>{t('testCasesPage.runHistoryLoadFailedTitle')}</AlertTitle>
-                          <AlertDescription>
-                            {t('testCasesPage.runHistoryLoadFailedDescription')}
-                          </AlertDescription>
-                        </Alert>
-                      ) : runHistory.length === 0 ? (
-                        <Alert>
-                          <AlertTitle>{t('testCasesPage.noRunHistoryTitle')}</AlertTitle>
-                          <AlertDescription>
-                            {t('testCasesPage.noRunHistoryDescription')}
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <>
-                          <div className="overflow-hidden rounded-md border border-border-subtle">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>{t('common.status')}</TableHead>
-                                  <TableHead>{t('testCasesPage.tableDuration')}</TableHead>
-                                  <TableHead>{t('common.created')}</TableHead>
-                                  <TableHead>{t('testCasesPage.tableMessage')}</TableHead>
-                                  <TableHead className="text-right">{t('testCasesPage.tableAction')}</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {runHistory.map((run) => (
-                                  <TableRow key={run.id}>
-                                    <TableCell>
-                                      <RunStatusBadge status={run.status} />
-                                    </TableCell>
-                                    <TableCell>{run.duration_ms} ms</TableCell>
-                                    <TableCell>{formatDate(run.created_at)}</TableCell>
-                                    <TableCell className="max-w-[240px] truncate">
-                                      {run.message || t('testCasesPage.noMessage')}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setRunDetailId(run.id)}
-                                      >
-                                        {t('common.view')}
-                                      </Button>
-                                    </TableCell>
+                    {activeTestCase.description ? (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">{t('common.description')}</div>
+                        <MarkdownPreview
+                          value={activeTestCase.description}
+                          emptyLabel={t('common.noDescriptionProvided')}
+                        />
+                      </div>
+                    ) : null}
+
+                    <Tabs
+                      value={effectiveDetailTab}
+                      onValueChange={value => setDetailTab(value as DetailTab)}
+                      className="space-y-4"
+                    >
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="overview">{t('common.overview')}</TabsTrigger>
+                        <TabsTrigger value="request">{t('testCasesPage.tabsRequest')}</TabsTrigger>
+                        <TabsTrigger value="runs">{t('testCasesPage.tabsRuns')}</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="overview" className="space-y-4">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <SummaryField
+                            label={t('common.created')}
+                            value={formatDate(activeTestCase.created_at)}
+                          />
+                          <SummaryField
+                            label={t('common.updated')}
+                            value={formatDate(activeTestCase.updated_at)}
+                          />
+                          <SummaryField
+                            label={t('testCasesPage.createdBy')}
+                            value={activeTestCase.created_by}
+                          />
+                          <SummaryField
+                            label={t('testCasesPage.apiSpecIdLabel')}
+                            value={activeTestCase.api_spec_id}
+                          />
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          <JsonPreview
+                            title={t('testCasesPage.tableAssertions')}
+                            value={activeTestCase.assertions}
+                            emptyLabel={t('testCasesPage.assertionsEmpty')}
+                          />
+                          <JsonPreview
+                            title={t('testCasesPage.extractVariables')}
+                            value={activeTestCase.extract_vars}
+                            emptyLabel={t('testCasesPage.extractVariablesEmpty')}
+                          />
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">
+                              {t('testCasesPage.preScript')}
+                            </div>
+                            <CodeBlock
+                              value={activeTestCase.pre_script}
+                              emptyLabel={t('testCasesPage.preScriptEmpty')}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">
+                              {t('testCasesPage.postScript')}
+                            </div>
+                            <CodeBlock
+                              value={activeTestCase.post_script}
+                              emptyLabel={t('testCasesPage.postScriptEmpty')}
+                            />
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="request" className="space-y-4">
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          <JsonPreview
+                            title={t('common.headers')}
+                            value={activeTestCase.headers}
+                            emptyLabel={t('testCasesPage.headersEmpty')}
+                          />
+                          <JsonPreview
+                            title={t('testCasesPage.queryParamsTitle')}
+                            value={activeTestCase.query_params}
+                            emptyLabel={t('testCasesPage.queryParamsEmpty')}
+                          />
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          <JsonPreview
+                            title={t('testCasesPage.pathParamsTitle')}
+                            value={activeTestCase.path_params}
+                            emptyLabel={t('testCasesPage.pathParamsEmpty')}
+                          />
+                          <JsonPreview
+                            title={t('common.requestBody')}
+                            value={activeTestCase.request_body}
+                            emptyLabel={t('testCasesPage.requestBodyEmpty')}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="runs" className="space-y-4">
+                        {effectiveLatestRunResult ? (
+                          <div className="rounded-md border border-border-subtle bg-bg-soft p-4">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium">
+                                  {t('testCasesPage.latestAdHocRun')}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {t('testCasesPage.latestAdHocRunDescription')}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <RunStatusBadge status={effectiveLatestRunResult.status} />
+                                <Badge variant="outline">
+                                  {t('testCasesPage.durationMs', {
+                                    value: effectiveLatestRunResult.duration_ms,
+                                  })}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                              <JsonPreview
+                                title={t('common.request')}
+                                value={effectiveLatestRunResult.request}
+                                emptyLabel={t('testCasesPage.noRequestPayloadReturned')}
+                              />
+                              <JsonPreview
+                                title={t('common.response')}
+                                value={effectiveLatestRunResult.response}
+                                emptyLabel={t('testCasesPage.noResponsePayloadReturned')}
+                              />
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="text-sm text-muted-foreground">
+                            {t('testCasesPage.totalRuns', {
+                              count: runHistoryQuery.data?.meta.total ?? 0,
+                            })}
+                            {latestHistoryRun
+                              ? ` • ${t('testCasesPage.latestPersistedAt', {
+                                  value: formatDate(latestHistoryRun.created_at),
+                                })}`
+                              : ''}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                              value={effectiveHistoryStatus}
+                              onValueChange={value => {
+                                setHistoryStatus(value as HistoryFilterStatus);
+                                setHistoryPage(1);
+                              }}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder={t('testCasesPage.filterRunStatus')} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  {t('testCasesPage.allStatuses')}
+                                </SelectItem>
+                                <SelectItem value="pass">
+                                  {t('testCasesPage.statusPassed')}
+                                </SelectItem>
+                                <SelectItem value="fail">
+                                  {t('testCasesPage.statusFailed')}
+                                </SelectItem>
+                                <SelectItem value="error">
+                                  {t('testCasesPage.statusError')}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => void runHistoryQuery.refetch()}
+                              loading={runHistoryQuery.isFetching && !runHistoryQuery.isLoading}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              {t('testCasesPage.refreshHistory')}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {runHistoryQuery.isError ? (
+                          <Alert>
+                            <AlertTitle>{t('testCasesPage.runHistoryLoadFailedTitle')}</AlertTitle>
+                            <AlertDescription>
+                              {t('testCasesPage.runHistoryLoadFailedDescription')}
+                            </AlertDescription>
+                          </Alert>
+                        ) : runHistory.length === 0 ? (
+                          <Alert>
+                            <AlertTitle>{t('testCasesPage.noRunHistoryTitle')}</AlertTitle>
+                            <AlertDescription>
+                              {t('testCasesPage.noRunHistoryDescription')}
+                            </AlertDescription>
+                          </Alert>
+                        ) : (
+                          <>
+                            <div className="overflow-hidden rounded-md border border-border-subtle">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>{t('common.status')}</TableHead>
+                                    <TableHead>{t('testCasesPage.tableDuration')}</TableHead>
+                                    <TableHead>{t('common.created')}</TableHead>
+                                    <TableHead>{t('testCasesPage.tableMessage')}</TableHead>
+                                    <TableHead className="text-right">
+                                      {t('testCasesPage.tableAction')}
+                                    </TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
+                                </TableHeader>
+                                <TableBody>
+                                  {runHistory.map(run => (
+                                    <TableRow key={run.id}>
+                                      <TableCell>
+                                        <RunStatusBadge status={run.status} />
+                                      </TableCell>
+                                      <TableCell>{run.duration_ms} ms</TableCell>
+                                      <TableCell>{formatDate(run.created_at)}</TableCell>
+                                      <TableCell className="max-w-[240px] truncate">
+                                        {run.message || t('testCasesPage.noMessage')}
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setRunDetailId(run.id)}
+                                        >
+                                          {t('common.view')}
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
 
-                          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="text-sm text-muted-foreground">
-                              {t('testCasesPage.runPageSummary', {
-                                page: runHistoryQuery.data?.meta.page || effectiveHistoryPage,
-                                pages: runHistoryQuery.data?.meta.total_pages || 1,
-                              })}
+                            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="text-sm text-muted-foreground">
+                                {t('testCasesPage.runPageSummary', {
+                                  page: runHistoryQuery.data?.meta.page || effectiveHistoryPage,
+                                  pages: runHistoryQuery.data?.meta.total_pages || 1,
+                                })}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setHistoryPage(currentPage => Math.max(1, currentPage - 1))
+                                  }
+                                  disabled={effectiveHistoryPage <= 1}
+                                >
+                                  {t('common.previous')}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setHistoryPage(currentPage => {
+                                      const nextPage = currentPage + 1;
+                                      return Math.min(
+                                        runHistoryQuery.data?.meta.total_pages || 1,
+                                        nextPage
+                                      );
+                                    })
+                                  }
+                                  disabled={
+                                    effectiveHistoryPage >=
+                                    (runHistoryQuery.data?.meta.total_pages || 1)
+                                  }
+                                >
+                                  {t('common.next')}
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() =>
-                                  setHistoryPage((currentPage) => Math.max(1, currentPage - 1))
-                                }
-                                disabled={effectiveHistoryPage <= 1}
-                              >
-                                {t('common.previous')}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() =>
-                                  setHistoryPage((currentPage) => {
-                                    const nextPage = currentPage + 1;
-                                    return Math.min(
-                                      runHistoryQuery.data?.meta.total_pages || 1,
-                                      nextPage
-                                    );
-                                  })
-                                }
-                                disabled={
-                                  effectiveHistoryPage >= (runHistoryQuery.data?.meta.total_pages || 1)
-                                }
-                              >
-                                {t('common.next')}
-                              </Button>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                          </>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
 
@@ -2668,10 +2687,8 @@ export function TestCaseManagementPage({
         testCase={formTarget}
         apiSpecs={apiSpecs}
         isLoadingTestCase={formMode === 'edit' && formTargetQuery.isLoading}
-        isSubmitting={
-          createTestCaseMutation.isPending || updateTestCaseMutation.isPending
-        }
-        onOpenChange={(open) => {
+        isSubmitting={createTestCaseMutation.isPending || updateTestCaseMutation.isPending}
+        onOpenChange={open => {
           setIsFormOpen(open);
           if (!open) {
             setFormTargetId(null);
@@ -2688,7 +2705,7 @@ export function TestCaseManagementPage({
         initialSpecId={autoOpenFromSpecSpecId}
         flowSource={flowSource}
         isSubmitting={fromSpecMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           setIsFromSpecOpen(open);
           if (!open) {
             clearGenerationIntent();
@@ -2702,7 +2719,7 @@ export function TestCaseManagementPage({
         open={Boolean(duplicateTarget)}
         testCase={duplicateTarget}
         isSubmitting={duplicateTestCaseMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDuplicateTarget(null);
           }
@@ -2716,7 +2733,7 @@ export function TestCaseManagementPage({
         testCase={runTarget}
         environments={environments}
         isSubmitting={runTestCaseMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setRunTarget(null);
           }
@@ -2728,7 +2745,7 @@ export function TestCaseManagementPage({
         open={Boolean(deleteTarget)}
         testCase={deleteTarget}
         isDeleting={deleteTestCaseMutation.isPending}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setDeleteTarget(null);
           }
@@ -2742,7 +2759,7 @@ export function TestCaseManagementPage({
         projectId={projectId}
         testCaseId={resolvedSelectedTestCaseId}
         runId={effectiveRunDetailId}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) {
             setRunDetailId(null);
           }

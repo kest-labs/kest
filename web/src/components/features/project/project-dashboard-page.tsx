@@ -5,7 +5,6 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowDownAZ,
-  ArrowRight,
   Boxes,
   FolderKanban,
   Grid2X2,
@@ -29,14 +28,7 @@ import {
   resolvePlatformLabel,
   type ProjectFormMode,
 } from '@/components/features/project/project-shared';
-import {
-  buildProjectApiSpecsRoute,
-  buildProjectCollectionsRoute,
-  buildProjectDetailRoute,
-  buildProjectEnvironmentsRoute,
-  buildProjectInviteRoute,
-  buildProjectTestCasesRoute,
-} from '@/constants/routes';
+import { buildProjectCategoriesRoute, buildProjectInviteRoute } from '@/constants/routes';
 import { useCreateDemoProject } from '@/hooks/use-create-demo-project';
 import { useApiSpecs } from '@/hooks/use-api-specs';
 import {
@@ -66,17 +58,6 @@ type ProjectViewMode = 'grid' | 'list';
 type ProjectSortMode = 'newest' | 'oldest';
 type ProjectT = ScopedTranslations<'project'>;
 
-interface DashboardNextStep {
-  summary: string;
-  title: string;
-  description: string;
-  reason: string;
-  primaryHref: string;
-  primaryLabel: string;
-  secondaryHref: string;
-  secondaryLabel: string;
-}
-
 const getProjectCreatedAt = (project: ApiProject) => project.created_at || '';
 
 const sortProjectsByCreatedAtDesc = (left: ApiProject, right: ApiProject) =>
@@ -91,13 +72,7 @@ const formatProjectTimestamp = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : formatDate(value, 'YYYY-MM-DD HH:mm');
 };
 
-const buildQuickRequestHref = (projectId: number | string) =>
-  `${buildProjectCollectionsRoute(projectId)}?quickRequest=1`;
-
-const getReceivedInvitationRoleLabel = (
-  t: ScopedTranslations<'project'>,
-  role: ReceivedProjectInvitation['role']
-) => {
+const getReceivedInvitationRoleLabel = (t: ProjectT, role: ReceivedProjectInvitation['role']) => {
   switch (role) {
     case 'admin':
       return t('roles.admin');
@@ -171,7 +146,7 @@ export function ProjectDashboardPage() {
       if (formMode === 'create') {
         const project = await createProjectMutation.mutateAsync(payload as CreateProjectRequest);
         markFirstProjectCreated();
-        router.push(buildProjectDetailRoute(project.id));
+        router.push(buildProjectCategoriesRoute(project.id));
       } else if (editingProject) {
         await updateProjectMutation.mutateAsync({
           id: editingProject.id,
@@ -212,20 +187,9 @@ export function ProjectDashboardPage() {
           <section className="space-y-5">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-xl font-medium tracking-normal text-text-main">
-                    {t('dashboardPage.teamTitle')}
-                  </h1>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'border-border-strong bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]',
-                      COMPACT_BADGE_CLASS_NAME
-                    )}
-                  >
-                    {t('dashboardPage.teamOwnerBadge')}
-                  </Badge>
-                </div>
+                <h1 className="text-xl font-medium tracking-normal text-text-main">
+                  {t('dashboardPage.teamTitle')}
+                </h1>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
                   <Badge variant="outline" className={cn('bg-bg-soft', COMPACT_BADGE_CLASS_NAME)}>
@@ -239,27 +203,12 @@ export function ProjectDashboardPage() {
 
               <div className="border-b border-border-subtle">
                 <nav className="flex min-w-0 items-center gap-5 overflow-x-auto no-scrollbar">
-                  {[
-                    t('dashboardPage.tabs.projects'),
-                    t('dashboardPage.tabs.resources'),
-                    t('dashboardPage.tabs.activity'),
-                    t('dashboardPage.tabs.members'),
-                    t('dashboardPage.tabs.orders'),
-                    t('dashboardPage.tabs.settings'),
-                  ].map((label, index) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className={cn(
-                        'relative shrink-0 px-0 pb-3 text-sm font-medium tracking-normal transition-colors',
-                        index === 0
-                          ? 'text-[var(--miro-brand-blue)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--miro-brand-blue)]'
-                          : 'text-text-muted hover:text-text-main'
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    className="relative shrink-0 px-0 pb-3 text-sm font-medium tracking-normal text-[var(--miro-brand-blue)] transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--miro-brand-blue)]"
+                  >
+                    {t('dashboardPage.tabs.settings')}
+                  </button>
                 </nav>
               </div>
             </div>
@@ -360,7 +309,7 @@ export function ProjectDashboardPage() {
                   onCreateDemoProject={async () => {
                     const result = await createDemoProjectMutation.mutateAsync();
                     markFirstProjectCreated();
-                    router.push(buildProjectDetailRoute(result.project.id));
+                    router.push(buildProjectCategoriesRoute(result.project.id));
                   }}
                   isCreatingDemoProject={createDemoProjectMutation.isPending}
                 />
@@ -385,17 +334,6 @@ export function ProjectDashboardPage() {
                 </div>
               )}
             </div>
-
-            {filteredProjects.length > 0 ? (
-              <div className="text-xs text-text-muted">
-                {deferredSearch.trim()
-                  ? t('dashboardPage.filteredProjectSummary', {
-                      visible: filteredProjects.length,
-                      total: projects.length,
-                    })
-                  : t('dashboardPage.projectSummary', { count: projects.length })}
-              </div>
-            ) : null}
           </section>
 
           {projects.length === 0 && !projectsQuery.isLoading && !projectsQuery.error ? (
@@ -404,7 +342,7 @@ export function ProjectDashboardPage() {
               onCreateDemoProject={async () => {
                 const result = await createDemoProjectMutation.mutateAsync();
                 markFirstProjectCreated();
-                router.push(buildProjectDetailRoute(result.project.id));
+                router.push(buildProjectCategoriesRoute(result.project.id));
               }}
               isCreatingDemoProject={createDemoProjectMutation.isPending}
             />
@@ -466,7 +404,7 @@ function PendingInvitationsPanel({
     setActingOn({ action: 'accept', slug: invitation.slug });
     try {
       const result = await acceptInvitationMutation.mutateAsync(invitation.slug);
-      router.push(result.redirect_to || buildProjectDetailRoute(result.project_id));
+      router.push(result.redirect_to || buildProjectCategoriesRoute(result.project_id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     } finally {
@@ -620,14 +558,6 @@ function ProjectCard({
   const environmentCount = stats?.environment_count ?? 0;
   const memberCount = stats?.member_count ?? null;
   const createdAtLabel = formatProjectTimestamp(project.created_at);
-  const nextStep = stats
-    ? resolveDashboardNextStep({
-        t,
-        projectId: project.id,
-        apiSpecCount,
-        environmentCount,
-      })
-    : null;
   const isLoadingStats = statsQuery.isLoading || apiSpecsQuery.isLoading;
   const isInactive = project.status !== 1;
   const menuItems = [
@@ -652,8 +582,8 @@ function ProjectCard({
     return (
       <div className="group relative rounded-lg border border-border-subtle bg-bg-canvas transition-colors hover:border-border-strong hover:bg-bg-soft">
         <Link
-          href={buildProjectDetailRoute(project.id)}
-          className="grid gap-3 p-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] md:items-center"
+          href={buildProjectCategoriesRoute(project.id)}
+          className="grid gap-3 p-3 pr-20 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] md:items-center"
         >
           <div className="flex min-w-0 items-center gap-3">
             <ProjectAvatar name={project.name} />
@@ -692,7 +622,6 @@ function ProjectCard({
             <Badge variant="outline" className={cn('bg-bg-canvas', COMPACT_BADGE_CLASS_NAME)}>
               {resolvePlatformLabel(project.platform)}
             </Badge>
-            <ArrowRight className="h-3.5 w-3.5 text-text-muted transition-transform group-hover:translate-x-0.5" />
           </div>
         </Link>
 
@@ -700,7 +629,7 @@ function ProjectCard({
           items={menuItems}
           ariaLabel={t('dashboardPage.openProjectActions', { name: project.name })}
           stopPropagation
-          triggerClassName="absolute right-3 top-3 h-7 w-7 rounded-full bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main [&>svg]:h-3.5 [&>svg]:w-3.5"
+          triggerClassName="absolute right-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main [&>svg]:h-3.5 [&>svg]:w-3.5"
         />
       </div>
     );
@@ -708,7 +637,7 @@ function ProjectCard({
 
   return (
     <div className="group relative min-h-[180px] rounded-lg border border-border-subtle bg-bg-canvas transition-colors hover:border-border-strong hover:bg-bg-soft">
-      <Link href={buildProjectDetailRoute(project.id)} className="flex h-full flex-col p-4">
+      <Link href={buildProjectCategoriesRoute(project.id)} className="flex h-full flex-col p-4">
         <div className="flex min-w-0 items-start gap-3 pr-6">
           <ProjectAvatar name={project.name} />
           <div className="min-w-0 flex-1">
@@ -744,7 +673,7 @@ function ProjectCard({
           />
         </div>
 
-        <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
+        <div className="mt-auto flex flex-wrap items-end gap-2 pt-3">
           <div className="min-w-0 space-y-1">
             <Badge variant="outline" className={cn('bg-bg-canvas', COMPACT_BADGE_CLASS_NAME)}>
               {resolvePlatformLabel(project.platform)}
@@ -754,14 +683,6 @@ function ProjectCard({
                 {t('dashboardPage.createdAt', { value: createdAtLabel })}
               </p>
             ) : null}
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
-              {t('dashboardPage.nextAction')}
-            </p>
-            <p className="mt-0.5 max-w-[140px] truncate text-xs font-medium text-text-main">
-              {nextStep?.primaryLabel ?? t('projectDetail.openWorkspace')}
-            </p>
           </div>
         </div>
       </Link>
@@ -970,56 +891,4 @@ function DemoFeature({ title, description }: { title: string; description: strin
       <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p>
     </div>
   );
-}
-
-function resolveDashboardNextStep({
-  t,
-  projectId,
-  apiSpecCount,
-  environmentCount,
-}: {
-  t: ProjectT;
-  projectId: number | string;
-  apiSpecCount: number;
-  environmentCount: number;
-}): DashboardNextStep {
-  if (apiSpecCount === 0) {
-    return {
-      summary: t('dashboardPage.noApiSpecSummary'),
-      title: t('dashboardPage.noApiSpecTitle'),
-      description: t('dashboardPage.noApiSpecDescription'),
-      reason: t('dashboardPage.noApiSpecReason'),
-      primaryHref: `${buildProjectApiSpecsRoute(projectId)}?ai=create`,
-      primaryLabel: t('projectDetail.aiDraftApi'),
-      secondaryHref: buildQuickRequestHref(projectId),
-      secondaryLabel: t('projectDetail.quickRequest'),
-    } satisfies DashboardNextStep;
-  }
-
-  if (environmentCount === 0) {
-    return {
-      summary: t('dashboardPage.firstEnvironmentSummary', { count: apiSpecCount }),
-      title: t('dashboardPage.firstEnvironmentTitle'),
-      description: t('dashboardPage.firstEnvironmentDescription'),
-      reason: t('dashboardPage.firstEnvironmentReason'),
-      primaryHref: buildProjectEnvironmentsRoute(projectId),
-      primaryLabel: t('projectDetail.configureEnvironment'),
-      secondaryHref: buildProjectApiSpecsRoute(projectId),
-      secondaryLabel: t('projectDetail.reviewApiSpecs'),
-    } satisfies DashboardNextStep;
-  }
-
-  return {
-    summary: t('dashboardPage.coverageSummary', {
-      apiSpecCount,
-      environmentCount,
-    }),
-    title: t('dashboardPage.coverageTitle'),
-    description: t('dashboardPage.coverageDescription'),
-    reason: t('dashboardPage.coverageReason'),
-    primaryHref: buildProjectTestCasesRoute(projectId),
-    primaryLabel: t('apiSpecs.openTestCases'),
-    secondaryHref: buildQuickRequestHref(projectId),
-    secondaryLabel: t('projectDetail.quickRequest'),
-  } satisfies DashboardNextStep;
 }

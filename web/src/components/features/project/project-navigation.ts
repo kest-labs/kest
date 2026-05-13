@@ -1,7 +1,16 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { FileJson2, FlaskConical, FolderGit2, FolderOpen, Globe, History, Tags, Users } from 'lucide-react';
+import {
+  FileJson2,
+  FlaskConical,
+  FolderGit2,
+  FolderOpen,
+  Globe,
+  History,
+  Tags,
+  Users,
+} from 'lucide-react';
 import {
   buildProjectApiSpecsRoute,
   buildProjectCategoriesRoute,
@@ -42,6 +51,12 @@ export interface ProjectWorkspaceModuleMeta {
 
 export const PROJECT_WORKSPACE_MODULES: ProjectWorkspaceModuleMeta[] = [
   {
+    value: 'categories',
+    i18nKey: 'categories',
+    icon: Tags,
+    status: 'ready',
+  },
+  {
     value: 'api-specs',
     i18nKey: 'apiSpecs',
     icon: FileJson2,
@@ -66,12 +81,6 @@ export const PROJECT_WORKSPACE_MODULES: ProjectWorkspaceModuleMeta[] = [
     status: 'ready',
   },
   {
-    value: 'categories',
-    i18nKey: 'categories',
-    icon: Tags,
-    status: 'ready',
-  },
-  {
     value: 'members',
     i18nKey: 'members',
     icon: Users,
@@ -92,8 +101,7 @@ export const PROJECT_WORKSPACE_MODULES: ProjectWorkspaceModuleMeta[] = [
 ];
 
 export const getProjectWorkspaceModuleMeta = (module: ProjectWorkspaceModule) =>
-  PROJECT_WORKSPACE_MODULES.find((item) => item.value === module) ??
-  PROJECT_WORKSPACE_MODULES[0];
+  PROJECT_WORKSPACE_MODULES.find(item => item.value === module) ?? PROJECT_WORKSPACE_MODULES[0];
 
 export const buildProjectWorkspaceRoute = (
   projectId: string | number,
@@ -117,6 +125,6 @@ export const buildProjectWorkspaceRoute = (
     case 'flows':
       return buildProjectFlowsRoute(projectId);
     default:
-      return buildProjectApiSpecsRoute(projectId);
+      return buildProjectCategoriesRoute(projectId);
   }
 };

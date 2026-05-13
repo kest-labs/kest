@@ -3,19 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  CheckCircle2,
-  Clock3,
-  LogIn,
-  MailPlus,
-  ShieldCheck,
-  XCircle,
-} from 'lucide-react';
+import { CheckCircle2, Clock3, LogIn, MailPlus, ShieldCheck, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ROUTES, buildProjectDetailRoute, buildProjectInviteRoute } from '@/constants/routes';
+import { ROUTES, buildProjectCategoriesRoute, buildProjectInviteRoute } from '@/constants/routes';
 import {
   useAcceptProjectInvitation,
   useProjectInvitationDetail,
@@ -65,7 +58,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
   const handleAcceptInvitation = async () => {
     try {
       const result = await acceptInvitationMutation.mutateAsync(undefined);
-      router.replace(result.redirect_to || buildProjectDetailRoute(result.project_id));
+      router.replace(result.redirect_to || buildProjectCategoriesRoute(result.project_id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -148,16 +141,16 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
                 <AlertTitle>{t('invitation.unavailableTitle')}</AlertTitle>
-                <AlertDescription>
-                  {t('invitation.unavailableDescription')}
-                </AlertDescription>
+                <AlertDescription>{t('invitation.unavailableDescription')}</AlertDescription>
               </Alert>
             ) : (
               <>
                 <div className="rounded-xl border border-border-subtle bg-bg-canvas p-5">
                   <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div className="space-y-1">
-                      <p className="figma-caption text-muted-foreground">{t('invitation.projectLabel')}</p>
+                      <p className="figma-caption text-muted-foreground">
+                        {t('invitation.projectLabel')}
+                      </p>
                       <h1 className="text-2xl font-medium tracking-normal">
                         {invitation.project_name}
                       </h1>
@@ -177,9 +170,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                       <ShieldCheck className="h-4 w-4" />
                       {t('invitation.roleLabel')}
                     </div>
-                    <p className="mt-3 text-lg font-medium">
-                      {getRoleLabel(invitation.role)}
-                    </p>
+                    <p className="mt-3 text-lg font-medium">{getRoleLabel(invitation.role)}</p>
                   </div>
                   <div className="rounded-xl border border-border-subtle bg-bg-canvas p-5">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -198,7 +189,9 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                       {t('invitation.remainingUsesLabel')}
                     </div>
                     <p className="mt-3 text-lg font-medium">
-                      {invitation.remaining_uses === null ? t('invitation.unlimited') : invitation.remaining_uses}
+                      {invitation.remaining_uses === null
+                        ? t('invitation.unlimited')
+                        : invitation.remaining_uses}
                     </p>
                   </div>
                 </div>
@@ -207,9 +200,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                   <Alert>
                     <LogIn className="h-4 w-4" />
                     <AlertTitle>{t('invitation.loginRequiredTitle')}</AlertTitle>
-                    <AlertDescription>
-                      {t('invitation.loginRequiredDescription')}
-                    </AlertDescription>
+                    <AlertDescription>{t('invitation.loginRequiredDescription')}</AlertDescription>
                   </Alert>
                 ) : null}
 
@@ -217,9 +208,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                   <Alert>
                     <CheckCircle2 className="h-4 w-4" />
                     <AlertTitle>{t('invitation.rejectedTitle')}</AlertTitle>
-                    <AlertDescription>
-                      {t('invitation.rejectedDescription')}
-                    </AlertDescription>
+                    <AlertDescription>{t('invitation.rejectedDescription')}</AlertDescription>
                   </Alert>
                 ) : null}
 

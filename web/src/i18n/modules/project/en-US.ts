@@ -1185,7 +1185,7 @@ const messages: ProjectMessages = {
     optional: 'Optional',
   },
   dashboardPage: {
-    teamTitle: 'Personal Team',
+    teamTitle: 'All Projects',
     teamOwnerBadge: 'Team owner',
     projectCount: '{count} projects',
     activeProjectCount: '{count} active',

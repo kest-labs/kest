@@ -1,4 +1,5 @@
-import { ProjectDetailPage } from '@/components/features/project/project-detail-page';
+import { redirect } from 'next/navigation';
+import { buildProjectCategoriesRoute } from '@/constants/routes';
 
 interface ProjectDetailRoutePageProps {
   params: Promise<{
@@ -6,13 +7,9 @@ interface ProjectDetailRoutePageProps {
   }>;
 }
 
-// 项目工作区入口。
-// 作用：
-// 1. 把 `/project/:projectId` 收敛为项目概览首页，承担进入各个工作区模块前的启动页
-// 2. 避免把项目概览藏在 query 参数里，保持信息架构可预测
-export default async function ProjectDetailRoutePage({
-  params,
-}: ProjectDetailRoutePageProps) {
+// 项目工作区默认入口。
+// 作用：把 `/project/:projectId` 直接收敛到 Categories 工作区，避免再展示旧的 overview 内容区。
+export default async function ProjectDetailRoutePage({ params }: ProjectDetailRoutePageProps) {
   const { projectId } = await params;
-  return <ProjectDetailPage projectId={projectId} />;
+  redirect(buildProjectCategoriesRoute(projectId));
 }
