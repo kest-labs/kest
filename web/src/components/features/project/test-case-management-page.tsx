@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  Boxes,
   Copy,
   FileJson2,
   FlaskConical,
@@ -17,7 +16,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  ShieldCheck,
   Tags,
   Trash2,
 } from 'lucide-react';
@@ -63,7 +61,6 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
 import { buildApiPath } from '@/config/api';
 import {
   buildProjectApiSpecsRoute,
@@ -1705,12 +1702,6 @@ export function TestCaseManagementPage({
 
   const totalTestCases = testCasesQuery.data?.meta.total ?? 0;
   const totalPages = testCasesQuery.data?.meta.total_pages ?? 1;
-  const linkedApiSpecsCount = new Set(testCases.map(testCase => testCase.api_spec_id)).size;
-  const environmentsInPage = new Set(testCases.map(testCase => testCase.env).filter(Boolean)).size;
-  const currentPageAssertionCount = testCases.reduce(
-    (total, testCase) => total + (testCase.assertions?.length ?? 0),
-    0
-  );
 
   const activeSpec = activeTestCase ? apiSpecsById.get(activeTestCase.api_spec_id) : undefined;
   const latestHistoryRun = runHistory[0] ?? null;
@@ -2009,51 +2000,6 @@ export function TestCaseManagementPage({
               </AlertDescription>
             </Alert>
           ) : null}
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {testCasesQuery.isLoading ? (
-              <>
-                <StatCardSkeleton />
-                <StatCardSkeleton />
-                <StatCardSkeleton />
-                <StatCardSkeleton />
-              </>
-            ) : (
-              <>
-                <StatCard
-                  title={t('testCasesPage.totalTitle')}
-                  value={totalTestCases}
-                  description={t('testCasesPage.totalDescription', { pages: totalPages })}
-                  icon={FlaskConical}
-                  variant="primary"
-                />
-                <StatCard
-                  title={t('testCasesPage.currentPageTitle')}
-                  value={testCases.length}
-                  description={t('testCasesPage.currentPageDescription', {
-                    page: testCasesQuery.data?.meta.page || page,
-                  })}
-                  icon={Boxes}
-                  variant="success"
-                />
-                <StatCard
-                  title={t('testCasesPage.linkedSpecsTitle')}
-                  value={linkedApiSpecsCount}
-                  description={t('testCasesPage.linkedSpecsDescription')}
-                  icon={FileJson2}
-                  variant="warning"
-                />
-                <StatCard
-                  title={t('testCasesPage.assertionsTitle')}
-                  value={currentPageAssertionCount}
-                  description={t('testCasesPage.assertionsDescription', {
-                    count: environmentsInPage,
-                  })}
-                  icon={ShieldCheck}
-                />
-              </>
-            )}
-          </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <Card className="border-border-subtle bg-bg-canvas">
