@@ -51,6 +51,12 @@ export interface ProjectWorkspaceModuleMeta {
 
 const PROJECT_WORKSPACE_MODULE_META: ProjectWorkspaceModuleMeta[] = [
   {
+    value: 'collections',
+    i18nKey: 'collections',
+    icon: FolderOpen,
+    status: 'ready',
+  },
+  {
     value: 'api-specs',
     i18nKey: 'apiSpecs',
     icon: FileJson2,
@@ -66,12 +72,6 @@ const PROJECT_WORKSPACE_MODULE_META: ProjectWorkspaceModuleMeta[] = [
     value: 'test-cases',
     i18nKey: 'testCases',
     icon: FlaskConical,
-    status: 'ready',
-  },
-  {
-    value: 'collections',
-    i18nKey: 'collections',
-    icon: FolderOpen,
     status: 'ready',
   },
   {

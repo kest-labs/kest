@@ -19,8 +19,8 @@ const messages: ProjectMessages = {
       description: 'Generate and manage validation suites derived from API specs.',
     },
     collections: {
-      label: 'Collections',
-      shortLabel: 'Collections',
+      label: 'Requests',
+      shortLabel: 'Requests',
       description:
         'Use scratchpads and reusable request groups for manual debugging and local execution.',
     },
@@ -708,12 +708,26 @@ const messages: ProjectMessages = {
         label: 'Collection name',
         placeholder: 'Enter collection name',
       },
+      deleteCollectionDialog: {
+        title: 'Delete Collection',
+        description: 'This will permanently remove "{name}" and its requests.',
+        warning: 'This action cannot be undone. Click confirm to delete this collection.',
+        confirm: 'Confirm',
+        fallbackName: 'this collection',
+      },
       renameRequestDialog: {
         title: 'Rename Request',
         description:
           'Update the request name and sync it to the backend when this request already has a persisted ID.',
         label: 'Request name',
         placeholder: 'Enter request name',
+      },
+      deleteRequestDialog: {
+        title: 'Delete Request',
+        description: 'This will permanently remove "{name}".',
+        warning: 'This action cannot be undone. Click confirm to delete this request.',
+        confirm: 'Confirm',
+        fallbackName: 'this request',
       },
       editors: {
         defaultHeaderDescription: 'Default header',

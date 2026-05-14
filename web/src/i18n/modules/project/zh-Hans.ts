@@ -16,8 +16,8 @@ const messages = {
       description: '生成并管理从 API 规格派生的验证套件。',
     },
     collections: {
-      label: '集合',
-      shortLabel: '集合',
+      label: '请求',
+      shortLabel: '请求',
       description: '使用草稿和可复用请求组进行手动调试与本地执行。',
     },
     categories: {
@@ -659,11 +659,25 @@ const messages = {
         label: '集合名称',
         placeholder: '输入集合名称',
       },
+      deleteCollectionDialog: {
+        title: '删除集合',
+        description: '这会永久删除 “{name}” 及其中的请求。',
+        warning: '此操作无法撤销。点击确认后才会删除该集合。',
+        confirm: '确认',
+        fallbackName: '这个集合',
+      },
       renameRequestDialog: {
         title: '重命名请求',
         description: '更新请求名称；如果该请求已经持久化，会同时同步到后端。',
         label: '请求名称',
         placeholder: '输入请求名称',
+      },
+      deleteRequestDialog: {
+        title: '删除请求',
+        description: '这会永久删除 “{name}”。',
+        warning: '此操作无法撤销。点击确认后才会删除该请求。',
+        confirm: '确认',
+        fallbackName: '这个请求',
       },
       editors: {
         defaultHeaderDescription: '默认 header',
