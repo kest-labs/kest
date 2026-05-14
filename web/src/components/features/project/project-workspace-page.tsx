@@ -27,7 +27,6 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
 import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import {
   Breadcrumb,
@@ -133,7 +132,7 @@ import {
   useUpdateEnvironment,
 } from '@/hooks/use-environments';
 import { useProjectHistories, useProjectHistory } from '@/hooks/use-histories';
-import { useProject, useProjectStats } from '@/hooks/use-projects';
+import { useProject } from '@/hooks/use-projects';
 import type {
   ApiSpec,
   ApiSpecExportFormat,
@@ -1998,7 +1997,6 @@ function EnvironmentsWorkspaceSection({
       ? null
       : selectedItemId;
 
-  const projectStatsQuery = useProjectStats(projectId);
   const memberRoleQuery = useProjectMemberRole(projectId);
   const environmentsQuery = useEnvironments(projectId);
   const selectedEnvironmentQuery = useEnvironment(projectId, effectiveSelectedItemId ?? undefined);
@@ -2027,19 +2025,6 @@ function EnvironmentsWorkspaceSection({
   const selectedEnvironment = selectedEnvironmentQuery.data ?? selectedEnvironmentFromList;
   const currentRole = memberRoleQuery.data?.role;
   const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
-  const totalEnvironments =
-    environmentsQuery.data?.total ??
-    projectStatsQuery.data?.environment_count ??
-    environments.length;
-  const withBaseUrlCount = environments.filter(environment =>
-    Boolean(environment.base_url?.trim())
-  ).length;
-  const withVariablesCount = environments.filter(
-    environment => Object.keys(environment.variables || {}).length > 0
-  ).length;
-  const withHeadersCount = environments.filter(
-    environment => Object.keys(environment.headers || {}).length > 0
-  ).length;
   const listPreview =
     normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
   const environmentsPath = `/projects/${projectId}/environments`;
@@ -2140,7 +2125,6 @@ function EnvironmentsWorkspaceSection({
 
   const handleRefresh = async () => {
     const tasks: Array<Promise<unknown>> = [
-      projectStatsQuery.refetch(),
       memberRoleQuery.refetch(),
       environmentsQuery.refetch(),
     ];
@@ -2153,7 +2137,6 @@ function EnvironmentsWorkspaceSection({
   };
 
   const isRefreshing =
-    projectStatsQuery.isFetching ||
     memberRoleQuery.isFetching ||
     environmentsQuery.isFetching ||
     selectedEnvironmentQuery.isFetching;
@@ -2337,49 +2320,6 @@ function EnvironmentsWorkspaceSection({
                   </AlertDescription>
                 </Alert>
               ) : null}
-
-              {environmentsQuery.isLoading || projectStatsQuery.isLoading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <StatCardSkeleton />
-                  <StatCardSkeleton />
-                  <StatCardSkeleton />
-                  <StatCardSkeleton />
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <StatCard
-                    title={t('environments.totalEnvironments')}
-                    value={totalEnvironments}
-                    description={t('environments.totalEnvironmentsDescription')}
-                    icon={Globe}
-                    variant="primary"
-                  />
-                  <StatCard
-                    title={t('environments.withBaseUrl')}
-                    value={withBaseUrlCount}
-                    description={t('environments.withBaseUrlDescription')}
-                    icon={ShieldCheck}
-                    variant="success"
-                  />
-                  <StatCard
-                    title={t('environments.withVariables')}
-                    value={withVariablesCount}
-                    description={t('environments.withVariablesDescription')}
-                    icon={Boxes}
-                    variant="warning"
-                  />
-                  <StatCard
-                    title={t('environments.withHeaders')}
-                    value={withHeadersCount}
-                    description={
-                      normalizedSearch
-                        ? t('environments.searchFilteredBy', { query: normalizedSearch })
-                        : t('environments.withHeadersDescription')
-                    }
-                    icon={Tags}
-                  />
-                </div>
-              )}
 
               {effectiveSelectedItemId && selectedEnvironmentQuery.isLoading ? (
                 <DetailSkeleton />

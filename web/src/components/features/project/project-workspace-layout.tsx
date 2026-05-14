@@ -132,7 +132,7 @@ export function ProjectWorkspaceLayout({
                   variant="ghost"
                   size="sm"
                   isIcon
-                  className="h-8 w-8 rounded-full border border-border-strong bg-bg-canvas text-text-main hover:bg-bg-subtle"
+                  className="!size-8 rounded-full border border-border-strong bg-bg-canvas text-text-main hover:bg-bg-subtle"
                 >
                   <Link href={buildProjectDetailRoute(projectId)}>
                     <ArrowLeft className="h-3.5 w-3.5" />
@@ -151,7 +151,7 @@ export function ProjectWorkspaceLayout({
                   variant="ghost"
                   size="sm"
                   isIcon
-                  className="h-8 w-8 rounded-full border border-border-strong bg-bg-canvas text-text-main hover:bg-bg-subtle"
+                  className="!size-8 rounded-full border border-border-strong bg-bg-canvas text-text-main hover:bg-bg-subtle"
                   onClick={() => updateDesktopNavCollapsed(!isDesktopNavCollapsed)}
                   aria-label={
                     isDesktopNavCollapsed
