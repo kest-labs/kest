@@ -82,6 +82,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   collectionKeys,
   useCreateCollection,
@@ -3918,40 +3919,64 @@ function CollectionsSidebar({
               className="pl-9"
             />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            isIcon
-            onClick={() => {
-              setPage(1);
-              onCreateCollection();
-            }}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            isIcon
-            loading={isImportingRootPostman}
-            disabled={isImportingAny}
-            onClick={onImportRootPostman}
-          >
-            <Upload className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            isIcon
-            loading={isImportingRootMarkdown}
-            disabled={isImportingAny}
-            onClick={onImportRootMarkdown}
-          >
-            <FileText className="h-4 w-4" />
-          </Button>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isIcon
+                aria-label={t('collections.workbench.actions.newCollection')}
+                onClick={() => {
+                  setPage(1);
+                  onCreateCollection();
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {t('collections.workbench.actions.newCollection')}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isIcon
+                loading={isImportingRootPostman}
+                disabled={isImportingAny}
+                aria-label={t('collections.workbench.actions.importPostman')}
+                onClick={onImportRootPostman}
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {t('collections.workbench.actions.importPostman')}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isIcon
+                loading={isImportingRootMarkdown}
+                disabled={isImportingAny}
+                aria-label={t('collections.workbench.actions.importMarkdown')}
+                onClick={onImportRootMarkdown}
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {t('collections.workbench.actions.importMarkdown')}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
