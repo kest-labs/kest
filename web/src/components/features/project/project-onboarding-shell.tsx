@@ -108,12 +108,14 @@ export function ProjectOnboardingShell() {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
+      const key = typeof event.key === 'string' ? event.key : '';
+      const normalizedKey = key.toLowerCase();
       const isTypingTarget =
         tag === 'input' || tag === 'textarea' || Boolean(target?.isContentEditable);
-      const isMetaK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
-      const isQuestionMark = event.key === '?' && !event.metaKey && !event.ctrlKey;
-      const isProjectJump = event.key.toLowerCase() === 'p' && event.shiftKey === false;
-      const isApiJump = event.key.toLowerCase() === 'a' && event.shiftKey === false;
+      const isMetaK = (event.metaKey || event.ctrlKey) && normalizedKey === 'k';
+      const isQuestionMark = key === '?' && !event.metaKey && !event.ctrlKey;
+      const isProjectJump = normalizedKey === 'p' && event.shiftKey === false;
+      const isApiJump = normalizedKey === 'a' && event.shiftKey === false;
 
       if (isMetaK) {
         event.preventDefault();
@@ -126,11 +128,14 @@ export function ProjectOnboardingShell() {
         return;
       }
 
-      if (!isTypingTarget && event.key.toLowerCase() === 'g') {
+      if (!isTypingTarget && normalizedKey === 'g') {
         const followUpHandler = (followUpEvent: KeyboardEvent) => {
-          if (followUpEvent.key.toLowerCase() === 'p') {
+          const followUpKey =
+            typeof followUpEvent.key === 'string' ? followUpEvent.key.toLowerCase() : '';
+
+          if (followUpKey === 'p') {
             router.push(ROUTES.CONSOLE.PROJECTS);
-          } else if (followUpEvent.key.toLowerCase() === 'a' && currentProjectId) {
+          } else if (followUpKey === 'a' && currentProjectId) {
             router.push(buildProjectWorkspaceRoute(currentProjectId, 'api-specs'));
           }
           window.removeEventListener('keydown', followUpHandler, true);
