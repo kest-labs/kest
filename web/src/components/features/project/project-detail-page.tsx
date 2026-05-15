@@ -69,6 +69,7 @@ import type {
   UpdateProjectRequest,
 } from '@/types/project';
 import { formatDate } from '@/utils';
+import { buildKestConnectionKey } from '@/utils/kest-connection-key';
 
 interface WorkflowStep {
   key: string;
@@ -469,16 +470,17 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
   const PrimaryIcon = nextAction.primaryIcon;
   const SecondaryIcon = nextAction.secondaryIcon;
   const cliPlatformUrl = (apiExternalBaseUrl || buildApiPath('/')).replace(/\/$/, '');
-  const cliConfigCommand =
+  const cliConnectionKey =
     generatedCliToken && project
-      ? [
-          'kest sync config \\',
-          `  --platform-url '${cliPlatformUrl}' \\`,
-          `  --platform-token '${generatedCliToken.token}' \\`,
-          `  --project-id '${project.id}' \\`,
-          '  --auto-sync-history',
-        ].join('\n')
+      ? buildKestConnectionKey({
+          version: 1,
+          platform_url: cliPlatformUrl,
+          platform_token: generatedCliToken.token,
+          platform_project_id: String(project.id),
+          platform_auto_sync_history: true,
+        })
       : '';
+  const cliConfigCommand = cliConnectionKey ? `kest key '${cliConnectionKey}'` : '';
   const isProjectLoading = projectQuery.isLoading || projectStatsQuery.isLoading;
   const isModuleMetricsLoading =
     projectStatsQuery.isLoading || collectionsQuery.isLoading || testCasesQuery.isLoading;
@@ -902,7 +904,6 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
               </CardContent>
             </Card>
           </div>
-
         </div>
       </main>
 
