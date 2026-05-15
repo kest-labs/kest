@@ -218,6 +218,55 @@ func (s *Store) GetRecordsByProject(project string, limit int) ([]Record, error)
 	return records, nil
 }
 
+func (s *Store) GetRecordsForSync(project string, includeAllProjects bool, since time.Time, limit int) ([]Record, error) {
+	if limit <= 0 {
+		limit = 5000
+	}
+	if !includeAllProjects && project == "" {
+		return nil, nil
+	}
+
+	query := `
+	SELECT id, method, url, base_url, path, query_params, request_headers, request_body,
+	       response_status, response_headers, response_body, duration_ms, environment, project, created_at
+	FROM records
+	WHERE (? OR project = ?)
+	  AND (? OR datetime(created_at) >= datetime(?))
+	ORDER BY created_at DESC
+	LIMIT ?
+	`
+
+	hasSince := !since.IsZero()
+	var sinceValue any = ""
+	if hasSince {
+		sinceValue = sqliteTimestamp(since)
+	}
+
+	rows, err := s.db.Query(query, includeAllProjects, project, !hasSince, sinceValue, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []Record
+	for rows.Next() {
+		var r Record
+		var queryParams, requestHeaders, responseHeaders []byte
+		if err := rows.Scan(
+			&r.ID, &r.Method, &r.URL, &r.BaseURL, &r.Path, &queryParams, &requestHeaders, &r.RequestBody,
+			&r.ResponseStatus, &responseHeaders, &r.ResponseBody, &r.DurationMs, &r.Environment, &r.Project, &r.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		r.QueryParams = json.RawMessage(queryParams)
+		r.RequestHeaders = json.RawMessage(requestHeaders)
+		r.ResponseHeaders = json.RawMessage(responseHeaders)
+		records = append(records, r)
+	}
+
+	return records, nil
+}
+
 func (s *Store) SaveRecord(r *Record) (int64, error) {
 	query := `
 	INSERT INTO records (
@@ -327,6 +376,18 @@ func (s *Store) GetOrCreateClientID() (string, error) {
 		return "", err
 	}
 	return clientID, nil
+}
+
+func (s *Store) GetSyncMeta(key string) (string, error) {
+	var value string
+	err := s.db.QueryRow(`SELECT value FROM sync_meta WHERE key = ?`, key).Scan(&value)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return value, nil
 }
 
 func (s *Store) EnqueueSyncOutbox(item *SyncOutboxItem) error {

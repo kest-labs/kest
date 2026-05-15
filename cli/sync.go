@@ -25,6 +25,10 @@ var (
 	syncConfigToken       string
 	syncConfigProject     string
 	syncConfigAutoHistory bool
+	syncHistoryLimit      int
+	syncHistoryDryRun     bool
+	syncHistorySince      string
+	syncHistoryAll        bool
 )
 
 var syncCmd = &cobra.Command{
@@ -53,10 +57,22 @@ var syncConfigCmd = &cobra.Command{
 	},
 }
 
+var syncHistoryCmd = &cobra.Command{
+	Use:   "history",
+	Short: "Push CLI request history to Kest Platform",
+	Long: `Push local CLI request history to the Kest Platform project configured by
+kest key or kest sync config. Re-running the command is safe because synced
+events use stable source IDs.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runSyncHistory()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.AddCommand(syncPushCmd)
 	syncCmd.AddCommand(syncConfigCmd)
+	syncCmd.AddCommand(syncHistoryCmd)
 
 	// Sync push flags
 	syncPushCmd.Flags().StringVarP(&syncPushProjectID, "project-id", "p", "", "Platform project ID")
@@ -68,6 +84,11 @@ func init() {
 	syncConfigCmd.Flags().StringVar(&syncConfigToken, "platform-token", "", "Project-scoped CLI token")
 	syncConfigCmd.Flags().StringVar(&syncConfigProject, "project-id", "", "Default platform project ID")
 	syncConfigCmd.Flags().BoolVar(&syncConfigAutoHistory, "auto-sync-history", false, "Enable automatic CLI history sync to the platform")
+
+	syncHistoryCmd.Flags().IntVar(&syncHistoryLimit, "limit", 5000, "Maximum number of local history records to sync")
+	syncHistoryCmd.Flags().BoolVar(&syncHistoryDryRun, "dry-run", false, "Preview records without uploading them")
+	syncHistoryCmd.Flags().StringVar(&syncHistorySince, "since", "", "Only sync records newer than this duration (for example: 24h)")
+	syncHistoryCmd.Flags().BoolVar(&syncHistoryAll, "all", false, "Sync records across all local Kest projects")
 }
 
 // APISpecSync represents an API spec for syncing
@@ -418,6 +439,159 @@ func parseSyncResponse(body []byte) (SyncResponse, error) {
 		return SyncResponse{}, err
 	}
 	return syncResp, nil
+}
+
+func runSyncHistory() error {
+	logger.StartSession("sync_history")
+	defer logger.EndSession()
+
+	conf, err := config.LoadConfig()
+	if err != nil {
+		conf = &config.Config{}
+	}
+
+	if strings.TrimSpace(conf.PlatformURL) == "" {
+		return fmt.Errorf("platform URL not configured. Run `kest key ...` or `kest sync config --platform-url ...`")
+	}
+	if strings.TrimSpace(conf.PlatformToken) == "" {
+		return fmt.Errorf("platform token not configured. Run `kest key ...` or `kest sync config --platform-token ...`")
+	}
+	if strings.TrimSpace(conf.PlatformProjectID) == "" {
+		return fmt.Errorf("platform project ID not configured. Run `kest key ...` or `kest sync config --project-id ...`")
+	}
+
+	localProjectID := strings.TrimSpace(conf.ProjectID)
+	if !syncHistoryAll && localProjectID == "" {
+		return fmt.Errorf("sync history must be run inside a Kest project, or use --all to sync all local history")
+	}
+
+	if syncHistoryLimit <= 0 {
+		return fmt.Errorf("--limit must be greater than zero")
+	}
+
+	var since time.Time
+	if strings.TrimSpace(syncHistorySince) != "" {
+		duration, err := time.ParseDuration(syncHistorySince)
+		if err != nil {
+			return fmt.Errorf("invalid --since duration: %w", err)
+		}
+		since = time.Now().UTC().Add(-duration)
+	}
+
+	store, err := storage.NewStore()
+	if err != nil {
+		return fmt.Errorf("failed to open storage: %w", err)
+	}
+	defer store.Close()
+
+	records, err := store.GetRecordsForSync(localProjectID, syncHistoryAll, since, syncHistoryLimit)
+	if err != nil {
+		return fmt.Errorf("failed to load history: %w", err)
+	}
+	if len(records) == 0 {
+		fmt.Println("⚠️  No request history found for the selected scope.")
+		return nil
+	}
+
+	if syncHistoryDryRun {
+		return previewHistorySync(records, syncHistoryAll, since)
+	}
+
+	clientID, err := store.GetOrCreateClientID()
+	if err != nil {
+		return fmt.Errorf("failed to load sync client id: %w", err)
+	}
+
+	entries := buildHistorySyncEntries(records, clientID)
+	return pushHistoryEntriesToPlatform(conf, clientID, entries)
+}
+
+func buildHistorySyncEntries(records []storage.Record, clientID string) []platformsync.HistorySyncEntry {
+	entries := make([]platformsync.HistorySyncEntry, 0, len(records))
+	for _, record := range records {
+		if record.ID == 0 {
+			continue
+		}
+		entries = append(entries, platformsync.BuildRequestHistoryEntry(&record, "sync history", clientID))
+	}
+	return entries
+}
+
+func previewHistorySync(records []storage.Record, includeAllProjects bool, since time.Time) error {
+	fmt.Printf("\n📋 Preview: Would sync %d history record(s)\n", len(records))
+	if includeAllProjects {
+		fmt.Println("   Scope: all local projects")
+	} else if len(records) > 0 {
+		fmt.Printf("   Scope: local project %s\n", records[0].Project)
+	}
+	if !since.IsZero() {
+		fmt.Printf("   Since: %s\n", since.Format(time.RFC3339))
+	}
+
+	maxPreview := len(records)
+	if maxPreview > 5 {
+		maxPreview = 5
+	}
+	if maxPreview > 0 {
+		fmt.Println("\nRecent records:")
+		for i := 0; i < maxPreview; i++ {
+			record := records[i]
+			target := strings.TrimSpace(record.Path)
+			if target == "" {
+				target = record.URL
+			}
+			fmt.Printf("   %d. #%d %s %s -> %d (%s)\n",
+				i+1,
+				record.ID,
+				strings.ToUpper(record.Method),
+				target,
+				record.ResponseStatus,
+				record.CreatedAt.Format(time.RFC3339),
+			)
+		}
+	}
+
+	fmt.Println("\n💡 Run without --dry-run to upload these history records.")
+	return nil
+}
+
+func pushHistoryEntriesToPlatform(conf *config.Config, clientID string, entries []platformsync.HistorySyncEntry) error {
+	const batchSize = 100
+	total := platformsync.HistorySyncResponse{}
+
+	for start := 0; start < len(entries); start += batchSize {
+		end := start + batchSize
+		if end > len(entries) {
+			end = len(entries)
+		}
+
+		resp, err := platformsync.PushHistoryEntries(conf, clientID, entries[start:end])
+		if err != nil {
+			return err
+		}
+		total.Created += resp.Created
+		total.Updated += resp.Updated
+		total.Skipped += resp.Skipped
+		total.Errors = append(total.Errors, resp.Errors...)
+	}
+
+	fmt.Println("\n✅ History sync completed!")
+	fmt.Printf("   Created: %d\n", total.Created)
+	fmt.Printf("   Updated: %d\n", total.Updated)
+	fmt.Printf("   Skipped: %d\n", total.Skipped)
+	if len(total.Errors) > 0 {
+		fmt.Println("\n⚠️  Errors:")
+		for _, syncErr := range total.Errors {
+			fmt.Printf("   - %s\n", syncErr)
+		}
+	}
+
+	conf.LastSyncTime = time.Now().Format(time.RFC3339)
+	if err := config.SaveConfig(conf); err != nil {
+		logger.LogToSession("failed to save last sync time after history sync: %v", err)
+	}
+
+	return nil
 }
 
 func runSyncConfig(cmd *cobra.Command) error {

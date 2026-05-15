@@ -135,7 +135,17 @@ func QueueRequestHistory(conf *config.Config, store *storage.Store, record *stor
 		return err
 	}
 
-	entry := HistorySyncEntry{
+	entry := BuildRequestHistoryEntry(record, sourceCommand, clientID)
+
+	return enqueueHistoryEntry(store, conf, entry)
+}
+
+func BuildRequestHistoryEntry(record *storage.Record, sourceCommand, clientID string) HistorySyncEntry {
+	if record == nil {
+		return HistorySyncEntry{}
+	}
+
+	return HistorySyncEntry{
 		SourceEventID: fmt.Sprintf("%s:record:%d", clientID, record.ID),
 		EventType:     "cli_request",
 		OccurredAt:    normalizedEventTime(record.CreatedAt),
@@ -145,8 +155,6 @@ func QueueRequestHistory(conf *config.Config, store *storage.Store, record *stor
 		Message:       buildRequestHistoryMessage(record),
 		Data:          buildRequestHistoryData(record, sourceCommand, clientID),
 	}
-
-	return enqueueHistoryEntry(store, conf, entry)
 }
 
 func QueueRunHistory(conf *config.Config, store *storage.Store, sourcePath string, summ *summary.Summary, logPath string) error {
@@ -198,40 +206,7 @@ func enqueueHistoryEntry(store *storage.Store, conf *config.Config, entry Histor
 }
 
 func pushHistoryEntry(conf *config.Config, clientID string, entry HistorySyncEntry) error {
-	projectID := strings.TrimSpace(conf.PlatformProjectID)
-	metadata, _ := json.Marshal(map[string]any{
-		"client_id": clientID,
-	})
-
-	reqBody, err := json.Marshal(HistorySyncRequest{
-		ProjectID: &projectID,
-		Source:    HistorySyncSource,
-		Metadata:  metadata,
-		Entries:   []HistorySyncEntry{entry},
-	})
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, buildHistorySyncEndpoint(conf.PlatformURL, projectID), bytes.NewBuffer(reqBody))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+conf.PlatformToken)
-
-	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("history sync failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	syncResp, err := parseHistorySyncResponse(body)
+	syncResp, err := PushHistoryEntries(conf, clientID, []HistorySyncEntry{entry})
 	if err != nil {
 		return err
 	}
@@ -240,6 +215,59 @@ func pushHistoryEntry(conf *config.Config, clientID string, entry HistorySyncEnt
 	}
 
 	return nil
+}
+
+func PushHistoryEntries(conf *config.Config, clientID string, entries []HistorySyncEntry) (HistorySyncResponse, error) {
+	if conf == nil {
+		return HistorySyncResponse{}, fmt.Errorf("platform config is required")
+	}
+	if len(entries) == 0 {
+		return HistorySyncResponse{}, nil
+	}
+
+	projectID := strings.TrimSpace(conf.PlatformProjectID)
+	if projectID == "" {
+		return HistorySyncResponse{}, fmt.Errorf("platform project ID is required")
+	}
+
+	metadata, _ := json.Marshal(map[string]any{
+		"client_id": clientID,
+	})
+
+	reqBody, err := json.Marshal(HistorySyncRequest{
+		ProjectID: &projectID,
+		Source:    HistorySyncSource,
+		Metadata:  metadata,
+		Entries:   entries,
+	})
+	if err != nil {
+		return HistorySyncResponse{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, buildHistorySyncEndpoint(conf.PlatformURL, projectID), bytes.NewBuffer(reqBody))
+	if err != nil {
+		return HistorySyncResponse{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+conf.PlatformToken)
+
+	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+	if err != nil {
+		return HistorySyncResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return HistorySyncResponse{}, fmt.Errorf("history sync failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	syncResp, err := parseHistorySyncResponse(body)
+	if err != nil {
+		return HistorySyncResponse{}, err
+	}
+
+	return syncResp, nil
 }
 
 func parseHistorySyncResponse(body []byte) (HistorySyncResponse, error) {

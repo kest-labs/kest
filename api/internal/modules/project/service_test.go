@@ -144,6 +144,30 @@ func TestValidateCLITokenRejectsScopeMismatchAndExpiry(t *testing.T) {
 	}
 }
 
+func TestValidateCLITokenAcceptsRunWriteScope(t *testing.T) {
+	rawToken := "kest_pat_run_scope"
+	repo := &testProjectRepo{
+		project: &Project{ID: "12", Name: "Catalog API"},
+		token: &ProjectCLIToken{
+			ID:        "6",
+			ProjectID: "12",
+			CreatedBy: "7",
+			Name:      "history sync token",
+			Scopes:    []string{CLITokenScopeRunWrite},
+		},
+		tokenHash: hashCLIToken(rawToken),
+	}
+	svc := NewService(repo, nil)
+
+	tokenID, createdBy, err := svc.ValidateCLIToken(context.Background(), "12", rawToken, []string{CLITokenScopeRunWrite})
+	if err != nil {
+		t.Fatalf("ValidateCLIToken returned error: %v", err)
+	}
+	if tokenID != "6" || createdBy != "7" {
+		t.Fatalf("expected token metadata (6,7), got (%s,%s)", tokenID, createdBy)
+	}
+}
+
 func TestUpdateProjectAppliesEditableFields(t *testing.T) {
 	repo := &testProjectRepo{
 		project: &Project{
