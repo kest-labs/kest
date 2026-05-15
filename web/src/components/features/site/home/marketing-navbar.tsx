@@ -130,13 +130,13 @@ export function MarketingNavbar({
           <div className="hidden items-center gap-2 lg:flex">
             <LanguageSwitcher />
             <Button asChild variant="ghost" size="lg" className="text-text-subtle hover:text-text-main">
-              <Link href="/login">{loginLabel}</Link>
-            </Button>
-            <Button asChild variant="ghost" size="lg" className="text-text-subtle hover:text-text-main">
               <Link href="#pricing">{pricingLabel}</Link>
             </Button>
             <Button asChild variant="ghost" size="lg" className="text-text-subtle hover:text-text-main">
               <Link href="#pricing">{contactSalesLabel}</Link>
+            </Button>
+            <Button asChild variant="ghost" size="lg" className="text-text-subtle hover:text-text-main">
+              <Link href="/login">{loginLabel}</Link>
             </Button>
             <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary">
               <Link href="/register">{signUpLabel}</Link>
