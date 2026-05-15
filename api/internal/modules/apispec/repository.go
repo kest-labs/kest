@@ -100,7 +100,7 @@ func (r *repository) GetSpecByMethodAndPath(ctx context.Context, projectID strin
 }
 
 func (r *repository) UpdateSpec(ctx context.Context, spec *APISpecPO) error {
-	return r.db.WithContext(ctx).Save(spec).Error
+	return r.db.WithContext(ctx).Model(spec).Select("*").Updates(spec).Error
 }
 
 func (r *repository) DeleteSpec(ctx context.Context, id string) error {

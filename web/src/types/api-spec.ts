@@ -125,7 +125,7 @@ export interface CreateApiSpecRequest {
 }
 
 export interface UpdateApiSpecRequest {
-  category_id?: number | string;
+  category_id?: number | string | null;
   path?: string;
   summary?: string;
   description?: string;

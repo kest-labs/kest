@@ -1,6 +1,7 @@
 package apispec
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
@@ -144,9 +146,19 @@ func (h *Handler) UpdateSpec(c *gin.Context) {
 	}
 
 	var req UpdateAPISpecRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
+	}
+	if rawBody, exists := c.Get(gin.BodyBytesKey); exists {
+		if body, ok := rawBody.([]byte); ok {
+			var payload map[string]json.RawMessage
+			if err := json.Unmarshal(body, &payload); err == nil {
+				if rawCategoryID, present := payload["category_id"]; present && bytes.Equal(bytes.TrimSpace(rawCategoryID), []byte("null")) {
+					req.ClearCategory = true
+				}
+			}
+		}
 	}
 
 	spec, err := h.service.UpdateSpec(c.Request.Context(), projectID, id, &req)

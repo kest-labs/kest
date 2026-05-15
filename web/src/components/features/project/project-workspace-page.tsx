@@ -4,6 +4,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
   Bot,
   Boxes,
   Clock3,
@@ -12,6 +25,7 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  GripVertical,
   FileClock,
   FileCode2,
   FileJson2,
@@ -157,6 +171,7 @@ import { PROJECT_MEMBER_WRITE_ROLES, type ProjectMemberRole } from '@/types/memb
 import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
 import { cn, formatDate } from '@/utils';
+import { toast } from 'sonner';
 
 const MAX_MODULE_ITEMS = 500;
 const EMPTY_SPECS: ApiSpec[] = [];
@@ -178,7 +193,7 @@ interface ApiSpecSidebarGroup {
   key: string;
   label: string;
   depth: number;
-  categoryId?: string;
+  categoryId?: string | null;
   specs: ApiSpec[];
 }
 
@@ -1446,7 +1461,14 @@ function ApiSpecsWorkspaceSection({
   const [aiAction, setAiAction] = useState<{ mode: 'doc' | 'test'; spec: ApiSpec | null } | null>(
     null
   );
+  const [draggingSpecId, setDraggingSpecId] = useState<string | number | null>(null);
   const deferredSearch = useDeferredValue(searchQuery);
+  const dragSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor)
+  );
 
   const specsQuery = useApiSpecs({
     projectId,
@@ -1535,6 +1557,7 @@ function ApiSpecsWorkspaceSection({
         key: 'uncategorized',
         label: t('apiSpecs.uncategorized'),
         depth: 0,
+        categoryId: null,
         specs: uncategorizedSpecs,
       });
     }
@@ -1542,11 +1565,34 @@ function ApiSpecsWorkspaceSection({
     return groups;
   }, [deferredSearch, filteredSpecs, flatCategories, t]);
 
+  const moveTargetGroups = useMemo<ApiSpecSidebarGroup[]>(
+    () => [
+      ...flatCategories.map(category => ({
+        key: `move-category-${category.id}`,
+        label: category.name,
+        depth: category.depth,
+        categoryId: String(category.id),
+        specs: [],
+      })),
+      {
+        key: 'move-uncategorized',
+        label: t('apiSpecs.uncategorized'),
+        depth: 0,
+        categoryId: null,
+        specs: [],
+      },
+    ],
+    [flatCategories, t]
+  );
+
   const selectedSpecFromList =
     effectiveSelectedItemId === undefined || effectiveSelectedItemId === null
       ? null
       : (specs.find(spec => String(spec.id) === String(effectiveSelectedItemId)) ?? null);
   const selectedSpec = selectedSpecQuery.data ?? selectedSpecFromList;
+  const draggingSpec = draggingSpecId
+    ? (specs.find(spec => String(spec.id) === String(draggingSpecId)) ?? null)
+    : null;
   const activeSpecId = selectedSpec?.id ?? effectiveSelectedItemId ?? null;
   const specShareQuery = useApiSpecShare(projectId, activeSpecId ?? undefined);
   const publishShareMutation = usePublishApiSpecShare(projectId);
@@ -1644,6 +1690,58 @@ function ApiSpecsWorkspaceSection({
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
+  };
+
+  const moveSpecToCategory = async (spec: ApiSpec, categoryId: string | null) => {
+    if (!canWrite || updateSpecMutation.isPending) {
+      return;
+    }
+
+    const currentCategoryId = spec.category_id ? String(spec.category_id) : null;
+    if (currentCategoryId === categoryId) {
+      return;
+    }
+
+    const targetLabel = categoryId
+      ? categoryNameById.get(categoryId) || t('common.category')
+      : t('apiSpecs.uncategorized');
+
+    try {
+      await updateSpecMutation.mutateAsync({
+        specId: spec.id,
+        data: { category_id: categoryId },
+        suppressToast: true,
+      });
+      toast.success(
+        t('toasts.apiSpecMoved', {
+          method: spec.method,
+          path: spec.path,
+          category: targetLabel,
+        })
+      );
+      if (String(activeSpecId ?? '') === String(spec.id)) {
+        await selectedSpecQuery.refetch();
+      }
+    } catch {
+      // Global HTTP error handling already surfaces failure feedback.
+    }
+  };
+
+  const handleSpecDragStart = (event: DragStartEvent) => {
+    const specId = event.active.data.current?.specId;
+    setDraggingSpecId(typeof specId === 'string' || typeof specId === 'number' ? specId : null);
+  };
+
+  const handleSpecDragEnd = (event: DragEndEvent) => {
+    setDraggingSpecId(null);
+
+    const spec = event.active.data.current?.spec as ApiSpec | undefined;
+    const categoryId = event.over?.data.current?.categoryId as string | null | undefined;
+    if (!spec || categoryId === undefined) {
+      return;
+    }
+
+    void moveSpecToCategory(spec, categoryId);
   };
 
   const handleDeleteSpec = async () => {
@@ -2027,16 +2125,32 @@ function ApiSpecsWorkspaceSection({
               </div>
             }
           >
-            <ApiSpecDirectoryList
-              groups={sidebarGroups}
-              projectId={projectId}
-              selectedSpecId={selectedSpec?.id}
-              canWrite={canWrite}
-              onOpenCreate={openCreateSpecDialog}
-              onOpenEdit={openEditDialog}
-              onQueueAiAction={queueSpecAiAction}
-              onDelete={setDeleteTarget}
-            />
+            <DndContext
+              sensors={dragSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleSpecDragStart}
+              onDragEnd={handleSpecDragEnd}
+              onDragCancel={() => setDraggingSpecId(null)}
+            >
+              <ApiSpecDirectoryList
+                groups={sidebarGroups}
+                projectId={projectId}
+                selectedSpecId={selectedSpec?.id}
+                canWrite={canWrite}
+                movingSpecId={
+                  updateSpecMutation.isPending ? updateSpecMutation.variables?.specId ?? null : null
+                }
+                moveTargetGroups={moveTargetGroups}
+                onOpenCreate={openCreateSpecDialog}
+                onOpenEdit={openEditDialog}
+                onMoveSpec={moveSpecToCategory}
+                onQueueAiAction={queueSpecAiAction}
+                onDelete={setDeleteTarget}
+              />
+              <DragOverlay>
+                {draggingSpec ? <ApiSpecDragPreview spec={draggingSpec} /> : null}
+              </DragOverlay>
+            </DndContext>
           </ResourceSidebar>
         }
         content={
@@ -2413,8 +2527,11 @@ function ApiSpecDirectoryList({
   projectId,
   selectedSpecId,
   canWrite,
+  movingSpecId,
+  moveTargetGroups,
   onOpenCreate,
   onOpenEdit,
+  onMoveSpec,
   onQueueAiAction,
   onDelete,
 }: {
@@ -2422,99 +2539,239 @@ function ApiSpecDirectoryList({
   projectId: number | string;
   selectedSpecId?: string | number | null;
   canWrite: boolean;
+  movingSpecId?: string | number | null;
+  moveTargetGroups: ApiSpecSidebarGroup[];
   onOpenCreate: (categoryId?: string) => void;
   onOpenEdit: (specId: string | number) => void;
+  onMoveSpec: (spec: ApiSpec, categoryId: string | null) => void;
   onQueueAiAction: (spec: ApiSpec, mode: 'doc' | 'test') => void;
   onDelete: (spec: ApiSpec) => void;
 }) {
-  const t = useT('project');
-
   return (
     <div className="space-y-2">
       {groups.map(group => (
         <div key={group.key} className="space-y-1">
-          <div
-            className="group/category flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium uppercase leading-4 text-text-muted"
-            style={{ paddingLeft: `${8 + group.depth * 10}px` }}
-          >
-            <Tags className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 flex-1 truncate">{group.label}</span>
-            <span className="shrink-0 tabular-nums">{group.specs.length}</span>
-            {group.categoryId ? (
-              <button
-                type="button"
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-muted opacity-0 transition-opacity hover:bg-bg-subtle hover:text-text-main group-hover/category:opacity-100 focus:opacity-100"
-                onClick={() => onOpenCreate(group.categoryId)}
-                aria-label={t('apiSpecs.addSpecToCategory', { category: group.label })}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
-          </div>
+          <ApiSpecCategoryDropZone
+            group={group}
+            canWrite={canWrite}
+            onOpenCreate={onOpenCreate}
+          />
 
           {group.specs.map(spec => (
-            <ResourceListItem
+            <DraggableApiSpecListItem
               key={spec.id}
-              href={buildModuleHref(projectId, 'api-specs', spec.id)}
+              spec={spec}
+              projectId={projectId}
               active={String(spec.id) === String(selectedSpecId ?? '')}
-              title={`${spec.method} ${spec.path}`}
-              description={spec.summary || spec.description || t('common.noSummaryProvided')}
+              canWrite={canWrite}
               indentLevel={Math.min(group.depth + 1, 5)}
-              meta={
-                <>
-                  <Badge variant="outline">{spec.version}</Badge>
-                  <span>
-                    {t('common.examples')}: {spec.examples?.length ?? 0}
-                  </span>
-                </>
-              }
-              actionsMenu={
-                <ActionMenu
-                  items={[
-                    {
-                      key: `spec-open-${spec.id}`,
-                      label: t('common.open'),
-                      href: buildModuleHref(projectId, 'api-specs', spec.id),
-                    },
-                    {
-                      key: `spec-edit-${spec.id}`,
-                      label: t('common.edit'),
-                      icon: Pencil,
-                      disabled: !canWrite,
-                      onSelect: () => onOpenEdit(spec.id),
-                    },
-                    {
-                      key: `spec-gen-doc-${spec.id}`,
-                      label: t('apiSpecsPage.genDoc'),
-                      icon: Bot,
-                      disabled: !canWrite,
-                      onSelect: () => onQueueAiAction(spec, 'doc'),
-                    },
-                    {
-                      key: `spec-gen-test-${spec.id}`,
-                      label: t('apiSpecsPage.genTest'),
-                      icon: FileCode2,
-                      disabled: !canWrite,
-                      onSelect: () => onQueueAiAction(spec, 'test'),
-                    },
-                    {
-                      key: `spec-delete-${spec.id}`,
-                      label: t('common.delete'),
-                      icon: Trash2,
-                      destructive: true,
-                      disabled: !canWrite,
-                      onSelect: () => onDelete(spec),
-                    },
-                  ]}
-                  ariaLabel={t('common.openActions')}
-                  stopPropagation
-                  triggerClassName="h-6 w-6 rounded-md opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
-                />
-              }
+              isMoving={String(spec.id) === String(movingSpecId ?? '')}
+              moveTargetGroups={moveTargetGroups}
+              onOpenEdit={onOpenEdit}
+              onMoveSpec={onMoveSpec}
+              onQueueAiAction={onQueueAiAction}
+              onDelete={onDelete}
             />
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+function ApiSpecCategoryDropZone({
+  group,
+  canWrite,
+  onOpenCreate,
+}: {
+  group: ApiSpecSidebarGroup;
+  canWrite: boolean;
+  onOpenCreate: (categoryId?: string) => void;
+}) {
+  const t = useT('project');
+  const { isOver, setNodeRef } = useDroppable({
+    id: `api-spec-category-${group.categoryId ?? 'uncategorized'}`,
+    data: {
+      categoryId: group.categoryId ?? null,
+      label: group.label,
+    },
+    disabled: !canWrite,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'group/category flex min-h-7 items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-[11px] font-medium uppercase leading-4 text-text-muted transition-colors',
+        canWrite ? 'data-[droppable=true]:cursor-copy' : '',
+        isOver && 'border-primary bg-primary/10 text-text-main'
+      )}
+      data-droppable={canWrite}
+      style={{ paddingLeft: `${8 + group.depth * 10}px` }}
+    >
+      <Tags className="h-3.5 w-3.5 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{group.label}</span>
+      <span className="shrink-0 tabular-nums">{group.specs.length}</span>
+      {group.categoryId ? (
+        <button
+          type="button"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-muted opacity-0 transition-opacity hover:bg-bg-subtle hover:text-text-main group-hover/category:opacity-100 focus:opacity-100"
+          onClick={() => onOpenCreate(group.categoryId ?? undefined)}
+          aria-label={t('apiSpecs.addSpecToCategory', { category: group.label })}
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function DraggableApiSpecListItem({
+  spec,
+  projectId,
+  active,
+  canWrite,
+  indentLevel,
+  isMoving,
+  moveTargetGroups,
+  onOpenEdit,
+  onMoveSpec,
+  onQueueAiAction,
+  onDelete,
+}: {
+  spec: ApiSpec;
+  projectId: number | string;
+  active: boolean;
+  canWrite: boolean;
+  indentLevel: number;
+  isMoving: boolean;
+  moveTargetGroups: ApiSpecSidebarGroup[];
+  onOpenEdit: (specId: string | number) => void;
+  onMoveSpec: (spec: ApiSpec, categoryId: string | null) => void;
+  onQueueAiAction: (spec: ApiSpec, mode: 'doc' | 'test') => void;
+  onDelete: (spec: ApiSpec) => void;
+}) {
+  const t = useT('project');
+  const currentCategoryId = spec.category_id ? String(spec.category_id) : null;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `api-spec-${spec.id}`,
+    data: {
+      spec,
+      specId: spec.id,
+    },
+    disabled: !canWrite,
+  });
+
+  const moveItems: ActionMenuItem[] = moveTargetGroups
+    .filter(group => (group.categoryId ?? null) !== currentCategoryId)
+    .map(group => ({
+      key: `spec-move-${spec.id}-${group.categoryId ?? 'uncategorized'}`,
+      label: t('apiSpecs.moveToCategory', { category: group.label }),
+      icon: Tags,
+      disabled: !canWrite,
+      onSelect: () => onMoveSpec(spec, group.categoryId ?? null),
+    }));
+
+  return (
+    <div ref={setNodeRef} className={cn((isDragging || isMoving) && 'opacity-55')}>
+      <ResourceListItem
+        href={buildModuleHref(projectId, 'api-specs', spec.id)}
+        active={active}
+        title={`${spec.method} ${spec.path}`}
+        description={spec.summary || spec.description || t('common.noSummaryProvided')}
+        indentLevel={indentLevel}
+        leading={
+          canWrite ? (
+            <button
+              type="button"
+              className={cn(
+                'mt-0.5 inline-flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main active:cursor-grabbing',
+                active && 'text-primary-foreground/72 hover:bg-primary-foreground/15 hover:text-primary-foreground'
+              )}
+              aria-label={t('apiSpecs.dragSpecHandle')}
+              {...listeners}
+              {...attributes}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+          ) : null
+        }
+        meta={
+          <>
+            <Badge variant="outline">{spec.version}</Badge>
+            <span>
+              {t('common.examples')}: {spec.examples?.length ?? 0}
+            </span>
+          </>
+        }
+        actionsMenu={
+          <ActionMenu
+            items={[
+              {
+                key: `spec-open-${spec.id}`,
+                label: t('common.open'),
+                href: buildModuleHref(projectId, 'api-specs', spec.id),
+              },
+              {
+                key: `spec-edit-${spec.id}`,
+                label: t('common.edit'),
+                icon: Pencil,
+                disabled: !canWrite,
+                onSelect: () => onOpenEdit(spec.id),
+              },
+              ...moveItems.map((item, index) => ({
+                ...item,
+                separatorBefore: index === 0,
+              })),
+              {
+                key: `spec-gen-doc-${spec.id}`,
+                label: t('apiSpecsPage.genDoc'),
+                icon: Bot,
+                separatorBefore: moveItems.length === 0,
+                disabled: !canWrite,
+                onSelect: () => onQueueAiAction(spec, 'doc'),
+              },
+              {
+                key: `spec-gen-test-${spec.id}`,
+                label: t('apiSpecsPage.genTest'),
+                icon: FileCode2,
+                disabled: !canWrite,
+                onSelect: () => onQueueAiAction(spec, 'test'),
+              },
+              {
+                key: `spec-delete-${spec.id}`,
+                label: t('common.delete'),
+                icon: Trash2,
+                destructive: true,
+                separatorBefore: true,
+                disabled: !canWrite,
+                onSelect: () => onDelete(spec),
+              },
+            ]}
+            ariaLabel={t('common.openActions')}
+            stopPropagation
+            triggerClassName="h-6 w-6 rounded-md opacity-0 transition-opacity group-hover/resource:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
+          />
+        }
+      />
+    </div>
+  );
+}
+
+function ApiSpecDragPreview({ spec }: { spec: ApiSpec }) {
+  return (
+    <div className="w-72 rounded-md border border-primary bg-bg-canvas px-3 py-2 shadow-modal">
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="shrink-0">
+          {spec.method}
+        </Badge>
+        <p className="min-w-0 truncate text-[13px] font-medium leading-5 text-text-main">
+          {spec.path}
+        </p>
+      </div>
+      <p className="mt-1 line-clamp-1 text-xs leading-4 text-text-muted">
+        {spec.summary || spec.description || 'No summary provided'}
+      </p>
     </div>
   );
 }
@@ -4036,6 +4293,7 @@ function ResourceListItem({
   description,
   meta,
   actionsMenu,
+  leading,
   onOpen,
   indentLevel = 0,
 }: {
@@ -4045,6 +4303,7 @@ function ResourceListItem({
   description: string;
   meta?: React.ReactNode;
   actionsMenu?: React.ReactNode;
+  leading?: React.ReactNode;
   onOpen?: () => void;
   indentLevel?: number;
 }) {
@@ -4059,34 +4318,37 @@ function ResourceListItem({
       style={{ marginLeft: indentLevel > 0 ? `${indentLevel * 12}px` : undefined }}
     >
       <div className="flex items-start justify-between gap-3">
-        <Link href={href} className="min-w-0 flex-1" onClick={onOpen}>
-          <p
-            className={cn(
-              'truncate text-[13px] font-medium leading-5',
-              active ? 'text-primary-foreground' : 'text-text-main'
-            )}
-          >
-            {title}
-          </p>
-          <p
-            className={cn(
-              'mt-0.5 line-clamp-1 text-xs leading-4',
-              active ? 'text-primary-foreground/72' : 'text-text-muted'
-            )}
-          >
-            {description}
-          </p>
-          {meta ? (
-            <div
+        <div className="flex min-w-0 flex-1 items-start gap-1.5">
+          {leading}
+          <Link href={href} className="min-w-0 flex-1" onClick={onOpen}>
+            <p
               className={cn(
-                'mt-1.5 flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden text-[11px] leading-4 [&_[data-slot=badge]]:px-1.5 [&_[data-slot=badge]]:py-0 [&_[data-slot=badge]]:text-[11px] [&_[data-slot=badge]]:font-medium [&_[data-slot=badge]]:leading-4 [&_span]:min-w-0 [&_span]:truncate',
+                'truncate text-[13px] font-medium leading-5',
+                active ? 'text-primary-foreground' : 'text-text-main'
+              )}
+            >
+              {title}
+            </p>
+            <p
+              className={cn(
+                'mt-0.5 line-clamp-1 text-xs leading-4',
                 active ? 'text-primary-foreground/72' : 'text-text-muted'
               )}
             >
-              {meta}
-            </div>
-          ) : null}
-        </Link>
+              {description}
+            </p>
+            {meta ? (
+              <div
+                className={cn(
+                  'mt-1.5 flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden text-[11px] leading-4 [&_[data-slot=badge]]:px-1.5 [&_[data-slot=badge]]:py-0 [&_[data-slot=badge]]:text-[11px] [&_[data-slot=badge]]:font-medium [&_[data-slot=badge]]:leading-4 [&_span]:min-w-0 [&_span]:truncate',
+                  active ? 'text-primary-foreground/72' : 'text-text-muted'
+                )}
+              >
+                {meta}
+              </div>
+            ) : null}
+          </Link>
+        </div>
         {actionsMenu ? <div className="-mr-1 shrink-0">{actionsMenu}</div> : null}
       </div>
     </div>

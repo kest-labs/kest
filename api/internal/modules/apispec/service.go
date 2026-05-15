@@ -249,7 +249,9 @@ func (s *service) UpdateSpec(ctx context.Context, projectID, id string, req *Upd
 	if req.IsPublic != nil {
 		po.IsPublic = *req.IsPublic
 	}
-	if req.CategoryID != nil {
+	if req.ClearCategory {
+		po.CategoryID = nil
+	} else if req.CategoryID != nil {
 		po.CategoryID = req.CategoryID
 	}
 

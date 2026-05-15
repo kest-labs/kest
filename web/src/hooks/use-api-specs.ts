@@ -275,15 +275,24 @@ export function useUpdateApiSpec(projectId: number | string) {
   const t = useT();
 
   return useMutation({
-    mutationFn: ({ specId, data }: { specId: number | string; data: UpdateApiSpecRequest }) =>
+    mutationFn: ({
+      specId,
+      data,
+    }: {
+      specId: number | string;
+      data: UpdateApiSpecRequest;
+      suppressToast?: boolean;
+    }) =>
       apiSpecService.update(projectId, specId, data),
-    onSuccess: spec => {
+    onSuccess: (spec, variables) => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       queryClient.setQueryData(apiSpecKeys.detail(projectId, spec.id), spec);
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.full(projectId, spec.id) });
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.examples(projectId, spec.id) });
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.share(projectId, spec.id) });
-      toast.success(t.project('toasts.apiSpecUpdated', { method: spec.method, path: spec.path }));
+      if (!variables.suppressToast) {
+        toast.success(t.project('toasts.apiSpecUpdated', { method: spec.method, path: spec.path }));
+      }
     },
   });
 }

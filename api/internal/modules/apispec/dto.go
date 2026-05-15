@@ -28,6 +28,7 @@ type CreateAPISpecRequest struct {
 
 type UpdateAPISpecRequest struct {
 	CategoryID    *string                  `json:"category_id"`
+	ClearCategory bool                     `json:"-"`
 	Summary       *string                  `json:"summary" binding:"omitempty,max=500"`
 	Description   *string                  `json:"description"`
 	DocMarkdown   *string                  `json:"doc_markdown"`
