@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react"
 import { cn } from "@/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium leading-[1.3] tracking-normal focus-ring shrink-0 disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-border-main disabled:text-text-muted [&>svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium leading-[1.3] tracking-normal focus-ring shrink-0 disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-border-main disabled:text-text-muted [&>svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -42,7 +42,7 @@ const buttonVariants = cva(
         "2xl": "min-h-11 px-6 py-3",
       },
       isIcon: {
-        true: "size-9 rounded-full border border-border-main bg-bg-canvas p-0 text-text-main",
+        true: "size-9 rounded-md border border-border-main bg-bg-canvas p-0 text-text-main",
       },
     },
     defaultVariants: {

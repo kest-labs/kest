@@ -82,16 +82,16 @@ export function ProjectWorkspaceLayout({
                     key={item.value}
                     href={href}
                     className={cn(
-                      'flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors',
+                      'flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors',
                       isActive
-                        ? 'border-primary bg-primary text-primary-foreground'
+                        ? 'border-border-strong bg-bg-canvas text-text-main'
                         : 'border-border-subtle bg-bg-canvas text-text-muted hover:border-border-strong hover:bg-bg-subtle hover:text-text-main'
                     )}
                   >
                     <div
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-                        isActive ? 'bg-text-inverse/16 text-primary-foreground' : 'bg-bg-surface text-text-main'
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-sm',
+                        isActive ? 'bg-primary text-primary-foreground' : 'bg-bg-surface text-text-main'
                       )}
                     >
                       <Icon className="h-3 w-3" />
@@ -191,21 +191,21 @@ export function ProjectWorkspaceLayout({
                       key={item.value}
                       href={href}
                       className={cn(
-                        'group flex rounded-full border transition-colors',
+                    'group relative flex rounded-md border transition-colors',
                         isDesktopNavCollapsed
                           ? 'items-center justify-center px-2 py-3 text-center'
                           : 'items-center gap-3 px-3 py-3',
                         isActive
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-transparent text-text-muted hover:border-border-subtle hover:bg-bg-subtle hover:text-text-main'
+                          ? 'border-border-strong bg-bg-canvas text-text-main before:absolute before:inset-y-2 before:left-0 before:w-1 before:bg-[var(--miro-brand-yellow)]'
+                          : 'border-transparent text-text-muted hover:border-border-subtle hover:bg-bg-canvas hover:text-text-main'
                       )}
                       aria-label={label}
                     >
                       <div
                         className={cn(
-                          'flex shrink-0 items-center justify-center rounded-xl',
+                          'flex shrink-0 items-center justify-center rounded-md',
                           isDesktopNavCollapsed ? 'h-8 w-8' : 'h-8 w-8',
-                          isActive ? 'bg-text-inverse/16 text-primary-foreground' : 'bg-bg-surface text-text-main'
+                          isActive ? 'bg-primary text-primary-foreground' : 'bg-bg-surface text-text-main'
                         )}
                       >
                         <Icon className="h-3.5 w-3.5" />

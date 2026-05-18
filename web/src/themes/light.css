@@ -31,7 +31,7 @@
   
   --border: var(--miro-hairline);
   --input: var(--miro-hairline-strong);
-  --ring: var(--miro-brand-blue);
+  --ring: var(--miro-brand-yellow-deep);
 
   /* --- Semantic Design Tokens --- */
   
@@ -61,9 +61,9 @@
   --border-strong: var(--miro-hairline-strong);
 
   /* Brand / Primary */
-  --brand-main: var(--miro-brand-blue);
-  --brand-subtle: var(--miro-surface);
-  --brand-strong: var(--miro-blue-pressed);
+  --brand-main: var(--miro-brand-yellow);
+  --brand-subtle: var(--miro-surface-yellow);
+  --brand-strong: var(--miro-brand-yellow-deep);
 
   /* Marketing block colors */
   --block-lime: var(--miro-yellow-light);
@@ -85,8 +85,8 @@
   --error: var(--miro-coral-dark);
   --error-subtle: var(--miro-brand-red);
   
-  --info: var(--miro-brand-blue);
-  --info-subtle: var(--miro-surface-featured);
+  --info: var(--miro-ink);
+  --info-subtle: var(--miro-surface);
 
   --highlight: var(--miro-brand-yellow);
   --highlight-subtle: var(--miro-yellow-light);

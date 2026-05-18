@@ -68,7 +68,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -3919,7 +3918,9 @@ function HistoryWorkspaceSection({
           {filteredHistories.map(history => (
             <ResourceListItem
               key={history.id}
-              href={buildModuleHref(projectId, 'histories', history.id)}
+              href={`${buildModuleHref(projectId, 'histories', history.id)}${
+                entityTypeFilter !== 'all' ? `&entityType=${encodeURIComponent(entityTypeFilter)}` : ''
+              }`}
               active={history.id === selectedHistory?.id}
               title={getHistoryPrimaryTitle(history)}
               description={history.message || getHistoryFallbackDescription(history)}
@@ -4007,18 +4008,20 @@ function HistoryWorkspaceSection({
             />
           ) : (
             <div className="space-y-6">
-              <Card className="border-border-subtle">
+              <Card className="border-border-main bg-bg-canvas">
                 <CardHeader>
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="border-border-subtle bg-bg-subtle text-text-main"
+                          className="border-border-subtle bg-bg-canvas font-mono text-text-main"
                         >
                           {selectedHistory.entity_type}
                         </Badge>
-                        <Badge variant="outline">{selectedHistory.action}</Badge>
+                        <Badge variant="outline" className="font-mono">
+                          {selectedHistory.action}
+                        </Badge>
                         {selectedHistory.entity_type === 'cli_request' &&
                         getHistoryRequestStatus(selectedHistory) !== null ? (
                           <Badge variant="secondary">
@@ -4034,7 +4037,7 @@ function HistoryWorkspaceSection({
                         </Badge>
                       </div>
                       <div>
-                        <CardTitle className="text-2xl tracking-normal">
+                        <CardTitle className="text-2xl font-semibold tracking-normal">
                           {getHistoryPrimaryTitle(selectedHistory)}
                         </CardTitle>
                         <CardDescription className="mt-2 max-w-4xl leading-6">
@@ -4057,8 +4060,8 @@ function HistoryWorkspaceSection({
                 </CardHeader>
               </Card>
 
-              <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                <Card className="border-border-subtle">
+              <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+                <Card className="border-border-main bg-bg-canvas">
                   <CardHeader>
                     <CardTitle>{t('history.metadata')}</CardTitle>
                     <CardDescription>{t('history.metadataDescription')}</CardDescription>
@@ -4085,7 +4088,7 @@ function HistoryWorkspaceSection({
                   </CardContent>
                 </Card>
 
-                <Card className="border-border-subtle">
+                <Card className="border-border-main bg-bg-canvas">
                   <CardHeader>
                     <CardTitle>{t('history.recordedNote')}</CardTitle>
                     <CardDescription>{t('history.recordedNoteDescription')}</CardDescription>
@@ -4162,8 +4165,8 @@ function HistoryWorkspaceSection({
 
               {selectedCLIRun ? (
                 <>
-                  <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                    <Card className="border-border-subtle">
+                  <div className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
+                    <Card className="border-border-main bg-bg-canvas">
                       <CardHeader>
                         <CardTitle>{t('history.cliRunSummary')}</CardTitle>
                         <CardDescription>{t('history.cliRunSummaryDescription')}</CardDescription>
@@ -4191,13 +4194,15 @@ function HistoryWorkspaceSection({
                       </CardContent>
                     </Card>
 
-                    <Card className="border-border-subtle">
+                    <Card className="border-border-main bg-[#101112] text-white">
                       <CardHeader>
-                        <CardTitle>{t('history.logExcerpt')}</CardTitle>
-                        <CardDescription>{t('history.logExcerptDescription')}</CardDescription>
+                        <CardTitle className="text-white">{t('history.logExcerpt')}</CardTitle>
+                        <CardDescription className="text-white/60">
+                          {t('history.logExcerptDescription')}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <pre className="max-h-[340px] overflow-auto rounded-md border border-border-subtle bg-bg-soft p-4 text-xs leading-6 text-text-muted">
+                        <pre className="max-h-[340px] overflow-auto rounded-md border border-white/10 bg-black p-4 font-mono text-xs leading-6 text-white/82">
                           {getHistoryString(selectedCLIRunLog?.excerpt) ||
                             t('history.noLogExcerpt')}
                         </pre>
@@ -4205,7 +4210,7 @@ function HistoryWorkspaceSection({
                     </Card>
                   </div>
 
-                  <Card className="border-border-subtle">
+                  <Card className="border-border-main bg-bg-canvas">
                     <CardHeader>
                       <CardTitle>{t('history.stepResults')}</CardTitle>
                       <CardDescription>{t('history.stepResultsDescription')}</CardDescription>
@@ -4353,7 +4358,7 @@ function WorkspaceFrame({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas xl:flex-row">
-      <aside className="w-full shrink-0 border-b border-border-subtle bg-bg-canvas xl:w-[336px] xl:border-b-0 xl:border-r">
+      <aside className="w-full shrink-0 border-b border-border-main bg-bg-soft xl:w-[360px] xl:border-b-0 xl:border-r">
         {sidebar}
       </aside>
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{content}</div>
@@ -4390,9 +4395,9 @@ function ResourceSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="space-y-2 px-3 py-2">
+      <div className="space-y-2 border-b border-border-main bg-bg-canvas px-3 py-3">
         <div className="flex min-h-8 items-center">
-          <h2 className="truncate text-sm font-medium tracking-normal text-text-main">{title}</h2>
+          <h2 className="truncate text-sm font-semibold tracking-normal text-text-main">{title}</h2>
         </div>
 
         {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
@@ -4410,9 +4415,7 @@ function ResourceSidebar({
         ) : null}
       </div>
 
-      <Separator className="bg-border-main" />
-
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {loading ? (
           <div className="space-y-1.5">
             {Array.from({ length: 7 }).map((_, index) => (
@@ -4431,7 +4434,7 @@ function ResourceSidebar({
         ) : count === 0 ? (
           emptyState
         ) : (
-          <div className="space-y-1.5">{children}</div>
+          <div className="space-y-1">{children}</div>
         )}
       </div>
     </div>
@@ -4462,10 +4465,10 @@ function ResourceListItem({
   return (
     <div
       className={cn(
-        'group/resource rounded-md border px-3 py-2 transition-colors',
+        'group/resource relative rounded-md border px-3 py-2 transition-colors',
         active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border-subtle bg-bg-canvas hover:bg-bg-subtle'
+          ? 'border-border-strong bg-bg-canvas text-text-main before:absolute before:inset-y-2 before:left-0 before:w-1 before:bg-[var(--miro-brand-yellow)]'
+          : 'border-transparent bg-transparent hover:border-border-subtle hover:bg-bg-canvas'
       )}
       style={{ marginLeft: indentLevel > 0 ? `${indentLevel * 12}px` : undefined }}
     >
@@ -4476,7 +4479,7 @@ function ResourceListItem({
             <p
               className={cn(
                 'truncate text-[13px] font-medium leading-5',
-                active ? 'text-primary-foreground' : 'text-text-main'
+                active ? 'text-text-main' : 'text-text-main'
               )}
             >
               {title}
@@ -4484,7 +4487,7 @@ function ResourceListItem({
             <p
               className={cn(
                 'mt-0.5 line-clamp-1 text-xs leading-4',
-                active ? 'text-primary-foreground/72' : 'text-text-muted'
+                active ? 'text-text-muted' : 'text-text-muted'
               )}
             >
               {description}
@@ -4493,7 +4496,7 @@ function ResourceListItem({
               <div
                 className={cn(
                   'mt-1.5 flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden text-[11px] leading-4 [&_[data-slot=badge]]:px-1.5 [&_[data-slot=badge]]:py-0 [&_[data-slot=badge]]:text-[11px] [&_[data-slot=badge]]:font-medium [&_[data-slot=badge]]:leading-4 [&_span]:min-w-0 [&_span]:truncate',
-                  active ? 'text-primary-foreground/72' : 'text-text-muted'
+                  active ? 'text-text-muted' : 'text-text-muted'
                 )}
               >
                 {meta}
@@ -4528,7 +4531,7 @@ function ResourceContent({
 
   return (
     <main className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle bg-bg-canvas px-4 py-2 md:px-6">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-main bg-bg-canvas px-4 py-2 md:px-6">
         <Breadcrumb className="min-w-0">
           <BreadcrumbList className="flex-nowrap">
             <BreadcrumbItem className="min-w-0 shrink-0">
@@ -4558,7 +4561,7 @@ function ResourceContent({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto bg-bg-soft p-4 md:p-5">{children}</div>
     </main>
   );
 }
@@ -4574,7 +4577,7 @@ function SidebarEmptyState({
 }) {
   return (
     <div className="rounded-md border border-dashed border-border-subtle bg-bg-soft p-5 text-center">
-      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-bg-canvas text-text-muted">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-muted">
         <Icon className="h-5 w-5" />
       </div>
       <p className="mt-4 text-sm font-medium text-text-main">{title}</p>
@@ -4599,7 +4602,7 @@ function GuideState({
   return (
     <Card className="border-dashed border-border-subtle">
       <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <div className="flex h-14 w-14 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <Icon className="h-6 w-6" />
         </div>
         <div className="space-y-2">
@@ -4631,7 +4634,7 @@ function ApiSpecsGuideState({
     <Card className="min-w-0 border-border-subtle">
       <CardContent className="space-y-6 py-8">
         <div className="flex flex-col items-start gap-4 rounded-lg border border-border-subtle bg-bg-surface p-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Bot className="h-6 w-6" />
           </div>
           <div className="space-y-2">
@@ -4716,7 +4719,7 @@ function DetailField({ label, children }: { label: string; children: React.React
 
 function InfoBadge({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-full border border-border-subtle bg-bg-canvas px-3 py-2 text-sm">
+    <div className="rounded-md border border-border-subtle bg-bg-canvas px-3 py-2 text-sm">
       <span className="text-text-muted">{label}: </span>
       <span className="font-medium text-text-main">{value}</span>
     </div>
