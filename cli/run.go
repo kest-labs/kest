@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kest-labs/kest/cli/internal/logger"
+	"github.com/kest-labs/kest/cli/internal/output"
 	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/report"
 	"github.com/kest-labs/kest/cli/internal/storage"
@@ -131,14 +132,19 @@ func runScenario(filePath string) error {
 		}
 	}
 
+	summ := summary.NewSummary()
+	restoreOutput := func() {}
+	if output.JSONOutput {
+		restoreOutput = suppressStdout()
+		defer restoreOutput()
+	}
+
 	fmt.Printf("\n🚀 Running %d test(s) from %s\n", len(blocks), filePath)
 	if runParallel {
 		fmt.Printf("⚡ Parallel mode: %d workers\n\n", runJobs)
 	} else {
 		fmt.Println("📝 Sequential mode")
 	}
-
-	summ := summary.NewSummary()
 
 	if runParallel {
 		// Parallel execution
@@ -184,10 +190,15 @@ func runScenario(filePath string) error {
 		}
 	}
 
-	summ.Print()
-
 	logPath := logger.GetSessionPath()
-	if logPath != "" {
+	if output.JSONOutput {
+		restoreOutput()
+		restoreOutput = func() {}
+		summ.PrintJSON(filePath, logPath)
+	} else {
+		summ.Print()
+	}
+	if logPath != "" && !output.JSONOutput {
 		fmt.Printf("\n📄 Full session logs generated at: %s\n", logPath)
 		fmt.Printf("💡 Tip: Use this path for deep-context debugging in AI Editors (Cursor/Windsurf)\n")
 		fmt.Printf("📘 Need help writing flows? Run 'kest guide' for a quick tutorial.\n")
@@ -340,6 +351,11 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 	teardownSteps := doc.Teardown
 
 	totalSteps := len(setupSteps) + len(steps) + len(teardownSteps)
+	restoreOutput := func() {}
+	if output.JSONOutput {
+		restoreOutput = suppressStdout()
+		defer restoreOutput()
+	}
 	fmt.Printf("\n🚀 Running %d step(s) from %s\n", totalSteps, filePath)
 	if runParallel {
 		fmt.Printf("⚠️  Parallel mode is ignored for flow steps; running sequentially.\n\n")
@@ -383,6 +399,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		if err := validateFlowStepVariables(step, captureOrigins, failedSteps); err != nil {
 			result := summary.TestResult{
 				Name:    stepName(step),
+				StepID:  step.ID,
 				Method:  strings.ToUpper(step.Request.Method),
 				URL:     step.Request.URL,
 				Success: false,
@@ -399,6 +416,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		if step.Type == "exec" {
 			fmt.Printf("\n  ▶ %s (exec, line %d)\n", stepName(step), step.LineNum)
 			result := executeExecStep(step)
+			result.StepID = step.ID
 			summ.AddResult(result)
 			if !result.Success {
 				failedSteps[stepName(step)] = true
@@ -418,6 +436,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		if step.Request.Method == "" || step.Request.URL == "" {
 			result := summary.TestResult{
 				Name:    stepName(step),
+				StepID:  step.ID,
 				Success: false,
 				Error:   fmt.Errorf("invalid step (missing METHOD/URL) at line %d", step.LineNum),
 			}
@@ -454,12 +473,15 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		res, err := executeFlowStepWithPoll(step, opts)
 		result := res
 		result.Name = stepName(step)
+		result.StepID = step.ID
 		result.Success = (err == nil)
 		result.Error = err
-		summ.AddResult(result)
 
 		// Process captures after successful request
 		if err == nil && len(step.Request.Captures) > 0 {
+			if result.Captures == nil {
+				result.Captures = make(map[string]string)
+			}
 			store, _ := storage.NewStore() //nolint: we need a fresh store per capture block
 			conf := loadConfigWarn()
 			for _, capExpr := range step.Request.Captures {
@@ -479,6 +501,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 						if ActiveRunCtx != nil {
 							ActiveRunCtx.Set(varName, value)
 						}
+						result.Captures[varName] = value
 						// Also save to storage for persistence
 						if store != nil && conf != nil {
 							store.SaveVariable(&storage.Variable{
@@ -499,6 +522,9 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		}
 
 		if err != nil {
+			if result.FailedAssertion == "" && strings.Contains(err.Error(), "assertion failed:") {
+				result.FailedAssertion = strings.TrimSpace(strings.TrimPrefix(err.Error(), "assertion failed:"))
+			}
 			failedSteps[stepName(step)] = true
 			fmt.Printf("    ❌ Failed at step %s\n", stepName(step))
 			if runFailFast {
@@ -508,11 +534,13 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 				if i+1 < total {
 					fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
 				}
+				summ.AddResult(result)
 				return false
 			}
 		} else {
 			fmt.Printf("    ✅ %s %s → %d (%s)\n", res.Method, step.Request.URL, res.Status, res.Duration.Round(time.Millisecond))
 		}
+		summ.AddResult(result)
 		return true
 	}
 
@@ -523,10 +551,15 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		}
 	}
 
-	summ.Print()
-
 	logPath := logger.GetSessionPath()
-	if logPath != "" {
+	if output.JSONOutput {
+		restoreOutput()
+		restoreOutput = func() {}
+		summ.PrintJSON(filePath, logPath)
+	} else {
+		summ.Print()
+	}
+	if logPath != "" && !output.JSONOutput {
 		fmt.Printf("\n📄 Full session logs generated at: %s\n", logPath)
 		fmt.Printf("💡 Tip: Use this path for deep-context debugging in AI Editors (Cursor/Windsurf)\n")
 		fmt.Printf("📘 Need help writing flows? Run 'kest guide' for a quick tutorial.\n")
@@ -685,8 +718,12 @@ func executeExecStep(step FlowStep) summary.TestResult {
 		value := ResolveExecCapture(output, query)
 		if value != "" {
 			if ActiveRunCtx != nil {
-				ActiveRunCtx.Set(varName, value)
+				ActiveRunCtx.SetWithSource(varName, value, stepName(step), "success", "exec")
 			}
+			if result.Captures == nil {
+				result.Captures = make(map[string]string)
+			}
+			result.Captures[varName] = value
 			fmt.Printf("  Captured: %s = %s\n", varName, value)
 			logger.LogToSession("Exec Captured: %s = %s", varName, value)
 		} else {
@@ -910,6 +947,19 @@ func sortByIndex(ids []string, index map[string]int) []string {
 		return index[ids[i]] < index[ids[j]]
 	})
 	return ids
+}
+
+func suppressStdout() func() {
+	devNull, err := os.Open(os.DevNull)
+	if err != nil {
+		return func() {}
+	}
+	oldStdout := os.Stdout
+	os.Stdout = devNull
+	return func() {
+		os.Stdout = oldStdout
+		_ = devNull.Close()
+	}
 }
 
 func stepName(step FlowStep) string {

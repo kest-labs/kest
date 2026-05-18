@@ -137,19 +137,26 @@ func NormalizeJSONPath(path string) string {
 //
 // Supported query formats:
 //   - $stdout        → entire stdout
-//   - $line.N        → Nth line (0-indexed)
+//   - $line.N        → Nth line (1-indexed; $line.0 is accepted for compatibility)
 //   - <gjson path>   → parse stdout as JSON, extract via gjson
 func ResolveExecCapture(output string, query string) string {
 	lines := strings.Split(output, "\n")
+	query = strings.TrimSpace(query)
 
 	switch {
 	case query == "$stdout":
 		return output
 
-	case strings.HasPrefix(query, "$line."):
-		idxStr := strings.TrimPrefix(query, "$line.")
+	case strings.HasPrefix(query, "$line.") || strings.HasPrefix(query, "line."):
+		idxStr := strings.TrimPrefix(strings.TrimPrefix(query, "$line."), "line.")
 		idx, err := strconv.Atoi(idxStr)
-		if err != nil || idx < 0 || idx >= len(lines) {
+		if err != nil || idx < 0 {
+			return ""
+		}
+		if idx > 0 {
+			idx--
+		}
+		if idx >= len(lines) {
 			return ""
 		}
 		return strings.TrimSpace(lines[idx])
