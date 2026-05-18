@@ -217,11 +217,6 @@ func projectDeleteStatements(projectID string) []projectDeleteStatement {
 			args:  []any{projectID},
 		},
 		{
-			table: "api_categories",
-			sql:   "DELETE FROM api_categories WHERE project_id = ?",
-			args:  []any{projectID},
-		},
-		{
 			table: "api_environments",
 			sql:   "DELETE FROM api_environments WHERE project_id = ?",
 			args:  []any{projectID},

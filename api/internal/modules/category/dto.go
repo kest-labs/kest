@@ -41,7 +41,7 @@ type CategoryListResponse struct {
 
 type CategoryResponse struct {
 	ID          string             `json:"id"`
-	ProjectID   string             `json:"project_id"`
+	WorkspaceID string             `json:"workspace_id"`
 	Name        string             `json:"name"`
 	ParentID    *string            `json:"parent_id"`
 	Description string             `json:"description,omitempty"`
@@ -52,9 +52,9 @@ type CategoryResponse struct {
 }
 
 // ToCategoryPO converts CreateCategoryRequest to CategoryPO
-func ToCategoryPO(projectID string, req *CreateCategoryRequest) *CategoryPO {
+func ToCategoryPO(workspaceID string, req *CreateCategoryRequest) *CategoryPO {
 	return &CategoryPO{
-		ProjectID:   projectID,
+		WorkspaceID: workspaceID,
 		Name:        req.Name,
 		ParentID:    req.ParentID,
 		Description: req.Description,
@@ -69,7 +69,7 @@ func FromCategoryPO(po *CategoryPO) *CategoryResponse {
 	}
 	return &CategoryResponse{
 		ID:          po.ID,
-		ProjectID:   po.ProjectID,
+		WorkspaceID: po.WorkspaceID,
 		Name:        po.Name,
 		ParentID:    po.ParentID,
 		Description: po.Description,

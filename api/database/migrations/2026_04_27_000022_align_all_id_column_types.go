@@ -56,6 +56,7 @@ func (m *alignAllIDColumnTypes) Up(db *gorm.DB) error {
 		{table: "examples", column: "request_id", expectedType: idTypeText},
 		{table: "api_categories", column: "id", expectedType: idTypeText},
 		{table: "api_categories", column: "project_id", expectedType: idTypeText},
+		{table: "api_categories", column: "workspace_id", expectedType: idTypeText},
 		{table: "api_categories", column: "parent_id", expectedType: idTypeText},
 		{table: "api_specs", column: "id", expectedType: idTypeText},
 		{table: "api_specs", column: "project_id", expectedType: idTypeText},

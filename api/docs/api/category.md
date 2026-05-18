@@ -10,18 +10,18 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/categories` | List categorys | 🔒 |
-| `POST` | `/v1/projects/:id/categories` | Create category | 🔒 |
-| `PUT` | `/v1/projects/:id/categories/sort` | Sort category | 🔒 |
-| `GET` | `/v1/projects/:id/categories/:cid` | Get category details | 🔒 |
-| `PATCH` | `/v1/projects/:id/categories/:cid` | Update category | 🔒 |
-| `DELETE` | `/v1/projects/:id/categories/:cid` | Delete category | 🔒 |
+| `GET` | `/v1/workspaces/:id/categories` | List categorys | 🔒 |
+| `POST` | `/v1/workspaces/:id/categories` | Create category | 🔒 |
+| `PUT` | `/v1/workspaces/:id/categories/sort` | Sort category | 🔒 |
+| `GET` | `/v1/workspaces/:id/categories/:cid` | Get category details | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/categories/:cid` | Update category | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/categories/:cid` | Delete category | 🔒 |
 
 ---
 
 ## Details
 
-### GET `/v1/projects/:id/categories`
+### GET `/v1/workspaces/:id/categories`
 
 **List categorys**
 
@@ -48,13 +48,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/categories' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/categories' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/categories`
+### POST `/v1/workspaces/:id/categories`
 
 **Create category**
 
@@ -71,13 +71,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/categories' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/categories' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/categories' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PUT `/v1/projects/:id/categories/sort`
+### PUT `/v1/workspaces/:id/categories/sort`
 
 **Sort category**
 
@@ -94,13 +94,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/categories' \
 #### Example
 
 ```bash
-curl -X PUT 'http://localhost:8025/api/v1/projects/1/categories/sort' \
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1/categories/sort' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/categories/:cid`
+### GET `/v1/workspaces/:id/categories/:cid`
 
 **Get category details**
 
@@ -118,13 +118,13 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/categories/sort' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/categories/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/categories/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/categories/:cid`
+### PATCH `/v1/workspaces/:id/categories/:cid`
 
 **Update category**
 
@@ -142,13 +142,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/categories/1' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/categories/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/categories/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/categories/:cid`
+### DELETE `/v1/workspaces/:id/categories/:cid`
 
 **Delete category**
 
@@ -166,7 +166,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/categories/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/categories/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/categories/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
