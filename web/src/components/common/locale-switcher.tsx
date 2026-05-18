@@ -41,7 +41,7 @@ export function LanguageSwitcher({ showTooltip = false }: { showTooltip?: boolea
               variant="ghost"
               isIcon
               noScale
-              className="h-9 w-9 rounded-full border border-border-main bg-bg-surface transition-colors hover:bg-bg-subtle"
+              className="h-9 w-9 rounded-md border border-border-main bg-bg-surface transition-colors hover:bg-bg-subtle"
               disabled={isPending}
               aria-label={t('common.selectLanguage')}
             >

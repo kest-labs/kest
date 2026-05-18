@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,17 @@ import { Label } from '@/components/ui/label';
 import { authConfig } from '@/config/auth';
 import { useLogin } from '@/hooks/use-auth';
 import { useT } from '@/i18n/client';
+import {
+  clearAuthFormDraft,
+  LOGIN_FORM_DRAFT_KEY,
+  readAuthFormDraft,
+  writeAuthFormDraft,
+} from './auth-form-draft';
+
+const emptyLoginForm = {
+  username: '',
+  password: '',
+};
 
 export function LoginForm() {
   const t = useT();
@@ -25,10 +36,52 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const loginMutation = useLogin();
   const returnUrl = searchParams.get('returnUrl');
-  const [form, setForm] = useState({
-    username: '',
-    password: '',
-  });
+  const [form, setForm] = useState(emptyLoginForm);
+  const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    queueMicrotask(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      setForm(readAuthFormDraft(window.sessionStorage, LOGIN_FORM_DRAFT_KEY, emptyLoginForm));
+      setHasHydratedDraft(true);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedDraft) {
+      return;
+    }
+
+    writeAuthFormDraft(window.sessionStorage, LOGIN_FORM_DRAFT_KEY, form);
+  }, [form, hasHydratedDraft]);
+
+  const persistCurrentForm = useCallback(() => {
+    writeAuthFormDraft(window.sessionStorage, LOGIN_FORM_DRAFT_KEY, {
+      username: usernameInputRef.current?.value ?? form.username,
+      password: passwordInputRef.current?.value ?? form.password,
+    });
+  }, [form.password, form.username]);
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', persistCurrentForm);
+    window.addEventListener('pagehide', persistCurrentForm);
+
+    return () => {
+      window.removeEventListener('beforeunload', persistCurrentForm);
+      window.removeEventListener('pagehide', persistCurrentForm);
+    };
+  }, [persistCurrentForm]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -44,6 +97,7 @@ export function LoginForm() {
         description: t.auth('welcomeBackUser', { name: displayName }),
       });
 
+      clearAuthFormDraft(window.sessionStorage, LOGIN_FORM_DRAFT_KEY);
       router.replace(nextPath);
     } catch {
       // Error toast is handled by the global HTTP error handler.
@@ -63,6 +117,7 @@ export function LoginForm() {
             <Label htmlFor="username">{t.auth('usernameOrEmail')}</Label>
             <Input
               id="username"
+              ref={usernameInputRef}
               value={form.username}
               onChange={event => setForm(current => ({ ...current, username: event.target.value }))}
               placeholder={t.auth('enterUsernameOrEmail')}
@@ -83,6 +138,7 @@ export function LoginForm() {
             </div>
             <Input
               id="password"
+              ref={passwordInputRef}
               type="password"
               value={form.password}
               onChange={event => setForm(current => ({ ...current, password: event.target.value }))}

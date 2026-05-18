@@ -190,7 +190,7 @@ export function ProjectDashboardPage() {
   };
 
   return (
-    <main className="h-full min-h-0 overflow-y-auto bg-bg-canvas">
+    <main className="h-full min-h-0 overflow-y-auto bg-bg-soft">
       <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col px-4 py-5 md:px-6 lg:px-10">
         <div className="space-y-6">
           <PendingInvitationsPanel
@@ -220,7 +220,7 @@ export function ProjectDashboardPage() {
                 <nav className="flex min-w-0 items-center gap-5 overflow-x-auto no-scrollbar">
                   <button
                     type="button"
-                    className="relative shrink-0 px-0 pb-3 text-sm font-medium tracking-normal text-[var(--miro-brand-blue)] transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--miro-brand-blue)]"
+                    className="relative shrink-0 px-0 pb-3 text-sm font-semibold tracking-normal text-text-main transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-sm after:bg-[var(--miro-brand-yellow)]"
                   >
                     {t('dashboardPage.tabs.settings')}
                   </button>
@@ -230,7 +230,7 @@ export function ProjectDashboardPage() {
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex rounded-lg bg-bg-surface p-1">
+                <div className="inline-flex rounded-md border border-border-subtle bg-bg-canvas p-1">
                   <Button
                     type="button"
                     variant="ghost"
@@ -239,7 +239,7 @@ export function ProjectDashboardPage() {
                     aria-label={t('dashboardPage.gridView')}
                     className={cn(
                       'h-8 w-8 rounded-md border-0 bg-transparent',
-                      viewMode === 'grid' && 'bg-bg-canvas shadow-sm'
+                      viewMode === 'grid' && 'bg-primary text-primary-foreground'
                     )}
                     onClick={() => setViewMode('grid')}
                   >
@@ -253,7 +253,7 @@ export function ProjectDashboardPage() {
                     aria-label={t('dashboardPage.listView')}
                     className={cn(
                       'h-8 w-8 rounded-md border-0 bg-transparent',
-                      viewMode === 'list' && 'bg-bg-canvas shadow-sm'
+                      viewMode === 'list' && 'bg-primary text-primary-foreground'
                     )}
                     onClick={() => setViewMode('list')}
                   >
@@ -652,7 +652,7 @@ function ProjectCard({
           items={menuItems}
           ariaLabel={t('dashboardPage.openProjectActions', { name: project.name })}
           stopPropagation
-          triggerClassName="absolute right-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main [&>svg]:h-3.5 [&>svg]:w-3.5"
+          triggerClassName="absolute right-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main [&>svg]:h-3.5 [&>svg]:w-3.5"
         />
       </div>
     );
@@ -724,7 +724,7 @@ function ProjectCard({
         items={menuItems}
         ariaLabel={t('dashboardPage.openProjectActions', { name: project.name })}
         stopPropagation
-        triggerClassName="absolute right-3 top-3 h-7 w-7 rounded-full bg-bg-canvas text-text-muted opacity-0 transition-opacity hover:bg-bg-subtle hover:text-text-main group-hover:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
+          triggerClassName="absolute right-3 top-3 h-7 w-7 rounded-md bg-bg-canvas text-text-muted opacity-0 transition-opacity hover:bg-bg-subtle hover:text-text-main group-hover:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
       />
     </div>
   );
@@ -739,7 +739,7 @@ function ProjectAvatar({ name }: { name: string }) {
     .join('');
 
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--miro-rose-light)] text-[var(--miro-brand-blue)]">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-main bg-primary text-primary-foreground">
       {initials ? (
         <span className="text-xs font-semibold tracking-normal">{initials}</span>
       ) : (
@@ -817,7 +817,7 @@ function ProjectDashboardEmptyState({
 
   return (
     <div className="rounded-lg border border-dashed border-border-subtle bg-bg-soft p-6 text-center">
-      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-main">
         <FolderKanban className="h-5 w-5" />
       </div>
       <h2 className="mt-4 text-base font-medium tracking-normal text-text-main">
