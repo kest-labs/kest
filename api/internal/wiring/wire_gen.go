@@ -83,7 +83,7 @@ func InitApplication() (*app.Application, error) {
 	requestHandler := request.NewHandler(requestService, workspaceService)
 	exampleRepository := example.NewRepository(db)
 	exampleService := example.NewService(exampleRepository)
-	exampleHandler := example.NewHandler(exampleService)
+	exampleHandler := example.NewHandler(exampleService, requestService, workspaceService)
 	runnerRunner := runner.New()
 	runHandler := run.NewHandler(requestService, workspaceService, runnerRunner)
 	historyRepository := history.NewRepository(db)
