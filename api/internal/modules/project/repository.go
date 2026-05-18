@@ -139,11 +139,8 @@ func (r *repository) GetStats(ctx context.Context, projectID string) (*ProjectSt
 	stats := &ProjectStats{}
 	db := r.db.WithContext(ctx)
 
-	db.Table("api_specs").Where("project_id = ?", projectID).Count(&stats.APISpecCount)
 	db.Table("api_flows").Where("project_id = ?", projectID).Count(&stats.FlowCount)
-	db.Table("api_environments").Where("project_id = ?", projectID).Count(&stats.EnvironmentCount)
 	db.Table("project_members").Where("project_id = ?", projectID).Count(&stats.MemberCount)
-	db.Table("api_categories").Where("project_id = ?", projectID).Count(&stats.CategoryCount)
 
 	return stats, nil
 }
@@ -155,42 +152,10 @@ type projectDeleteStatement struct {
 }
 
 func projectDeleteStatements(projectID string) []projectDeleteStatement {
-	specIDsSubquery := "SELECT id FROM api_specs WHERE project_id = ?"
 	flowIDsSubquery := "SELECT id FROM api_flows WHERE project_id = ?"
 	flowRunIDsSubquery := "SELECT id FROM api_flow_runs WHERE flow_id IN (" + flowIDsSubquery + ")"
-	testCaseIDsSubquery := "SELECT id FROM test_cases WHERE api_spec_id IN (" + specIDsSubquery + ")"
 
 	return []projectDeleteStatement{
-		{
-			table: "test_runs",
-			sql:   "DELETE FROM test_runs WHERE test_case_id IN (" + testCaseIDsSubquery + ")",
-			args:  []any{projectID},
-		},
-		{
-			table: "test_cases",
-			sql:   "DELETE FROM test_cases WHERE api_spec_id IN (" + specIDsSubquery + ")",
-			args:  []any{projectID},
-		},
-		{
-			table: "api_examples",
-			sql:   "DELETE FROM api_examples WHERE api_spec_id IN (" + specIDsSubquery + ")",
-			args:  []any{projectID},
-		},
-		{
-			table: "api_spec_shares",
-			sql:   "DELETE FROM api_spec_shares WHERE project_id = ?",
-			args:  []any{projectID},
-		},
-		{
-			table: "api_spec_ai_drafts",
-			sql:   "DELETE FROM api_spec_ai_drafts WHERE project_id = ?",
-			args:  []any{projectID},
-		},
-		{
-			table: "api_specs",
-			sql:   "DELETE FROM api_specs WHERE project_id = ?",
-			args:  []any{projectID},
-		},
 		{
 			table: "api_flow_step_results",
 			sql:   "DELETE FROM api_flow_step_results WHERE run_id IN (" + flowRunIDsSubquery + ")",
@@ -214,11 +179,6 @@ func projectDeleteStatements(projectID string) []projectDeleteStatement {
 		{
 			table: "api_flows",
 			sql:   "DELETE FROM api_flows WHERE project_id = ?",
-			args:  []any{projectID},
-		},
-		{
-			table: "api_environments",
-			sql:   "DELETE FROM api_environments WHERE project_id = ?",
 			args:  []any{projectID},
 		},
 		{

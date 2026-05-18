@@ -68,7 +68,7 @@ func deriveAIDraftConventions(specs []*APISpecPO) *APISpecAIDraftConventions {
 		defaultVersion = commonVersions[0]
 	}
 
-	authStyle := "project-auth-required"
+	authStyle := "workspace-auth-required"
 	if publicCount == len(specs) {
 		authStyle = "public"
 	} else if publicCount > 0 {

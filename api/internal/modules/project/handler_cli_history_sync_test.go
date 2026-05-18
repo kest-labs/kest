@@ -24,6 +24,63 @@ func (s *testCLIHistorySyncer) SyncHistoryFromCLI(ctx context.Context, projectID
 	return &CLIHistorySyncResponseBody{Created: len(req.Entries)}, nil
 }
 
+type testCLISpecSyncer struct {
+	projectID string
+	req       *CLISpecSyncRequest
+}
+
+func (s *testCLISpecSyncer) SyncSpecsFromCLI(ctx context.Context, projectID string, req *CLISpecSyncRequest) (*CLISpecSyncResponseBody, error) {
+	s.projectID = projectID
+	s.req = req
+	return &CLISpecSyncResponseBody{Created: len(req.Specs)}, nil
+}
+
+func TestSyncSpecsFromCLIUsesInjectedSyncer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	syncer := &testCLISpecSyncer{}
+	h := NewHandler(nil, nil)
+	h.SetSpecSyncer(syncer)
+
+	router := gin.New()
+	router.POST("/projects/:id/cli/spec-sync", h.SyncSpecsFromCLI)
+
+	body := `{
+		"project_id":"12",
+		"source":"cli",
+		"specs":[{
+			"method":"GET",
+			"path":"/health",
+			"title":"Health check",
+			"version":"v1"
+		}]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/projects/12/cli/spec-sync", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if syncer.projectID != "12" {
+		t.Fatalf("unexpected syncer project id: %q", syncer.projectID)
+	}
+	if syncer.req == nil || len(syncer.req.Specs) != 1 {
+		t.Fatalf("expected one synced spec, got %#v", syncer.req)
+	}
+
+	var envelope struct {
+		Data CLISpecSyncResponseBody `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if envelope.Data.Created != 1 {
+		t.Fatalf("expected created count 1, got %+v", envelope.Data)
+	}
+}
+
 func TestSyncHistoryFromCLIUsesInjectedSyncer(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	syncer := &testCLIHistorySyncer{}

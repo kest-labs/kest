@@ -47,29 +47,29 @@ Total endpoints: **133**
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/api-specs` | List Specs apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs` | Create Spec apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/import` | Import Specs apispec | 🔒 |
-| `GET` | `/v1/projects/:id/api-specs/export` | Export Specs apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/batch-gen-doc` | Batch Gen Doc apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/ai-drafts` | Create A I Draft apispec | 🔒 |
-| `GET` | `/v1/projects/:id/api-specs/ai-drafts/:aid` | Get A I Draft apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/ai-drafts/:aid/refine` | Refine A I Draft apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/ai-drafts/:aid/accept` | Accept A I Draft apispec | 🔒 |
-| `GET` | `/v1/projects/:id/api-specs/:sid` | Get Spec apispec | 🔒 |
-| `GET` | `/v1/projects/:id/api-specs/:sid/full` | Get Spec With Examples apispec | 🔒 |
-| `PATCH` | `/v1/projects/:id/api-specs/:sid` | Update Spec apispec | 🔒 |
-| `DELETE` | `/v1/projects/:id/api-specs/:sid` | Delete Spec apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/gen-doc` | Gen Doc apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/gen-test` | Gen Test apispec | 🔒 |
-| `GET` | `/v1/projects/:id/api-specs/:sid/examples` | List Examples apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/examples` | Create Example apispec | 🔒 |
-| `GET` | `/v1/projects/:id/api-specs/:sid/share` | Get Share apispec | 🔒 |
-| `POST` | `/v1/projects/:id/api-specs/:sid/share` | Publish Share apispec | 🔒 |
-| `DELETE` | `/v1/projects/:id/api-specs/:sid/share` | Delete Share apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs` | List Specs apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs` | Create Spec apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/import` | Import Specs apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs/export` | Export Specs apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/batch-gen-doc` | Batch Gen Doc apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/ai-drafts` | Create A I Draft apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs/ai-drafts/:aid` | Get A I Draft apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/ai-drafts/:aid/refine` | Refine A I Draft apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/ai-drafts/:aid/accept` | Accept A I Draft apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs/:sid` | Get Spec apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs/:sid/full` | Get Spec With Examples apispec | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/api-specs/:sid` | Update Spec apispec | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/api-specs/:sid` | Delete Spec apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/:sid/gen-doc` | Gen Doc apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/:sid/gen-test` | Gen Test apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs/:sid/examples` | List Examples apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/:sid/examples` | Create Example apispec | 🔒 |
+| `GET` | `/v1/workspaces/:id/api-specs/:sid/share` | Get Share apispec | 🔒 |
+| `POST` | `/v1/workspaces/:id/api-specs/:sid/share` | Publish Share apispec | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/api-specs/:sid/share` | Delete Share apispec | 🔒 |
 | `GET` | `/v1/public/api-spec-shares/:slug` | Get Public Share apispec | 🔓 |
 
-### GET `/v1/projects/:id/api-specs`
+### GET `/v1/workspaces/:id/api-specs`
 
 **List Specs apispec**
 
@@ -86,13 +86,13 @@ Total endpoints: **133**
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs`
+### POST `/v1/workspaces/:id/api-specs`
 
 **Create Spec apispec**
 
@@ -109,13 +109,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/import`
+### POST `/v1/workspaces/:id/api-specs/import`
 
 **Import Specs apispec**
 
@@ -132,13 +132,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/import' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/import' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/api-specs/export`
+### GET `/v1/workspaces/:id/api-specs/export`
 
 **Export Specs apispec**
 
@@ -155,13 +155,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/import' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/export' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs/export' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/batch-gen-doc`
+### POST `/v1/workspaces/:id/api-specs/batch-gen-doc`
 
 **Batch Gen Doc apispec**
 
@@ -204,7 +204,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/export' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/batch-gen-doc' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/batch-gen-doc' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"category_id": null,"force": true,"lang": "string"}'
@@ -212,7 +212,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/batch-gen-doc' \
 
 ---
 
-### POST `/v1/projects/:id/api-specs/ai-drafts`
+### POST `/v1/workspaces/:id/api-specs/ai-drafts`
 
 **Create A I Draft apispec**
 
@@ -229,13 +229,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/batch-gen-doc' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/ai-drafts' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/api-specs/ai-drafts/:aid`
+### GET `/v1/workspaces/:id/api-specs/ai-drafts/:aid`
 
 **Get A I Draft apispec**
 
@@ -253,13 +253,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs/ai-drafts/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/ai-drafts/:aid/refine`
+### POST `/v1/workspaces/:id/api-specs/ai-drafts/:aid/refine`
 
 **Refine A I Draft apispec**
 
@@ -277,13 +277,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts/1/refine' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/ai-drafts/1/refine' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/ai-drafts/:aid/accept`
+### POST `/v1/workspaces/:id/api-specs/ai-drafts/:aid/accept`
 
 **Accept A I Draft apispec**
 
@@ -301,13 +301,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts/1/refi
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts/1/accept' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/ai-drafts/1/accept' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/api-specs/:sid`
+### GET `/v1/workspaces/:id/api-specs/:sid`
 
 **Get Spec apispec**
 
@@ -325,13 +325,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/ai-drafts/1/acce
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/api-specs/:sid/full`
+### GET `/v1/workspaces/:id/api-specs/:sid/full`
 
 **Get Spec With Examples apispec**
 
@@ -349,13 +349,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1/full' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/full' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/api-specs/:sid`
+### PATCH `/v1/workspaces/:id/api-specs/:sid`
 
 **Update Spec apispec**
 
@@ -373,13 +373,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1/full' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/api-specs/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/api-specs/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/api-specs/:sid`
+### DELETE `/v1/workspaces/:id/api-specs/:sid`
 
 **Delete Spec apispec**
 
@@ -397,13 +397,13 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/api-specs/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/api-specs/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/api-specs/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/:sid/gen-doc`
+### POST `/v1/workspaces/:id/api-specs/:sid/gen-doc`
 
 **Gen Doc apispec**
 
@@ -421,13 +421,13 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/api-specs/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/gen-doc' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/gen-doc' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/:sid/gen-test`
+### POST `/v1/workspaces/:id/api-specs/:sid/gen-test`
 
 **Gen Test apispec**
 
@@ -445,13 +445,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/gen-doc' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/gen-test' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/gen-test' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/api-specs/:sid/examples`
+### GET `/v1/workspaces/:id/api-specs/:sid/examples`
 
 **List Examples apispec**
 
@@ -469,13 +469,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/gen-test' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1/examples' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/examples' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/:sid/examples`
+### POST `/v1/workspaces/:id/api-specs/:sid/examples`
 
 **Create Example apispec**
 
@@ -493,13 +493,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1/examples' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/examples' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/examples' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/api-specs/:sid/share`
+### GET `/v1/workspaces/:id/api-specs/:sid/share`
 
 **Get Share apispec**
 
@@ -517,13 +517,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/examples' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1/share' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/share' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/api-specs/:sid/share`
+### POST `/v1/workspaces/:id/api-specs/:sid/share`
 
 **Publish Share apispec**
 
@@ -541,13 +541,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/api-specs/1/share' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/share' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/share' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/api-specs/:sid/share`
+### DELETE `/v1/workspaces/:id/api-specs/:sid/share`
 
 **Delete Share apispec**
 
@@ -565,7 +565,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/api-specs/1/share' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/api-specs/1/share' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/api-specs/1/share' \
   -H 'Authorization: Bearer <token>'
 ```
 

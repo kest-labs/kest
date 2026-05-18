@@ -20,10 +20,10 @@ func TestRepositoryDeleteCascadesProjectData(t *testing.T) {
 		`CREATE TABLE project_members (project_id TEXT)`,
 		`CREATE TABLE project_cli_tokens (project_id TEXT)`,
 		`CREATE TABLE project_invitations (project_id TEXT)`,
-		`CREATE TABLE api_specs (id TEXT PRIMARY KEY, project_id TEXT)`,
+		`CREATE TABLE api_specs (id TEXT PRIMARY KEY, workspace_id TEXT)`,
 		`CREATE TABLE api_examples (api_spec_id TEXT)`,
-		`CREATE TABLE api_spec_shares (project_id TEXT)`,
-		`CREATE TABLE api_spec_ai_drafts (project_id TEXT)`,
+		`CREATE TABLE api_spec_shares (workspace_id TEXT)`,
+		`CREATE TABLE api_spec_ai_drafts (workspace_id TEXT)`,
 		`CREATE TABLE api_flows (id TEXT PRIMARY KEY, project_id TEXT)`,
 		`CREATE TABLE api_flow_steps (flow_id TEXT)`,
 		`CREATE TABLE api_flow_edges (flow_id TEXT)`,
@@ -41,6 +41,7 @@ func TestRepositoryDeleteCascadesProjectData(t *testing.T) {
 	}
 
 	projectID := "project-1"
+	workspaceID := "workspace-1"
 	specID := "spec-1"
 	flowID := "flow-1"
 	runID := "run-1"
@@ -51,10 +52,10 @@ func TestRepositoryDeleteCascadesProjectData(t *testing.T) {
 		fmt.Sprintf(`INSERT INTO project_members (project_id) VALUES ('%s')`, projectID),
 		fmt.Sprintf(`INSERT INTO project_cli_tokens (project_id) VALUES ('%s')`, projectID),
 		fmt.Sprintf(`INSERT INTO project_invitations (project_id) VALUES ('%s')`, projectID),
-		fmt.Sprintf(`INSERT INTO api_specs (id, project_id) VALUES ('%s', '%s')`, specID, projectID),
+		fmt.Sprintf(`INSERT INTO api_specs (id, workspace_id) VALUES ('%s', '%s')`, specID, workspaceID),
 		fmt.Sprintf(`INSERT INTO api_examples (api_spec_id) VALUES ('%s')`, specID),
-		fmt.Sprintf(`INSERT INTO api_spec_shares (project_id) VALUES ('%s')`, projectID),
-		fmt.Sprintf(`INSERT INTO api_spec_ai_drafts (project_id) VALUES ('%s')`, projectID),
+		fmt.Sprintf(`INSERT INTO api_spec_shares (workspace_id) VALUES ('%s')`, workspaceID),
+		fmt.Sprintf(`INSERT INTO api_spec_ai_drafts (workspace_id) VALUES ('%s')`, workspaceID),
 		fmt.Sprintf(`INSERT INTO api_flows (id, project_id) VALUES ('%s', '%s')`, flowID, projectID),
 		fmt.Sprintf(`INSERT INTO api_flow_steps (flow_id) VALUES ('%s')`, flowID),
 		fmt.Sprintf(`INSERT INTO api_flow_edges (flow_id) VALUES ('%s')`, flowID),
@@ -97,20 +98,31 @@ func TestRepositoryDeleteCascadesProjectData(t *testing.T) {
 		"project_members",
 		"project_cli_tokens",
 		"project_invitations",
-		"api_specs",
-		"api_examples",
-		"api_spec_shares",
-		"api_spec_ai_drafts",
 		"api_flows",
 		"api_flow_steps",
 		"api_flow_edges",
 		"api_flow_runs",
 		"api_flow_step_results",
-		"test_cases",
-		"test_runs",
 		"audit_logs",
 	} {
 		assertCountZero(table, "")
+	}
+
+	for _, table := range []string{
+		"api_specs",
+		"api_examples",
+		"api_spec_shares",
+		"api_spec_ai_drafts",
+		"test_cases",
+		"test_runs",
+	} {
+		var count int64
+		if err := db.Table(table).Count(&count).Error; err != nil {
+			t.Fatalf("failed to count preserved rows in %s: %v", table, err)
+		}
+		if count != 1 {
+			t.Fatalf("expected %s to preserve 1 workspace-scoped row, got %d", table, count)
+		}
 	}
 }
 

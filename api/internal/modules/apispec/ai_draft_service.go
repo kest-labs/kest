@@ -29,26 +29,26 @@ type AIDraftStreamCallbacks struct {
 
 func (s *service) CreateAIDraft(
 	ctx context.Context,
-	projectID string,
+	workspaceID string,
 	userID string,
 	req *CreateAPISpecAIDraftRequest,
 ) (*APISpecAIDraftResponse, error) {
-	return s.createAIDraft(ctx, projectID, userID, req, AIDraftStreamCallbacks{})
+	return s.createAIDraft(ctx, workspaceID, userID, req, AIDraftStreamCallbacks{})
 }
 
 func (s *service) CreateAIDraftStream(
 	ctx context.Context,
-	projectID string,
+	workspaceID string,
 	userID string,
 	req *CreateAPISpecAIDraftRequest,
 	callbacks AIDraftStreamCallbacks,
 ) (*APISpecAIDraftResponse, error) {
-	return s.createAIDraft(ctx, projectID, userID, req, callbacks)
+	return s.createAIDraft(ctx, workspaceID, userID, req, callbacks)
 }
 
 func (s *service) createAIDraft(
 	ctx context.Context,
-	projectID string,
+	workspaceID string,
 	userID string,
 	req *CreateAPISpecAIDraftRequest,
 	callbacks AIDraftStreamCallbacks,
@@ -58,13 +58,13 @@ func (s *service) createAIDraft(
 		return nil, err
 	}
 
-	emitStatus(callbacks, "Analyzing project conventions")
-	specs, err := s.repo.ListAllSpecs(ctx, projectID)
+	emitStatus(callbacks, "Analyzing workspace conventions")
+	specs, err := s.repo.ListAllSpecs(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
 
-	conventions := conventionsForPrompt(specs, req.UseProjectConventions)
+	conventions := conventionsForPrompt(specs, req.workspaceConventionsEnabled())
 	references := selectAIDraftReferences(req, specs)
 
 	llmCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
@@ -132,7 +132,7 @@ func (s *service) createAIDraft(
 
 	emitStatus(callbacks, "Saving draft")
 	po := &APISpecAIDraftPO{
-		ProjectID:     projectID,
+		WorkspaceID:   workspaceID,
 		CreatedBy:     userID,
 		Status:        AIDraftStatusDraft,
 		Intent:        req.Intent,
@@ -158,8 +158,8 @@ func emitStatus(callbacks AIDraftStreamCallbacks, status string) {
 	}
 }
 
-func (s *service) GetAIDraft(ctx context.Context, projectID, draftID string) (*APISpecAIDraftResponse, error) {
-	po, err := s.repo.GetAIDraftByIDAndProject(ctx, draftID, projectID)
+func (s *service) GetAIDraft(ctx context.Context, workspaceID, draftID string) (*APISpecAIDraftResponse, error) {
+	po, err := s.repo.GetAIDraftByIDAndWorkspace(ctx, draftID, workspaceID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrAIDraftNotFound
@@ -172,7 +172,7 @@ func (s *service) GetAIDraft(ctx context.Context, projectID, draftID string) (*A
 
 func (s *service) RefineAIDraft(
 	ctx context.Context,
-	projectID, draftID string,
+	workspaceID, draftID string,
 	req *RefineAPISpecAIDraftRequest,
 ) (*APISpecAIDraftResponse, error) {
 	client, err := newConfiguredLLMClient()
@@ -180,7 +180,7 @@ func (s *service) RefineAIDraft(
 		return nil, err
 	}
 
-	po, err := s.repo.GetAIDraftByIDAndProject(ctx, draftID, projectID)
+	po, err := s.repo.GetAIDraftByIDAndWorkspace(ctx, draftID, workspaceID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrAIDraftNotFound
@@ -247,10 +247,10 @@ func (s *service) RefineAIDraft(
 
 func (s *service) AcceptAIDraft(
 	ctx context.Context,
-	projectID, draftID string,
+	workspaceID, draftID string,
 	req *AcceptAPISpecAIDraftRequest,
 ) (*AcceptAPISpecAIDraftResponse, error) {
-	po, err := s.repo.GetAIDraftByIDAndProject(ctx, draftID, projectID)
+	po, err := s.repo.GetAIDraftByIDAndWorkspace(ctx, draftID, workspaceID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrAIDraftNotFound
@@ -265,7 +265,7 @@ func (s *service) AcceptAIDraft(
 
 	warnings := make([]string, 0, 2)
 	if po.Status == AIDraftStatusAccepted && po.AcceptedSpecID != nil {
-		existing, getErr := s.GetSpecByID(ctx, projectID, *po.AcceptedSpecID)
+		existing, getErr := s.GetSpecByID(ctx, workspaceID, *po.AcceptedSpecID)
 		if getErr == nil {
 			return &AcceptAPISpecAIDraftResponse{
 				DraftID:  po.ID,
@@ -285,7 +285,7 @@ func (s *service) AcceptAIDraft(
 		return nil, err
 	}
 
-	spec, err := s.CreateSpec(ctx, finalDraft.toCreateSpecRequest(projectID))
+	spec, err := s.CreateSpec(ctx, finalDraft.toCreateSpecRequest(workspaceID))
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (s *service) AcceptAIDraft(
 	}
 
 	if req != nil && req.GenerateDoc {
-		if generated, genErr := s.GenDoc(ctx, projectID, spec.ID, lang); genErr == nil {
+		if generated, genErr := s.GenDoc(ctx, workspaceID, spec.ID, lang); genErr == nil {
 			spec = generated
 		} else {
 			warnings = append(warnings, fmt.Sprintf("documentation generation skipped: %v", genErr))
@@ -305,14 +305,14 @@ func (s *service) AcceptAIDraft(
 
 	generatedTest := ""
 	if req != nil && req.GenerateTest {
-		if flowContent, genErr := s.GenTest(ctx, projectID, spec.ID, lang); genErr == nil {
+		if flowContent, genErr := s.GenTest(ctx, workspaceID, spec.ID, lang); genErr == nil {
 			generatedTest = flowContent
 		} else {
 			warnings = append(warnings, fmt.Sprintf("test generation skipped: %v", genErr))
 		}
 	}
 
-	if latest, getErr := s.GetSpecByID(ctx, projectID, spec.ID); getErr == nil {
+	if latest, getErr := s.GetSpecByID(ctx, workspaceID, spec.ID); getErr == nil {
 		spec = latest
 	}
 

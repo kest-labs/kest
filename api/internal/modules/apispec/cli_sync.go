@@ -66,7 +66,7 @@ type CLISpecSyncResult struct {
 	Errors  []string
 }
 
-func (h *Handler) SyncSpecsFromCLI(ctx context.Context, projectID string, req *project.CLISpecSyncRequest) (*project.CLISpecSyncResponseBody, error) {
+func (h *Handler) SyncSpecsFromCLI(ctx context.Context, workspaceID string, req *project.CLISpecSyncRequest) (*project.CLISpecSyncResponseBody, error) {
 	input := &CLISpecSyncInput{
 		Source:   req.Source,
 		Metadata: req.Metadata,
@@ -88,7 +88,7 @@ func (h *Handler) SyncSpecsFromCLI(ctx context.Context, projectID string, req *p
 		})
 	}
 
-	result, err := h.service.SyncSpecsFromCLI(ctx, projectID, input)
+	result, err := h.service.SyncSpecsFromCLI(ctx, workspaceID, input)
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +101,12 @@ func (h *Handler) SyncSpecsFromCLI(ctx context.Context, projectID string, req *p
 	}, nil
 }
 
-func (s *service) SyncSpecsFromCLI(ctx context.Context, projectID string, req *CLISpecSyncInput) (*CLISpecSyncResult, error) {
+func (s *service) SyncSpecsFromCLI(ctx context.Context, workspaceID string, req *CLISpecSyncInput) (*CLISpecSyncResult, error) {
 	result := &CLISpecSyncResult{}
 
 	for _, spec := range req.Specs {
-		specReq := toCreateAPISpecRequest(projectID, spec)
-		existing, err := s.repo.GetSpecByMethodAndPath(ctx, projectID, specReq.Method, specReq.Path)
+		specReq := toCreateAPISpecRequest(workspaceID, spec)
+		existing, err := s.repo.GetSpecByMethodAndPath(ctx, workspaceID, specReq.Method, specReq.Path)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("%s %s: %v", specReq.Method, specReq.Path, err))
 			continue
@@ -156,9 +156,9 @@ func (s *service) SyncSpecsFromCLI(ctx context.Context, projectID string, req *C
 	return result, nil
 }
 
-func toCreateAPISpecRequest(projectID string, spec CLISpecSyncSpecInput) *CreateAPISpecRequest {
+func toCreateAPISpecRequest(workspaceID string, spec CLISpecSyncSpecInput) *CreateAPISpecRequest {
 	req := &CreateAPISpecRequest{
-		ProjectID:   projectID,
+		WorkspaceID: workspaceID,
 		Method:      strings.ToUpper(strings.TrimSpace(spec.Method)),
 		Path:        strings.TrimSpace(spec.Path),
 		Summary:     firstNonEmpty(strings.TrimSpace(spec.Summary), strings.TrimSpace(spec.Title)),
