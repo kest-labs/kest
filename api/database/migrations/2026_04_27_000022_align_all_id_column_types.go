@@ -80,6 +80,7 @@ func (m *alignAllIDColumnTypes) Up(db *gorm.DB) error {
 		{table: "history", column: "id", expectedType: idTypeText},
 		{table: "history", column: "entity_id", expectedType: idTypeText},
 		{table: "history", column: "project_id", expectedType: idTypeText},
+		{table: "history", column: "workspace_id", expectedType: idTypeText},
 		{table: "test_cases", column: "id", expectedType: idTypeText},
 		{table: "test_cases", column: "api_spec_id", expectedType: idTypeText},
 		{table: "test_runs", column: "id", expectedType: idTypeText},

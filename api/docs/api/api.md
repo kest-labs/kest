@@ -29,7 +29,7 @@ Total endpoints: **133**
 - [Example](#example) (7 endpoints)
 - [Export](#export) (1 endpoints)
 - [Flow](#flow) (15 endpoints)
-- [History](#history) (2 endpoints)
+- [History](#history) (3 endpoints)
 - [Importer](#importer) (1 endpoints)
 - [Member](#member) (11 endpoints)
 - [Permission](#permission) (9 endpoints)
@@ -2163,10 +2163,54 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1/events?base_
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/history` | List historys | 🔒 |
-| `GET` | `/v1/projects/:id/history/:hid` | Get history details | 🔒 |
+| `POST` | `/v1/workspaces/:id/history` | Create history | 🔒 |
+| `GET` | `/v1/workspaces/:id/history` | List historys | 🔒 |
+| `GET` | `/v1/workspaces/:id/history/:hid` | Get history details | 🔒 |
 
-### GET `/v1/projects/:id/history`
+### POST `/v1/workspaces/:id/history`
+
+**Create history**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+| Route Name | `history.create` |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Response
+
+```json
+{
+  "action": "string",
+  "created_at": "2024-01-01T00:00:00Z",
+  "data": "object",
+  "diff": "object",
+  "entity_id": "string",
+  "entity_type": "string",
+  "id": "string",
+  "message": "string",
+  "source": "string",
+  "source_event_id": "string",
+  "user_id": "string",
+  "workspace_id": "string"
+}
+```
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/history' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### GET `/v1/workspaces/:id/history`
 
 **List historys**
 
@@ -2189,25 +2233,27 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1/events?base_
   "created_at": "2024-01-01T00:00:00Z",
   "data": "object",
   "diff": "object",
-  "entity_id": 1,
+  "entity_id": "string",
   "entity_type": "string",
-  "id": 1,
+  "id": "string",
   "message": "string",
-  "project_id": 1,
-  "user_id": 1
+  "source": "string",
+  "source_event_id": "string",
+  "user_id": "string",
+  "workspace_id": "string"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/history' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/history' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/history/:hid`
+### GET `/v1/workspaces/:id/history/:hid`
 
 **Get history details**
 
@@ -2231,19 +2277,21 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/history' \
   "created_at": "2024-01-01T00:00:00Z",
   "data": "object",
   "diff": "object",
-  "entity_id": 1,
+  "entity_id": "string",
   "entity_type": "string",
-  "id": 1,
+  "id": "string",
   "message": "string",
-  "project_id": 1,
-  "user_id": 1
+  "source": "string",
+  "source_event_id": "string",
+  "user_id": "string",
+  "workspace_id": "string"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/history/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/history/1' \
   -H 'Authorization: Bearer <token>'
 ```
 

@@ -13,8 +13,8 @@ import (
 type Repository interface {
 	Create(ctx context.Context, history *History) error
 	GetByID(ctx context.Context, id string) (*History, error)
-	GetBySourceEvent(ctx context.Context, projectID, source, sourceEventID string) (*History, error)
-	ListByEntity(ctx context.Context, projectID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error)
+	GetBySourceEvent(ctx context.Context, workspaceID, source, sourceEventID string) (*History, error)
+	ListByEntity(ctx context.Context, workspaceID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error)
 }
 
 type repository struct {
@@ -47,10 +47,10 @@ func (r *repository) GetByID(ctx context.Context, id string) (*History, error) {
 	return po.toDomain(), nil
 }
 
-func (r *repository) GetBySourceEvent(ctx context.Context, projectID, source, sourceEventID string) (*History, error) {
+func (r *repository) GetBySourceEvent(ctx context.Context, workspaceID, source, sourceEventID string) (*History, error) {
 	var po HistoryPO
 	if err := r.db.WithContext(ctx).
-		Where("project_id = ? AND source = ? AND source_event_id = ?", projectID, source, sourceEventID).
+		Where("workspace_id = ? AND source = ? AND source_event_id = ?", workspaceID, source, sourceEventID).
 		First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -60,11 +60,11 @@ func (r *repository) GetBySourceEvent(ctx context.Context, projectID, source, so
 	return po.toDomain(), nil
 }
 
-func (r *repository) ListByEntity(ctx context.Context, projectID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error) {
+func (r *repository) ListByEntity(ctx context.Context, workspaceID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error) {
 	var poList []*HistoryPO
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&HistoryPO{}).Where("project_id = ?", projectID)
+	query := r.db.WithContext(ctx).Model(&HistoryPO{}).Where("workspace_id = ?", workspaceID)
 
 	if entityType != "" {
 		query = query.Where("entity_type = ?", entityType)

@@ -51,14 +51,28 @@ func (m *addCLISyncFieldsToHistory) Up(db *gorm.DB) error {
 		}
 	}
 
-	return db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_history_project_source_event
-		    ON history(project_id, source, source_event_id)
-	`).Error
+	if db.Migrator().HasColumn("history", "project_id") {
+		return db.Exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_history_project_source_event
+			    ON history(project_id, source, source_event_id)
+		`).Error
+	}
+
+	if db.Migrator().HasColumn("history", "workspace_id") {
+		return db.Exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_history_workspace_source_event
+			    ON history(workspace_id, source, source_event_id)
+		`).Error
+	}
+
+	return nil
 }
 
 func (m *addCLISyncFieldsToHistory) Down(db *gorm.DB) error {
 	if err := db.Exec(`DROP INDEX IF EXISTS idx_history_project_source_event`).Error; err != nil {
+		return err
+	}
+	if err := db.Exec(`DROP INDEX IF EXISTS idx_history_workspace_source_event`).Error; err != nil {
 		return err
 	}
 	if err := dropColumnIfExists(db, "history", "source_event_id"); err != nil {

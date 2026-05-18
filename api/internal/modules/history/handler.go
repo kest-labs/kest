@@ -2,25 +2,26 @@ package history
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
@@ -28,9 +29,9 @@ func (h *Handler) Name() string {
 	return "history"
 }
 
-// Create handles POST /projects/:id/history
+// Create handles POST /workspaces/:id/history
 func (h *Handler) Create(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -45,7 +46,7 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	req.ProjectID = projectID
+	req.WorkspaceID = workspaceID
 	req.UserID = userID
 
 	history, err := h.service.Record(c.Request.Context(), &req)
@@ -57,9 +58,9 @@ func (h *Handler) Create(c *gin.Context) {
 	response.Created(c, toResponse(history))
 }
 
-// List handles GET /projects/:id/history
+// List handles GET /workspaces/:id/history
 func (h *Handler) List(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -69,7 +70,7 @@ func (h *Handler) List(c *gin.Context) {
 	page := handler.QueryInt(c, "page", 1)
 	perPage := handler.QueryInt(c, "per_page", 20)
 
-	histories, total, err := h.service.List(c.Request.Context(), projectID, entityType, entityID, page, perPage)
+	histories, total, err := h.service.List(c.Request.Context(), workspaceID, entityType, entityID, page, perPage)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -86,8 +87,13 @@ func (h *Handler) List(c *gin.Context) {
 	})
 }
 
-// Get handles GET /projects/:id/history/:hid
+// Get handles GET /workspaces/:id/history/:hid
 func (h *Handler) Get(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
+		return
+	}
+
 	historyID, ok := handler.ParseID(c, "hid")
 	if !ok {
 		return
@@ -102,6 +108,30 @@ func (h *Handler) Get(c *gin.Context) {
 		response.InternalServerError(c, err.Error(), err)
 		return
 	}
+	if history.WorkspaceID != workspaceID {
+		response.NotFound(c, ErrHistoryNotFound.Error())
+		return
+	}
 
 	response.Success(c, toResponse(history))
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }
