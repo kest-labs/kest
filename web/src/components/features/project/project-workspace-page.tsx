@@ -1461,7 +1461,7 @@ function ProjectKeysWorkspaceSection({
         id: project.id,
         data: {
           name: `${project.name} CLI sync`,
-          scopes: ['spec:write', 'run:write'],
+          scopes: ['collection:read', 'collection:run', 'environment:read'],
         },
       });
       setGeneratedCliToken(token);
@@ -1537,7 +1537,9 @@ function ProjectKeysWorkspaceSection({
                     <span className="font-mono">{scopedProjectId}</span>
                   </DetailField>
                   <DetailField label={t('keysPage.scopes')}>
-                    <span className="font-mono text-xs">spec:write, run:write</span>
+                    <span className="font-mono text-xs">
+                      collection:read, collection:run, environment:read
+                    </span>
                   </DetailField>
                   <DetailField label={t('keysPage.autoSyncHistory')}>
                     {t('keysPage.autoSyncHistoryEnabled')}
@@ -2987,10 +2989,10 @@ function EnvironmentsWorkspaceSection({
   const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
   const listPreview =
     normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
-  const environmentsPath = `/projects/${projectId}/environments`;
+  const environmentsPath = `/workspaces/${projectId}/environments`;
   const activeEnvironmentPath = selectedEnvironment
-    ? `/projects/${projectId}/environments/${selectedEnvironment.id}`
-    : `/projects/${projectId}/environments/:eid`;
+    ? `/workspaces/${projectId}/environments/${selectedEnvironment.id}`
+    : `/workspaces/${projectId}/environments/:eid`;
 
   const closeEnvironmentForm = () => {
     setIsFormOpen(false);

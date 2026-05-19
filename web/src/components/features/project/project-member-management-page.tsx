@@ -142,14 +142,14 @@ const getRoleBadgeVariant = (role: ProjectMemberRole) => {
 };
 
 const getMemberInitials = (member: Pick<ProjectMember, 'username' | 'email'>) => {
-  const source = member.username.trim() || member.email.trim();
+  const source = (member.username ?? '').trim() || (member.email ?? '').trim();
   const parts = source.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
 
-  return source.slice(0, 2).toUpperCase();
+  return (source || '?').slice(0, 2).toUpperCase();
 };
 
 const getAssignableRole = (role?: ProjectMemberRole): AssignableProjectMemberRole => {
@@ -314,8 +314,8 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
       const matchesRole = roleFilter === 'all' || member.role === roleFilter;
       const matchesKeyword =
         !deferredSearchQuery ||
-        member.username.toLowerCase().includes(deferredSearchQuery) ||
-        member.email.toLowerCase().includes(deferredSearchQuery);
+        (member.username ?? '').toLowerCase().includes(deferredSearchQuery) ||
+        (member.email ?? '').toLowerCase().includes(deferredSearchQuery);
 
       return matchesRole && matchesKeyword;
     });
@@ -340,7 +340,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
     { value: 'write', label: getRoleLabel(t, 'write') },
     { value: 'read', label: getRoleLabel(t, 'read') },
   ];
-  const invitationsPath = buildApiPath('/projects/:id/invitations');
+  const invitationsPath = buildApiPath('/workspaces/:id/invitations');
   const isRefreshing =
     projectQuery.isFetching ||
     projectStatsQuery.isFetching ||
@@ -927,10 +927,14 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {formatDate(member.created_at, 'YYYY-MM-DD HH:mm')}
+                              {member.created_at
+                                ? formatDate(member.created_at, 'YYYY-MM-DD HH:mm')
+                                : '-'}
                             </TableCell>
                             <TableCell>
-                              {formatDate(member.updated_at, 'YYYY-MM-DD HH:mm')}
+                              {member.updated_at
+                                ? formatDate(member.updated_at, 'YYYY-MM-DD HH:mm')
+                                : '-'}
                             </TableCell>
                             <TableCell className="text-right">
                               {!canManageMembers ? (

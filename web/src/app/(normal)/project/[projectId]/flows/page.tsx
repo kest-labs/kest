@@ -1,29 +1,20 @@
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { buildProjectFlowsRoute } from '@/constants/routes';
+import {
+  redirectLegacyProjectRoute,
+  type LegacySearchParams,
+} from '../_legacy/redirect';
 
-interface ProjectFlowsPageProps {
+interface LegacyProjectFlowsPageProps {
   params: Promise<{
     projectId: string;
   }>;
-  searchParams: Promise<{
-    item?: string;
-  }>;
+  searchParams: Promise<LegacySearchParams>;
 }
 
-// 项目 flows 工作区入口。
-// 作用：挂载基于 React Flow 的测试流工作区，并通过 `?item=` 支持选中具体 flow。
-export default async function ProjectFlowsPage({
+export default async function LegacyProjectFlowsPage({
   params,
   searchParams,
-}: ProjectFlowsPageProps) {
+}: LegacyProjectFlowsPageProps) {
   const { projectId } = await params;
-  const { item } = await searchParams;
-  const selectedItemId = item?.trim() ? item : null;
-
-  return (
-    <ProjectWorkspacePage
-      projectId={projectId}
-      module="flows"
-      selectedItemId={selectedItemId}
-    />
-  );
+  redirectLegacyProjectRoute(buildProjectFlowsRoute(projectId), await searchParams);
 }

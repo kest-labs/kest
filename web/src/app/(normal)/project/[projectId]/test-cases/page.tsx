@@ -1,30 +1,20 @@
-import { TestCaseManagementPage } from '@/components/features/project/test-case-management-page';
+import { buildProjectTestCasesRoute } from '@/constants/routes';
+import {
+  redirectLegacyProjectRoute,
+  type LegacySearchParams,
+} from '../_legacy/redirect';
 
-interface ProjectTestCasesPageProps {
+interface LegacyProjectTestCasesPageProps {
   params: Promise<{
     projectId: string;
   }>;
-  searchParams: Promise<{
-    fromSpec?: string;
-    source?: string;
-  }>;
+  searchParams: Promise<LegacySearchParams>;
 }
 
-// 项目 Test Cases 管理页面入口。
-// 作用：读取动态项目 ID，并挂载受保护的 Test Cases 管理界面。
-export default async function ProjectTestCasesPage({
+export default async function LegacyProjectTestCasesPage({
   params,
   searchParams,
-}: ProjectTestCasesPageProps) {
+}: LegacyProjectTestCasesPageProps) {
   const { projectId } = await params;
-  const { fromSpec, source } = await searchParams;
-  const selectedSpecId = fromSpec?.trim() ? fromSpec : null;
-
-  return (
-    <TestCaseManagementPage
-      projectId={projectId}
-      autoOpenFromSpecSpecId={selectedSpecId}
-      flowSource={source === 'ai' ? 'ai' : null}
-    />
-  );
+  redirectLegacyProjectRoute(buildProjectTestCasesRoute(projectId), await searchParams);
 }

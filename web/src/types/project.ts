@@ -4,6 +4,22 @@ import type { ProjectMemberRole } from '@/types/member';
 // 作用：统一约束项目列表、详情、统计和表单请求的数据结构。
 export type ProjectPlatform = 'go' | 'javascript' | 'python' | 'java' | 'ruby' | 'php' | 'csharp';
 export type ProjectStatus = 0 | 1;
+export type WorkspaceType = 'personal' | 'team' | 'public';
+export type WorkspaceVisibility = 'private' | 'team' | 'public';
+
+export interface ApiWorkspace {
+  id: number | string;
+  name: string;
+  slug: string;
+  description?: string;
+  type: WorkspaceType;
+  owner_id: number | string;
+  visibility: WorkspaceVisibility;
+  settings?: Record<string, unknown>;
+  role?: ProjectMemberRole;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface ApiProject {
   id: number | string;
@@ -25,7 +41,8 @@ export interface ProjectStats {
 
 export interface ProjectCliTokenInfo {
   id: number | string;
-  project_id: number | string;
+  project_id?: number | string;
+  workspace_id?: number | string;
   name: string;
   token_prefix: string;
   scopes: string[];
@@ -43,7 +60,8 @@ export interface GenerateProjectCliTokenRequest {
 export interface GenerateProjectCliTokenResponse {
   token: string;
   token_type: string;
-  project_id: number | string;
+  project_id?: number | string;
+  workspace_id?: number | string;
   token_info: ProjectCliTokenInfo;
 }
 
@@ -68,12 +86,17 @@ export interface CreateProjectRequest {
   name: string;
   slug?: string;
   platform?: ProjectPlatform;
+  type?: WorkspaceType;
+  visibility?: WorkspaceVisibility;
+  description?: string;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   platform?: ProjectPlatform;
   status?: ProjectStatus;
+  visibility?: WorkspaceVisibility;
+  description?: string;
 }
 
 export interface DeleteProjectResponse {

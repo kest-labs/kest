@@ -1,16 +1,15 @@
-import { ProjectMemberManagementPage } from '@/components/features/project/project-member-management-page';
+import { buildProjectMembersRoute } from '@/constants/routes';
+import { redirectLegacyProjectRoute } from '../_legacy/redirect';
 
-interface ProjectMembersPageProps {
+interface LegacyProjectMembersPageProps {
   params: Promise<{
     projectId: string;
   }>;
 }
 
-// 项目成员管理页面入口。
-// 作用：读取动态项目 ID，并挂载项目成员管理界面。
-export default async function ProjectMembersPage({
+export default async function LegacyProjectMembersPage({
   params,
-}: ProjectMembersPageProps) {
+}: LegacyProjectMembersPageProps) {
   const { projectId } = await params;
-  return <ProjectMemberManagementPage projectId={projectId} />;
+  redirectLegacyProjectRoute(buildProjectMembersRoute(projectId));
 }

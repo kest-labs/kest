@@ -6,7 +6,7 @@ import type { CreateHistoryRequest, HistoryListParams } from '@/types/history';
 
 export const historyKeys = {
   all: ['histories'] as const,
-  project: (projectId: number | string) => [...historyKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...historyKeys.all, 'workspace', projectId] as const,
   lists: (projectId: number | string) => [...historyKeys.project(projectId), 'lists'] as const,
   list: (params: HistoryListParams) => [...historyKeys.lists(params.projectId), params] as const,
   detail: (projectId: number | string, historyId: number | string) =>
