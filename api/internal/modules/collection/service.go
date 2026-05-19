@@ -15,12 +15,12 @@ var (
 // Service defines the interface for collection business logic
 type Service interface {
 	Create(ctx context.Context, req *CreateCollectionRequest) (*Collection, error)
-	GetByID(ctx context.Context, id, projectID string) (*Collection, error)
-	Update(ctx context.Context, id, projectID string, req *UpdateCollectionRequest) (*Collection, error)
-	Delete(ctx context.Context, id, projectID string) error
-	List(ctx context.Context, projectID string, page, perPage int) ([]*Collection, int64, error)
-	GetTree(ctx context.Context, projectID string) ([]*CollectionTreeNode, error)
-	Move(ctx context.Context, id, projectID string, req *MoveCollectionRequest) (*Collection, error)
+	GetByID(ctx context.Context, id, workspaceID string) (*Collection, error)
+	Update(ctx context.Context, id, workspaceID string, req *UpdateCollectionRequest) (*Collection, error)
+	Delete(ctx context.Context, id, workspaceID string) error
+	List(ctx context.Context, workspaceID string, page, perPage int) ([]*Collection, int64, error)
+	GetTree(ctx context.Context, workspaceID string) ([]*CollectionTreeNode, error)
+	Move(ctx context.Context, id, workspaceID string, req *MoveCollectionRequest) (*Collection, error)
 }
 
 // service implements Service interface
@@ -40,7 +40,7 @@ func (s *service) Create(ctx context.Context, req *CreateCollectionRequest) (*Co
 
 	// Validate parent if provided
 	if parentID != nil {
-		parent, err := s.repo.GetByIDAndProject(ctx, *parentID, req.ProjectID)
+		parent, err := s.repo.GetByIDAndWorkspace(ctx, *parentID, req.WorkspaceID)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +55,7 @@ func (s *service) Create(ctx context.Context, req *CreateCollectionRequest) (*Co
 	collection := &Collection{
 		Name:        req.Name,
 		Description: req.Description,
-		ProjectID:   req.ProjectID,
+		WorkspaceID: req.WorkspaceID,
 		ParentID:    parentID,
 		IsFolder:    req.IsFolder,
 		SortOrder:   req.SortOrder,
@@ -68,8 +68,8 @@ func (s *service) Create(ctx context.Context, req *CreateCollectionRequest) (*Co
 	return collection, nil
 }
 
-func (s *service) GetByID(ctx context.Context, id, projectID string) (*Collection, error) {
-	collection, err := s.repo.GetByIDAndProject(ctx, id, projectID)
+func (s *service) GetByID(ctx context.Context, id, workspaceID string) (*Collection, error) {
+	collection, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +79,8 @@ func (s *service) GetByID(ctx context.Context, id, projectID string) (*Collectio
 	return collection, nil
 }
 
-func (s *service) Update(ctx context.Context, id, projectID string, req *UpdateCollectionRequest) (*Collection, error) {
-	collection, err := s.repo.GetByIDAndProject(ctx, id, projectID)
+func (s *service) Update(ctx context.Context, id, workspaceID string, req *UpdateCollectionRequest) (*Collection, error) {
+	collection, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (s *service) Update(ctx context.Context, id, projectID string, req *UpdateC
 
 		// Validate new parent
 		if parentID != nil {
-			parent, err := s.repo.GetByIDAndProject(ctx, *parentID, projectID)
+			parent, err := s.repo.GetByIDAndWorkspace(ctx, *parentID, workspaceID)
 			if err != nil {
 				return nil, err
 			}
@@ -112,7 +112,7 @@ func (s *service) Update(ctx context.Context, id, projectID string, req *UpdateC
 				return nil, ErrInvalidParent
 			}
 
-			createsCycle, err := s.wouldCreateCycle(ctx, projectID, id, *parentID)
+			createsCycle, err := s.wouldCreateCycle(ctx, workspaceID, id, *parentID)
 			if err != nil {
 				return nil, err
 			}
@@ -134,8 +134,8 @@ func (s *service) Update(ctx context.Context, id, projectID string, req *UpdateC
 	return collection, nil
 }
 
-func (s *service) Delete(ctx context.Context, id, projectID string) error {
-	collection, err := s.repo.GetByIDAndProject(ctx, id, projectID)
+func (s *service) Delete(ctx context.Context, id, workspaceID string) error {
+	collection, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (s *service) Delete(ctx context.Context, id, projectID string) error {
 	}
 
 	// Check for children
-	children, err := s.repo.GetByParentID(ctx, projectID, &id)
+	children, err := s.repo.GetByParentID(ctx, workspaceID, &id)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (s *service) Delete(ctx context.Context, id, projectID string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *service) List(ctx context.Context, projectID string, page, perPage int) ([]*Collection, int64, error) {
+func (s *service) List(ctx context.Context, workspaceID string, page, perPage int) ([]*Collection, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -169,11 +169,11 @@ func (s *service) List(ctx context.Context, projectID string, page, perPage int)
 	}
 
 	offset := (page - 1) * perPage
-	return s.repo.List(ctx, projectID, offset, perPage)
+	return s.repo.List(ctx, workspaceID, offset, perPage)
 }
 
-func (s *service) GetTree(ctx context.Context, projectID string) ([]*CollectionTreeNode, error) {
-	allCollections, err := s.repo.ListAll(ctx, projectID)
+func (s *service) GetTree(ctx context.Context, workspaceID string) ([]*CollectionTreeNode, error) {
+	allCollections, err := s.repo.ListAll(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -182,15 +182,15 @@ func (s *service) GetTree(ctx context.Context, projectID string) ([]*CollectionT
 	return buildTree(allCollections), nil
 }
 
-func (s *service) Move(ctx context.Context, id, projectID string, req *MoveCollectionRequest) (*Collection, error) {
+func (s *service) Move(ctx context.Context, id, workspaceID string, req *MoveCollectionRequest) (*Collection, error) {
 	updateReq := &UpdateCollectionRequest{
 		ParentID:  req.ParentID,
 		SortOrder: req.SortOrder,
 	}
-	return s.Update(ctx, id, projectID, updateReq)
+	return s.Update(ctx, id, workspaceID, updateReq)
 }
 
-func (s *service) wouldCreateCycle(ctx context.Context, projectID, collectionID, parentID string) (bool, error) {
+func (s *service) wouldCreateCycle(ctx context.Context, workspaceID, collectionID, parentID string) (bool, error) {
 	visited := map[string]struct{}{}
 	currentID := parentID
 
@@ -203,7 +203,7 @@ func (s *service) wouldCreateCycle(ctx context.Context, projectID, collectionID,
 		}
 		visited[currentID] = struct{}{}
 
-		current, err := s.repo.GetByIDAndProject(ctx, currentID, projectID)
+		current, err := s.repo.GetByIDAndWorkspace(ctx, currentID, workspaceID)
 		if err != nil {
 			return false, err
 		}
@@ -236,7 +236,7 @@ func buildTree(collections []*Collection) []*CollectionTreeNode {
 			ID:          c.ID,
 			Name:        c.Name,
 			Description: c.Description,
-			ProjectID:   c.ProjectID,
+			WorkspaceID: c.WorkspaceID,
 			ParentID:    c.ParentID,
 			IsFolder:    c.IsFolder,
 			SortOrder:   c.SortOrder,

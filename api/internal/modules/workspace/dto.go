@@ -1,6 +1,10 @@
 package workspace
 
-import idpkg "github.com/kest-labs/kest/api/pkg/id"
+import (
+	"time"
+
+	idpkg "github.com/kest-labs/kest/api/pkg/id"
+)
 
 // DTO (Data Transfer Objects) for workspace module
 
@@ -23,12 +27,18 @@ type UpdateWorkspaceRequest struct {
 // AddMemberRequest represents the request to add a member
 type AddMemberRequest struct {
 	UserID idpkg.Compatible `json:"user_id" binding:"required" swaggertype:"string"`
-	Role   string           `json:"role" binding:"required,oneof=owner admin editor viewer"`
+	Role   string           `json:"role" binding:"required,oneof=owner admin write read"`
 }
 
 // UpdateMemberRoleRequest represents the request to update member role
 type UpdateMemberRoleRequest struct {
-	Role string `json:"role" binding:"required,oneof=owner admin editor viewer"`
+	Role string `json:"role" binding:"required,oneof=owner admin write read"`
+}
+
+type GenerateWorkspaceCLITokenRequest struct {
+	Name      string     `json:"name" binding:"omitempty,max=100"`
+	Scopes    []string   `json:"scopes"`
+	ExpiresAt *time.Time `json:"expires_at"`
 }
 
 // WorkspaceResponse represents the workspace response
@@ -55,6 +65,24 @@ type WorkspaceMemberResponse struct {
 	Role        string `json:"role"`
 	InvitedBy   string `json:"invited_by"`
 	JoinedAt    string `json:"joined_at"`
+}
+
+type WorkspaceCLITokenResponse struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	Name        string     `json:"name"`
+	TokenPrefix string     `json:"token_prefix"`
+	Scopes      []string   `json:"scopes"`
+	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type GenerateWorkspaceCLITokenResponse struct {
+	Token       string                     `json:"token"`
+	TokenType   string                     `json:"token_type"`
+	WorkspaceID string                     `json:"workspace_id"`
+	TokenInfo   *WorkspaceCLITokenResponse `json:"token_info"`
 }
 
 // FromWorkspace converts domain Workspace to WorkspaceResponse
@@ -105,6 +133,31 @@ func FromMemberList(members []*WorkspaceMember) []*WorkspaceMemberResponse {
 	result := make([]*WorkspaceMemberResponse, len(members))
 	for i, m := range members {
 		result[i] = FromMember(m)
+	}
+	return result
+}
+
+func FromCLIToken(token *WorkspaceCLIToken) *WorkspaceCLITokenResponse {
+	if token == nil {
+		return nil
+	}
+
+	return &WorkspaceCLITokenResponse{
+		ID:          token.ID,
+		WorkspaceID: token.WorkspaceID,
+		Name:        token.Name,
+		TokenPrefix: token.TokenPrefix,
+		Scopes:      token.Scopes,
+		LastUsedAt:  token.LastUsedAt,
+		ExpiresAt:   token.ExpiresAt,
+		CreatedAt:   token.CreatedAt,
+	}
+}
+
+func FromCLITokenList(tokens []*WorkspaceCLIToken) []*WorkspaceCLITokenResponse {
+	result := make([]*WorkspaceCLITokenResponse, len(tokens))
+	for i, token := range tokens {
+		result[i] = FromCLIToken(token)
 	}
 	return result
 }

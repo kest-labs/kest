@@ -29,6 +29,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/testcase"
 	"github.com/kest-labs/kest/api/internal/modules/testrunner"
 	"github.com/kest-labs/kest/api/internal/modules/user"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 // InitApplication initializes the entire application with all dependencies.
@@ -43,6 +44,7 @@ func InitApplication() (*app.Application, error) {
 		member.ProviderSet,
 		permission.ProviderSet,
 		audit.ProviderSet,
+		workspace.ProviderSet,
 		project.NewRepository,
 		project.NewService,
 		provideProjectHandler,

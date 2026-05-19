@@ -10,13 +10,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v1/projects/:id/collections/:cid/requests/:rid/run` | Run run | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/:cid/requests/:rid/run` | Run run | 🔒 |
 
 ---
 
 ## Details
 
-### POST `/v1/projects/:id/collections/:cid/requests/:rid/run`
+### POST `/v1/workspaces/:id/collections/:cid/requests/:rid/run`
 
 **Run run**
 
@@ -49,7 +49,7 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/run' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/run' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"environment_id": null,"variables": "object"}'

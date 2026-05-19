@@ -19,6 +19,8 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 | `GET` | `/v1/workspaces/:id/members` | List Members workspace | 🔒 |
 | `PATCH` | `/v1/workspaces/:id/members/:uid` | Update Member Role workspace | 🔒 |
 | `DELETE` | `/v1/workspaces/:id/members/:uid` | Remove Member workspace | 🔒 |
+| `POST` | `/v1/workspaces/:id/cli-tokens` | Generate C L I Token workspace | 🔒 |
+| `GET` | `/v1/workspaces/:id/cli-tokens` | List C L I Tokens workspace | 🔒 |
 
 ---
 
@@ -278,7 +280,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1' \
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `user_id` | `uint` | ✅ | Required |
-| `role` | `string` | ✅ | Required, One of: owner admin editor viewer |
+| `role` | `string` | ✅ | Required, One of: owner admin write read |
 
 #### Path Parameters
 
@@ -374,7 +376,7 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces/1/members' \
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `role` | `string` | ✅ | Required, One of: owner admin editor viewer |
+| `role` | `string` | ✅ | Required, One of: owner admin write read |
 
 #### Path Parameters
 
@@ -453,3 +455,97 @@ curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/members/1' \
 
 ---
 
+### POST `/v1/workspaces/:id/cli-tokens`
+
+**Generate C L I Token workspace**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+| Route Name | `workspaces.cli_tokens.create` |
+
+#### Request Body
+
+```json
+{
+  "expires_at": null,
+  "name": "Workspace CLI sync",
+  "scopes": ["collection:read", "collection:run"]
+}
+```
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Response
+
+```json
+{
+  "token": "kest_pat_...",
+  "token_type": "bearer",
+  "workspace_id": "1",
+  "token_info": {
+    "id": "string",
+    "workspace_id": "1",
+    "name": "Workspace CLI sync",
+    "token_prefix": "kest_pat_...",
+    "scopes": ["collection:read", "collection:run"],
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/cli-tokens' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Workspace CLI sync","scopes":["collection:read","collection:run"]}'
+```
+
+---
+
+### GET `/v1/workspaces/:id/cli-tokens`
+
+**List C L I Tokens workspace**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+| Route Name | `workspaces.cli_tokens.list` |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Response
+
+```json
+[
+  {
+    "id": "string",
+    "workspace_id": "1",
+    "name": "Workspace CLI sync",
+    "token_prefix": "kest_pat_...",
+    "scopes": ["collection:read", "collection:run"],
+    "last_used_at": null,
+    "expires_at": null,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+#### Example
+
+```bash
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/cli-tokens' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---

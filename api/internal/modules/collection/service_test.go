@@ -8,24 +8,24 @@ import (
 )
 
 func TestServiceUpdateRejectsDescendantParent(t *testing.T) {
-	projectID := "1"
+	workspaceID := "1"
 	rootID := "1"
 	childID := "2"
 
 	repo := &stubCollectionRepository{
 		collections: map[string]*Collection{
 			rootID: {
-				ID:        rootID,
-				Name:      "Root",
-				ProjectID: projectID,
-				IsFolder:  true,
+				ID:          rootID,
+				Name:        "Root",
+				WorkspaceID: workspaceID,
+				IsFolder:    true,
 			},
 			childID: {
-				ID:        childID,
-				Name:      "Child",
-				ProjectID: projectID,
-				ParentID:  stringPtr(rootID),
-				IsFolder:  true,
+				ID:          childID,
+				Name:        "Child",
+				WorkspaceID: workspaceID,
+				ParentID:    stringPtr(rootID),
+				IsFolder:    true,
 			},
 		},
 	}
@@ -35,14 +35,14 @@ func TestServiceUpdateRejectsDescendantParent(t *testing.T) {
 		ParentID: stringPtr(childID),
 	}
 
-	_, err := service.Update(context.Background(), rootID, projectID, req)
+	_, err := service.Update(context.Background(), rootID, workspaceID, req)
 	if !errors.Is(err, ErrInvalidParent) {
 		t.Fatalf("expected ErrInvalidParent, got %v", err)
 	}
 }
 
 func TestServiceGetTreeHandlesCorruptHierarchy(t *testing.T) {
-	projectID := "1"
+	workspaceID := "1"
 	cycleA := "1"
 	cycleB := "2"
 	orphanParent := "999"
@@ -50,34 +50,34 @@ func TestServiceGetTreeHandlesCorruptHierarchy(t *testing.T) {
 	repo := &stubCollectionRepository{
 		collections: map[string]*Collection{
 			cycleA: {
-				ID:        cycleA,
-				Name:      "Cycle A",
-				ProjectID: projectID,
-				ParentID:  stringPtr(cycleB),
-				IsFolder:  true,
-				SortOrder: 2,
+				ID:          cycleA,
+				Name:        "Cycle A",
+				WorkspaceID: workspaceID,
+				ParentID:    stringPtr(cycleB),
+				IsFolder:    true,
+				SortOrder:   2,
 			},
 			cycleB: {
-				ID:        cycleB,
-				Name:      "Cycle B",
-				ProjectID: projectID,
-				ParentID:  stringPtr(cycleA),
-				IsFolder:  true,
-				SortOrder: 1,
+				ID:          cycleB,
+				Name:        "Cycle B",
+				WorkspaceID: workspaceID,
+				ParentID:    stringPtr(cycleA),
+				IsFolder:    true,
+				SortOrder:   1,
 			},
 			"3": {
-				ID:        "3",
-				Name:      "Orphan",
-				ProjectID: projectID,
-				ParentID:  stringPtr(orphanParent),
-				IsFolder:  false,
-				SortOrder: 3,
+				ID:          "3",
+				Name:        "Orphan",
+				WorkspaceID: workspaceID,
+				ParentID:    stringPtr(orphanParent),
+				IsFolder:    false,
+				SortOrder:   3,
 			},
 		},
 	}
 
 	service := NewService(repo)
-	tree, err := service.GetTree(context.Background(), projectID)
+	tree, err := service.GetTree(context.Background(), workspaceID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -109,9 +109,9 @@ func (r *stubCollectionRepository) GetByID(_ context.Context, id string) (*Colle
 	return cloneCollection(r.collections[id]), nil
 }
 
-func (r *stubCollectionRepository) GetByIDAndProject(_ context.Context, id, projectID string) (*Collection, error) {
+func (r *stubCollectionRepository) GetByIDAndWorkspace(_ context.Context, id, workspaceID string) (*Collection, error) {
 	collection := r.collections[id]
-	if collection == nil || collection.ProjectID != projectID {
+	if collection == nil || collection.WorkspaceID != workspaceID {
 		return nil, nil
 	}
 
@@ -128,10 +128,10 @@ func (r *stubCollectionRepository) Delete(_ context.Context, id string) error {
 	return nil
 }
 
-func (r *stubCollectionRepository) List(_ context.Context, projectID string, _, _ int) ([]*Collection, int64, error) {
+func (r *stubCollectionRepository) List(_ context.Context, workspaceID string, _, _ int) ([]*Collection, int64, error) {
 	var collections []*Collection
 	for _, collection := range r.collections {
-		if collection.ProjectID == projectID {
+		if collection.WorkspaceID == workspaceID {
 			collections = append(collections, cloneCollection(collection))
 		}
 	}
@@ -139,12 +139,12 @@ func (r *stubCollectionRepository) List(_ context.Context, projectID string, _, 
 	return collections, int64(len(collections)), nil
 }
 
-func (r *stubCollectionRepository) ListAll(_ context.Context, projectID string) ([]*Collection, error) {
+func (r *stubCollectionRepository) ListAll(_ context.Context, workspaceID string) ([]*Collection, error) {
 	r.listAllCalls++
 
 	var collections []*Collection
 	for _, collection := range r.collections {
-		if collection.ProjectID == projectID {
+		if collection.WorkspaceID == workspaceID {
 			collections = append(collections, cloneCollection(collection))
 		}
 	}
@@ -152,10 +152,10 @@ func (r *stubCollectionRepository) ListAll(_ context.Context, projectID string) 
 	return collections, nil
 }
 
-func (r *stubCollectionRepository) GetByParentID(_ context.Context, projectID string, parentID *string) ([]*Collection, error) {
+func (r *stubCollectionRepository) GetByParentID(_ context.Context, workspaceID string, parentID *string) ([]*Collection, error) {
 	var collections []*Collection
 	for _, collection := range r.collections {
-		if collection.ProjectID != projectID {
+		if collection.WorkspaceID != workspaceID {
 			continue
 		}
 

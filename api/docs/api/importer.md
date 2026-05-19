@@ -10,13 +10,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v1/projects/:id/collections/import/postman` | Import Postman importer | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/import/postman` | Import Postman importer | 🔒 |
 
 ---
 
 ## Details
 
-### POST `/v1/projects/:id/collections/import/postman`
+### POST `/v1/workspaces/:id/collections/import/postman`
 
 **Import Postman importer**
 
@@ -34,7 +34,7 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/import/postman' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/import/postman' \
   -H 'Authorization: Bearer <token>'
 ```
 

@@ -1,29 +1,31 @@
 package run
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
-	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
 	"github.com/kest-labs/kest/api/internal/modules/variable"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 type Handler struct {
 	contracts.BaseModule
-	requestService request.Service
-	memberService  member.Service
-	runner         runner.Runner
+	requestService   request.Service
+	workspaceService workspace.Service
+	runner           runner.Runner
 }
 
-func NewHandler(requestService request.Service, memberService member.Service, runner runner.Runner) *Handler {
+func NewHandler(requestService request.Service, workspaceService workspace.Service, runner runner.Runner) *Handler {
 	return &Handler{
-		requestService: requestService,
-		memberService:  memberService,
-		runner:         runner,
+		requestService:   requestService,
+		workspaceService: workspaceService,
+		runner:           runner,
 	}
 }
 
@@ -37,7 +39,7 @@ type RunRequest struct {
 }
 
 func (h *Handler) Run(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -57,13 +59,13 @@ func (h *Handler) Run(c *gin.Context) {
 		return
 	}
 
-	reqModel, err := h.requestService.GetByID(c.Request.Context(), requestID, collectionID, projectID)
+	reqModel, err := h.requestService.GetByID(c.Request.Context(), requestID, collectionID, workspaceID)
 	if err != nil {
 		if err == request.ErrRequestNotFound {
 			response.NotFound(c, err.Error())
 			return
 		}
-		if err == request.ErrCollectionNotFound || err == request.ErrInvalidCollection {
+		if err == request.ErrInvalidCollection {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -83,4 +85,24 @@ func (h *Handler) Run(c *gin.Context) {
 	}
 
 	response.Success(c, resp)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }

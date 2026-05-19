@@ -9,7 +9,7 @@ import (
 // EnvironmentPO represents an environment in the database
 type EnvironmentPO struct {
 	ID          string         `gorm:"primaryKey" json:"id"`
-	ProjectID   string         `gorm:"not null;index:idx_env_project" json:"project_id"`
+	WorkspaceID string         `gorm:"not null;index:idx_env_workspace" json:"workspace_id"`
 	Name        string         `gorm:"size:50;not null" json:"name"`
 	DisplayName string         `gorm:"size:100" json:"display_name"`
 	BaseURL     string         `gorm:"size:500" json:"base_url"`

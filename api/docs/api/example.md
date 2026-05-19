@@ -10,19 +10,19 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v1/projects/:id/collections/:cid/requests/:rid/examples` | Create example | 🔒 |
-| `GET` | `/v1/projects/:id/collections/:cid/requests/:rid/examples` | List examples | 🔒 |
-| `GET` | `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid` | Get example details | 🔒 |
-| `PUT` | `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid` | Update example | 🔒 |
-| `DELETE` | `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid` | Delete example | 🔒 |
-| `POST` | `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid/response` | Save Response example | 🔒 |
-| `POST` | `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid/default` | Set Default example | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples` | Create example | 🔒 |
+| `GET` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples` | List examples | 🔒 |
+| `GET` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid` | Get example details | 🔒 |
+| `PUT` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid` | Update example | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid` | Delete example | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid/response` | Save Response example | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid/default` | Set Default example | 🔒 |
 
 ---
 
 ## Details
 
-### POST `/v1/projects/:id/collections/:cid/requests/:rid/examples`
+### POST `/v1/workspaces/:id/collections/:cid/requests/:rid/examples`
 
 **Create example**
 
@@ -68,13 +68,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/collections/:cid/requests/:rid/examples`
+### GET `/v1/workspaces/:id/collections/:cid/requests/:rid/examples`
 
 **List examples**
 
@@ -120,13 +120,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/e
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid`
+### GET `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid`
 
 **Get example details**
 
@@ -173,13 +173,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/ex
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PUT `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid`
+### PUT `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid`
 
 **Update example**
 
@@ -226,13 +226,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/ex
 #### Example
 
 ```bash
-curl -X PUT 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples/1' \
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid`
+### DELETE `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid`
 
 **Delete example**
 
@@ -279,13 +279,13 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/ex
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid/response`
+### POST `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid/response`
 
 **Save Response example**
 
@@ -350,7 +350,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples/1/response' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples/1/response' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"response_body": "string","response_headers": "object","response_status": 1,"response_time": 1}'
@@ -358,7 +358,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/e
 
 ---
 
-### POST `/v1/projects/:id/collections/:cid/requests/:rid/examples/:eid/default`
+### POST `/v1/workspaces/:id/collections/:cid/requests/:rid/examples/:eid/default`
 
 **Set Default example**
 
@@ -405,7 +405,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/e
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/examples/1/default' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/examples/1/default' \
   -H 'Authorization: Bearer <token>'
 ```
 

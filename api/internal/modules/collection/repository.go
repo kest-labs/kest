@@ -19,12 +19,12 @@ type CollectionStats struct {
 type Repository interface {
 	Create(ctx context.Context, collection *Collection) error
 	GetByID(ctx context.Context, id string) (*Collection, error)
-	GetByIDAndProject(ctx context.Context, id, projectID string) (*Collection, error)
+	GetByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*Collection, error)
 	Update(ctx context.Context, collection *Collection) error
 	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, projectID string, offset, limit int) ([]*Collection, int64, error)
-	ListAll(ctx context.Context, projectID string) ([]*Collection, error)
-	GetByParentID(ctx context.Context, projectID string, parentID *string) ([]*Collection, error)
+	List(ctx context.Context, workspaceID string, offset, limit int) ([]*Collection, int64, error)
+	ListAll(ctx context.Context, workspaceID string) ([]*Collection, error)
+	GetByParentID(ctx context.Context, workspaceID string, parentID *string) ([]*Collection, error)
 	GetStats(ctx context.Context, collectionID string) (*CollectionStats, error)
 }
 
@@ -60,9 +60,9 @@ func (r *repository) GetByID(ctx context.Context, id string) (*Collection, error
 	return po.toDomain(), nil
 }
 
-func (r *repository) GetByIDAndProject(ctx context.Context, id, projectID string) (*Collection, error) {
+func (r *repository) GetByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*Collection, error) {
 	var po CollectionPO
-	if err := r.db.WithContext(ctx).Where("id = ? AND project_id = ?", id, projectID).First(&po).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("id = ? AND workspace_id = ?", id, workspaceID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -80,26 +80,26 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 	return dbutil.DeleteByID(r.db.WithContext(ctx), &CollectionPO{}, id).Error
 }
 
-func (r *repository) List(ctx context.Context, projectID string, offset, limit int) ([]*Collection, int64, error) {
+func (r *repository) List(ctx context.Context, workspaceID string, offset, limit int) ([]*Collection, int64, error) {
 	var poList []*CollectionPO
 	var total int64
 
-	if err := r.db.WithContext(ctx).Model(&CollectionPO{}).Where("project_id = ?", projectID).Count(&total).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&CollectionPO{}).Where("workspace_id = ?", workspaceID).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Offset(offset).Limit(limit).Order("sort_order ASC, created_at DESC, id DESC").Find(&poList).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("workspace_id = ?", workspaceID).Offset(offset).Limit(limit).Order("sort_order ASC, created_at DESC, id DESC").Find(&poList).Error; err != nil {
 		return nil, 0, err
 	}
 
 	return toDomainList(poList), total, nil
 }
 
-func (r *repository) ListAll(ctx context.Context, projectID string) ([]*Collection, error) {
+func (r *repository) ListAll(ctx context.Context, workspaceID string) ([]*Collection, error) {
 	var poList []*CollectionPO
 
 	if err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Order("sort_order ASC, created_at DESC, id DESC").
 		Find(&poList).Error; err != nil {
 		return nil, err
@@ -108,10 +108,10 @@ func (r *repository) ListAll(ctx context.Context, projectID string) ([]*Collecti
 	return toDomainList(poList), nil
 }
 
-func (r *repository) GetByParentID(ctx context.Context, projectID string, parentID *string) ([]*Collection, error) {
+func (r *repository) GetByParentID(ctx context.Context, workspaceID string, parentID *string) ([]*Collection, error) {
 	var poList []*CollectionPO
 
-	query := r.db.WithContext(ctx).Where("project_id = ?", projectID)
+	query := r.db.WithContext(ctx).Where("workspace_id = ?", workspaceID)
 	if parentID == nil {
 		query = query.Where("parent_id IS NULL")
 	} else {

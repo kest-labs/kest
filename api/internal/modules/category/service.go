@@ -13,13 +13,13 @@ var (
 
 // Service defines the interface for category business logic
 type Service interface {
-	CreateCategory(ctx context.Context, projectID string, req *CreateCategoryRequest) (*CategoryResponse, error)
-	GetCategory(ctx context.Context, projectID, id string) (*CategoryResponse, error)
-	ListCategories(ctx context.Context, projectID string) ([]*CategoryResponse, error)
-	GetCategoryTree(ctx context.Context, projectID string) ([]*CategoryResponse, error)
-	UpdateCategory(ctx context.Context, projectID, id string, req *UpdateCategoryRequest) (*CategoryResponse, error)
-	DeleteCategory(ctx context.Context, projectID, id string) error
-	SortCategories(ctx context.Context, projectID string, req *SortCategoriesRequest) error
+	CreateCategory(ctx context.Context, workspaceID string, req *CreateCategoryRequest) (*CategoryResponse, error)
+	GetCategory(ctx context.Context, workspaceID, id string) (*CategoryResponse, error)
+	ListCategories(ctx context.Context, workspaceID string) ([]*CategoryResponse, error)
+	GetCategoryTree(ctx context.Context, workspaceID string) ([]*CategoryResponse, error)
+	UpdateCategory(ctx context.Context, workspaceID, id string, req *UpdateCategoryRequest) (*CategoryResponse, error)
+	DeleteCategory(ctx context.Context, workspaceID, id string) error
+	SortCategories(ctx context.Context, workspaceID string, req *SortCategoriesRequest) error
 }
 
 type service struct {
@@ -31,9 +31,9 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) CreateCategory(ctx context.Context, projectID string, req *CreateCategoryRequest) (*CategoryResponse, error) {
+func (s *service) CreateCategory(ctx context.Context, workspaceID string, req *CreateCategoryRequest) (*CategoryResponse, error) {
 	if req.ParentID != nil {
-		parent, err := s.repo.GetByIDAndProject(ctx, *req.ParentID, projectID)
+		parent, err := s.repo.GetByIDAndWorkspace(ctx, *req.ParentID, workspaceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get parent category: %w", err)
 		}
@@ -42,15 +42,15 @@ func (s *service) CreateCategory(ctx context.Context, projectID string, req *Cre
 		}
 	}
 
-	category := ToCategoryPO(projectID, req)
+	category := ToCategoryPO(workspaceID, req)
 	if err := s.repo.Create(ctx, category); err != nil {
 		return nil, fmt.Errorf("failed to create category: %w", err)
 	}
 	return FromCategoryPO(category), nil
 }
 
-func (s *service) GetCategory(ctx context.Context, projectID, id string) (*CategoryResponse, error) {
-	category, err := s.repo.GetByIDAndProject(ctx, id, projectID)
+func (s *service) GetCategory(ctx context.Context, workspaceID, id string) (*CategoryResponse, error) {
+	category, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category: %w", err)
 	}
@@ -60,16 +60,16 @@ func (s *service) GetCategory(ctx context.Context, projectID, id string) (*Categ
 	return FromCategoryPO(category), nil
 }
 
-func (s *service) ListCategories(ctx context.Context, projectID string) ([]*CategoryResponse, error) {
-	categories, err := s.repo.ListByProject(ctx, projectID)
+func (s *service) ListCategories(ctx context.Context, workspaceID string) ([]*CategoryResponse, error) {
+	categories, err := s.repo.ListByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list categories: %w", err)
 	}
 	return ToResponseList(categories), nil
 }
 
-func (s *service) GetCategoryTree(ctx context.Context, projectID string) ([]*CategoryResponse, error) {
-	categories, err := s.repo.ListByProject(ctx, projectID)
+func (s *service) GetCategoryTree(ctx context.Context, workspaceID string) ([]*CategoryResponse, error) {
+	categories, err := s.repo.ListByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list categories for tree: %w", err)
 	}
@@ -93,8 +93,8 @@ func buildTree(categories []*CategoryResponse, parentID *string) []*CategoryResp
 	return tree
 }
 
-func (s *service) UpdateCategory(ctx context.Context, projectID, id string, req *UpdateCategoryRequest) (*CategoryResponse, error) {
-	category, err := s.repo.GetByIDAndProject(ctx, id, projectID)
+func (s *service) UpdateCategory(ctx context.Context, workspaceID, id string, req *UpdateCategoryRequest) (*CategoryResponse, error) {
+	category, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category for update: %w", err)
 	}
@@ -112,7 +112,7 @@ func (s *service) UpdateCategory(ctx context.Context, projectID, id string, req 
 				return nil, ErrInvalidParentCategory
 			}
 
-			parent, err := s.repo.GetByIDAndProject(ctx, parentID, projectID)
+			parent, err := s.repo.GetByIDAndWorkspace(ctx, parentID, workspaceID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get parent category for update: %w", err)
 			}
@@ -136,8 +136,8 @@ func (s *service) UpdateCategory(ctx context.Context, projectID, id string, req 
 	return FromCategoryPO(category), nil
 }
 
-func (s *service) DeleteCategory(ctx context.Context, projectID, id string) error {
-	category, err := s.repo.GetByIDAndProject(ctx, id, projectID)
+func (s *service) DeleteCategory(ctx context.Context, workspaceID, id string) error {
+	category, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return err
 	}
@@ -147,6 +147,6 @@ func (s *service) DeleteCategory(ctx context.Context, projectID, id string) erro
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *service) SortCategories(ctx context.Context, projectID string, req *SortCategoriesRequest) error {
-	return s.repo.UpdateSortOrder(ctx, projectID, req.CategoryIDs)
+func (s *service) SortCategories(ctx context.Context, workspaceID string, req *SortCategoriesRequest) error {
+	return s.repo.UpdateSortOrder(ctx, workspaceID, req.CategoryIDs)
 }

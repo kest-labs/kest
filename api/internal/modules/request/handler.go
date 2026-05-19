@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -15,8 +15,8 @@ import (
 // Handler handles HTTP requests for request module
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
 // Name returns the module name
@@ -25,16 +25,16 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new request handler
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
-// Create handles POST /projects/:id/collections/:cid/requests
+// Create handles POST /workspaces/:id/collections/:cid/requests
 func (h *Handler) Create(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -51,7 +51,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	req.CollectionID = collectionID
 
-	request, err := h.service.Create(c.Request.Context(), projectID, &req)
+	request, err := h.service.Create(c.Request.Context(), workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCollection) {
 			response.Error(c, http.StatusBadRequest, err.Error())
@@ -64,9 +64,9 @@ func (h *Handler) Create(c *gin.Context) {
 	response.Created(c, toResponse(request))
 }
 
-// Get handles GET /projects/:id/collections/:cid/requests/:rid
+// Get handles GET /workspaces/:id/collections/:cid/requests/:rid
 func (h *Handler) Get(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -81,7 +81,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	request, err := h.service.GetByID(c.Request.Context(), requestID, collectionID, projectID)
+	request, err := h.service.GetByID(c.Request.Context(), requestID, collectionID, workspaceID)
 	if err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
 			response.NotFound(c, err.Error())
@@ -98,9 +98,9 @@ func (h *Handler) Get(c *gin.Context) {
 	response.Success(c, toResponse(request))
 }
 
-// Update handles PUT /projects/:id/collections/:cid/requests/:rid
+// Update handles PUT /workspaces/:id/collections/:cid/requests/:rid
 func (h *Handler) Update(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -120,7 +120,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	request, err := h.service.Update(c.Request.Context(), requestID, collectionID, projectID, &req)
+	request, err := h.service.Update(c.Request.Context(), requestID, collectionID, workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
 			response.NotFound(c, err.Error())
@@ -137,9 +137,9 @@ func (h *Handler) Update(c *gin.Context) {
 	response.Success(c, toResponse(request))
 }
 
-// Delete handles DELETE /projects/:id/collections/:cid/requests/:rid
+// Delete handles DELETE /workspaces/:id/collections/:cid/requests/:rid
 func (h *Handler) Delete(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -154,7 +154,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), requestID, collectionID, projectID); err != nil {
+	if err := h.service.Delete(c.Request.Context(), requestID, collectionID, workspaceID); err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
 			response.NotFound(c, err.Error())
 			return
@@ -170,9 +170,9 @@ func (h *Handler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"message": "request deleted"})
 }
 
-// List handles GET /projects/:id/collections/:cid/requests
+// List handles GET /workspaces/:id/collections/:cid/requests
 func (h *Handler) List(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -185,7 +185,7 @@ func (h *Handler) List(c *gin.Context) {
 	page := handler.QueryInt(c, "page", 1)
 	perPage := handler.QueryInt(c, "per_page", 20)
 
-	requests, total, err := h.service.List(c.Request.Context(), collectionID, projectID, page, perPage)
+	requests, total, err := h.service.List(c.Request.Context(), collectionID, workspaceID, page, perPage)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCollection) {
 			response.NotFound(c, err.Error())
@@ -206,9 +206,9 @@ func (h *Handler) List(c *gin.Context) {
 	})
 }
 
-// Move handles PATCH /projects/:id/collections/:cid/requests/:rid/move
+// Move handles PATCH /workspaces/:id/collections/:cid/requests/:rid/move
 func (h *Handler) Move(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -228,7 +228,7 @@ func (h *Handler) Move(c *gin.Context) {
 		return
 	}
 
-	request, err := h.service.Move(c.Request.Context(), requestID, collectionID, projectID, &req)
+	request, err := h.service.Move(c.Request.Context(), requestID, collectionID, workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrRequestNotFound) {
 			response.NotFound(c, err.Error())
@@ -243,4 +243,24 @@ func (h *Handler) Move(c *gin.Context) {
 	}
 
 	response.Success(c, toResponse(request))
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }

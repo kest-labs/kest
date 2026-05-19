@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -15,8 +15,8 @@ import (
 // Handler handles HTTP requests for collection module
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
 // Name returns the module name
@@ -25,16 +25,16 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new collection handler
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
-// Create handles POST /projects/:id/collections
+// Create handles POST /workspaces/:id/collections
 func (h *Handler) Create(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -44,7 +44,7 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	req.ProjectID = projectID
+	req.WorkspaceID = workspaceID
 
 	collection, err := h.service.Create(c.Request.Context(), &req)
 	if err != nil {
@@ -59,9 +59,9 @@ func (h *Handler) Create(c *gin.Context) {
 	response.Created(c, toResponse(collection))
 }
 
-// Get handles GET /projects/:id/collections/:cid
+// Get handles GET /workspaces/:id/collections/:cid
 func (h *Handler) Get(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -71,7 +71,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	collection, err := h.service.GetByID(c.Request.Context(), collectionID, projectID)
+	collection, err := h.service.GetByID(c.Request.Context(), collectionID, workspaceID)
 	if err != nil {
 		if errors.Is(err, ErrCollectionNotFound) {
 			response.NotFound(c, err.Error())
@@ -84,9 +84,9 @@ func (h *Handler) Get(c *gin.Context) {
 	response.Success(c, toResponse(collection))
 }
 
-// Update handles PUT /projects/:id/collections/:cid
+// Update handles PUT /workspaces/:id/collections/:cid
 func (h *Handler) Update(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -101,7 +101,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	collection, err := h.service.Update(c.Request.Context(), collectionID, projectID, &req)
+	collection, err := h.service.Update(c.Request.Context(), collectionID, workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrCollectionNotFound) {
 			response.NotFound(c, err.Error())
@@ -118,9 +118,9 @@ func (h *Handler) Update(c *gin.Context) {
 	response.Success(c, toResponse(collection))
 }
 
-// Delete handles DELETE /projects/:id/collections/:cid
+// Delete handles DELETE /workspaces/:id/collections/:cid
 func (h *Handler) Delete(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -130,7 +130,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), collectionID, projectID); err != nil {
+	if err := h.service.Delete(c.Request.Context(), collectionID, workspaceID); err != nil {
 		if errors.Is(err, ErrCollectionNotFound) {
 			response.NotFound(c, err.Error())
 			return
@@ -142,9 +142,9 @@ func (h *Handler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"message": "collection deleted"})
 }
 
-// List handles GET /projects/:id/collections
+// List handles GET /workspaces/:id/collections
 func (h *Handler) List(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -152,7 +152,7 @@ func (h *Handler) List(c *gin.Context) {
 	page := handler.QueryInt(c, "page", 1)
 	perPage := handler.QueryInt(c, "per_page", 20)
 
-	collections, total, err := h.service.List(c.Request.Context(), projectID, page, perPage)
+	collections, total, err := h.service.List(c.Request.Context(), workspaceID, page, perPage)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -169,14 +169,14 @@ func (h *Handler) List(c *gin.Context) {
 	})
 }
 
-// GetTree handles GET /projects/:id/collections/tree
+// GetTree handles GET /workspaces/:id/collections/tree
 func (h *Handler) GetTree(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
 
-	tree, err := h.service.GetTree(c.Request.Context(), projectID)
+	tree, err := h.service.GetTree(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -185,9 +185,9 @@ func (h *Handler) GetTree(c *gin.Context) {
 	response.Success(c, tree)
 }
 
-// Move handles PATCH /projects/:id/collections/:cid/move
+// Move handles PATCH /workspaces/:id/collections/:cid/move
 func (h *Handler) Move(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -202,7 +202,7 @@ func (h *Handler) Move(c *gin.Context) {
 		return
 	}
 
-	collection, err := h.service.Move(c.Request.Context(), collectionID, projectID, &req)
+	collection, err := h.service.Move(c.Request.Context(), collectionID, workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrCollectionNotFound) {
 			response.NotFound(c, err.Error())
@@ -217,4 +217,24 @@ func (h *Handler) Move(c *gin.Context) {
 	}
 
 	response.Success(c, toResponse(collection))
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }

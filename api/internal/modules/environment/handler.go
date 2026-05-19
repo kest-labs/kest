@@ -1,22 +1,25 @@
 package environment
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
-	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
+	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
+
+var errEnvironmentAccessDenied = errors.New("workspace not found or access denied")
 
 // Handler handles HTTP requests for environments
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
 // Name returns the module name
@@ -25,40 +28,33 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new environment handler
-func NewHandler(service Service, memberService member.Service) *Handler {
-	return &Handler{service: service, memberService: memberService}
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
+	return &Handler{service: service, workspaceService: workspaceService}
 }
 
 // RegisterRoutes registers environment routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/environments", func(envs *router.Router) {
+	r.Group("/workspaces/:id/environments", func(envs *router.Router) {
 		envs.WithMiddleware("auth")
 
-		envs.GET("", h.List).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
-		envs.POST("", h.Create).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+		envs.GET("", h.List).WhereUUIDOrNumber("id")
+		envs.POST("", h.Create).WhereUUIDOrNumber("id")
 
-		envs.GET("/:eid", h.Get).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
-		envs.PATCH("/:eid", h.Update).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
-		envs.DELETE("/:eid", h.Delete).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
-		envs.POST("/:eid/duplicate", h.Duplicate).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+		envs.GET("/:eid", h.Get).WhereUUIDOrNumber("id", "eid")
+		envs.PATCH("/:eid", h.Update).WhereUUIDOrNumber("id", "eid")
+		envs.DELETE("/:eid", h.Delete).WhereUUIDOrNumber("id", "eid")
+		envs.POST("/:eid/duplicate", h.Duplicate).WhereUUIDOrNumber("id", "eid")
 	})
 }
 
-// ListEnvironments handles GET /api/v1/projects/:project_id/environments
+// ListEnvironments handles GET /api/v1/workspaces/:workspace_id/environments
 func (h *Handler) ListEnvironments(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
 		return
 	}
 
-	envs, err := h.service.ListEnvironments(c.Request.Context(), projectID)
+	envs, err := h.service.ListEnvironments(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -70,11 +66,10 @@ func (h *Handler) ListEnvironments(c *gin.Context) {
 	})
 }
 
-// CreateEnvironment handles POST /api/v1/projects/:project_id/environments
+// CreateEnvironment handles POST /api/v1/workspaces/:workspace_id/environments
 func (h *Handler) CreateEnvironment(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
 		return
 	}
 
@@ -84,8 +79,7 @@ func (h *Handler) CreateEnvironment(c *gin.Context) {
 		return
 	}
 
-	// Ensure project_id matches
-	req.ProjectID = projectID
+	req.WorkspaceID = workspaceID
 
 	env, err := h.service.CreateEnvironment(c.Request.Context(), &req)
 	if err != nil {
@@ -96,15 +90,20 @@ func (h *Handler) CreateEnvironment(c *gin.Context) {
 	response.Created(c, env)
 }
 
-// GetEnvironment handles GET /api/v1/projects/:id/environments/:eid
+// GetEnvironment handles GET /api/v1/workspaces/:id/environments/:eid
 func (h *Handler) GetEnvironment(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
+		return
+	}
+
 	id := c.Param("eid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid environment ID")
 		return
 	}
 
-	env, err := h.service.GetEnvironment(c.Request.Context(), id)
+	env, err := h.service.GetEnvironment(c.Request.Context(), workspaceID, id)
 	if err != nil {
 		if err.Error() == "environment not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -113,12 +112,16 @@ func (h *Handler) GetEnvironment(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	response.Success(c, env)
 }
 
-// UpdateEnvironment handles PATCH /api/v1/projects/:id/environments/:eid
+// UpdateEnvironment handles PATCH /api/v1/workspaces/:id/environments/:eid
 func (h *Handler) UpdateEnvironment(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	id := c.Param("eid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid environment ID")
@@ -131,7 +134,7 @@ func (h *Handler) UpdateEnvironment(c *gin.Context) {
 		return
 	}
 
-	env, err := h.service.UpdateEnvironment(c.Request.Context(), id, &req)
+	env, err := h.service.UpdateEnvironment(c.Request.Context(), workspaceID, id, &req)
 	if err != nil {
 		if err.Error() == "environment not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -140,19 +143,22 @@ func (h *Handler) UpdateEnvironment(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	response.Success(c, env)
 }
 
-// DeleteEnvironment handles DELETE /api/v1/projects/:id/environments/:eid
+// DeleteEnvironment handles DELETE /api/v1/workspaces/:id/environments/:eid
 func (h *Handler) DeleteEnvironment(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	id := c.Param("eid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid environment ID")
 		return
 	}
-
-	if err := h.service.DeleteEnvironment(c.Request.Context(), id); err != nil {
+	if err := h.service.DeleteEnvironment(c.Request.Context(), workspaceID, id); err != nil {
 		if err.Error() == "environment not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
 			return
@@ -164,8 +170,13 @@ func (h *Handler) DeleteEnvironment(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// DuplicateEnvironment handles POST /api/v1/projects/:id/environments/:eid/duplicate
+// DuplicateEnvironment handles POST /api/v1/workspaces/:id/environments/:eid/duplicate
 func (h *Handler) DuplicateEnvironment(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	id := c.Param("eid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid environment ID")
@@ -178,7 +189,7 @@ func (h *Handler) DuplicateEnvironment(c *gin.Context) {
 		return
 	}
 
-	env, err := h.service.DuplicateEnvironment(c.Request.Context(), id, &req)
+	env, err := h.service.DuplicateEnvironment(c.Request.Context(), workspaceID, id, &req)
 	if err != nil {
 		if err.Error() == "source environment not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -187,8 +198,32 @@ func (h *Handler) DuplicateEnvironment(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	response.Created(c, env)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(
+		workspaceID,
+		userID,
+		requiredRole,
+		false,
+	)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, errEnvironmentAccessDenied.Error())
+		return "", false
+	}
+
+	return workspaceID, true
 }
 
 // Convenience methods for router registration

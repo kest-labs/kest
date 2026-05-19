@@ -7,7 +7,7 @@ import (
 
 // CreateEnvironmentRequest represents the request to create an environment
 type CreateEnvironmentRequest struct {
-	ProjectID   string                 `json:"project_id"`
+	WorkspaceID string                 `json:"workspace_id"`
 	Name        string                 `json:"name" binding:"required,max=50"`
 	DisplayName string                 `json:"display_name,omitempty" binding:"max=100"`
 	BaseURL     string                 `json:"base_url,omitempty" binding:"max=500"`
@@ -27,7 +27,7 @@ type UpdateEnvironmentRequest struct {
 // EnvironmentResponse represents the response for an environment
 type EnvironmentResponse struct {
 	ID          string                 `json:"id"`
-	ProjectID   string                 `json:"project_id"`
+	WorkspaceID string                 `json:"workspace_id"`
 	Name        string                 `json:"name"`
 	DisplayName string                 `json:"display_name,omitempty"`
 	BaseURL     string                 `json:"base_url,omitempty"`
@@ -46,7 +46,7 @@ type DuplicateEnvironmentRequest struct {
 // ToEnvironmentPO converts CreateEnvironmentRequest to EnvironmentPO
 func (r *CreateEnvironmentRequest) ToEnvironmentPO() (*EnvironmentPO, error) {
 	env := &EnvironmentPO{
-		ProjectID:   r.ProjectID,
+		WorkspaceID: r.WorkspaceID,
 		Name:        r.Name,
 		DisplayName: r.DisplayName,
 		BaseURL:     r.BaseURL,
@@ -77,7 +77,7 @@ func (r *CreateEnvironmentRequest) ToEnvironmentPO() (*EnvironmentPO, error) {
 func (po *EnvironmentPO) ToResponse() (*EnvironmentResponse, error) {
 	resp := &EnvironmentResponse{
 		ID:          po.ID,
-		ProjectID:   po.ProjectID,
+		WorkspaceID: po.WorkspaceID,
 		Name:        po.Name,
 		DisplayName: po.DisplayName,
 		BaseURL:     po.BaseURL,

@@ -13,8 +13,9 @@ import (
 type Repository interface {
 	Create(ctx context.Context, env *EnvironmentPO) error
 	GetByID(ctx context.Context, id string) (*EnvironmentPO, error)
-	GetByProjectAndName(ctx context.Context, projectID string, name string) (*EnvironmentPO, error)
-	ListByProject(ctx context.Context, projectID string) ([]*EnvironmentPO, error)
+	GetByIDAndWorkspace(ctx context.Context, id string, workspaceID string) (*EnvironmentPO, error)
+	GetByWorkspaceAndName(ctx context.Context, workspaceID string, name string) (*EnvironmentPO, error)
+	ListByWorkspace(ctx context.Context, workspaceID string) ([]*EnvironmentPO, error)
 	Update(ctx context.Context, env *EnvironmentPO) error
 	Delete(ctx context.Context, id string) error
 }
@@ -46,11 +47,11 @@ func (r *repository) GetByID(ctx context.Context, id string) (*EnvironmentPO, er
 	return &env, nil
 }
 
-// GetByProjectAndName gets an environment by project ID and name
-func (r *repository) GetByProjectAndName(ctx context.Context, projectID string, name string) (*EnvironmentPO, error) {
+// GetByIDAndWorkspace gets an environment by ID scoped to a workspace.
+func (r *repository) GetByIDAndWorkspace(ctx context.Context, id string, workspaceID string) (*EnvironmentPO, error) {
 	var env EnvironmentPO
-	err := r.db.WithContext(ctx).
-		Where("project_id = ? AND name = ?", projectID, name).
+	err := dbutil.ByID(r.db.WithContext(ctx), id).
+		Where("workspace_id = ?", workspaceID).
 		First(&env).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -61,11 +62,26 @@ func (r *repository) GetByProjectAndName(ctx context.Context, projectID string, 
 	return &env, nil
 }
 
-// ListByProject lists all environments for a project
-func (r *repository) ListByProject(ctx context.Context, projectID string) ([]*EnvironmentPO, error) {
+// GetByWorkspaceAndName gets an environment by workspace ID and name
+func (r *repository) GetByWorkspaceAndName(ctx context.Context, workspaceID string, name string) (*EnvironmentPO, error) {
+	var env EnvironmentPO
+	err := r.db.WithContext(ctx).
+		Where("workspace_id = ? AND name = ?", workspaceID, name).
+		First(&env).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &env, nil
+}
+
+// ListByWorkspace lists all environments for a workspace
+func (r *repository) ListByWorkspace(ctx context.Context, workspaceID string) ([]*EnvironmentPO, error) {
 	var envs []*EnvironmentPO
 	err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Order("name ASC").
 		Find(&envs).Error
 	if err != nil {

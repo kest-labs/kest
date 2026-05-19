@@ -6,7 +6,7 @@ import "time"
 type RecordHistoryRequest struct {
 	EntityType    string                 `json:"entity_type" binding:"required"`
 	EntityID      string                 `json:"entity_id" binding:"required"`
-	ProjectID     string                 `json:"project_id"`
+	WorkspaceID   string                 `json:"workspace_id"`
 	UserID        string                 `json:"user_id"`
 	Source        string                 `json:"source,omitempty"`
 	SourceEventID string                 `json:"source_event_id,omitempty"`
@@ -21,7 +21,7 @@ type HistoryResponse struct {
 	ID            string                 `json:"id"`
 	EntityType    string                 `json:"entity_type"`
 	EntityID      string                 `json:"entity_id"`
-	ProjectID     string                 `json:"project_id"`
+	WorkspaceID   string                 `json:"workspace_id"`
 	UserID        string                 `json:"user_id"`
 	Source        string                 `json:"source,omitempty"`
 	SourceEventID string                 `json:"source_event_id,omitempty"`
@@ -45,7 +45,7 @@ func toResponse(h *History) *HistoryResponse {
 		ID:            h.ID,
 		EntityType:    h.EntityType,
 		EntityID:      h.EntityID,
-		ProjectID:     h.ProjectID,
+		WorkspaceID:   h.WorkspaceID,
 		UserID:        h.UserID,
 		Source:        h.Source,
 		SourceEventID: h.SourceEventID,

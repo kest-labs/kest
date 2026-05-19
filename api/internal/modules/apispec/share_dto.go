@@ -7,13 +7,13 @@ import (
 
 // APISpecShareResponse is the internal management view for a published share.
 type APISpecShareResponse struct {
-	ID        string    `json:"id"`
-	ProjectID string    `json:"project_id"`
-	APISpecID string    `json:"api_spec_id"`
-	Slug      string    `json:"slug"`
-	CreatedBy string    `json:"created_by"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	APISpecID   string    `json:"api_spec_id"`
+	Slug        string    `json:"slug"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // PublicAPISpecShareResponse is the anonymous payload used by the public share page.
@@ -30,13 +30,13 @@ func fromAPISpecSharePO(po *APISpecSharePO) *APISpecShareResponse {
 	}
 
 	return &APISpecShareResponse{
-		ID:        po.ID,
-		ProjectID: po.ProjectID,
-		APISpecID: po.APISpecID,
-		Slug:      po.Slug,
-		CreatedBy: po.CreatedBy,
-		CreatedAt: po.CreatedAt,
-		UpdatedAt: po.UpdatedAt,
+		ID:          po.ID,
+		WorkspaceID: po.WorkspaceID,
+		APISpecID:   po.APISpecID,
+		Slug:        po.Slug,
+		CreatedBy:   po.CreatedBy,
+		CreatedAt:   po.CreatedAt,
+		UpdatedAt:   po.UpdatedAt,
 	}
 }
 

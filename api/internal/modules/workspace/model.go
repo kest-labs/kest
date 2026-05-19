@@ -46,7 +46,7 @@ type WorkspaceMemberPO struct {
 	ID          string `gorm:"primaryKey"`
 	WorkspaceID string `gorm:"index;uniqueIndex:idx_workspace_user;not null"`
 	UserID      string `gorm:"index;uniqueIndex:idx_workspace_user;not null"`
-	Role        string `gorm:"size:20;not null"` // owner|admin|editor|viewer
+	Role        string `gorm:"size:20;not null"` // owner|admin|write|read
 	InvitedBy   string `gorm:"index"`            // Inviter user ID
 	JoinedAt    time.Time
 	CreatedAt   time.Time
@@ -59,20 +59,71 @@ func (WorkspaceMemberPO) TableName() string {
 	return "workspace_members"
 }
 
+const (
+	CLITokenScopeCollectionRead  = "collection:read"
+	CLITokenScopeCollectionRun   = "collection:run"
+	CLITokenScopeEnvironmentRead = "environment:read"
+	CLITokenScopeTestCaseRun     = "test_case:run"
+	CLITokenScopeFlowRun         = "flow:run"
+)
+
+var supportedCLITokenScopes = map[string]struct{}{
+	CLITokenScopeCollectionRead:  {},
+	CLITokenScopeCollectionRun:   {},
+	CLITokenScopeEnvironmentRead: {},
+	CLITokenScopeTestCaseRun:     {},
+	CLITokenScopeFlowRun:         {},
+}
+
+// WorkspaceCLITokenPO persists workspace-scoped CLI tokens. TokenHash is the
+// only stored secret; raw tokens are returned only during creation.
+type WorkspaceCLITokenPO struct {
+	ID          string `gorm:"primaryKey"`
+	WorkspaceID string `gorm:"not null;index"`
+	CreatedBy   string `gorm:"not null;index"`
+	Name        string `gorm:"size:100;not null"`
+	TokenPrefix string `gorm:"size:32;not null;index"`
+	TokenHash   string `gorm:"size:64;not null;uniqueIndex"`
+	Scopes      string `gorm:"type:text"`
+	LastUsedAt  *time.Time
+	ExpiresAt   *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
+}
+
+func (WorkspaceCLITokenPO) TableName() string {
+	return "workspace_cli_tokens"
+}
+
+// WorkspaceCLIToken is the service-layer representation of a CLI token.
+type WorkspaceCLIToken struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	CreatedBy   string     `json:"created_by"`
+	Name        string     `json:"name"`
+	TokenPrefix string     `json:"token_prefix"`
+	Scopes      []string   `json:"scopes"`
+	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 // Role constants
 const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleEditor = "editor"
-	RoleViewer = "viewer"
+	RoleOwner = "owner"
+	RoleAdmin = "admin"
+	RoleWrite = "write"
+	RoleRead  = "read"
 )
 
 // RoleLevel defines the hierarchy of roles
 var RoleLevel = map[string]int{
-	RoleOwner:  40,
-	RoleAdmin:  30,
-	RoleEditor: 20,
-	RoleViewer: 10,
+	RoleOwner: 40,
+	RoleAdmin: 30,
+	RoleWrite: 20,
+	RoleRead:  10,
 }
 
 // Workspace is the domain entity
@@ -160,4 +211,48 @@ func toMemberDomainList(poList []*WorkspaceMemberPO) []*WorkspaceMember {
 		result[i] = po.toMemberDomain()
 	}
 	return result
+}
+
+func (po *WorkspaceCLITokenPO) toDomain() *WorkspaceCLIToken {
+	if po == nil {
+		return nil
+	}
+
+	token := &WorkspaceCLIToken{
+		ID:          po.ID,
+		WorkspaceID: po.WorkspaceID,
+		CreatedBy:   po.CreatedBy,
+		Name:        po.Name,
+		TokenPrefix: po.TokenPrefix,
+		LastUsedAt:  po.LastUsedAt,
+		ExpiresAt:   po.ExpiresAt,
+		CreatedAt:   po.CreatedAt,
+		UpdatedAt:   po.UpdatedAt,
+	}
+
+	if po.Scopes != "" {
+		_ = json.Unmarshal([]byte(po.Scopes), &token.Scopes)
+	}
+
+	return token
+}
+
+func newWorkspaceCLITokenPO(token *WorkspaceCLIToken, tokenHash string) *WorkspaceCLITokenPO {
+	if token == nil {
+		return nil
+	}
+
+	scopesJSON, _ := json.Marshal(token.Scopes)
+
+	return &WorkspaceCLITokenPO{
+		ID:          token.ID,
+		WorkspaceID: token.WorkspaceID,
+		CreatedBy:   token.CreatedBy,
+		Name:        token.Name,
+		TokenPrefix: token.TokenPrefix,
+		TokenHash:   tokenHash,
+		Scopes:      string(scopesJSON),
+		LastUsedAt:  token.LastUsedAt,
+		ExpiresAt:   token.ExpiresAt,
+	}
 }

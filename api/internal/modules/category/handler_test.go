@@ -1,6 +1,7 @@
 package category
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 func TestFilterCategoriesMatchesParentName(t *testing.T) {
@@ -48,18 +51,23 @@ func TestPaginateCategoriesBuildsPaginationMetadata(t *testing.T) {
 func TestListCategoriesReturnsPaginatedFlatResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	handler := NewHandler(&stubCategoryService{
+	categoryService := &stubCategoryService{
 		listCategories: []*CategoryResponse{
 			{ID: "1", Name: "Payments"},
 			{ID: "2", Name: "Webhook", Description: "Receives callbacks"},
 			{ID: "3", Name: "Invoices"},
 		},
-	}, nil)
+	}
+	workspaceService := &stubWorkspaceService{allowed: true}
+	handler := NewHandler(&stubCategoryService{
+		listCategories: categoryService.listCategories,
+	}, workspaceService)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
-	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/projects/9/categories?search=hook&page=1&per_page=1", nil)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/workspaces/9/categories?search=hook&page=1&per_page=1", nil)
 	ctx.Params = gin.Params{{Key: "id", Value: "9"}}
+	ctx.Set("userID", "42")
 	handler.ListCategories(ctx)
 
 	if recorder.Code != http.StatusOK {
@@ -79,15 +87,55 @@ func TestListCategoriesReturnsPaginatedFlatResponse(t *testing.T) {
 	if payload.Data.Pagination == nil || payload.Data.Pagination.PerPage != 1 {
 		t.Fatalf("expected pagination metadata, got %#v", payload.Data.Pagination)
 	}
+	if workspaceService.workspaceID != "9" || workspaceService.userID != "42" || workspaceService.requiredRole != workspace.RoleRead {
+		t.Fatalf("unexpected workspace permission check: %#v", workspaceService)
+	}
+}
+
+func TestCreateCategoryAuthorizesWorkspaceWrite(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	categoryService := &stubCategoryService{}
+	workspaceService := &stubWorkspaceService{allowed: true}
+	handler := NewHandler(categoryService, workspaceService)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(
+		http.MethodPost,
+		"/v1/workspaces/9/categories",
+		bytes.NewBufferString(`{"name":"Payments"}`),
+	)
+	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Params = gin.Params{{Key: "id", Value: "9"}}
+	ctx.Set("userID", "42")
+
+	handler.CreateCategory(ctx)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if workspaceService.workspaceID != "9" || workspaceService.requiredRole != workspace.RoleWrite {
+		t.Fatalf("unexpected workspace permission check: %#v", workspaceService)
+	}
+	if categoryService.createdWorkspaceID != "9" {
+		t.Fatalf("expected category to be created in workspace 9, got %q", categoryService.createdWorkspaceID)
+	}
 }
 
 type stubCategoryService struct {
-	listCategories []*CategoryResponse
-	treeCategories []*CategoryResponse
+	listCategories     []*CategoryResponse
+	treeCategories     []*CategoryResponse
+	createdWorkspaceID string
 }
 
-func (s *stubCategoryService) CreateCategory(_ context.Context, _ string, _ *CreateCategoryRequest) (*CategoryResponse, error) {
-	return nil, nil
+func (s *stubCategoryService) CreateCategory(_ context.Context, workspaceID string, req *CreateCategoryRequest) (*CategoryResponse, error) {
+	s.createdWorkspaceID = workspaceID
+	return &CategoryResponse{
+		ID:          "10",
+		WorkspaceID: workspaceID,
+		Name:        req.Name,
+	}, nil
 }
 
 func (s *stubCategoryService) GetCategory(_ context.Context, _, _ string) (*CategoryResponse, error) {
@@ -112,4 +160,71 @@ func (s *stubCategoryService) DeleteCategory(_ context.Context, _, _ string) err
 
 func (s *stubCategoryService) SortCategories(_ context.Context, _ string, _ *SortCategoriesRequest) error {
 	return nil
+}
+
+type stubWorkspaceService struct {
+	workspaceID  string
+	userID       string
+	requiredRole string
+	allowed      bool
+	err          error
+}
+
+func (s *stubWorkspaceService) CreateWorkspace(*workspace.CreateWorkspaceRequest, string) (*workspace.Workspace, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) UpdateWorkspace(string, *workspace.UpdateWorkspaceRequest, string, bool) (*workspace.Workspace, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) DeleteWorkspace(string, string, bool) error {
+	return nil
+}
+
+func (s *stubWorkspaceService) GetWorkspace(string, string, bool) (*workspace.Workspace, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) ListWorkspaces(string, bool) ([]*workspace.Workspace, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) AddMember(string, *workspace.AddMemberRequest, string, bool) error {
+	return nil
+}
+
+func (s *stubWorkspaceService) RemoveMember(string, string, string, bool) error {
+	return nil
+}
+
+func (s *stubWorkspaceService) UpdateMemberRole(string, string, string, string, bool) error {
+	return nil
+}
+
+func (s *stubWorkspaceService) ListMembers(string, string, bool) ([]*workspace.WorkspaceMember, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) GenerateCLIToken(context.Context, string, string, *workspace.GenerateWorkspaceCLITokenRequest) (*workspace.GenerateWorkspaceCLITokenResponse, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) ListCLITokens(context.Context, string) ([]*workspace.WorkspaceCLIToken, error) {
+	return nil, nil
+}
+
+func (s *stubWorkspaceService) ValidateCLIToken(context.Context, string, string, []string) (string, string, error) {
+	return "", "", nil
+}
+
+func (s *stubWorkspaceService) CheckUserRole(string, string, bool) (string, error) {
+	return "", nil
+}
+
+func (s *stubWorkspaceService) HasPermission(workspaceID, userID string, requiredRole string, _ bool) (bool, error) {
+	s.workspaceID = workspaceID
+	s.userID = userID
+	s.requiredRole = requiredRole
+	return s.allowed, s.err
 }

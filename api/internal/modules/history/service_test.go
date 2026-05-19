@@ -25,7 +25,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 			id TEXT PRIMARY KEY,
 			entity_type TEXT NOT NULL,
 			entity_id TEXT NOT NULL,
-			project_id TEXT NOT NULL,
+			workspace_id TEXT NOT NULL,
 			user_id TEXT NOT NULL,
 			source TEXT NOT NULL DEFAULT 'web',
 			source_event_id TEXT NOT NULL,
@@ -37,8 +37,8 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 			updated_at DATETIME,
 			deleted_at DATETIME
 		);
-		CREATE UNIQUE INDEX idx_history_project_source_event
-			ON history(project_id, source, source_event_id)
+		CREATE UNIQUE INDEX idx_history_workspace_source_event
+			ON history(workspace_id, source, source_event_id)
 	`).Error; err != nil {
 		t.Fatalf("create history schema returned error: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 		},
 	}
 
-	first, err := svc.SyncHistoryFromCLI(context.Background(), "project-1", "7", req)
+	first, err := svc.SyncHistoryFromCLI(context.Background(), "workspace-1", "7", req)
 	if err != nil {
 		t.Fatalf("SyncHistoryFromCLI returned error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 		t.Fatalf("expected first sync to create one record, got %+v", first)
 	}
 
-	second, err := svc.SyncHistoryFromCLI(context.Background(), "project-1", "7", req)
+	second, err := svc.SyncHistoryFromCLI(context.Background(), "workspace-1", "7", req)
 	if err != nil {
 		t.Fatalf("SyncHistoryFromCLI second call returned error: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 		t.Fatalf("expected second sync to skip duplicate record, got %+v", second)
 	}
 
-	record, err := repo.GetBySourceEvent(context.Background(), "project-1", "cli", "client-1:record:42")
+	record, err := repo.GetBySourceEvent(context.Background(), "workspace-1", "cli", "client-1:record:42")
 	if err != nil {
 		t.Fatalf("GetBySourceEvent returned error: %v", err)
 	}
@@ -91,6 +91,9 @@ func TestSyncHistoryFromCLIIsIdempotent(t *testing.T) {
 	}
 	if record.Source != "cli" {
 		t.Fatalf("expected source cli, got %q", record.Source)
+	}
+	if record.WorkspaceID != "workspace-1" {
+		t.Fatalf("expected workspace workspace-1, got %q", record.WorkspaceID)
 	}
 	if !record.CreatedAt.Equal(time.Unix(1700000000, 0).UTC()) {
 		t.Fatalf("expected created_at to match occurred_at, got %s", record.CreatedAt)

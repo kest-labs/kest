@@ -10,19 +10,19 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v1/projects/:id/collections/:cid/requests` | Create request | 🔒 |
-| `GET` | `/v1/projects/:id/collections/:cid/requests` | List requests | 🔒 |
-| `GET` | `/v1/projects/:id/collections/:cid/requests/:rid` | Get request details | 🔒 |
-| `PUT` | `/v1/projects/:id/collections/:cid/requests/:rid` | Update request | 🔒 |
-| `DELETE` | `/v1/projects/:id/collections/:cid/requests/:rid` | Delete request | 🔒 |
-| `PATCH` | `/v1/projects/:id/collections/:cid/requests/:rid/move` | Move request | 🔒 |
-| `POST` | `/v1/projects/:id/collections/:cid/requests/:rid/rollback` | Rollback request | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/:cid/requests` | Create request | 🔒 |
+| `GET` | `/v1/workspaces/:id/collections/:cid/requests` | List requests | 🔒 |
+| `GET` | `/v1/workspaces/:id/collections/:cid/requests/:rid` | Get request details | 🔒 |
+| `PUT` | `/v1/workspaces/:id/collections/:cid/requests/:rid` | Update request | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/collections/:cid/requests/:rid` | Delete request | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/collections/:cid/requests/:rid/move` | Move request | 🔒 |
+| `POST` | `/v1/workspaces/:id/collections/:cid/requests/:rid/rollback` | Rollback request | 🔒 |
 
 ---
 
 ## Details
 
-### POST `/v1/projects/:id/collections/:cid/requests`
+### POST `/v1/workspaces/:id/collections/:cid/requests`
 
 **Create request**
 
@@ -64,13 +64,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/collections/:cid/requests`
+### GET `/v1/workspaces/:id/collections/:cid/requests`
 
 **List requests**
 
@@ -112,13 +112,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/collections/:cid/requests/:rid`
+### GET `/v1/workspaces/:id/collections/:cid/requests/:rid`
 
 **Get request details**
 
@@ -161,13 +161,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PUT `/v1/projects/:id/collections/:cid/requests/:rid`
+### PUT `/v1/workspaces/:id/collections/:cid/requests/:rid`
 
 **Update request**
 
@@ -210,13 +210,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1' \
 #### Example
 
 ```bash
-curl -X PUT 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1' \
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/collections/:cid/requests/:rid`
+### DELETE `/v1/workspaces/:id/collections/:cid/requests/:rid`
 
 **Delete request**
 
@@ -259,13 +259,13 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/collections/:cid/requests/:rid/move`
+### PATCH `/v1/workspaces/:id/collections/:cid/requests/:rid/move`
 
 **Move request**
 
@@ -308,13 +308,13 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/move' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/move' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/collections/:cid/requests/:rid/rollback`
+### POST `/v1/workspaces/:id/collections/:cid/requests/:rid/rollback`
 
 **Rollback request**
 
@@ -369,7 +369,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/collections/1/requests/1/rollback' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/1/requests/1/rollback' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"version_id": 1}'

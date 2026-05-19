@@ -89,3 +89,43 @@ func RegisterRoutes(rg *gin.RouterGroup, handler *Handler, memberService Service
 		}
 	}
 }
+
+func TestParseModuleRoutesFileTreatsRequireWorkspaceCLITokenAsProtected(t *testing.T) {
+	tempDir := t.TempDir()
+	moduleDir := filepath.Join(tempDir, "project")
+	if err := os.MkdirAll(moduleDir, 0755); err != nil {
+		t.Fatalf("failed to create module dir: %v", err)
+	}
+
+	routesFile := filepath.Join(moduleDir, "routes.go")
+	content := `package project
+
+import "github.com/kest-labs/kest/api/internal/infra/router"
+
+func (h *Handler) RegisterRoutes(r *router.Router) {
+	r.Group("", func(cli *router.Router) {
+		cli.POST("/projects/:id/cli/spec-sync", h.SyncSpecsFromCLI).
+			Name("projects.cli.spec_sync").
+			Middleware(middleware.RequireWorkspaceCLIToken(h.workspaceTokenValidator, workspace.CLITokenScopeCollectionRead))
+	})
+}`
+
+	if err := os.WriteFile(routesFile, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write routes file: %v", err)
+	}
+
+	routes, err := parseModuleRoutesFile(routesFile, "/v1")
+	if err != nil {
+		t.Fatalf("parseModuleRoutesFile returned error: %v", err)
+	}
+	if len(routes) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(routes))
+	}
+
+	if routes[0].IsPublic {
+		t.Fatalf("expected workspace CLI token route to be protected, got %+v", routes[0])
+	}
+	if !hasMiddleware(routes[0].Middlewares, "auth") {
+		t.Fatalf("expected auth middleware marker, got %+v", routes[0])
+	}
+}

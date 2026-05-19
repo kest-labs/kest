@@ -1,21 +1,34 @@
 package workspace
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
-	"github.com/kest-labs/kest/api/internal/domain"
+	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles HTTP requests for workspace operations
 type Handler struct {
+	contracts.BaseModule
 	service Service
+}
+
+// Name returns the module name
+func (h *Handler) Name() string {
+	return "workspace"
 }
 
 // NewHandler creates a new workspace handler
 func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
+}
+
+func (h *Handler) Service() Service {
+	return h.service
 }
 
 // CreateWorkspace handles workspace creation
@@ -33,15 +46,12 @@ func (h *Handler) CreateWorkspace(c *gin.Context) {
 		return
 	}
 
-	// Get user from context (set by auth middleware)
-	user, exists := c.Get("user")
-	if !exists {
-		response.Unauthorized(c, "user not authenticated")
+	userID, ok := handler.GetUserID(c)
+	if !ok {
 		return
 	}
-	currentUser := user.(*domain.User)
 
-	workspace, err := h.service.CreateWorkspace(&req, currentUser.ID)
+	workspace, err := h.service.CreateWorkspace(&req, userID)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -57,10 +67,12 @@ func (h *Handler) CreateWorkspace(c *gin.Context) {
 // @Success 200 {array} WorkspaceResponse
 // @Router /workspaces [get]
 func (h *Handler) ListWorkspaces(c *gin.Context) {
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	workspaces, err := h.service.ListWorkspaces(currentUser.ID, currentUser.IsSuperAdmin)
+	workspaces, err := h.service.ListWorkspaces(userID, false)
 	if err != nil {
 		response.InternalServerError(c, "Failed to list workspaces", err)
 		return
@@ -82,10 +94,12 @@ func (h *Handler) GetWorkspace(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	workspace, err := h.service.GetWorkspace(id, currentUser.ID, currentUser.IsSuperAdmin)
+	workspace, err := h.service.GetWorkspace(id, userID, false)
 	if err != nil {
 		response.NotFound(c, "Workspace not found", err)
 		return
@@ -115,10 +129,12 @@ func (h *Handler) UpdateWorkspace(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	workspace, err := h.service.UpdateWorkspace(id, &req, currentUser.ID, currentUser.IsSuperAdmin)
+	workspace, err := h.service.UpdateWorkspace(id, &req, userID, false)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -139,10 +155,12 @@ func (h *Handler) DeleteWorkspace(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.DeleteWorkspace(id, currentUser.ID, currentUser.IsSuperAdmin); err != nil {
+	if err := h.service.DeleteWorkspace(id, userID, false); err != nil {
 		response.Forbidden(c, err.Error())
 		return
 	}
@@ -171,10 +189,12 @@ func (h *Handler) AddMember(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.AddMember(id, &req, currentUser.ID, currentUser.IsSuperAdmin); err != nil {
+	if err := h.service.AddMember(id, &req, userID, false); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
@@ -195,10 +215,12 @@ func (h *Handler) ListMembers(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	members, err := h.service.ListMembers(id, currentUser.ID, currentUser.IsSuperAdmin)
+	members, err := h.service.ListMembers(id, userID, false)
 	if err != nil {
 		response.NotFound(c, "Workspace not found or access denied", err)
 		return
@@ -234,10 +256,12 @@ func (h *Handler) UpdateMemberRole(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	currentUserID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.UpdateMemberRole(workspaceID, userID, req.Role, currentUser.ID, currentUser.IsSuperAdmin); err != nil {
+	if err := h.service.UpdateMemberRole(workspaceID, userID, req.Role, currentUserID, false); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
@@ -263,13 +287,78 @@ func (h *Handler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("user")
-	currentUser := user.(*domain.User)
+	currentUserID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
 
-	if err := h.service.RemoveMember(workspaceID, userID, currentUser.ID, currentUser.IsSuperAdmin); err != nil {
+	if err := h.service.RemoveMember(workspaceID, userID, currentUserID, false); err != nil {
 		response.Forbidden(c, err.Error())
 		return
 	}
 
 	response.NoContent(c)
+}
+
+// GenerateCLIToken handles POST /workspaces/:id/cli-tokens
+func (h *Handler) GenerateCLIToken(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	var req GenerateWorkspaceCLITokenRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	allowed, err := h.service.HasPermission(workspaceID, userID, RoleAdmin, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return
+	}
+
+	token, err := h.service.GenerateCLIToken(c.Request.Context(), workspaceID, userID, &req)
+	if err != nil {
+		if errors.Is(err, ErrUnsupportedCLITokenScope) {
+			response.BadRequest(c, err.Error(), err)
+			return
+		}
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Created(c, token)
+}
+
+// ListCLITokens handles GET /workspaces/:id/cli-tokens
+func (h *Handler) ListCLITokens(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	allowed, err := h.service.HasPermission(workspaceID, userID, RoleAdmin, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return
+	}
+
+	tokens, err := h.service.ListCLITokens(c.Request.Context(), workspaceID)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, FromCLITokenList(tokens))
 }

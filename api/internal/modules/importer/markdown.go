@@ -80,7 +80,7 @@ var (
 
 func (s *service) ImportMarkdown(
 	ctx context.Context,
-	projectID, parentID string,
+	workspaceID, parentID string,
 	file *multipart.FileHeader,
 ) (*MarkdownImportResult, error) {
 	f, err := file.Open()
@@ -99,12 +99,12 @@ func (s *service) ImportMarkdown(
 		return nil, err
 	}
 
-	return s.importMarkdownDocument(ctx, projectID, parentID, doc)
+	return s.importMarkdownDocument(ctx, workspaceID, parentID, doc)
 }
 
 func (s *service) importMarkdownDocument(
 	ctx context.Context,
-	projectID, parentID string,
+	workspaceID, parentID string,
 	doc *markdownDocument,
 ) (*MarkdownImportResult, error) {
 	if doc == nil || len(doc.Modules) == 0 {
@@ -112,9 +112,9 @@ func (s *service) importMarkdownDocument(
 	}
 
 	rootReq := &collection.CreateCollectionRequest{
-		ProjectID: projectID,
-		Name:      doc.Title,
-		IsFolder:  true,
+		WorkspaceID: workspaceID,
+		Name:        doc.Title,
+		IsFolder:    true,
 	}
 	if parentID != "" {
 		rootReq.ParentID = &parentID
@@ -133,11 +133,11 @@ func (s *service) importMarkdownDocument(
 
 	for moduleIndex, module := range doc.Modules {
 		moduleReq := &collection.CreateCollectionRequest{
-			ProjectID: projectID,
-			Name:      module.Name,
-			ParentID:  &rootFolder.ID,
-			IsFolder:  false,
-			SortOrder: moduleIndex,
+			WorkspaceID: workspaceID,
+			Name:        module.Name,
+			ParentID:    &rootFolder.ID,
+			IsFolder:    false,
+			SortOrder:   moduleIndex,
 		}
 
 		moduleCollection, err := s.collectionService.Create(ctx, moduleReq)
@@ -165,7 +165,7 @@ func (s *service) importMarkdownDocument(
 				SortOrder:    requestIndex,
 			}
 
-			if _, err := s.requestService.Create(ctx, projectID, req); err != nil {
+			if _, err := s.requestService.Create(ctx, workspaceID, req); err != nil {
 				return nil, err
 			}
 

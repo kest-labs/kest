@@ -17,8 +17,8 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 | `PATCH` | `/v1/projects/:id` | Update project | 🔒 |
 | `DELETE` | `/v1/projects/:id` | Delete project | 🔒 |
 | `GET` | `/v1/projects/:id/stats` | Get Stats project | 🔒 |
-| `POST` | `/v1/projects/:id/cli-tokens` | Generate C L I Token project | 🔒 |
-| `POST` | `/v1/projects/:id/cli/spec-sync` | Sync Specs From C L I project | 🔓 |
+| `POST` | `/v1/projects/:id/cli/spec-sync` | Sync Specs From C L I project | 🔒 |
+| `POST` | `/v1/projects/:id/cli/history-sync` | Sync History From C L I project | 🔒 |
 
 ---
 
@@ -277,51 +277,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/stats' \
 
 ---
 
-### POST `/v1/projects/:id/cli-tokens`
-
-**Generate C L I Token project**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Response
-
-```json
-{
-  "created_at": "2024-01-01T00:00:00Z",
-  "id": 1,
-  "name": "John Doe",
-  "platform": "string",
-  "public_key": "string",
-  "slug": "string",
-  "status": 1,
-  "updated_at": "2024-01-01T00:00:00Z"
-}
-```
-
-#### Example
-
-```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/cli-tokens' \
-  -H 'Authorization: Bearer <token>'
-```
-
----
-
 ### POST `/v1/projects/:id/cli/spec-sync`
 
 **Sync Specs From C L I project**
 
 | Property | Value |
 |----------|-------|
-| Auth | 🔓 Not required |
+| Auth | 🔒 Workspace CLI token required |
 
 #### Path Parameters
 
@@ -347,8 +309,31 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/cli-tokens' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/cli/spec-sync'
+curl -X POST 'http://localhost:8025/api/v1/projects/1/cli/spec-sync' \
+  -H 'Authorization: Bearer <workspace-cli-token>'
 ```
 
 ---
 
+### POST `/v1/projects/:id/cli/history-sync`
+
+**Sync History From C L I project**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 Workspace CLI token required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/projects/1/cli/history-sync' \
+  -H 'Authorization: Bearer <workspace-cli-token>'
+```
+
+---

@@ -10,18 +10,21 @@ import (
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/modules/collection"
 	"github.com/kest-labs/kest/api/internal/modules/request"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 type Handler struct {
 	contracts.BaseModule
-	service Service
+	service          Service
+	workspaceService workspace.Service
 }
 
-func NewHandler(service Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service: service,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
@@ -29,9 +32,9 @@ func (h *Handler) Name() string {
 	return "importer"
 }
 
-// ImportPostman handles POST /projects/:id/collections/import/postman
+// ImportPostman handles POST /workspaces/:id/collections/import/postman
 func (h *Handler) ImportPostman(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -44,7 +47,7 @@ func (h *Handler) ImportPostman(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.ImportPostman(c.Request.Context(), projectID, parentID, file); err != nil {
+	if err := h.service.ImportPostman(c.Request.Context(), workspaceID, parentID, file); err != nil {
 		if errors.Is(err, ErrInvalidPostmanCollection) ||
 			errors.Is(err, collection.ErrInvalidParent) ||
 			errors.Is(err, request.ErrInvalidCollection) {
@@ -58,9 +61,9 @@ func (h *Handler) ImportPostman(c *gin.Context) {
 	response.Success(c, gin.H{"message": "import successful"})
 }
 
-// ImportMarkdown handles POST /projects/:id/collections/import/markdown
+// ImportMarkdown handles POST /workspaces/:id/collections/import/markdown
 func (h *Handler) ImportMarkdown(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -73,7 +76,7 @@ func (h *Handler) ImportMarkdown(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ImportMarkdown(c.Request.Context(), projectID, parentID, file)
+	result, err := h.service.ImportMarkdown(c.Request.Context(), workspaceID, parentID, file)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMarkdownDocument) ||
 			errors.Is(err, ErrMarkdownBaseURLNotFound) ||
@@ -88,4 +91,24 @@ func (h *Handler) ImportMarkdown(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }

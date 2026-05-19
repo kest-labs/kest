@@ -11,13 +11,13 @@ import (
 
 // SpecListFilter holds filter parameters for listing API specs
 type SpecListFilter struct {
-	ProjectID string
-	Version   string
-	Method    string // GET, POST, PUT, etc.
-	Tag       string // filter by tag (partial match)
-	Keyword   string // search in path, summary, description
-	Page      int
-	PageSize  int
+	WorkspaceID string
+	Version     string
+	Method      string // GET, POST, PUT, etc.
+	Tag         string // filter by tag (partial match)
+	Keyword     string // search in path, summary, description
+	Page        int
+	PageSize    int
 }
 
 // Repository defines API specification data access interface
@@ -25,13 +25,13 @@ type Repository interface {
 	// API Spec operations
 	CreateSpec(ctx context.Context, spec *APISpecPO) error
 	GetSpecByID(ctx context.Context, id string) (*APISpecPO, error)
-	GetSpecByIDAndProject(ctx context.Context, id, projectID string) (*APISpecPO, error)
-	GetSpecByMethodAndPath(ctx context.Context, projectID string, method, path string) (*APISpecPO, error)
+	GetSpecByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*APISpecPO, error)
+	GetSpecByMethodAndPath(ctx context.Context, workspaceID string, method, path string) (*APISpecPO, error)
 	UpdateSpec(ctx context.Context, spec *APISpecPO) error
 	DeleteSpec(ctx context.Context, id string) error
 	ListSpecs(ctx context.Context, filter *SpecListFilter) ([]*APISpecPO, int64, error)
-	ListAllSpecs(ctx context.Context, projectID string) ([]*APISpecPO, error)
-	ListSpecsForBatchGen(ctx context.Context, projectID string, categoryID *string, forceRegen bool) ([]*APISpecPO, error)
+	ListAllSpecs(ctx context.Context, workspaceID string) ([]*APISpecPO, error)
+	ListSpecsForBatchGen(ctx context.Context, workspaceID string, categoryID *string, forceRegen bool) ([]*APISpecPO, error)
 
 	// API Example operations
 	CreateExample(ctx context.Context, example *APIExamplePO) error
@@ -41,15 +41,15 @@ type Repository interface {
 
 	// AI draft operations
 	CreateAIDraft(ctx context.Context, draft *APISpecAIDraftPO) error
-	GetAIDraftByIDAndProject(ctx context.Context, id, projectID string) (*APISpecAIDraftPO, error)
+	GetAIDraftByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*APISpecAIDraftPO, error)
 	UpdateAIDraft(ctx context.Context, draft *APISpecAIDraftPO) error
 
 	// Share operations
 	CreateShare(ctx context.Context, share *APISpecSharePO) error
 	UpdateShare(ctx context.Context, share *APISpecSharePO) error
-	GetShareBySpecID(ctx context.Context, projectID, specID string) (*APISpecSharePO, error)
+	GetShareBySpecID(ctx context.Context, workspaceID, specID string) (*APISpecSharePO, error)
 	GetShareBySlug(ctx context.Context, slug string) (*APISpecSharePO, error)
-	DeleteShareBySpecID(ctx context.Context, projectID, specID string) error
+	DeleteShareBySpecID(ctx context.Context, workspaceID, specID string) error
 }
 
 // repository is the private implementation
@@ -76,20 +76,20 @@ func (r *repository) GetSpecByID(ctx context.Context, id string) (*APISpecPO, er
 	return &spec, nil
 }
 
-func (r *repository) GetSpecByIDAndProject(ctx context.Context, id, projectID string) (*APISpecPO, error) {
+func (r *repository) GetSpecByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*APISpecPO, error) {
 	var spec APISpecPO
 	if err := r.db.WithContext(ctx).
-		Where("id = ? AND project_id = ?", id, projectID).
+		Where("id = ? AND workspace_id = ?", id, workspaceID).
 		First(&spec).Error; err != nil {
 		return nil, err
 	}
 	return &spec, nil
 }
 
-func (r *repository) GetSpecByMethodAndPath(ctx context.Context, projectID string, method, path string) (*APISpecPO, error) {
+func (r *repository) GetSpecByMethodAndPath(ctx context.Context, workspaceID string, method, path string) (*APISpecPO, error) {
 	var spec APISpecPO
 	if err := r.db.WithContext(ctx).
-		Where("project_id = ? AND method = ? AND path = ?", projectID, method, path).
+		Where("workspace_id = ? AND method = ? AND path = ?", workspaceID, method, path).
 		First(&spec).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -111,7 +111,7 @@ func (r *repository) ListSpecs(ctx context.Context, filter *SpecListFilter) ([]*
 	var specs []*APISpecPO
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&APISpecPO{}).Where("project_id = ?", filter.ProjectID)
+	query := r.db.WithContext(ctx).Model(&APISpecPO{}).Where("workspace_id = ?", filter.WorkspaceID)
 
 	if filter.Version != "" {
 		query = query.Where("version = ?", filter.Version)
@@ -146,10 +146,10 @@ func (r *repository) ListSpecs(ctx context.Context, filter *SpecListFilter) ([]*
 	return specs, total, nil
 }
 
-func (r *repository) ListAllSpecs(ctx context.Context, projectID string) ([]*APISpecPO, error) {
+func (r *repository) ListAllSpecs(ctx context.Context, workspaceID string) ([]*APISpecPO, error) {
 	var specs []*APISpecPO
 	if err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Order("method ASC, path ASC").
 		Find(&specs).Error; err != nil {
 		return nil, err
@@ -159,9 +159,9 @@ func (r *repository) ListAllSpecs(ctx context.Context, projectID string) ([]*API
 
 // ListSpecsForBatchGen returns specs eligible for batch generation.
 // If forceRegen is false, only specs with no existing doc are returned.
-func (r *repository) ListSpecsForBatchGen(ctx context.Context, projectID string, categoryID *string, forceRegen bool) ([]*APISpecPO, error) {
+func (r *repository) ListSpecsForBatchGen(ctx context.Context, workspaceID string, categoryID *string, forceRegen bool) ([]*APISpecPO, error) {
 	var specs []*APISpecPO
-	query := r.db.WithContext(ctx).Where("project_id = ?", projectID)
+	query := r.db.WithContext(ctx).Where("workspace_id = ?", workspaceID)
 	if categoryID != nil {
 		query = query.Where("category_id = ?", *categoryID)
 	}
@@ -209,10 +209,10 @@ func (r *repository) CreateAIDraft(ctx context.Context, draft *APISpecAIDraftPO)
 	return r.db.WithContext(ctx).Create(draft).Error
 }
 
-func (r *repository) GetAIDraftByIDAndProject(ctx context.Context, id, projectID string) (*APISpecAIDraftPO, error) {
+func (r *repository) GetAIDraftByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*APISpecAIDraftPO, error) {
 	var draft APISpecAIDraftPO
 	if err := r.db.WithContext(ctx).
-		Where("id = ? AND project_id = ?", id, projectID).
+		Where("id = ? AND workspace_id = ?", id, workspaceID).
 		First(&draft).Error; err != nil {
 		return nil, err
 	}
@@ -233,10 +233,10 @@ func (r *repository) UpdateShare(ctx context.Context, share *APISpecSharePO) err
 	return r.db.WithContext(ctx).Save(share).Error
 }
 
-func (r *repository) GetShareBySpecID(ctx context.Context, projectID, specID string) (*APISpecSharePO, error) {
+func (r *repository) GetShareBySpecID(ctx context.Context, workspaceID, specID string) (*APISpecSharePO, error) {
 	var share APISpecSharePO
 	if err := r.db.WithContext(ctx).
-		Where("project_id = ? AND api_spec_id = ?", projectID, specID).
+		Where("workspace_id = ? AND api_spec_id = ?", workspaceID, specID).
 		First(&share).Error; err != nil {
 		return nil, err
 	}
@@ -253,8 +253,8 @@ func (r *repository) GetShareBySlug(ctx context.Context, slug string) (*APISpecS
 	return &share, nil
 }
 
-func (r *repository) DeleteShareBySpecID(ctx context.Context, projectID, specID string) error {
+func (r *repository) DeleteShareBySpecID(ctx context.Context, workspaceID, specID string) error {
 	return r.db.WithContext(ctx).
-		Where("project_id = ? AND api_spec_id = ?", projectID, specID).
+		Where("workspace_id = ? AND api_spec_id = ?", workspaceID, specID).
 		Delete(&APISpecSharePO{}).Error
 }

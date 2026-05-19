@@ -82,8 +82,8 @@ UPDATE users SET is_super_admin = TRUE WHERE username = 'admin';
 ### Workspace 级别
 - **Owner** (40): 完全控制，可以删除 Workspace
 - **Admin** (30): 可以邀请/移除成员，管理项目
-- **Editor** (20): 可以创建和编辑资源
-- **Viewer** (10): 只读权限
+- **Write** (20): 可以创建和编辑资源
+- **Read** (10): 只读权限
 
 ### 权限检查逻辑
 ```go
@@ -156,7 +156,7 @@ curl -X POST https://api.kest.dev/v1/workspaces/1/members \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": 18,
-    "role": "editor"
+    "role": "write"
   }'
 ```
 
@@ -182,7 +182,7 @@ curl -X POST https://api.kest.dev/v1/workspaces/1/projects \
 project, err := repo.FindByID(projectID)
 
 // ✅ 正确: 先验证 Workspace 权限
-hasAccess, _ := workspaceService.HasPermission(workspaceID, userID, RoleViewer, user.IsSuperAdmin)
+hasAccess, _ := workspaceService.HasPermission(workspaceID, userID, RoleRead, user.IsSuperAdmin)
 if !hasAccess {
     return errors.New("access denied")
 }

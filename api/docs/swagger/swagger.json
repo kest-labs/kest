@@ -657,8 +657,8 @@
                     "enum": [
                         "owner",
                         "admin",
-                        "editor",
-                        "viewer"
+                        "write",
+                        "read"
                     ]
                 },
                 "user_id": {
@@ -715,8 +715,8 @@
                     "enum": [
                         "owner",
                         "admin",
-                        "editor",
-                        "viewer"
+                        "write",
+                        "read"
                     ]
                 }
             }

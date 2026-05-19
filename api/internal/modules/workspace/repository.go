@@ -1,6 +1,10 @@
 package workspace
 
 import (
+	"context"
+	"errors"
+	"time"
+
 	"gorm.io/gorm"
 
 	"github.com/kest-labs/kest/api/pkg/dbutil"
@@ -25,6 +29,12 @@ type Repository interface {
 	UpdateMemberRole(workspaceID, userID string, role string) error
 	FindMember(workspaceID, userID string) (*WorkspaceMemberPO, error)
 	ListMembers(workspaceID string) ([]*WorkspaceMemberPO, error)
+
+	// CLI token management
+	CreateCLIToken(ctx context.Context, token *WorkspaceCLIToken, tokenHash string) error
+	GetCLITokenByHash(ctx context.Context, tokenHash string) (*WorkspaceCLIToken, error)
+	ListCLITokens(ctx context.Context, workspaceID string) ([]*WorkspaceCLIToken, error)
+	TouchCLIToken(ctx context.Context, id string, usedAt time.Time) error
 
 	// Permission checks
 	CheckPermission(workspaceID, userID string, isSuperAdmin bool) (string, error)
@@ -144,6 +154,55 @@ func (r *repository) ListMembers(workspaceID string) ([]*WorkspaceMemberPO, erro
 		Order("role DESC, joined_at ASC").
 		Find(&members).Error
 	return members, err
+}
+
+func (r *repository) CreateCLIToken(ctx context.Context, token *WorkspaceCLIToken, tokenHash string) error {
+	po := newWorkspaceCLITokenPO(token, tokenHash)
+	if err := r.db.WithContext(ctx).Create(po).Error; err != nil {
+		return err
+	}
+
+	token.ID = po.ID
+	token.CreatedAt = po.CreatedAt
+	token.UpdatedAt = po.UpdatedAt
+	return nil
+}
+
+func (r *repository) GetCLITokenByHash(ctx context.Context, tokenHash string) (*WorkspaceCLIToken, error) {
+	var po WorkspaceCLITokenPO
+	if err := r.db.WithContext(ctx).
+		Where("token_hash = ?", tokenHash).
+		First(&po).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return po.toDomain(), nil
+}
+
+func (r *repository) ListCLITokens(ctx context.Context, workspaceID string) ([]*WorkspaceCLIToken, error) {
+	var pos []*WorkspaceCLITokenPO
+	if err := r.db.WithContext(ctx).
+		Where("workspace_id = ?", workspaceID).
+		Order("created_at DESC").
+		Find(&pos).Error; err != nil {
+		return nil, err
+	}
+
+	tokens := make([]*WorkspaceCLIToken, len(pos))
+	for i, po := range pos {
+		tokens[i] = po.toDomain()
+	}
+	return tokens, nil
+}
+
+func (r *repository) TouchCLIToken(ctx context.Context, id string, usedAt time.Time) error {
+	return r.db.WithContext(ctx).
+		Model(&WorkspaceCLITokenPO{}).
+		Where("id = ?", id).
+		Update("last_used_at", usedAt).Error
 }
 
 // CheckPermission returns the user's role in a workspace

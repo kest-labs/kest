@@ -62,7 +62,9 @@ func parseModuleRoutesFile(filename string, apiPrefix string) ([]Route, error) {
 	withMiddlewarePattern := regexp.MustCompile(`WithMiddleware\s*\(\s*"([^"]+)"\s*\)`)
 	groupMiddlewarePattern := regexp.MustCompile(`(\w+)\.WithMiddleware\s*\(\s*"([^"]+)"\s*\)`)
 	groupUsePattern := regexp.MustCompile(`(\w+)\.Use\s*\((.+)\)`)
+	routeMiddlewarePattern := regexp.MustCompile(`\.?Middleware\s*\(`)
 
+	lastRouteIndex := -1
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -128,12 +130,28 @@ func parseModuleRoutesFile(filename string, apiPrefix string) ([]Route, error) {
 				}
 				r.Middlewares = appendUniqueMiddleware(r.Middlewares, middleware[1])
 			}
-			if strings.Contains(line, "RequireProjectRole") {
+			if strings.Contains(line, "RequireProjectRole") ||
+				strings.Contains(line, "RequireWorkspaceCLIToken") {
 				r.IsPublic = false
 				r.Middlewares = appendUniqueMiddleware(r.Middlewares, "auth")
 			}
 
 			routes = append(routes, r)
+			lastRouteIndex = len(routes) - 1
+			continue
+		}
+
+		if lastRouteIndex >= 0 {
+			if name := namePattern.FindStringSubmatch(line); len(name) == 2 {
+				routes[lastRouteIndex].Name = name[1]
+			}
+
+			if routeMiddlewarePattern.MatchString(line) &&
+				(strings.Contains(line, "RequireProjectRole") ||
+					strings.Contains(line, "RequireWorkspaceCLIToken")) {
+				routes[lastRouteIndex].IsPublic = false
+				routes[lastRouteIndex].Middlewares = appendUniqueMiddleware(routes[lastRouteIndex].Middlewares, "auth")
+			}
 		}
 	}
 

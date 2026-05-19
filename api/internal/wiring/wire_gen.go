@@ -35,6 +35,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/testcase"
 	"github.com/kest-labs/kest/api/internal/modules/testrunner"
 	"github.com/kest-labs/kest/api/internal/modules/user"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 // Injectors from wire.go:
@@ -66,6 +67,9 @@ func InitApplication() (*app.Application, error) {
 	permissionHandler := permission.NewHandler(permissionService)
 	auditRepository := audit.NewRepository(db)
 	auditHandler := audit.NewHandler(auditRepository)
+	workspaceRepository := workspace.NewRepository(db)
+	workspaceService := workspace.NewService(workspaceRepository)
+	workspaceHandler := workspace.NewHandler(workspaceService)
 	projectRepository := project.NewRepository(db)
 	projectService := project.NewService(projectRepository, memberService)
 	projectinviteRepository := projectinvite.NewRepository(db)
@@ -73,33 +77,33 @@ func InitApplication() (*app.Application, error) {
 	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
-	collectionHandler := collection.NewHandler(collectionService, memberService)
+	collectionHandler := collection.NewHandler(collectionService, workspaceService)
 	requestRepository := request.NewRepository(db)
 	requestService := request.NewService(requestRepository, collectionRepository)
-	requestHandler := request.NewHandler(requestService, memberService)
+	requestHandler := request.NewHandler(requestService, workspaceService)
 	exampleRepository := example.NewRepository(db)
 	exampleService := example.NewService(exampleRepository)
-	exampleHandler := example.NewHandler(exampleService)
+	exampleHandler := example.NewHandler(exampleService, requestService, workspaceService)
 	runnerRunner := runner.New()
-	runHandler := run.NewHandler(requestService, memberService, runnerRunner)
+	runHandler := run.NewHandler(requestService, workspaceService, runnerRunner)
 	historyRepository := history.NewRepository(db)
 	historyService := history.NewService(historyRepository)
-	historyHandler := history.NewHandler(historyService, memberService)
-	projectHandler := provideProjectHandler(projectService, memberService, historyHandler)
+	historyHandler := history.NewHandler(historyService, workspaceService)
 	exportService := export.NewService(collectionService, requestService)
-	exportHandler := export.NewHandler(exportService)
+	exportHandler := export.NewHandler(exportService, workspaceService)
 	importerService := importer.NewService(collectionService, requestService)
-	importerHandler := importer.NewHandler(importerService)
+	importerHandler := importer.NewHandler(importerService, workspaceService)
 	apispecRepository := apispec.NewRepository(db)
 	apispecService := apispec.NewService(apispecRepository)
 	testcaseRepository := testcase.NewRepository(db)
-	apispecHandler := provideAPISpecHandler(apispecService, memberService, testcaseRepository)
+	apispecHandler := provideAPISpecHandler(apispecService, workspaceService, testcaseRepository)
+	projectHandler := provideProjectHandler(projectService, memberService, workspaceService, apispecHandler, historyHandler)
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
-	categoryHandler := category.NewHandler(categoryService, memberService)
+	categoryHandler := category.NewHandler(categoryService, workspaceService)
 	environmentRepository := environment.NewRepository(db)
 	environmentService := environment.NewService(environmentRepository)
-	environmentHandler := environment.NewHandler(environmentService, memberService)
+	environmentHandler := environment.NewHandler(environmentService, workspaceService)
 	flowRepository := flow.NewRepository(db)
 	flowService := flow.NewService(flowRepository)
 	flowHandler := flow.NewHandler(flowService, memberService)
@@ -112,6 +116,7 @@ func InitApplication() (*app.Application, error) {
 		Member:        memberHandler,
 		Permission:    permissionHandler,
 		Audit:         auditHandler,
+		Workspace:     workspaceHandler,
 		Project:       projectHandler,
 		ProjectInvite: projectinviteHandler,
 		Collection:    collectionHandler,

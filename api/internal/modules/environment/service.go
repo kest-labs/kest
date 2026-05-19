@@ -9,11 +9,11 @@ import (
 // Service defines the interface for environment business logic
 type Service interface {
 	CreateEnvironment(ctx context.Context, req *CreateEnvironmentRequest) (*EnvironmentResponse, error)
-	GetEnvironment(ctx context.Context, id string) (*EnvironmentResponse, error)
-	ListEnvironments(ctx context.Context, projectID string) ([]*EnvironmentResponse, error)
-	UpdateEnvironment(ctx context.Context, id string, req *UpdateEnvironmentRequest) (*EnvironmentResponse, error)
-	DeleteEnvironment(ctx context.Context, id string) error
-	DuplicateEnvironment(ctx context.Context, id string, req *DuplicateEnvironmentRequest) (*EnvironmentResponse, error)
+	GetEnvironment(ctx context.Context, workspaceID string, id string) (*EnvironmentResponse, error)
+	ListEnvironments(ctx context.Context, workspaceID string) ([]*EnvironmentResponse, error)
+	UpdateEnvironment(ctx context.Context, workspaceID string, id string, req *UpdateEnvironmentRequest) (*EnvironmentResponse, error)
+	DeleteEnvironment(ctx context.Context, workspaceID string, id string) error
+	DuplicateEnvironment(ctx context.Context, workspaceID string, id string, req *DuplicateEnvironmentRequest) (*EnvironmentResponse, error)
 }
 
 type service struct {
@@ -28,12 +28,12 @@ func NewService(repo Repository) Service {
 // CreateEnvironment creates a new environment
 func (s *service) CreateEnvironment(ctx context.Context, req *CreateEnvironmentRequest) (*EnvironmentResponse, error) {
 	// Check if environment with same name already exists
-	existing, err := s.repo.GetByProjectAndName(ctx, req.ProjectID, req.Name)
+	existing, err := s.repo.GetByWorkspaceAndName(ctx, req.WorkspaceID, req.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing environment: %w", err)
 	}
 	if existing != nil {
-		return nil, fmt.Errorf("environment with name '%s' already exists in this project", req.Name)
+		return nil, fmt.Errorf("environment with name '%s' already exists in this workspace", req.Name)
 	}
 
 	// Convert request to PO
@@ -57,8 +57,8 @@ func (s *service) CreateEnvironment(ctx context.Context, req *CreateEnvironmentR
 }
 
 // GetEnvironment gets an environment by ID
-func (s *service) GetEnvironment(ctx context.Context, id string) (*EnvironmentResponse, error) {
-	env, err := s.repo.GetByID(ctx, id)
+func (s *service) GetEnvironment(ctx context.Context, workspaceID string, id string) (*EnvironmentResponse, error) {
+	env, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get environment: %w", err)
 	}
@@ -74,9 +74,9 @@ func (s *service) GetEnvironment(ctx context.Context, id string) (*EnvironmentRe
 	return resp, nil
 }
 
-// ListEnvironments lists all environments for a project
-func (s *service) ListEnvironments(ctx context.Context, projectID string) ([]*EnvironmentResponse, error) {
-	envs, err := s.repo.ListByProject(ctx, projectID)
+// ListEnvironments lists all environments for a workspace
+func (s *service) ListEnvironments(ctx context.Context, workspaceID string) ([]*EnvironmentResponse, error) {
+	envs, err := s.repo.ListByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list environments: %w", err)
 	}
@@ -90,9 +90,9 @@ func (s *service) ListEnvironments(ctx context.Context, projectID string) ([]*En
 }
 
 // UpdateEnvironment updates an environment
-func (s *service) UpdateEnvironment(ctx context.Context, id string, req *UpdateEnvironmentRequest) (*EnvironmentResponse, error) {
+func (s *service) UpdateEnvironment(ctx context.Context, workspaceID string, id string, req *UpdateEnvironmentRequest) (*EnvironmentResponse, error) {
 	// Get existing environment
-	env, err := s.repo.GetByID(ctx, id)
+	env, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get environment: %w", err)
 	}
@@ -104,7 +104,7 @@ func (s *service) UpdateEnvironment(ctx context.Context, id string, req *UpdateE
 	if req.Name != nil {
 		// Check if new name conflicts
 		if *req.Name != env.Name {
-			existing, err := s.repo.GetByProjectAndName(ctx, env.ProjectID, *req.Name)
+			existing, err := s.repo.GetByWorkspaceAndName(ctx, env.WorkspaceID, *req.Name)
 			if err != nil {
 				return nil, fmt.Errorf("failed to check existing environment: %w", err)
 			}
@@ -154,9 +154,9 @@ func (s *service) UpdateEnvironment(ctx context.Context, id string, req *UpdateE
 }
 
 // DeleteEnvironment deletes an environment
-func (s *service) DeleteEnvironment(ctx context.Context, id string) error {
+func (s *service) DeleteEnvironment(ctx context.Context, workspaceID string, id string) error {
 	// Check if environment exists
-	env, err := s.repo.GetByID(ctx, id)
+	env, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return fmt.Errorf("failed to get environment: %w", err)
 	}
@@ -173,9 +173,9 @@ func (s *service) DeleteEnvironment(ctx context.Context, id string) error {
 }
 
 // DuplicateEnvironment duplicates an environment
-func (s *service) DuplicateEnvironment(ctx context.Context, id string, req *DuplicateEnvironmentRequest) (*EnvironmentResponse, error) {
+func (s *service) DuplicateEnvironment(ctx context.Context, workspaceID string, id string, req *DuplicateEnvironmentRequest) (*EnvironmentResponse, error) {
 	// Get source environment
-	source, err := s.repo.GetByID(ctx, id)
+	source, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get source environment: %w", err)
 	}
@@ -184,7 +184,7 @@ func (s *service) DuplicateEnvironment(ctx context.Context, id string, req *Dupl
 	}
 
 	// Check if new name conflicts
-	existing, err := s.repo.GetByProjectAndName(ctx, source.ProjectID, req.Name)
+	existing, err := s.repo.GetByWorkspaceAndName(ctx, source.WorkspaceID, req.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing environment: %w", err)
 	}
@@ -194,7 +194,7 @@ func (s *service) DuplicateEnvironment(ctx context.Context, id string, req *Dupl
 
 	// Create new environment by copying source
 	newEnv := &EnvironmentPO{
-		ProjectID:   source.ProjectID,
+		WorkspaceID: source.WorkspaceID,
 		Name:        req.Name,
 		DisplayName: fmt.Sprintf("Copy of %s", source.DisplayName),
 		BaseURL:     source.BaseURL,

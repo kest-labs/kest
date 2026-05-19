@@ -5,12 +5,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
-// RollbackRequest handles POST /projects/:id/collections/:cid/requests/:rid/rollback
+// RollbackRequest handles POST /workspaces/:id/collections/:cid/requests/:rid/rollback
 func (h *Handler) Rollback(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	collectionID, ok := handler.ParseID(c, "cid")
 	if !ok {
 		return

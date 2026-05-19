@@ -39,7 +39,7 @@ func buildCreateAIDraftPrompt(
 
 	if conventions != nil {
 		if payload, err := json.MarshalIndent(conventions, "", "  "); err == nil {
-			sb.WriteString("[Project Conventions]\n")
+			sb.WriteString("[Workspace Conventions]\n")
 			sb.Write(payload)
 			sb.WriteString("\n\n")
 		}
@@ -85,7 +85,7 @@ func buildRefineAIDraftPrompt(
 
 	if conventions != nil {
 		if payload, err := json.MarshalIndent(conventions, "", "  "); err == nil {
-			sb.WriteString("[Project Conventions]\n")
+			sb.WriteString("[Workspace Conventions]\n")
 			sb.Write(payload)
 			sb.WriteString("\n\n")
 		}
@@ -116,7 +116,7 @@ func getAIDraftSystemPrompt(lang string) string {
 5. draft 必须尽量完整，但只能包含公开、安全的接口设计字段。`
 	}
 
-	return `You are a senior API design assistant. Generate a structured API spec draft from the user's intent, project conventions, and similar APIs.
+	return `You are a senior API design assistant. Generate a structured API spec draft from the user's intent, workspace conventions, and similar APIs.
 
 Strict rules:
 1. Return JSON only. Do not include markdown explanation outside JSON.

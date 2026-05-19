@@ -1,61 +1,38 @@
 package apispec
 
 import (
-	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
 )
 
 // RegisterRoutes registers API specification routes
-func RegisterRoutes(r *router.Router, handler *Handler, memberService member.Service) {
-	r.Group("/projects/:id/api-specs", func(projects *router.Router) {
-		projects.WithMiddleware("auth")
+func RegisterRoutes(r *router.Router, handler *Handler) {
+	r.Group("/workspaces/:id/api-specs", func(specs *router.Router) {
+		specs.WithMiddleware("auth")
 
-		projects.GET("", handler.ListSpecs).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))
-		projects.POST("", handler.CreateSpec).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.POST("/import", handler.ImportSpecs).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.GET("/export", handler.ExportSpecs).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))
-		projects.POST("/batch-gen-doc", handler.BatchGenDoc).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.POST("/ai-drafts", handler.CreateAIDraft).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.POST("/ai-drafts/stream", handler.CreateAIDraftStream).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.GET("/ai-drafts/:aid", handler.GetAIDraft).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.POST("/ai-drafts/:aid/refine", handler.RefineAIDraft).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.POST("/ai-drafts/:aid/accept", handler.AcceptAIDraft).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
+		specs.GET("", handler.ListSpecs).WhereUUIDOrNumber("id")
+		specs.POST("", handler.CreateSpec).WhereUUIDOrNumber("id")
+		specs.POST("/import", handler.ImportSpecs).WhereUUIDOrNumber("id")
+		specs.GET("/export", handler.ExportSpecs).WhereUUIDOrNumber("id")
+		specs.POST("/batch-gen-doc", handler.BatchGenDoc).WhereUUIDOrNumber("id")
+		specs.POST("/ai-drafts", handler.CreateAIDraft).WhereUUIDOrNumber("id")
+		specs.POST("/ai-drafts/stream", handler.CreateAIDraftStream).WhereUUIDOrNumber("id")
+		specs.GET("/ai-drafts/:aid", handler.GetAIDraft).WhereUUIDOrNumber("id", "aid")
+		specs.POST("/ai-drafts/:aid/refine", handler.RefineAIDraft).WhereUUIDOrNumber("id", "aid")
+		specs.POST("/ai-drafts/:aid/accept", handler.AcceptAIDraft).WhereUUIDOrNumber("id", "aid")
 
-		projects.GET("/:sid", handler.GetSpec).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))
-		projects.GET("/:sid/full", handler.GetSpecWithExamples).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))
-		projects.PATCH("/:sid", handler.UpdateSpec).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.DELETE("/:sid", handler.DeleteSpec).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
+		specs.GET("/:sid", handler.GetSpec).WhereUUIDOrNumber("id", "sid")
+		specs.GET("/:sid/full", handler.GetSpecWithExamples).WhereUUIDOrNumber("id", "sid")
+		specs.PATCH("/:sid", handler.UpdateSpec).WhereUUIDOrNumber("id", "sid")
+		specs.DELETE("/:sid", handler.DeleteSpec).WhereUUIDOrNumber("id", "sid")
 
-		projects.POST("/:sid/gen-doc", handler.GenDoc).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.POST("/:sid/gen-test", handler.GenTest).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.GET("/:sid/examples", handler.ListExamples).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))
-		projects.POST("/:sid/examples", handler.CreateExample).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
+		specs.POST("/:sid/gen-doc", handler.GenDoc).WhereUUIDOrNumber("id", "sid")
+		specs.POST("/:sid/gen-test", handler.GenTest).WhereUUIDOrNumber("id", "sid")
+		specs.GET("/:sid/examples", handler.ListExamples).WhereUUIDOrNumber("id", "sid")
+		specs.POST("/:sid/examples", handler.CreateExample).WhereUUIDOrNumber("id", "sid")
 
-		projects.GET("/:sid/share", handler.GetShare).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))
-		projects.POST("/:sid/share", handler.PublishShare).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
-		projects.DELETE("/:sid/share", handler.DeleteShare).
-			Middleware(middleware.RequireProjectRole(memberService, member.RoleWrite))
+		specs.GET("/:sid/share", handler.GetShare).WhereUUIDOrNumber("id", "sid")
+		specs.POST("/:sid/share", handler.PublishShare).WhereUUIDOrNumber("id", "sid")
+		specs.DELETE("/:sid/share", handler.DeleteShare).WhereUUIDOrNumber("id", "sid")
 	})
 
 	r.GET("/public/api-spec-shares/:slug", handler.GetPublicShare)

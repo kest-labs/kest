@@ -17,8 +17,8 @@ var (
 type Service interface {
 	Record(ctx context.Context, req *RecordHistoryRequest) (*History, error)
 	GetByID(ctx context.Context, id string) (*History, error)
-	List(ctx context.Context, projectID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error)
-	SyncHistoryFromCLI(ctx context.Context, projectID string, createdBy string, req *CLIHistorySyncInput) (*CLIHistorySyncResult, error)
+	List(ctx context.Context, workspaceID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error)
+	SyncHistoryFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIHistorySyncInput) (*CLIHistorySyncResult, error)
 }
 
 type service struct {
@@ -36,7 +36,7 @@ func (s *service) Record(ctx context.Context, req *RecordHistoryRequest) (*Histo
 	history := &History{
 		EntityType:    req.EntityType,
 		EntityID:      req.EntityID,
-		ProjectID:     req.ProjectID,
+		WorkspaceID:   req.WorkspaceID,
 		UserID:        req.UserID,
 		Source:        defaultHistorySource(strings.TrimSpace(req.Source)),
 		SourceEventID: defaultHistorySourceEventID(strings.TrimSpace(req.SourceEventID)),
@@ -64,15 +64,15 @@ func (s *service) GetByID(ctx context.Context, id string) (*History, error) {
 	return history, nil
 }
 
-func (s *service) List(ctx context.Context, projectID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error) {
-	return s.repo.ListByEntity(ctx, projectID, entityType, entityID, page, perPage)
+func (s *service) List(ctx context.Context, workspaceID string, entityType string, entityID string, page, perPage int) ([]*History, int64, error) {
+	return s.repo.ListByEntity(ctx, workspaceID, entityType, entityID, page, perPage)
 }
 
-func (s *service) SyncHistoryFromCLI(ctx context.Context, projectID string, createdBy string, req *CLIHistorySyncInput) (*CLIHistorySyncResult, error) {
+func (s *service) SyncHistoryFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIHistorySyncInput) (*CLIHistorySyncResult, error) {
 	result := &CLIHistorySyncResult{}
 
 	for _, entry := range req.Entries {
-		existing, err := s.repo.GetBySourceEvent(ctx, projectID, req.Source, entry.SourceEventID)
+		existing, err := s.repo.GetBySourceEvent(ctx, workspaceID, req.Source, entry.SourceEventID)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", entry.SourceEventID, err))
 			continue
@@ -85,7 +85,7 @@ func (s *service) SyncHistoryFromCLI(ctx context.Context, projectID string, crea
 		history := &History{
 			EntityType:    entry.EntityType,
 			EntityID:      entry.EntityID,
-			ProjectID:     projectID,
+			WorkspaceID:   workspaceID,
 			UserID:        createdBy,
 			Source:        defaultHistorySource(req.Source),
 			SourceEventID: entry.SourceEventID,
