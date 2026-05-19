@@ -1,32 +1,20 @@
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { buildProjectHistoriesRoute } from '@/constants/routes';
+import {
+  redirectLegacyProjectRoute,
+  type LegacySearchParams,
+} from '../_legacy/redirect';
 
-interface ProjectHistoriesPageProps {
+interface LegacyProjectHistoriesPageProps {
   params: Promise<{
     projectId: string;
   }>;
-  searchParams: Promise<{
-    item?: string;
-    entityType?: string;
-  }>;
+  searchParams: Promise<LegacySearchParams>;
 }
 
-// 项目 histories 工作区入口。
-// 作用：挂载项目历史工作区，并通过 `?item=` 支持选中具体记录。
-export default async function ProjectHistoriesPage({
+export default async function LegacyProjectHistoriesPage({
   params,
   searchParams,
-}: ProjectHistoriesPageProps) {
+}: LegacyProjectHistoriesPageProps) {
   const { projectId } = await params;
-  const { item, entityType } = await searchParams;
-  const selectedItemId = item?.trim() ? item : null;
-  const initialHistoryEntityType = entityType?.trim() ? entityType : null;
-
-  return (
-    <ProjectWorkspacePage
-      projectId={projectId}
-      module="histories"
-      selectedItemId={selectedItemId}
-      initialHistoryEntityType={initialHistoryEntityType}
-    />
-  );
+  redirectLegacyProjectRoute(buildProjectHistoriesRoute(projectId), await searchParams);
 }

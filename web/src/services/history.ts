@@ -13,7 +13,7 @@ const normalizeParams = <T extends object>(params: T) =>
 
 export const historyService = {
   create: (projectId: number | string, data: CreateHistoryRequest) =>
-    request.post<ProjectHistory>(`/projects/${projectId}/history`, data, {
+    request.post<ProjectHistory>(`/workspaces/${projectId}/history`, data, {
       skipErrorHandler: true,
     }),
 
@@ -24,7 +24,7 @@ export const historyService = {
     entityType,
     entityId,
   }: HistoryListParams) =>
-    request.get<HistoryListResponse>(`/projects/${projectId}/history`, {
+    request.get<HistoryListResponse>(`/workspaces/${projectId}/history`, {
       params: normalizeParams({
         page,
         per_page: pageSize,
@@ -34,7 +34,7 @@ export const historyService = {
     }),
 
   getById: (projectId: number | string, historyId: number | string) =>
-    request.get<ProjectHistory>(`/projects/${projectId}/history/${historyId}`),
+    request.get<ProjectHistory>(`/workspaces/${projectId}/history/${historyId}`),
 };
 
 export type HistoryService = typeof historyService;

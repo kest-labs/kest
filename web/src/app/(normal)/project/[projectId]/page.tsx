@@ -1,15 +1,13 @@
-import { redirect } from 'next/navigation';
-import { buildProjectApiSpecsRoute } from '@/constants/routes';
+import { buildProjectDetailRoute } from '@/constants/routes';
+import { redirectLegacyProjectRoute } from './_legacy/redirect';
 
-interface ProjectDetailRoutePageProps {
+interface LegacyProjectRoutePageProps {
   params: Promise<{
     projectId: string;
   }>;
 }
 
-// 项目工作区默认入口。
-// 作用：把 `/project/:projectId` 直接收敛到 API Specs 工作区，避免再展示旧的 overview 内容区。
-export default async function ProjectDetailRoutePage({ params }: ProjectDetailRoutePageProps) {
+export default async function LegacyProjectRoutePage({ params }: LegacyProjectRoutePageProps) {
   const { projectId } = await params;
-  redirect(buildProjectApiSpecsRoute(projectId));
+  redirectLegacyProjectRoute(buildProjectDetailRoute(projectId));
 }

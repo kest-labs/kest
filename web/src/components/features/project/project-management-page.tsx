@@ -104,9 +104,9 @@ export function ProjectManagementPage() {
   const activeOnPage = projects.filter(project => project.status === 1).length;
   const inactiveOnPage = projects.filter(project => project.status === 0).length;
 
-  const projectsPath = buildApiPath('/projects');
-  const projectDetailPath = buildApiPath('/projects/:id');
-  const projectStatsPath = buildApiPath('/projects/:id/stats');
+  const projectsPath = buildApiPath('/workspaces');
+  const projectDetailPath = buildApiPath('/workspaces/:id');
+  const projectStatsPath = buildApiPath('/workspaces/:id/stats');
   const headerActionItems: ActionMenuItem[] = [
     {
       key: 'refresh',
@@ -414,11 +414,11 @@ export function ProjectManagementPage() {
                   <div>PATCH {projectDetailPath}</div>
                   <div>DELETE {projectDetailPath}</div>
                   <div>GET {projectStatsPath}</div>
-                  <div>GET {buildApiPath('/projects/:id/environments')}</div>
-                  <div>GET {buildApiPath('/projects/:id/categories')}</div>
-                  <div>GET {buildApiPath('/projects/:id/api-specs')}</div>
-                  <div>GET {buildApiPath('/projects/:id/test-cases')}</div>
-                  <div>POST {buildApiPath('/projects/:id/test-cases')}</div>
+                  <div>GET {buildApiPath('/workspaces/:id/environments')}</div>
+                  <div>GET {buildApiPath('/workspaces/:id/categories')}</div>
+                  <div>GET {buildApiPath('/workspaces/:id/api-specs')}</div>
+                  <div>GET {buildApiPath('/workspaces/:id/test-cases')}</div>
+                  <div>POST {buildApiPath('/workspaces/:id/test-cases')}</div>
                 </div>
               </div>
 

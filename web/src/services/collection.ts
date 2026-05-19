@@ -23,7 +23,7 @@ export const collectionService = {
     page,
     perPage,
   }: CollectionListParams) =>
-    request.get<ProjectCollectionListResponse>(`/projects/${projectId}/collections`, {
+    request.get<ProjectCollectionListResponse>(`/workspaces/${projectId}/collections`, {
       params: normalizePayload({
         page,
         per_page: perPage,
@@ -31,10 +31,10 @@ export const collectionService = {
     }),
 
   create: (projectId: number | string, data: CreateCollectionRequest) =>
-    request.post<ProjectCollection>(`/projects/${projectId}/collections`, normalizePayload(data)),
+    request.post<ProjectCollection>(`/workspaces/${projectId}/collections`, normalizePayload(data)),
 
   tree: (projectId: number | string) =>
-    request.get<ProjectCollectionTreeNode[]>(`/projects/${projectId}/collections/tree`, {
+    request.get<ProjectCollectionTreeNode[]>(`/workspaces/${projectId}/collections/tree`, {
       skipErrorHandler: true,
     }),
 
@@ -44,12 +44,12 @@ export const collectionService = {
     data: UpdateCollectionRequest
   ) =>
     request.put<ProjectCollection>(
-      `/projects/${projectId}/collections/${collectionId}`,
+      `/workspaces/${projectId}/collections/${collectionId}`,
       normalizePayload(data)
     ),
 
   delete: (projectId: number | string, collectionId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/collections/${collectionId}`),
+    request.delete<void>(`/workspaces/${projectId}/collections/${collectionId}`),
 };
 
 export type CollectionService = typeof collectionService;

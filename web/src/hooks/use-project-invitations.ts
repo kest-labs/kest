@@ -11,7 +11,7 @@ import type { CreateProjectInvitationRequest } from '@/types/project-invitation'
 export const projectInvitationKeys = {
   all: ['project-invitations'] as const,
   project: (projectId: number | string) =>
-    [...projectInvitationKeys.all, 'project', projectId] as const,
+    [...projectInvitationKeys.all, 'workspace', projectId] as const,
   list: (projectId: number | string) =>
     [...projectInvitationKeys.project(projectId), 'list'] as const,
   received: () => [...projectInvitationKeys.all, 'received'] as const,

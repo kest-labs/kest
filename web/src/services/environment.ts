@@ -19,14 +19,14 @@ const normalizePayload = <T extends object>(payload: T) =>
 // 作用：把 environments 模块的 HTTP 调用统一收敛在一个出口，供 hooks 复用。
 export const environmentService = {
   list: (projectId: number | string) =>
-    request.get<EnvironmentListResponse>(`/projects/${projectId}/environments`),
+    request.get<EnvironmentListResponse>(`/workspaces/${projectId}/environments`),
 
   getById: (projectId: number | string, environmentId: number | string) =>
-    request.get<ProjectEnvironment>(`/projects/${projectId}/environments/${environmentId}`),
+    request.get<ProjectEnvironment>(`/workspaces/${projectId}/environments/${environmentId}`),
 
   create: (projectId: number | string, data: CreateEnvironmentRequest) =>
     request.post<ProjectEnvironment>(
-      `/projects/${projectId}/environments`,
+      `/workspaces/${projectId}/environments`,
       normalizePayload(data)
     ),
 
@@ -36,12 +36,12 @@ export const environmentService = {
     data: UpdateEnvironmentRequest
   ) =>
     request.patch<ProjectEnvironment>(
-      `/projects/${projectId}/environments/${environmentId}`,
+      `/workspaces/${projectId}/environments/${environmentId}`,
       normalizePayload(data)
     ),
 
   delete: (projectId: number | string, environmentId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/environments/${environmentId}`),
+    request.delete<void>(`/workspaces/${projectId}/environments/${environmentId}`),
 
   duplicate: (
     projectId: number | string,
@@ -49,7 +49,7 @@ export const environmentService = {
     data: DuplicateEnvironmentRequest
   ) =>
     request.post<ProjectEnvironment>(
-      `/projects/${projectId}/environments/${environmentId}/duplicate`,
+      `/workspaces/${projectId}/environments/${environmentId}/duplicate`,
       normalizePayload(data)
     ),
 };
