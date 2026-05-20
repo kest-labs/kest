@@ -2278,6 +2278,9 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const [defaultingExampleId, setDefaultingExampleId] = useState<number | string | null>(null);
   const [deletingExampleId, setDeletingExampleId] = useState<number | string | null>(null);
   const [runningCollectionId, setRunningCollectionId] = useState<string | null>(null);
+  const [preferredRunSourceType, setPreferredRunSourceType] = useState<
+    'request' | 'collection' | null
+  >(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
@@ -2462,28 +2465,51 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   );
   const projectSettings = projectQuery.data?.settings;
   const scratchpadTabs = useMemo(() => tabs.filter(tab => !tab.collectionId), [tabs]);
-  const currentRunSource = useMemo(() => {
+  const availableRunSources = useMemo(() => {
+    const sources: Array<{
+      sourceType: 'request' | 'collection';
+      sourceId: string;
+      title: string;
+    }> = [];
+
+    if (persistedActiveRequestId) {
+      sources.push({
+        sourceType: 'request',
+        sourceId: persistedActiveRequestId,
+        title: activeTab?.title ?? t('collections.workbench.defaultRequestTitle'),
+      });
+    }
+
     if (activeTab?.collectionId && isPersistedCollectionId(activeTab.collectionId)) {
-      return {
-        sourceType: 'collection' as const,
+      sources.push({
+        sourceType: 'collection',
         sourceId: activeTab.collectionId,
         title:
           collections.find(collection => collection.id === activeTab.collectionId)?.name ??
           t('collections.workbench.badges.collectionFallback'),
-      };
+      });
     }
 
-    const persistedRequestId = activeTab ? getPersistedRequestId(activeTab.id) : null;
-    if (persistedRequestId) {
-      return {
-        sourceType: 'request' as const,
-        sourceId: persistedRequestId,
-        title: activeTab?.title ?? t('collections.workbench.defaultRequestTitle'),
-      };
+    return sources;
+  }, [activeTab, collections, persistedActiveRequestId, t]);
+  const currentRunSource = useMemo(() => {
+    if (availableRunSources.length === 0) {
+      return null;
     }
 
-    return null;
-  }, [activeTab, collections, t]);
+    if (preferredRunSourceType) {
+      const preferredSource = availableRunSources.find(
+        source => source.sourceType === preferredRunSourceType
+      );
+      if (preferredSource) {
+        return preferredSource;
+      }
+    }
+
+    return (
+      availableRunSources.find(source => source.sourceType === 'request') ?? availableRunSources[0]
+    );
+  }, [availableRunSources, preferredRunSourceType]);
   const runsQuery = useRuns(
     currentRunSource
       ? {
@@ -2668,6 +2694,24 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     setDeleteExampleTarget(null);
     setDeletingExampleId(null);
   }, [persistedActiveCollectionId, persistedActiveRequestId]);
+
+  useEffect(() => {
+    if (availableRunSources.length === 0) {
+      if (preferredRunSourceType !== null) {
+        setPreferredRunSourceType(null);
+      }
+      return;
+    }
+
+    const nextPreferredSource =
+      availableRunSources.find(source => source.sourceType === preferredRunSourceType) ??
+      availableRunSources.find(source => source.sourceType === 'request') ??
+      availableRunSources[0];
+
+    if (nextPreferredSource && nextPreferredSource.sourceType !== preferredRunSourceType) {
+      setPreferredRunSourceType(nextPreferredSource.sourceType);
+    }
+  }, [availableRunSources, preferredRunSourceType]);
 
   useEffect(() => {
     if (!currentRunSource) {
@@ -3627,6 +3671,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       }));
 
       if (persistedRequest) {
+        setPreferredRunSourceType('request');
         void createHistoryMutation
           .mutateAsync(
             buildRequestRunHistoryPayload({
@@ -3685,6 +3730,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       }));
 
       if (persistedRequest) {
+        setPreferredRunSourceType('request');
         if (!executableUrl) {
           ({
             executableUrl,
@@ -3788,6 +3834,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       return;
     }
 
+    setPreferredRunSourceType('collection');
     setRunningCollectionId(targetCollectionId);
 
     const startedAt = new Date().toISOString();
@@ -4442,6 +4489,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
 
               <UnifiedRunsPanel
                 source={currentRunSource}
+                availableSources={availableRunSources}
+                selectedSourceType={currentRunSource?.sourceType ?? null}
                 runs={runs}
                 selectedRunId={selectedRunId}
                 selectedRun={selectedRunDetail}
@@ -4456,6 +4505,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                     void runDetailQuery.refetch();
                   }
                 }}
+                onSelectSourceType={sourceType => setPreferredRunSourceType(sourceType)}
                 onSelectRun={runId => setSelectedRunId(String(runId))}
               />
             </div>
@@ -7706,6 +7756,8 @@ const getUnifiedRunStatusClassName = (status: string) => {
 
 function UnifiedRunsPanel({
   source,
+  availableSources,
+  selectedSourceType,
   runs,
   selectedRunId,
   selectedRun,
@@ -7715,9 +7767,16 @@ function UnifiedRunsPanel({
   isDetailLoading,
   isDetailError,
   onRefresh,
+  onSelectSourceType,
   onSelectRun,
 }: {
   source: { sourceType: 'request' | 'collection'; sourceId: string; title: string } | null;
+  availableSources: Array<{
+    sourceType: 'request' | 'collection';
+    sourceId: string;
+    title: string;
+  }>;
+  selectedSourceType: 'request' | 'collection' | null;
   runs: Array<import('@/types/run').UnifiedRun>;
   selectedRunId: string | null;
   selectedRun: import('@/types/run').UnifiedRun | null | undefined;
@@ -7727,6 +7786,7 @@ function UnifiedRunsPanel({
   isDetailLoading: boolean;
   isDetailError: boolean;
   onRefresh: () => void;
+  onSelectSourceType: (sourceType: 'request' | 'collection') => void;
   onSelectRun: (runId: string) => void;
 }) {
   const t = useT('project');
@@ -7752,6 +7812,27 @@ function UnifiedRunsPanel({
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
+            {availableSources.length > 1 ? (
+              <div className="inline-flex rounded-full border border-border-subtle bg-bg-soft p-1">
+                {availableSources.map(runSource => (
+                  <button
+                    key={`${runSource.sourceType}-${runSource.sourceId}`}
+                    type="button"
+                    onClick={() => onSelectSourceType(runSource.sourceType)}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-sm transition-colors',
+                      selectedSourceType === runSource.sourceType
+                        ? 'bg-bg-canvas font-medium text-text-main'
+                        : 'text-text-muted hover:text-text-main'
+                    )}
+                  >
+                    {runSource.sourceType === 'collection'
+                      ? t('collections.workbench.runs.sourceCollection')
+                      : t('collections.workbench.runs.sourceRequest')}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <Button type="button" variant="outline" size="sm" onClick={onRefresh} loading={isRefreshing}>
               <RefreshCw className="h-4 w-4" />
               {t('common.refresh')}
