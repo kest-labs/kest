@@ -102,6 +102,7 @@ import { useEnvironments } from '@/hooks/use-environments';
 import { useCreateProjectHistory } from '@/hooks/use-histories';
 import { useImportMarkdownCollection, useImportPostmanCollection } from '@/hooks/use-importer';
 import { useProject, useUpdateProject } from '@/hooks/use-projects';
+import { useCreateRun } from '@/hooks/use-runs';
 import { useT } from '@/i18n/client';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
@@ -121,6 +122,7 @@ import type {
   ImportMarkdownCollectionRequest,
   ImportPostmanCollectionRequest,
 } from '@/types/importer';
+import type { CreateUnifiedRunRequest } from '@/types/run';
 import type {
   CreateRequestRequest,
   ProjectRequest,
@@ -1296,6 +1298,95 @@ const buildRequestRunHistoryPayload = ({
   };
 };
 
+const buildRequestUnifiedRunPayload = ({
+  request,
+  executedUrl,
+  requestHeaders,
+  requestBody,
+  settings,
+  environmentId,
+  response,
+  errorMessage,
+}: {
+  request: ProjectRequest;
+  executedUrl: string;
+  requestHeaders: Record<string, string>;
+  requestBody?: string;
+  settings: RequestPageTab['settings'];
+  environmentId?: string | null;
+  response?: RunRequestResponse;
+  errorMessage?: string;
+}): CreateUnifiedRunRequest => {
+  const succeeded = !errorMessage && (response?.status ?? 0) >= 200 && (response?.status ?? 0) < 300;
+  const effectiveErrorMessage =
+    errorMessage ||
+    (response && !succeeded
+      ? `HTTP ${response.status}${response.status_text ? ` ${response.status_text}` : ''}`.trim()
+      : undefined);
+
+  const requestSnapshot: Record<string, unknown> = {
+    id: request.id,
+    collection_id: request.collection_id,
+    name: request.name,
+    method: request.method,
+    url: request.url,
+    executed_url: executedUrl,
+    headers: sanitizeHistoryHeaders(request.headers),
+    executed_headers: sanitizeHistoryHeaderMap(requestHeaders),
+    query_params: request.query_params,
+    path_params: request.path_params,
+    body: requestBody ?? '',
+    body_type: request.body_type,
+    auth: sanitizeHistoryAuth(request.auth),
+  };
+
+  const responseSnapshot = response
+    ? {
+        status: response.status,
+        status_text: response.status_text,
+        headers: sanitizeHistoryHeaderMap(response.headers ?? {}),
+        body: response.body,
+        time: response.time,
+        duration_ms: response.time,
+        size: response.size,
+      }
+    : undefined;
+
+  return {
+    source_type: 'request',
+    source_id: String(request.id),
+    source_name:
+      request.url === PERSISTED_DRAFT_URL_PLACEHOLDER ? request.name : `${request.method} ${request.url}`,
+    status: succeeded ? 'passed' : 'failed',
+    environment_id: environmentId ?? undefined,
+    execution_mode: 'local',
+    duration_ms: response?.time ?? 0,
+    request_snapshot: requestSnapshot,
+    response_snapshot: responseSnapshot,
+    error_message: effectiveErrorMessage,
+    metadata: {
+      runner: {
+        mode: 'local',
+        follow_redirects: settings.followRedirects,
+        strict_tls: settings.strictTls,
+      },
+    },
+    steps: [
+      {
+        source_type: 'request',
+        source_id: String(request.id),
+        source_name:
+          request.url === PERSISTED_DRAFT_URL_PLACEHOLDER ? request.name : `${request.method} ${request.url}`,
+        status: succeeded ? 'passed' : 'failed',
+        duration_ms: response?.time ?? 0,
+        request_snapshot: requestSnapshot,
+        response_snapshot: responseSnapshot,
+        error_message: effectiveErrorMessage,
+      },
+    ],
+  };
+};
+
 const applyExampleToTab = (tab: RequestPageTab, example: RequestExample): RequestPageTab => {
   const paramsRows = toKeyValueRows(example.query_params);
   const headersRows = toKeyValueRows(example.headers);
@@ -2142,6 +2233,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const updateRequestMutation = useUpdateRequest(projectId);
   const deleteRequestMutation = useDeleteRequest(projectId);
   const createHistoryMutation = useCreateProjectHistory(projectId);
+  const createRunMutation = useCreateRun(projectId);
   const createExampleMutation = useCreateRequestExample(projectId);
   const updateExampleMutation = useUpdateRequestExample(projectId);
   const deleteExampleMutation = useDeleteRequestExample(projectId);
@@ -3444,6 +3536,23 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
             })
           )
           .catch(() => {});
+
+        void createRunMutation
+          .mutateAsync(
+            buildRequestUnifiedRunPayload({
+              request: persistedRequest,
+              executedUrl: executableUrl,
+              requestHeaders: executableHeaders,
+              requestBody: historyRequestBody,
+              settings: tabSnapshot.settings,
+              environmentId:
+                selectedEnvironment && selectedEnvironment.id !== undefined
+                  ? String(selectedEnvironment.id)
+                  : undefined,
+              response,
+            })
+          )
+          .catch(() => {});
       }
     } catch (error) {
       const message =
@@ -3499,6 +3608,23 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
                     error: errorText,
                   }),
               },
+            })
+          )
+          .catch(() => {});
+
+        void createRunMutation
+          .mutateAsync(
+            buildRequestUnifiedRunPayload({
+              request: persistedRequest,
+              executedUrl: executableUrl,
+              requestHeaders: executableHeaders,
+              requestBody: historyRequestBody,
+              settings: tabSnapshot.settings,
+              environmentId:
+                selectedEnvironment && selectedEnvironment.id !== undefined
+                  ? String(selectedEnvironment.id)
+                  : undefined,
+              errorMessage: message,
             })
           )
           .catch(() => {});
