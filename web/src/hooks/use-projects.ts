@@ -57,10 +57,9 @@ const removeProjectFromListCache = (
   };
 };
 
-// 项目域的 React Query key。
-// 作用：统一项目列表、详情、统计的缓存命名，方便后续失效与刷新。
+// Workspace-domain React Query keys for list, detail, and stats cache invalidation.
 export const projectKeys = {
-  all: ['projects'] as const,
+  all: ['workspaces'] as const,
   lists: () => [...projectKeys.all, 'list'] as const,
   list: (params: ProjectListParams) => [...projectKeys.lists(), params] as const,
   details: () => [...projectKeys.all, 'detail'] as const,
@@ -69,8 +68,7 @@ export const projectKeys = {
   projectStats: (id: number | string) => [...projectKeys.stats(), id] as const,
 };
 
-// 项目列表查询。
-// 作用：拉取当前登录用户可见的项目分页列表，并在翻页时保留上一页数据减少闪烁。
+// Fetches the paginated workspace list visible to the current user.
 export function useProjects(params: ProjectListParams = {}) {
   return useQuery({
     queryKey: projectKeys.list(params),
@@ -79,8 +77,7 @@ export function useProjects(params: ProjectListParams = {}) {
   });
 }
 
-// 项目详情查询。
-// 作用：按项目 ID 获取详情数据，供右侧详情面板或其他页面复用。
+// Fetches a workspace detail record for panels and workspace pages.
 export function useProject(id?: number | string, options: ProjectQueryOptions = {}) {
   const isEnabled = options.enabled ?? true;
   return useQuery({
@@ -91,8 +88,7 @@ export function useProject(id?: number | string, options: ProjectQueryOptions = 
   });
 }
 
-// 项目统计查询。
-// 作用：读取 `/projects/:id/stats`，展示 API specs、flows、members 等聚合信息。
+// Fetches workspace aggregate stats from `/workspaces/:id/stats`.
 export function useProjectStats(id?: number | string, options: ProjectQueryOptions = {}) {
   const isEnabled = options.enabled ?? true;
   return useQuery<ProjectStats>({
@@ -103,8 +99,7 @@ export function useProjectStats(id?: number | string, options: ProjectQueryOptio
   });
 }
 
-// 创建项目 mutation。
-// 作用：调用创建接口后刷新列表，并把新项目详情提前写入缓存。
+// Creates a Workspace and refreshes cached list/detail data.
 export function useCreateProject() {
   const queryClient = useQueryClient();
   const t = useT();
@@ -119,8 +114,7 @@ export function useCreateProject() {
   });
 }
 
-// 更新项目 mutation。
-// 作用：提交项目编辑后同步刷新列表、详情和统计缓存。
+// Updates a workspace and refreshes list, detail, and stats caches.
 export function useUpdateProject() {
   const queryClient = useQueryClient();
   const t = useT();
@@ -137,8 +131,7 @@ export function useUpdateProject() {
   });
 }
 
-// 删除项目 mutation。
-// 作用：项目删除成功后移除对应详情/统计缓存，并触发列表刷新。
+// Deletes a workspace and removes related detail/stats cache entries.
 export function useDeleteProject() {
   const queryClient = useQueryClient();
   const t = useT();
@@ -183,8 +176,7 @@ export function useDeleteProject() {
   });
 }
 
-// 生成 CLI token mutation。
-// 作用：为当前项目签发一次性展示的 project-scoped CLI token，供 `kest sync` 上传使用。
+// Generates a one-time CLI token for `kest sync` uploads.
 export function useGenerateProjectCliToken() {
   const t = useT();
 

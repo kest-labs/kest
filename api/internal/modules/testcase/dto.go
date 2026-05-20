@@ -7,6 +7,7 @@ import (
 
 // CreateTestCaseRequest represents the request to create a test case
 type CreateTestCaseRequest struct {
+	WorkspaceID string            `json:"workspace_id"`
 	APISpecID   string            `json:"api_spec_id" binding:"required"`
 	Name        string            `json:"name" binding:"required,max=255"`
 	Description string            `json:"description,omitempty"`
@@ -39,6 +40,7 @@ type UpdateTestCaseRequest struct {
 // TestCaseResponse represents the response for a test case
 type TestCaseResponse struct {
 	ID          string            `json:"id"`
+	WorkspaceID string            `json:"workspace_id,omitempty"`
 	APISpecID   string            `json:"api_spec_id"`
 	Method      string            `json:"method,omitempty"`
 	Path        string            `json:"path,omitempty"`
@@ -60,11 +62,12 @@ type TestCaseResponse struct {
 
 // FromSpecRequest represents the request to create a test case from an API spec
 type FromSpecRequest struct {
-	APISpecID  string  `json:"api_spec_id" binding:"required"`
-	Name       string  `json:"name" binding:"required,max=255"`
-	Env        string  `json:"env,omitempty" binding:"omitempty,max=50"`
-	UseExample bool    `json:"use_example,omitempty"`
-	ExampleID  *string `json:"example_id,omitempty"`
+	WorkspaceID string  `json:"workspace_id"`
+	APISpecID   string  `json:"api_spec_id" binding:"required"`
+	Name        string  `json:"name" binding:"required,max=255"`
+	Env         string  `json:"env,omitempty" binding:"omitempty,max=50"`
+	UseExample  bool    `json:"use_example,omitempty"`
+	ExampleID   *string `json:"example_id,omitempty"`
 }
 
 // DuplicateRequest represents the request to duplicate a test case
@@ -281,6 +284,7 @@ type TestRunResponse struct {
 
 // ListRunsFilter is the filter for listing test run history
 type ListRunsFilter struct {
+	WorkspaceID string
 	TestCaseID string
 	Status     *string
 	Page       int

@@ -419,7 +419,7 @@ function PendingInvitationsPanel({
     setActingOn({ action: 'accept', slug: invitation.slug });
     try {
       const result = await acceptInvitationMutation.mutateAsync(invitation.slug);
-      router.push(result.redirect_to || buildProjectApiSpecsRoute(result.project_id));
+      router.push(result.redirect_to || buildProjectApiSpecsRoute(result.workspace_id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     } finally {
@@ -488,12 +488,12 @@ function PendingInvitationsPanel({
                         })}
                       </Badge>
                       <Badge variant="outline" className={COMPACT_BADGE_CLASS_NAME}>
-                        {invitation.project_slug}
+                        {invitation.workspace_slug}
                       </Badge>
                     </div>
                     <div>
                       <p className="text-sm font-medium tracking-normal">
-                        {invitation.project_name}
+                        {invitation.workspace_name}
                       </p>
                       <p className="mt-1 text-xs text-text-muted">
                         {t('invitation.expiresLabel')}:{' '}

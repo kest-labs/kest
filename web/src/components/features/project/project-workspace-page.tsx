@@ -281,34 +281,40 @@ const formatHistoryDuration = (value: unknown) => {
   return duration === null ? null : `${duration}ms`;
 };
 
+const isRequestHistoryRecord = (history?: ProjectHistory | null) =>
+  history?.entity_type === 'cli_request' || history?.entity_type === 'request';
+
+const isRunHistoryRecord = (history?: ProjectHistory | null) =>
+  history?.entity_type === 'cli_run';
+
 const getCLIRequestRecord = (history?: ProjectHistory | null) => {
-  if (history?.entity_type !== 'cli_request') {
+  if (!isRequestHistoryRecord(history)) {
     return null;
   }
   return getHistoryNestedRecord(getHistoryDataRecord(history)?.request);
 };
 
 const getCLIRequestResponseRecord = (history?: ProjectHistory | null) => {
-  if (history?.entity_type !== 'cli_request') {
+  if (!isRequestHistoryRecord(history)) {
     return null;
   }
   return getHistoryNestedRecord(getHistoryDataRecord(history)?.response);
 };
 
 const getCLIRunRecord = (history?: ProjectHistory | null) => {
-  if (history?.entity_type !== 'cli_run') {
+  if (!isRunHistoryRecord(history)) {
     return null;
   }
   return getHistoryNestedRecord(getHistoryDataRecord(history)?.run);
 };
 
 const getCLIRunResults = (history?: ProjectHistory | null) =>
-  history?.entity_type === 'cli_run'
+  isRunHistoryRecord(history)
     ? getHistoryNestedList(getHistoryDataRecord(history)?.results)
     : [];
 
 const getCLIRunLogRecord = (history?: ProjectHistory | null) =>
-  history?.entity_type === 'cli_run'
+  isRunHistoryRecord(history)
     ? getHistoryNestedRecord(getHistoryDataRecord(history)?.log)
     : null;
 
@@ -363,7 +369,7 @@ const getHistoryPrimaryTitle = (history: ProjectHistory) =>
   `${history.entity_type} #${history.entity_id}`;
 
 const getHistoryFallbackDescription = (history: ProjectHistory) =>
-  history.entity_type === 'cli_request'
+  history.entity_type === 'cli_request' || history.entity_type === 'request'
     ? `${history.action} recorded for CLI request #${history.entity_id}`
     : history.entity_type === 'cli_run'
       ? `${history.action} recorded for CLI run ${getHistoryRunSourceName(history) ?? `#${history.entity_id}`}`
@@ -1462,7 +1468,7 @@ function ProjectKeysWorkspaceSection({
         id: project.id,
         data: {
           name: `${project.name} CLI sync`,
-          scopes: ['spec:write', 'run:write'],
+          scopes: ['collection:read', 'collection:run', 'environment:read'],
         },
       });
       setGeneratedCliToken(token);
@@ -1538,7 +1544,9 @@ function ProjectKeysWorkspaceSection({
                     <span className="font-mono">{scopedProjectId}</span>
                   </DetailField>
                   <DetailField label={t('keysPage.scopes')}>
-                    <span className="font-mono text-xs">spec:write, run:write</span>
+                    <span className="font-mono text-xs">
+                      collection:read, collection:run, environment:read
+                    </span>
                   </DetailField>
                   <DetailField label={t('keysPage.autoSyncHistory')}>
                     {t('keysPage.autoSyncHistoryEnabled')}
@@ -2988,10 +2996,10 @@ function EnvironmentsWorkspaceSection({
   const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
   const listPreview =
     normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
-  const environmentsPath = `/projects/${projectId}/environments`;
+  const environmentsPath = `/workspaces/${projectId}/environments`;
   const activeEnvironmentPath = selectedEnvironment
-    ? `/projects/${projectId}/environments/${selectedEnvironment.id}`
-    : `/projects/${projectId}/environments/:eid`;
+    ? `/workspaces/${projectId}/environments/${selectedEnvironment.id}`
+    : `/workspaces/${projectId}/environments/:eid`;
 
   const closeEnvironmentForm = () => {
     setIsFormOpen(false);
@@ -3926,22 +3934,21 @@ function HistoryWorkspaceSection({
               meta={
                 <>
                   <Badge variant="outline">{history.action}</Badge>
-                  {history.entity_type === 'cli_request' &&
-                  getHistoryRequestStatus(history) !== null ? (
+                  {isRequestHistoryRecord(history) && getHistoryRequestStatus(history) !== null ? (
                     <Badge variant="secondary">{getHistoryRequestStatus(history)}</Badge>
                   ) : null}
-                  {history.entity_type === 'cli_run' && getHistoryRunStatus(history) ? (
+                  {isRunHistoryRecord(history) && getHistoryRunStatus(history) ? (
                     <Badge variant="secondary">{getHistoryRunStatus(history)}</Badge>
                   ) : null}
-                  {history.entity_type !== 'cli_request' &&
-                  history.entity_type !== 'cli_run' &&
+                  {!isRequestHistoryRecord(history) &&
+                  !isRunHistoryRecord(history) &&
                   getHistoryRunStatus(history) ? (
                     <Badge variant="secondary">{getHistoryRunStatus(history)}</Badge>
                   ) : null}
-                  {history.entity_type === 'cli_request' && getHistoryRequestDuration(history) ? (
+                  {isRequestHistoryRecord(history) && getHistoryRequestDuration(history) ? (
                     <span>{getHistoryRequestDuration(history)}</span>
                   ) : null}
-                  {history.entity_type === 'cli_run' && getHistoryRunStepCount(history) !== null ? (
+                  {isRunHistoryRecord(history) && getHistoryRunStepCount(history) !== null ? (
                     <span>
                       {getHistoryRunStepCount(history)} {t('history.totalSteps').toLowerCase()}
                     </span>
@@ -4019,13 +4026,13 @@ function HistoryWorkspaceSection({
                           {selectedHistory.entity_type}
                         </Badge>
                         <Badge variant="outline">{selectedHistory.action}</Badge>
-                        {selectedHistory.entity_type === 'cli_request' &&
+                        {isRequestHistoryRecord(selectedHistory) &&
                         getHistoryRequestStatus(selectedHistory) !== null ? (
                           <Badge variant="secondary">
                             {getHistoryRequestStatus(selectedHistory)}
                           </Badge>
                         ) : null}
-                        {selectedHistory.entity_type !== 'cli_request' &&
+                        {!isRequestHistoryRecord(selectedHistory) &&
                         getHistoryRunStatus(selectedHistory) ? (
                           <Badge variant="secondary">{getHistoryRunStatus(selectedHistory)}</Badge>
                         ) : null}
@@ -4065,8 +4072,8 @@ function HistoryWorkspaceSection({
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
                     <DetailField label={t('history.recordId')}>{selectedHistory.id}</DetailField>
-                    <DetailField label={t('common.projectId')}>
-                      {selectedHistory.project_id}
+                    <DetailField label={t('history.workspaceId')}>
+                      {selectedHistory.workspace_id}
                     </DetailField>
                     <DetailField label={t('history.entityType')}>
                       {selectedHistory.entity_type}

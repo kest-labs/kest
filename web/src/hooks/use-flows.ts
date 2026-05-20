@@ -8,7 +8,7 @@ import type { CreateFlowRequest, SaveFlowRequest, UpdateFlowRequest } from '@/ty
 
 export const flowKeys = {
   all: ['flows'] as const,
-  project: (projectId: number | string) => [...flowKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...flowKeys.all, 'workspace', projectId] as const,
   list: (projectId: number | string) => [...flowKeys.project(projectId), 'list'] as const,
   detail: (projectId: number | string, flowId: number | string) =>
     [...flowKeys.project(projectId), 'detail', flowId] as const,

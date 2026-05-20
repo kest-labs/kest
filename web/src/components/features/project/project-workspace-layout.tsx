@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -12,7 +12,7 @@ import {
   buildProjectWorkspaceRoute,
 } from '@/components/features/project/project-navigation';
 import { getProjectModuleCopy } from '@/components/features/project/project-i18n';
-import { buildProjectDetailRoute } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { useT } from '@/i18n/client';
 import { cn } from '@/utils';
 
@@ -35,6 +35,7 @@ export function ProjectWorkspaceLayout({
 }) {
   const t = useT('project');
   const pathname = usePathname();
+  const router = useRouter();
   const readyModules = PROJECT_WORKSPACE_MODULES.filter(item => item.status !== 'planned');
   const plannedModules = PROJECT_WORKSPACE_MODULES.filter(item => item.status === 'planned');
   const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(getInitialDesktopNavCollapsed);
@@ -49,6 +50,10 @@ export function ProjectWorkspaceLayout({
     }
   };
 
+  const handleBackToWorkspaceOverview = () => {
+    router.push(ROUTES.CONSOLE.PROJECTS);
+  };
+
   return (
     <div className="flex min-h-full flex-col bg-bg-soft lg:h-full lg:min-h-0 lg:flex-row lg:overflow-hidden">
       <aside
@@ -59,15 +64,15 @@ export function ProjectWorkspaceLayout({
       >
         <div className="flex items-center gap-3 border-b border-border-subtle p-3 lg:hidden">
           <Button
-            asChild
+            type="button"
             variant="ghost"
             size="sm"
             isIcon
+            aria-label={t('common.backToProjectOverview')}
             className="h-8 w-8 shrink-0 rounded-full border border-border-strong bg-bg-canvas text-text-main hover:bg-bg-subtle"
+            onClick={handleBackToWorkspaceOverview}
           >
-            <Link href={buildProjectDetailRoute(projectId)}>
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </Link>
+            <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
 
           <div className="min-w-0 flex-1 overflow-x-auto no-scrollbar">
@@ -128,15 +133,15 @@ export function ProjectWorkspaceLayout({
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <Button
-                  asChild
+                  type="button"
                   variant="ghost"
                   size="sm"
                   isIcon
+                  aria-label={t('common.backToProjectOverview')}
                   className="!size-8 rounded-full border border-border-strong bg-bg-canvas text-text-main hover:bg-bg-subtle"
+                  onClick={handleBackToWorkspaceOverview}
                 >
-                  <Link href={buildProjectDetailRoute(projectId)}>
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                  </Link>
+                  <ArrowLeft className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">

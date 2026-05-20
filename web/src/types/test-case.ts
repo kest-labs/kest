@@ -47,7 +47,7 @@ export interface TestCaseListMeta {
 }
 
 export interface TestCaseListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   page?: number;
   pageSize?: number;
   apiSpecId?: number | string;
@@ -155,7 +155,7 @@ export interface TestCaseRun {
 }
 
 export interface TestCaseRunListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   testCaseId: number | string;
   page?: number;
   pageSize?: number;

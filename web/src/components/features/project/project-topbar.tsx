@@ -178,9 +178,9 @@ export function ProjectTopbar() {
                   >
                     <Link href={buildProjectInviteRoute(invitation.slug)}>
                       <div className="min-w-0">
-                        <div className="truncate font-medium">{invitation.project_name}</div>
+                        <div className="truncate font-medium">{invitation.workspace_name}</div>
                         <div className="truncate text-xs text-text-muted">
-                          {invitation.project_slug} · {getInvitationRoleLabel(t, invitation.role)}
+                          {invitation.workspace_slug} · {getInvitationRoleLabel(t, invitation.role)}
                         </div>
                       </div>
                     </Link>

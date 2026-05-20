@@ -16,13 +16,13 @@ const (
 
 const defaultInvitationValidity = 7 * 24 * time.Hour
 
-// ProjectInvitationPO stores shareable project invitation links.
+// ProjectInvitationPO stores shareable workspace invitation links.
 type ProjectInvitationPO struct {
 	ID            string `gorm:"primaryKey"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	DeletedAt     gorm.DeletedAt           `gorm:"index"`
-	ProjectID     string                   `gorm:"not null;index"`
+	WorkspaceID   string                   `gorm:"column:project_id;not null;index"`
 	TokenHash     string                   `gorm:"size:64;not null;uniqueIndex"`
 	TokenPrefix   string                   `gorm:"size:32;not null;index"`
 	Slug          string                   `gorm:"size:64;not null;uniqueIndex"`
@@ -44,7 +44,7 @@ func (ProjectInvitationPO) TableName() string {
 // ProjectInvitation is the service-layer invitation entity.
 type ProjectInvitation struct {
 	ID            string                 `json:"id"`
-	ProjectID     string                 `json:"project_id"`
+	WorkspaceID   string                 `json:"workspace_id"`
 	TokenPrefix   string                 `json:"token_prefix"`
 	Slug          string                 `json:"slug"`
 	Role          string                 `json:"role"`
@@ -60,8 +60,8 @@ type ProjectInvitation struct {
 	UpdatedAt     time.Time              `json:"updated_at"`
 }
 
-// ProjectSummary is a lightweight project projection used by public invite pages.
-type ProjectSummary struct {
+// WorkspaceSummary is a lightweight workspace projection used by public invite pages.
+type WorkspaceSummary struct {
 	ID   string
 	Name string
 	Slug string
@@ -90,7 +90,7 @@ func (po *ProjectInvitationPO) toDomain() *ProjectInvitation {
 
 	return &ProjectInvitation{
 		ID:            po.ID,
-		ProjectID:     po.ProjectID,
+		WorkspaceID:   po.WorkspaceID,
 		TokenPrefix:   po.TokenPrefix,
 		Slug:          po.Slug,
 		Role:          po.Role,
@@ -114,7 +114,7 @@ func newProjectInvitationPO(invitation *ProjectInvitation, tokenHash string) *Pr
 
 	return &ProjectInvitationPO{
 		ID:            invitation.ID,
-		ProjectID:     invitation.ProjectID,
+		WorkspaceID:   invitation.WorkspaceID,
 		TokenHash:     tokenHash,
 		TokenPrefix:   invitation.TokenPrefix,
 		Slug:          invitation.Slug,

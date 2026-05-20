@@ -22,6 +22,7 @@ type UpdateWorkspaceRequest struct {
 	Name        *string `json:"name" binding:"omitempty,max=100"`
 	Description *string `json:"description" binding:"omitempty,max=500"`
 	Visibility  *string `json:"visibility" binding:"omitempty,oneof=private team public"`
+	Settings    *map[string]interface{} `json:"settings,omitempty"`
 }
 
 // AddMemberRequest represents the request to add a member

@@ -70,6 +70,8 @@ type bridgeErrorResponse struct {
 	Error string `json:"error"`
 }
 
+const maxBridgeResponseBodyBytes = 5 * 1024 * 1024
+
 var bridgeCmd = &cobra.Command{
 	Use:   "bridge",
 	Short: "Start a local bridge for web-triggered API execution",
@@ -419,6 +421,13 @@ func executeBridgeRequest(req bridgeRunRequest) (*bridgeRunResponse, error) {
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	if len(body) > maxBridgeResponseBodyBytes {
+		return nil, fmt.Errorf(
+			"response body too large: %d bytes exceeds %d byte limit",
+			len(body),
+			maxBridgeResponseBodyBytes,
+		)
 	}
 
 	return &bridgeRunResponse{

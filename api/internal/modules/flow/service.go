@@ -9,9 +9,9 @@ import (
 // Service defines the business logic interface for flows
 type Service interface {
 	// Flow CRUD
-	CreateFlow(ctx context.Context, projectID string, userID string, req *CreateFlowRequest) (*FlowResponse, error)
+	CreateFlow(ctx context.Context, workspaceID string, userID string, req *CreateFlowRequest) (*FlowResponse, error)
 	GetFlow(ctx context.Context, id string) (*FlowDetailResponse, error)
-	ListFlows(ctx context.Context, projectID string) ([]*FlowResponse, error)
+	ListFlows(ctx context.Context, workspaceID string) ([]*FlowResponse, error)
 	UpdateFlow(ctx context.Context, id string, req *UpdateFlowRequest) (*FlowResponse, error)
 	DeleteFlow(ctx context.Context, id string) error
 	SaveFlow(ctx context.Context, id string, req *SaveFlowRequest) (*FlowDetailResponse, error)
@@ -44,14 +44,14 @@ func NewService(repo Repository) Service {
 
 // --- Flow CRUD ---
 
-func (s *service) CreateFlow(ctx context.Context, projectID string, userID string, req *CreateFlowRequest) (*FlowResponse, error) {
+func (s *service) CreateFlow(ctx context.Context, workspaceID string, userID string, req *CreateFlowRequest) (*FlowResponse, error) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		return nil, newFlowError(422, "flow name is required")
 	}
 
 	flow := &FlowPO{
-		ProjectID:   projectID,
+		WorkspaceID: workspaceID,
 		Name:        name,
 		Description: strings.TrimSpace(req.Description),
 		CreatedBy:   userID,
@@ -98,8 +98,8 @@ func (s *service) GetFlow(ctx context.Context, id string) (*FlowDetailResponse, 
 	return resp, nil
 }
 
-func (s *service) ListFlows(ctx context.Context, projectID string) ([]*FlowResponse, error) {
-	flows, err := s.repo.ListFlowsByProject(ctx, projectID)
+func (s *service) ListFlows(ctx context.Context, workspaceID string) ([]*FlowResponse, error) {
+	flows, err := s.repo.ListFlowsByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}

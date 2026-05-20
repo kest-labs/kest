@@ -441,7 +441,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
     perPage: 1,
   });
   const testCasesQuery = useTestCases({
-    projectId,
+    workspaceId: projectId,
     page: 1,
     pageSize: 1,
   });

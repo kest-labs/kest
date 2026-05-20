@@ -74,7 +74,7 @@ func InitApplication() (*app.Application, error) {
 	projectService := project.NewService(projectRepository, memberService)
 	projectinviteRepository := projectinvite.NewRepository(db)
 	projectinviteService := projectinvite.NewService(projectinviteRepository)
-	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)
+	projectinviteHandler := projectinvite.NewHandler(projectinviteService, workspaceService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
 	collectionHandler := collection.NewHandler(collectionService, workspaceService)
@@ -106,10 +106,10 @@ func InitApplication() (*app.Application, error) {
 	environmentHandler := environment.NewHandler(environmentService, workspaceService)
 	flowRepository := flow.NewRepository(db)
 	flowService := flow.NewService(flowRepository)
-	flowHandler := flow.NewHandler(flowService, memberService)
+	flowHandler := flow.NewHandler(flowService, workspaceService)
 	executor := testrunner.NewExecutor()
 	testcaseService := testcase.NewService(testcaseRepository, apispecRepository, environmentRepository, executor)
-	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
+	testcaseHandler := testcase.NewHandler(testcaseService, workspaceService)
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
 		User:          handler,

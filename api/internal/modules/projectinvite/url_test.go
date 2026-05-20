@@ -38,7 +38,7 @@ func TestResolveInvitationBaseURLFallsBackToRequestHost(t *testing.T) {
 func TestBuildProjectInvitationURLForBase(t *testing.T) {
 	got := buildProjectInvitationURLForBase("pji_demo", "https://www.kest.run/")
 
-	if got != "https://www.kest.run/invite/project/pji_demo" {
+	if got != "https://www.kest.run/invite/workspace/pji_demo" {
 		t.Fatalf("unexpected invite URL %q", got)
 	}
 }
@@ -56,7 +56,7 @@ func TestBuildProjectInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
 
 	got := buildProjectInvitationURLForBase("pji_demo", "http://localhost:3000")
 
-	if got != "https://kest.run/invite/project/pji_demo" {
+	if got != "https://kest.run/invite/workspace/pji_demo" {
 		t.Fatalf("expected configured frontend URL, got %q", got)
 	}
 }
@@ -70,7 +70,7 @@ func TestBuildProjectInvitationURLForBaseIgnoresLoopbackRequestBase(t *testing.T
 
 	got := buildProjectInvitationURLForBase("pji_demo", "http://127.0.0.1:3000")
 
-	if got != "/invite/project/pji_demo" {
+	if got != "/invite/workspace/pji_demo" {
 		t.Fatalf("expected relative path fallback, got %q", got)
 	}
 }

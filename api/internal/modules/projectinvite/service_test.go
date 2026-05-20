@@ -9,11 +9,11 @@ import (
 type testProjectInviteRepo struct {
 	invitation             *ProjectInvitation
 	userInvitations        []*ProjectInvitation
-	projectSummary         *ProjectSummary
-	projectSummaries       map[string]*ProjectSummary
+	workspaceSummary       *WorkspaceSummary
+	workspaceSummaries     map[string]*WorkspaceSummary
 	acceptedUserID         string
 	acceptedAt             *time.Time
-	hasProjectMember       bool
+	hasWorkspaceMember     bool
 	revokedDirectProjectID string
 	revokedDirectUserID    string
 }
@@ -30,7 +30,7 @@ func (r *testProjectInviteRepo) CreateInvitation(
 	return nil
 }
 
-func (r *testProjectInviteRepo) ListInvitationsByProject(
+func (r *testProjectInviteRepo) ListInvitationsByWorkspace(
 	_ context.Context,
 	_ string,
 ) ([]*ProjectInvitation, error) {
@@ -47,7 +47,7 @@ func (r *testProjectInviteRepo) ListInvitationsByInvitedUser(
 	return r.userInvitations, nil
 }
 
-func (r *testProjectInviteRepo) GetInvitationByProject(
+func (r *testProjectInviteRepo) GetInvitationByWorkspace(
 	_ context.Context,
 	_, invitationID string,
 ) (*ProjectInvitation, error) {
@@ -72,11 +72,11 @@ func (r *testProjectInviteRepo) UpdateInvitation(
 	return nil
 }
 
-func (r *testProjectInviteRepo) GetProjectSummary(_ context.Context, projectID string) (*ProjectSummary, error) {
-	if r.projectSummaries != nil {
-		return r.projectSummaries[projectID], nil
+func (r *testProjectInviteRepo) GetWorkspaceSummary(_ context.Context, workspaceID string) (*WorkspaceSummary, error) {
+	if r.workspaceSummaries != nil {
+		return r.workspaceSummaries[workspaceID], nil
 	}
-	return r.projectSummary, nil
+	return r.workspaceSummary, nil
 }
 
 func (r *testProjectInviteRepo) AcceptInvitation(
@@ -103,11 +103,11 @@ func (r *testProjectInviteRepo) RevokeActiveInvitationsForUser(
 	return nil
 }
 
-func (r *testProjectInviteRepo) HasProjectMember(
+func (r *testProjectInviteRepo) HasWorkspaceMember(
 	_ context.Context,
 	_, _ string,
 ) (bool, error) {
-	return r.hasProjectMember, nil
+	return r.hasWorkspaceMember, nil
 }
 
 func TestCreateInvitationDefaults(t *testing.T) {
@@ -121,8 +121,8 @@ func TestCreateInvitationDefaults(t *testing.T) {
 		t.Fatalf("CreateInvitation returned error: %v", err)
 	}
 
-	if resp.ProjectID != "12" {
-		t.Fatalf("expected project id 12, got %s", resp.ProjectID)
+	if resp.WorkspaceID != "12" {
+		t.Fatalf("expected workspace id 12, got %s", resp.WorkspaceID)
 	}
 	if resp.Role != memberRoleRead {
 		t.Fatalf("expected role %q, got %q", memberRoleRead, resp.Role)
@@ -168,13 +168,13 @@ func TestCreateInvitationDirectInviteForcesSingleUse(t *testing.T) {
 func TestAcceptInvitationRejectsAlreadyUsedUpLink(t *testing.T) {
 	repo := &testProjectInviteRepo{
 		invitation: &ProjectInvitation{
-			ID:        "3",
-			ProjectID: "12",
-			Slug:      "pji_usedup",
-			Role:      memberRoleRead,
-			Status:    InvitationStatusActive,
-			MaxUses:   1,
-			UsedCount: 1,
+			ID:          "3",
+			WorkspaceID: "12",
+			Slug:        "pji_usedup",
+			Role:        memberRoleRead,
+			Status:      InvitationStatusActive,
+			MaxUses:     1,
+			UsedCount:   1,
 		},
 	}
 	svc := NewService(repo)
@@ -187,12 +187,12 @@ func TestAcceptInvitationRejectsAlreadyUsedUpLink(t *testing.T) {
 func TestAcceptInvitationReturnsRedirect(t *testing.T) {
 	repo := &testProjectInviteRepo{
 		invitation: &ProjectInvitation{
-			ID:        "4",
-			ProjectID: "18",
-			Slug:      "pji_accept",
-			Role:      memberRoleWrite,
-			Status:    InvitationStatusActive,
-			MaxUses:   1,
+			ID:          "4",
+			WorkspaceID: "18",
+			Slug:        "pji_accept",
+			Role:        memberRoleWrite,
+			Status:      InvitationStatusActive,
+			MaxUses:     1,
 		},
 	}
 	svc := NewService(repo)
@@ -202,14 +202,14 @@ func TestAcceptInvitationReturnsRedirect(t *testing.T) {
 		t.Fatalf("AcceptInvitation returned error: %v", err)
 	}
 
-	if resp.ProjectID != "18" {
-		t.Fatalf("expected project id 18, got %s", resp.ProjectID)
+	if resp.WorkspaceID != "18" {
+		t.Fatalf("expected workspace id 18, got %s", resp.WorkspaceID)
 	}
 	if resp.Member.UserID != "42" || resp.Member.Role != memberRoleWrite {
 		t.Fatalf("unexpected member payload: %#v", resp.Member)
 	}
-	if resp.RedirectTo != "/project/18" {
-		t.Fatalf("expected redirect /project/18, got %q", resp.RedirectTo)
+	if resp.RedirectTo != "/workspace/18/api-specs" {
+		t.Fatalf("expected redirect /workspace/18/api-specs, got %q", resp.RedirectTo)
 	}
 	if repo.acceptedAt == nil {
 		t.Fatal("expected accept time to be recorded")
@@ -221,7 +221,7 @@ func TestAcceptInvitationRejectsWrongRecipient(t *testing.T) {
 	repo := &testProjectInviteRepo{
 		invitation: &ProjectInvitation{
 			ID:            "5",
-			ProjectID:     "18",
+			WorkspaceID:   "18",
 			Slug:          "pji_direct",
 			Role:          memberRoleWrite,
 			Status:        InvitationStatusActive,
@@ -241,7 +241,7 @@ func TestRejectInvitationMarksDirectInviteRejected(t *testing.T) {
 	repo := &testProjectInviteRepo{
 		invitation: &ProjectInvitation{
 			ID:            "6",
-			ProjectID:     "18",
+			WorkspaceID:   "18",
 			Slug:          "pji_reject",
 			Role:          memberRoleRead,
 			Status:        InvitationStatusActive,
@@ -270,7 +270,7 @@ func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 		userInvitations: []*ProjectInvitation{
 			{
 				ID:            "7",
-				ProjectID:     "18",
+				WorkspaceID:   "18",
 				Slug:          "pji_active",
 				Role:          memberRoleRead,
 				Status:        InvitationStatusActive,
@@ -279,7 +279,7 @@ func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 			},
 			{
 				ID:            "8",
-				ProjectID:     "19",
+				WorkspaceID:   "19",
 				Slug:          "pji_rejected",
 				Role:          memberRoleRead,
 				Status:        InvitationStatusRejected,
@@ -287,7 +287,7 @@ func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 				InvitedUserID: &invitedUserID,
 			},
 		},
-		projectSummaries: map[string]*ProjectSummary{
+		workspaceSummaries: map[string]*WorkspaceSummary{
 			"18": {ID: "18", Name: "Payments", Slug: "payments"},
 			"19": {ID: "19", Name: "Orders", Slug: "orders"},
 		},
@@ -302,7 +302,7 @@ func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 	if len(resp) != 1 {
 		t.Fatalf("expected 1 active direct invite, got %d", len(resp))
 	}
-	if resp[0].ProjectSlug != "payments" || resp[0].Slug != "pji_active" {
+	if resp[0].WorkspaceSlug != "payments" || resp[0].Slug != "pji_active" {
 		t.Fatalf("unexpected response payload: %#v", resp[0])
 	}
 }

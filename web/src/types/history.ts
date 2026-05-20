@@ -5,7 +5,7 @@ export interface ProjectHistory {
   id: string;
   entity_type: string;
   entity_id: string;
-  project_id: string;
+  workspace_id: string;
   user_id: string;
   source?: string;
   source_event_id?: string;

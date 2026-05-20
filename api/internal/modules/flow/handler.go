@@ -13,7 +13,7 @@ import (
 
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -21,8 +21,8 @@ import (
 // Handler handles HTTP requests for flows
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
 // Name returns the module name
@@ -31,21 +31,21 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new flow handler
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
 // RegisterRoutes registers flow routes
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	RegisterRoutes(r, h, h.memberService)
+	RegisterRoutes(r, h)
 }
 
 // --- helpers ---
 
-func (h *Handler) projectID(c *gin.Context) (string, bool) {
+func (h *Handler) workspaceID(c *gin.Context) (string, bool) {
 	return handler.ParseID(c, "id")
 }
 
@@ -102,14 +102,14 @@ func respondFlowError(c *gin.Context, err error) {
 
 // --- Flow handlers ---
 
-// ListFlows handles GET /projects/:id/flows
+// ListFlows handles GET /workspaces/:id/flows
 func (h *Handler) ListFlows(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
 
-	flows, err := h.service.ListFlows(c.Request.Context(), pid)
+	flows, err := h.service.ListFlows(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -121,9 +121,9 @@ func (h *Handler) ListFlows(c *gin.Context) {
 	})
 }
 
-// CreateFlow handles POST /projects/:id/flows
+// CreateFlow handles POST /workspaces/:id/flows
 func (h *Handler) CreateFlow(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -134,7 +134,7 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 		return
 	}
 
-	flow, err := h.service.CreateFlow(c.Request.Context(), pid, h.userID(c), &req)
+	flow, err := h.service.CreateFlow(c.Request.Context(), workspaceID, h.userID(c), &req)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -143,8 +143,12 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 	response.Created(c, flow)
 }
 
-// GetFlow handles GET /projects/:id/flows/:fid
+// GetFlow handles GET /workspaces/:id/flows/:fid
 func (h *Handler) GetFlow(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleRead); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -159,8 +163,12 @@ func (h *Handler) GetFlow(c *gin.Context) {
 	response.Success(c, flow)
 }
 
-// UpdateFlow handles PATCH /projects/:id/flows/:fid
+// UpdateFlow handles PATCH /workspaces/:id/flows/:fid
 func (h *Handler) UpdateFlow(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -181,8 +189,12 @@ func (h *Handler) UpdateFlow(c *gin.Context) {
 	response.Success(c, flow)
 }
 
-// DeleteFlow handles DELETE /projects/:id/flows/:fid
+// DeleteFlow handles DELETE /workspaces/:id/flows/:fid
 func (h *Handler) DeleteFlow(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -196,8 +208,12 @@ func (h *Handler) DeleteFlow(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// SaveFlow handles PUT /projects/:id/flows/:fid (full save with steps + edges)
+// SaveFlow handles PUT /workspaces/:id/flows/:fid (full save with steps + edges)
 func (h *Handler) SaveFlow(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -220,8 +236,12 @@ func (h *Handler) SaveFlow(c *gin.Context) {
 
 // --- Step handlers ---
 
-// CreateStep handles POST /projects/:id/flows/:fid/steps
+// CreateStep handles POST /workspaces/:id/flows/:fid/steps
 func (h *Handler) CreateStep(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -242,8 +262,12 @@ func (h *Handler) CreateStep(c *gin.Context) {
 	response.Created(c, step)
 }
 
-// UpdateStep handles PATCH /projects/:id/flows/:fid/steps/:sid
+// UpdateStep handles PATCH /workspaces/:id/flows/:fid/steps/:sid
 func (h *Handler) UpdateStep(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	sid, ok := h.stepID(c)
 	if !ok {
 		return
@@ -264,8 +288,12 @@ func (h *Handler) UpdateStep(c *gin.Context) {
 	response.Success(c, step)
 }
 
-// DeleteStep handles DELETE /projects/:id/flows/:fid/steps/:sid
+// DeleteStep handles DELETE /workspaces/:id/flows/:fid/steps/:sid
 func (h *Handler) DeleteStep(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	sid, ok := h.stepID(c)
 	if !ok {
 		return
@@ -281,8 +309,12 @@ func (h *Handler) DeleteStep(c *gin.Context) {
 
 // --- Edge handlers ---
 
-// CreateEdge handles POST /projects/:id/flows/:fid/edges
+// CreateEdge handles POST /workspaces/:id/flows/:fid/edges
 func (h *Handler) CreateEdge(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -303,8 +335,12 @@ func (h *Handler) CreateEdge(c *gin.Context) {
 	response.Created(c, edge)
 }
 
-// DeleteEdge handles DELETE /projects/:id/flows/:fid/edges/:eid
+// DeleteEdge handles DELETE /workspaces/:id/flows/:fid/edges/:eid
 func (h *Handler) DeleteEdge(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	eid, ok := h.edgeID(c)
 	if !ok {
 		return
@@ -320,9 +356,13 @@ func (h *Handler) DeleteEdge(c *gin.Context) {
 
 // --- Run handlers ---
 
-// ExecuteFlowSSE handles GET /projects/:id/flows/:fid/runs/:rid/events (SSE)
+// ExecuteFlowSSE handles GET /workspaces/:id/flows/:fid/runs/:rid/events (SSE)
 // Streams real-time step execution events to the client
 func (h *Handler) ExecuteFlowSSE(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleRead); !ok {
+		return
+	}
+
 	rid, ok := h.runID(c)
 	if !ok {
 		return
@@ -363,8 +403,12 @@ func (h *Handler) ExecuteFlowSSE(c *gin.Context) {
 	})
 }
 
-// RunFlow handles POST /projects/:id/flows/:fid/run
+// RunFlow handles POST /workspaces/:id/flows/:fid/run
 func (h *Handler) RunFlow(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleWrite); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -379,8 +423,12 @@ func (h *Handler) RunFlow(c *gin.Context) {
 	response.Created(c, run)
 }
 
-// GetRun handles GET /projects/:id/flows/:fid/runs/:rid
+// GetRun handles GET /workspaces/:id/flows/:fid/runs/:rid
 func (h *Handler) GetRun(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleRead); !ok {
+		return
+	}
+
 	rid, ok := h.runID(c)
 	if !ok {
 		return
@@ -395,8 +443,12 @@ func (h *Handler) GetRun(c *gin.Context) {
 	response.Success(c, run)
 }
 
-// ListRuns handles GET /projects/:id/flows/:fid/runs
+// ListRuns handles GET /workspaces/:id/flows/:fid/runs
 func (h *Handler) ListRuns(c *gin.Context) {
+	if _, ok := h.authorizeWorkspace(c, workspace.RoleRead); !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -412,4 +464,25 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		"items": runs,
 		"total": len(runs),
 	})
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := h.workspaceID(c)
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		response.Unauthorized(c, "Authentication required")
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }

@@ -927,7 +927,7 @@ function DuplicateTestCaseDialog({
 
 function CreateFromSpecDialog({
   open,
-  projectId,
+  workspaceId,
   apiSpecs,
   initialSpecId,
   flowSource,
@@ -936,7 +936,7 @@ function CreateFromSpecDialog({
   onSubmit,
 }: {
   open: boolean;
-  projectId: number | string;
+  workspaceId: number | string;
   apiSpecs: ApiSpec[];
   initialSpecId?: string | number | null;
   flowSource?: 'ai' | null;
@@ -956,7 +956,7 @@ function CreateFromSpecDialog({
 
   const selectedSpecId = draft.apiSpecId ? draft.apiSpecId : undefined;
   const specExamplesQuery = useApiSpecExamples(
-    projectId,
+    workspaceId,
     draft.useExample ? selectedSpecId : undefined
   );
   const specExamples = specExamplesQuery.data?.items ?? [];
@@ -1382,20 +1382,20 @@ function DeleteTestCaseDialog({
 
 function RunDetailDialog({
   open,
-  projectId,
+  workspaceId,
   testCaseId,
   runId,
   onOpenChange,
 }: {
   open: boolean;
-  projectId: number | string;
+  workspaceId: number | string;
   testCaseId?: number | string | null;
   runId?: number | string | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useT('project');
   const runQuery = useTestCaseRun(
-    projectId,
+    workspaceId,
     testCaseId ?? undefined,
     open ? (runId ?? undefined) : undefined
   );
@@ -1569,11 +1569,11 @@ function RunDetailDialog({
 }
 
 export function TestCaseManagementPage({
-  projectId,
+  workspaceId,
   autoOpenFromSpecSpecId = null,
   flowSource = null,
 }: {
-  projectId: number | string;
+  workspaceId: number | string;
   autoOpenFromSpecSpecId?: string | number | null;
   flowSource?: 'ai' | null;
 }) {
@@ -1604,17 +1604,17 @@ export function TestCaseManagementPage({
 
   const deferredKeyword = useDeferredValue(keyword.trim());
 
-  const projectQuery = useProject(projectId);
+  const projectQuery = useProject(workspaceId);
   const apiSpecsQuery = useApiSpecs({
-    projectId,
+    projectId: workspaceId,
     page: 1,
     pageSize: 100,
   });
-  const environmentsQuery = useEnvironments(projectId);
-  const memberRoleQuery = useProjectMemberRole(projectId);
+  const environmentsQuery = useEnvironments(workspaceId);
+  const memberRoleQuery = useProjectMemberRole(workspaceId);
 
   const testCasesQuery = useTestCases({
-    projectId,
+    workspaceId,
     page,
     pageSize: PAGE_SIZE,
     apiSpecId: apiSpecFilter !== 'all' ? apiSpecFilter : undefined,
@@ -1651,12 +1651,12 @@ export function TestCaseManagementPage({
   const effectiveLatestRunResult =
     latestRunResult?.test_case_id === resolvedSelectedTestCaseId ? latestRunResult : null;
 
-  const activeTestCaseQuery = useTestCase(projectId, resolvedSelectedTestCaseId ?? undefined);
-  const formTargetQuery = useTestCase(projectId, formTargetId ?? undefined);
+  const activeTestCaseQuery = useTestCase(workspaceId, resolvedSelectedTestCaseId ?? undefined);
+  const formTargetQuery = useTestCase(workspaceId, formTargetId ?? undefined);
   const runHistoryQuery = useTestCaseRuns(
     resolvedSelectedTestCaseId
       ? {
-          projectId,
+          workspaceId,
           testCaseId: resolvedSelectedTestCaseId,
           page: effectiveHistoryPage,
           pageSize: RUN_PAGE_SIZE,
@@ -1665,12 +1665,12 @@ export function TestCaseManagementPage({
       : undefined
   );
 
-  const createTestCaseMutation = useCreateTestCase(projectId);
-  const updateTestCaseMutation = useUpdateTestCase(projectId);
-  const deleteTestCaseMutation = useDeleteTestCase(projectId);
-  const duplicateTestCaseMutation = useDuplicateTestCase(projectId);
-  const fromSpecMutation = useCreateTestCaseFromSpec(projectId);
-  const runTestCaseMutation = useRunTestCase(projectId);
+  const createTestCaseMutation = useCreateTestCase(workspaceId);
+  const updateTestCaseMutation = useUpdateTestCase(workspaceId);
+  const deleteTestCaseMutation = useDeleteTestCase(workspaceId);
+  const duplicateTestCaseMutation = useDuplicateTestCase(workspaceId);
+  const fromSpecMutation = useCreateTestCaseFromSpec(workspaceId);
+  const runTestCaseMutation = useRunTestCase(workspaceId);
 
   const runHistory = runHistoryQuery.data?.items ?? EMPTY_RUNS;
   const activeTestCase =
@@ -1870,20 +1870,20 @@ export function TestCaseManagementPage({
       key: 'test-cases-api-specs',
       label: t('apiSpecs.title'),
       icon: FileJson2,
-      href: buildProjectApiSpecsRoute(projectId),
+      href: buildProjectApiSpecsRoute(workspaceId),
       separatorBefore: true,
     },
     {
       key: 'test-cases-environments',
       label: t('environments.title'),
       icon: Globe,
-      href: buildProjectEnvironmentsRoute(projectId),
+      href: buildProjectEnvironmentsRoute(workspaceId),
     },
     {
       key: 'test-cases-categories',
       label: t('categoriesPage.title'),
       icon: Tags,
-      href: buildProjectCategoriesRoute(projectId),
+      href: buildProjectCategoriesRoute(workspaceId),
     },
   ];
   const detailActionItems: ActionMenuItem[] = activeTestCase
@@ -1940,8 +1940,8 @@ export function TestCaseManagementPage({
               <BreadcrumbSeparator />
               <BreadcrumbItem className="min-w-0 shrink">
                 <BreadcrumbLink asChild>
-                  <Link href={buildProjectDetailRoute(projectId)} className="truncate">
-                    {projectQuery.data?.name || `#${projectId}`}
+                  <Link href={buildProjectDetailRoute(workspaceId)} className="truncate">
+                    {projectQuery.data?.name || `#${workspaceId}`}
                   </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -1980,7 +1980,7 @@ export function TestCaseManagementPage({
                 {t('testCasesPage.noApiSpecsDescription')}
                 <div className="mt-3">
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`${buildProjectApiSpecsRoute(projectId)}?ai=create`}>
+                    <Link href={`${buildProjectApiSpecsRoute(workspaceId)}?ai=create`}>
                       <FileJson2 className="h-4 w-4" />
                       {t('testCasesPage.aiDraftSpecButton')}
                     </Link>
@@ -2007,7 +2007,7 @@ export function TestCaseManagementPage({
                 <CardTitle>{t('testCasesPage.listTitle')}</CardTitle>
                 <CardDescription>
                   {t('testCasesPage.listDescription', {
-                    path: buildApiPath('/projects/:id/test-cases'),
+                    path: buildApiPath('/workspaces/:id/test-cases'),
                   })}
                 </CardDescription>
               </CardHeader>
@@ -2254,7 +2254,7 @@ export function TestCaseManagementPage({
                 <CardTitle>{t('testCasesPage.detailTitle')}</CardTitle>
                 <CardDescription>
                   {t('testCasesPage.detailDescription', {
-                    path: buildApiPath('/projects/:id/test-cases/:tcid'),
+                    path: buildApiPath('/workspaces/:id/test-cases/:tcid'),
                   })}
                 </CardDescription>
               </CardHeader>
@@ -2646,7 +2646,7 @@ export function TestCaseManagementPage({
       <CreateFromSpecDialog
         key={`from-spec-${isFromSpecOpen ? 'open' : 'closed'}-${autoOpenFromSpecSpecId ?? 'none'}-${apiSpecs.length}`}
         open={isFromSpecOpen}
-        projectId={projectId}
+        workspaceId={workspaceId}
         apiSpecs={apiSpecs}
         initialSpecId={autoOpenFromSpecSpecId}
         flowSource={flowSource}
@@ -2702,7 +2702,7 @@ export function TestCaseManagementPage({
       <RunDetailDialog
         key={`run-detail-${effectiveRunDetailId ?? 'none'}-${Boolean(effectiveRunDetailId) ? 'open' : 'closed'}`}
         open={Boolean(effectiveRunDetailId)}
-        projectId={projectId}
+        workspaceId={workspaceId}
         testCaseId={resolvedSelectedTestCaseId}
         runId={effectiveRunDetailId}
         onOpenChange={open => {

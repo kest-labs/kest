@@ -15,7 +15,7 @@ export const importerService = {
     formData.append('file', data.file);
 
     return request.post<ImportPostmanCollectionResponse>(
-      `/projects/${projectId}/collections/import/postman`,
+      `/workspaces/${projectId}/collections/import/postman`,
       formData,
       {
         params: data.parent_id ? { parent_id: data.parent_id } : undefined,
@@ -34,7 +34,7 @@ export const importerService = {
     formData.append('file', data.file);
 
     return request.post<ImportMarkdownCollectionResponse>(
-      `/projects/${projectId}/collections/import/markdown`,
+      `/workspaces/${projectId}/collections/import/markdown`,
       formData,
       {
         params: data.parent_id ? { parent_id: data.parent_id } : undefined,

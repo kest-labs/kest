@@ -93,12 +93,12 @@ const messages: ConsoleMessages = {
     note: 'The current backend returns a similar authenticated user payload for both routes, so this card stays wired to the `info` endpoint and shows what it currently exposes.',
   },
   dashboard: {
-    searchProjects: 'Search projects',
-    createProject: 'Create Project',
-    projects: 'Projects',
-    unableToLoadProjects: 'Unable to load projects',
+    searchProjects: 'Search workspaces',
+    createProject: 'Create Workspace',
+    projects: 'Workspaces',
+    unableToLoadProjects: 'Unable to load workspaces',
     unableToLoadProjectsDescription:
-      'The dashboard could not load the project list from the current API.',
+      'The dashboard could not load the workspace list from the current API.',
     selected: 'Selected',
   },
 };

@@ -9,7 +9,7 @@ import (
 // FlowPO represents a test flow (scenario) in the database
 type FlowPO struct {
 	ID          string         `gorm:"primaryKey" json:"id"`
-	ProjectID   string         `gorm:"not null;index:idx_flows_project" json:"project_id"`
+	WorkspaceID string         `gorm:"column:workspace_id;not null;index:idx_flows_workspace" json:"workspace_id"`
 	Name        string         `gorm:"size:255;not null" json:"name"`
 	Description string         `gorm:"type:text" json:"description"`
 	CreatedBy   string         `gorm:"not null" json:"created_by"`

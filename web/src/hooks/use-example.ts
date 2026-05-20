@@ -13,7 +13,7 @@ import type {
 
 export const exampleKeys = {
   all: ['examples'] as const,
-  project: (projectId: number | string) => [...exampleKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...exampleKeys.all, 'workspace', projectId] as const,
   request: (
     projectId: number | string,
     collectionId: number | string,

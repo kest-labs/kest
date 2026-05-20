@@ -1,14 +1,13 @@
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { buildProjectKeysRoute } from '@/constants/routes';
+import { redirectLegacyProjectRoute } from '../_legacy/redirect';
 
-interface ProjectKeysPageProps {
+interface LegacyProjectKeysPageProps {
   params: Promise<{
     projectId: string;
   }>;
 }
 
-// 项目 Keys 页面入口。
-// 作用：在工作区一级侧栏中提供 CLI/Web 连接密钥生成页。
-export default async function ProjectKeysPage({ params }: ProjectKeysPageProps) {
+export default async function LegacyProjectKeysPage({ params }: LegacyProjectKeysPageProps) {
   const { projectId } = await params;
-  return <ProjectWorkspacePage projectId={projectId} module="keys" />;
+  redirectLegacyProjectRoute(buildProjectKeysRoute(projectId));
 }

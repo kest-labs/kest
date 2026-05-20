@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, tc *TestCasePO) error
 	GetByID(ctx context.Context, id string) (*TestCasePO, error)
+	GetByIDAndWorkspace(ctx context.Context, id string, workspaceID string) (*TestCasePO, error)
 	List(ctx context.Context, filter *ListFilter) ([]*TestCasePO, int64, error)
 	Update(ctx context.Context, tc *TestCasePO) error
 	Delete(ctx context.Context, id string) error
@@ -29,7 +30,7 @@ type Repository interface {
 
 // ListFilter represents the filter for listing test cases
 type ListFilter struct {
-	ProjectID *string
+	WorkspaceID string
 	APISpecID *string
 	Env       *string
 	Keyword   *string
@@ -64,9 +65,29 @@ func (r *repository) GetByID(ctx context.Context, id string) (*TestCasePO, error
 	return &tc, nil
 }
 
+// GetByIDAndWorkspace gets a test case by ID scoped to a workspace.
+func (r *repository) GetByIDAndWorkspace(ctx context.Context, id string, workspaceID string) (*TestCasePO, error) {
+	var tc TestCasePO
+	err := r.db.WithContext(ctx).
+		Where("test_cases.id = ?", id).
+		Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+		Where("api_specs.workspace_id = ?", workspaceID).
+		First(&tc).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &tc, nil
+}
+
 // List lists test cases with filtering and pagination
 func (r *repository) List(ctx context.Context, filter *ListFilter) ([]*TestCasePO, int64, error) {
-	query := r.db.WithContext(ctx).Model(&TestCasePO{})
+	query := r.db.WithContext(ctx).
+		Model(&TestCasePO{}).
+		Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+		Where("api_specs.workspace_id = ?", filter.WorkspaceID)
 
 	// Apply filters
 	if filter.APISpecID != nil {
@@ -101,7 +122,7 @@ func (r *repository) List(ctx context.Context, filter *ListFilter) ([]*TestCaseP
 	// Get results
 	var testCases []*TestCasePO
 	err := query.
-		Order("id DESC").
+		Order("test_cases.id DESC").
 		Limit(filter.PageSize).
 		Offset(offset).
 		Find(&testCases).Error
@@ -140,7 +161,12 @@ func (r *repository) CreateRun(ctx context.Context, run *TestRunPO) error {
 
 // ListRuns lists test run history for a test case
 func (r *repository) ListRuns(ctx context.Context, filter *ListRunsFilter) ([]*TestRunPO, int64, error) {
-	query := r.db.WithContext(ctx).Model(&TestRunPO{}).Where("test_case_id = ?", filter.TestCaseID)
+	query := r.db.WithContext(ctx).
+		Model(&TestRunPO{}).
+		Joins("JOIN test_cases ON test_cases.id = test_runs.test_case_id").
+		Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+		Where("test_case_id = ?", filter.TestCaseID).
+		Where("api_specs.workspace_id = ?", filter.WorkspaceID)
 
 	if filter.Status != nil && *filter.Status != "" {
 		query = query.Where("status = ?", *filter.Status)

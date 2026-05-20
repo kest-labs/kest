@@ -1354,10 +1354,10 @@ export function EnvironmentManagementPage({
     (environment) => Object.keys(environment.headers || {}).length > 0
   ).length;
 
-  const environmentsPath = buildApiPath(`/projects/${projectId}/environments`);
+  const environmentsPath = buildApiPath(`/workspaces/${projectId}/environments`);
   const activeEnvironmentPath = activeEnvironmentId
-    ? buildApiPath(`/projects/${projectId}/environments/${activeEnvironmentId}`)
-    : buildApiPath(`/projects/${projectId}/environments/:eid`);
+    ? buildApiPath(`/workspaces/${projectId}/environments/${activeEnvironmentId}`)
+    : buildApiPath(`/workspaces/${projectId}/environments/:eid`);
 
   // 打开创建弹窗时清空编辑态，避免沿用上一条环境记录的数据。
   const openCreateDialog = () => {

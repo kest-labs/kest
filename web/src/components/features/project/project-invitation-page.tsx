@@ -58,7 +58,7 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
   const handleAcceptInvitation = async () => {
     try {
       const result = await acceptInvitationMutation.mutateAsync(undefined);
-      router.replace(result.redirect_to || buildProjectApiSpecsRoute(result.project_id));
+      router.replace(result.redirect_to || buildProjectApiSpecsRoute(result.workspace_id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -152,10 +152,10 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                         {t('invitation.projectLabel')}
                       </p>
                       <h1 className="text-2xl font-medium tracking-normal">
-                        {invitation.project_name}
+                        {invitation.workspace_name}
                       </h1>
                       <p className="font-mono text-sm text-muted-foreground">
-                        {invitation.project_slug}
+                        {invitation.workspace_slug}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">

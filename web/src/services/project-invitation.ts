@@ -14,30 +14,33 @@ const normalizePayload = <T extends object>(payload: T) =>
   ) as T;
 
 export const projectInvitationService = {
-  list: (projectId: number | string) =>
-    request.get<ProjectInvitation[]>(`/projects/${projectId}/invitations`),
+  list: (workspaceId: number | string) =>
+    request.get<ProjectInvitation[]>(`/workspaces/${workspaceId}/invitations`),
 
-  create: (projectId: number | string, data: CreateProjectInvitationRequest) =>
-    request.post<ProjectInvitation>(`/projects/${projectId}/invitations`, normalizePayload(data)),
+  create: (workspaceId: number | string, data: CreateProjectInvitationRequest) =>
+    request.post<ProjectInvitation>(
+      `/workspaces/${workspaceId}/invitations`,
+      normalizePayload(data)
+    ),
 
-  revoke: (projectId: number | string, invitationId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/invitations/${invitationId}`),
+  revoke: (workspaceId: number | string, invitationId: number | string) =>
+    request.delete<void>(`/workspaces/${workspaceId}/invitations/${invitationId}`),
 
   listReceived: () =>
-    request.get<ReceivedProjectInvitation[]>('/project-invitations/received', {
+    request.get<ReceivedProjectInvitation[]>('/workspace-invitations/received', {
       skipErrorHandler: true,
     }),
 
   getDetail: (slug: string) =>
-    request.get<PublicProjectInvitation>(`/project-invitations/${slug}`, {
+    request.get<PublicProjectInvitation>(`/workspace-invitations/${slug}`, {
       skipErrorHandler: true,
     }),
 
   accept: (slug: string) =>
-    request.post<AcceptProjectInvitationResponse>(`/project-invitations/${slug}/accept`),
+    request.post<AcceptProjectInvitationResponse>(`/workspace-invitations/${slug}/accept`),
 
   reject: (slug: string) =>
-    request.post<RejectProjectInvitationResponse>(`/project-invitations/${slug}/reject`),
+    request.post<RejectProjectInvitationResponse>(`/workspace-invitations/${slug}/reject`),
 };
 
 export type ProjectInvitationService = typeof projectInvitationService;

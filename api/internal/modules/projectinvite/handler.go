@@ -7,23 +7,22 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
-	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
@@ -35,34 +34,51 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 	r.Group("", func(auth *router.Router) {
 		auth.WithMiddleware("auth")
 
+		auth.POST("/workspaces/:id/invitations", h.CreateInvitation).
+			Name("workspaces.invitations.create").
+			WhereUUIDOrNumber("id")
+		auth.GET("/workspaces/:id/invitations", h.ListInvitations).
+			Name("workspaces.invitations.list").
+			WhereUUIDOrNumber("id")
+		auth.DELETE("/workspaces/:id/invitations/:inviteId", h.DeleteInvitation).
+			Name("workspaces.invitations.delete").
+			WhereUUIDOrNumber("id").
+			WhereUUID("inviteId")
+
 		auth.POST("/projects/:id/invitations", h.CreateInvitation).
 			Name("projects.invitations.create").
-			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
+			WhereUUIDOrNumber("id")
 		auth.GET("/projects/:id/invitations", h.ListInvitations).
 			Name("projects.invitations.list").
-			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
+			WhereUUIDOrNumber("id")
 		auth.DELETE("/projects/:id/invitations/:inviteId", h.DeleteInvitation).
 			Name("projects.invitations.delete").
 			WhereUUIDOrNumber("id").
-			WhereUUID("inviteId").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
+			WhereUUID("inviteId")
+
+		auth.GET("/workspace-invitations/received", h.ListReceivedInvitations).
+			Name("workspace_invitations.received")
 		auth.GET("/project-invitations/received", h.ListReceivedInvitations).
 			Name("project_invitations.received")
 
+		auth.POST("/workspace-invitations/:slug/accept", h.AcceptInvitation).
+			Name("workspace_invitations.accept")
 		auth.POST("/project-invitations/:slug/accept", h.AcceptInvitation).
 			Name("project_invitations.accept")
+		auth.POST("/workspace-invitations/:slug/reject", h.RejectInvitation).
+			Name("workspace_invitations.reject")
 		auth.POST("/project-invitations/:slug/reject", h.RejectInvitation).
 			Name("project_invitations.reject")
 	})
 
+	r.GET("/workspace-invitations/:slug", h.GetInvitation).
+		Name("workspace_invitations.show")
 	r.GET("/project-invitations/:slug", h.GetInvitation).
 		Name("project_invitations.show")
 }
 
 func (h *Handler) CreateInvitation(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleAdmin)
 	if !ok {
 		return
 	}
@@ -78,7 +94,7 @@ func (h *Handler) CreateInvitation(c *gin.Context) {
 	}
 
 	baseURL := resolveInvitationBaseURL(c.Request)
-	invitation, err := h.service.CreateInvitation(c.Request.Context(), projectID, userID, &req)
+	invitation, err := h.service.CreateInvitation(c.Request.Context(), workspaceID, userID, &req)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrProjectInvitationInvalidRole),
@@ -95,13 +111,13 @@ func (h *Handler) CreateInvitation(c *gin.Context) {
 }
 
 func (h *Handler) ListInvitations(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleAdmin)
 	if !ok {
 		return
 	}
 
 	baseURL := resolveInvitationBaseURL(c.Request)
-	invitations, err := h.service.ListInvitations(c.Request.Context(), projectID)
+	invitations, err := h.service.ListInvitations(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -114,7 +130,7 @@ func (h *Handler) ListInvitations(c *gin.Context) {
 }
 
 func (h *Handler) DeleteInvitation(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleAdmin)
 	if !ok {
 		return
 	}
@@ -124,7 +140,7 @@ func (h *Handler) DeleteInvitation(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RevokeInvitation(c.Request.Context(), projectID, invitationID); err != nil {
+	if err := h.service.RevokeInvitation(c.Request.Context(), workspaceID, invitationID); err != nil {
 		if errors.Is(err, ErrProjectInvitationNotFound) {
 			response.NotFound(c, err.Error(), err)
 			return
@@ -230,4 +246,25 @@ func (h *Handler) RejectInvitation(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		response.Unauthorized(c, "Authentication required")
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }

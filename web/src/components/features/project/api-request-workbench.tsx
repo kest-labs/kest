@@ -101,6 +101,7 @@ import {
 import { useEnvironments } from '@/hooks/use-environments';
 import { useCreateProjectHistory } from '@/hooks/use-histories';
 import { useImportMarkdownCollection, useImportPostmanCollection } from '@/hooks/use-importer';
+import { useProject, useUpdateProject } from '@/hooks/use-projects';
 import { useT } from '@/i18n/client';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
@@ -128,7 +129,13 @@ import type {
   RunRequestResponse,
   UpdateRequestRequest,
 } from '@/types/request';
-import { cn } from '@/utils';
+import {
+  buildRuntimeVariableLayers,
+  cn,
+  findUnresolvedTemplateKeys,
+  resolveTemplateValue,
+  type RequestRuntimeVariableLayers,
+} from '@/utils';
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 type RequestSection =
@@ -190,6 +197,13 @@ interface DirectRequestExecutionPayload {
   historyBody?: string;
 }
 
+interface ExecutableRequestState {
+  variableLayers: RequestRuntimeVariableLayers;
+  executableUrl: string;
+  executableHeaders: Record<string, string>;
+  executablePayload: DirectRequestExecutionPayload;
+}
+
 interface ResponseDraft {
   status: number | null;
   statusLabel: string;
@@ -226,6 +240,7 @@ interface RequestPageTab {
     strictTls: boolean;
     persistCookies: boolean;
   };
+  runtimeVariables: KeyValueRow[];
   response: ResponseDraft;
   isSending: boolean;
 }
@@ -235,6 +250,7 @@ interface CollectionNode {
   name: string;
   colorTone: CollectionColorTone;
   isFolder: boolean;
+  settings?: Record<string, unknown>;
   requestIds: string[];
 }
 
@@ -258,6 +274,12 @@ interface ImportDialogTarget {
   kind: ImportDialogKind;
   parentCollectionId: string | null;
   parentCollectionName: string | null;
+}
+
+interface VariableDialogState {
+  scope: 'workspace' | 'collection';
+  collectionId?: string;
+  collectionName?: string;
 }
 
 type ImportDialogKind = 'postman' | 'markdown';
@@ -293,7 +315,6 @@ const COLLECTION_COLOR_DOT_CLASS_NAMES: Record<CollectionColorTone, string> = {
   pink: 'bg-bg-surface',
   coral: 'bg-bg-surface',
 };
-const REQUEST_TEMPLATE_PATTERN = /\{\{([^}]+)\}\}/g;
 const DEFAULT_JSON_BODY = '{\n  "ping": "hello"\n}';
 const DEFAULT_JSON_PLACEHOLDER = '{\n  \n}';
 const DEFAULT_GRAPHQL_QUERY = 'query Example {\n  \n}';
@@ -614,6 +635,7 @@ const createRequestPageTab = (
     strictTls: true,
     persistCookies: false,
   },
+  runtimeVariables: overrides.runtimeVariables ?? [createKeyValueRow()],
   response: overrides.response ?? createEmptyResponse(),
   isSending: overrides.isSending ?? false,
 });
@@ -999,7 +1021,10 @@ const toResponseDraft = (response: RunRequestResponse): ResponseDraft => ({
   sizeBytes: response.size || byteLength(response.body),
   headers: response.headers ?? {},
   body: formatResponseBody(response.body),
-  error: null,
+  error:
+    response.status >= 200 && response.status < 300
+      ? null
+      : `HTTP ${response.status}${response.status_text ? ` ${response.status_text}` : ''}`.trim(),
 });
 
 const canCaptureResponse = (response: ResponseDraft) => response.status !== null && !response.error;
@@ -1220,7 +1245,12 @@ const buildRequestRunHistoryPayload = ({
     request.url === PERSISTED_DRAFT_URL_PLACEHOLDER
       ? request.name
       : `${request.method} ${request.url}`;
-  const succeeded = !errorMessage;
+  const succeeded = !errorMessage && (response?.status ?? 0) >= 200 && (response?.status ?? 0) < 300;
+  const effectiveErrorMessage =
+    errorMessage ||
+    (response && !succeeded
+      ? `HTTP ${response.status}${response.status_text ? ` ${response.status_text}` : ''}`.trim()
+      : undefined);
 
   return {
     entity_type: 'request',
@@ -1228,7 +1258,7 @@ const buildRequestRunHistoryPayload = ({
     action: succeeded ? 'run' : 'run_failed',
     message: succeeded
       ? messages.executed(requestLabel, response?.status)
-      : messages.failed(requestLabel, errorMessage ?? ''),
+      : messages.failed(requestLabel, effectiveErrorMessage ?? ''),
     data: {
       request: {
         id: request.id,
@@ -1257,10 +1287,11 @@ const buildRequestRunHistoryPayload = ({
             headers: sanitizeHistoryHeaderMap(response.headers ?? {}),
             body: response.body,
             time: response.time,
+            duration_ms: response.time,
             size: response.size,
           }
         : undefined,
-      error: errorMessage || undefined,
+      error: effectiveErrorMessage || undefined,
     },
   };
 };
@@ -1294,48 +1325,6 @@ const isEnabledRequestKeyValue = (row: RequestKeyValue) =>
   row.enabled !== false && row.key.trim().length > 0;
 
 const headersToObject = (headers: Headers) => Object.fromEntries(Array.from(headers.entries()));
-
-const toEnvironmentVariableValue = (value: unknown) => {
-  if (value === null || value === undefined) {
-    return '';
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-
-  return JSON.stringify(value);
-};
-
-const buildExecutionVariables = (environment?: ProjectEnvironment | null) => {
-  const variables: Record<string, string> = {};
-
-  Object.entries(environment?.variables ?? {}).forEach(([key, value]) => {
-    variables[key] = toEnvironmentVariableValue(value);
-  });
-
-  const baseUrl = environment?.base_url?.trim();
-  if (baseUrl && !variables.base_url) {
-    variables.base_url = baseUrl;
-  }
-
-  return variables;
-};
-
-const resolveTemplateValue = (value: string, variables: Record<string, string>) =>
-  value.replace(REQUEST_TEMPLATE_PATTERN, (match, key: string) => {
-    const resolved = variables[key.trim()];
-    return resolved === undefined ? match : resolved;
-  });
-
-const findUnresolvedTemplateKeys = (value: string) =>
-  Array.from(
-    new Set(Array.from(value.matchAll(REQUEST_TEMPLATE_PATTERN)).map(match => match[1].trim()))
-  );
 
 const getMissingVariableMessage = (
   keys: string[],
@@ -1371,6 +1360,121 @@ const resolveExecutionPathParams = (
     Object.entries(pathParams).map(([key, value]) => [key, resolveTemplateValue(value, variables)])
   );
 
+const toRuntimeVariableRecord = (rows: KeyValueRow[]) =>
+  rows.reduce<Record<string, string>>((variables, row) => {
+    const key = row.key.trim();
+    if (!key) {
+      return variables;
+    }
+
+    variables[key] = row.value;
+    return variables;
+  }, {});
+
+const toVariableRows = (value: Record<string, unknown> | Record<string, string> | undefined) => {
+  if (!value || Object.keys(value).length === 0) {
+    return [createKeyValueRow()];
+  }
+
+  return [
+    ...Object.entries(value).map(([key, entryValue]) =>
+      createKeyValueRow(key, typeof entryValue === 'string' ? entryValue : JSON.stringify(entryValue))
+    ),
+    createKeyValueRow(),
+  ];
+};
+
+const getWorkspaceVariableSource = (projectSettings?: Record<string, unknown>) => {
+  if (!projectSettings) {
+    return undefined;
+  }
+
+  const runtime =
+    typeof projectSettings.runtime === 'object' && projectSettings.runtime
+      ? (projectSettings.runtime as Record<string, unknown>)
+      : null;
+
+  if (runtime && typeof runtime.variables === 'object' && runtime.variables) {
+    return runtime.variables;
+  }
+
+  if (typeof projectSettings.variables === 'object' && projectSettings.variables) {
+    return projectSettings.variables;
+  }
+
+  return undefined;
+};
+
+const getCollectionVariableSource = (collectionSettings?: Record<string, unknown>) => {
+  if (!collectionSettings) {
+    return undefined;
+  }
+
+  if (typeof collectionSettings.variables === 'object' && collectionSettings.variables) {
+    return collectionSettings.variables;
+  }
+
+  const runtime =
+    typeof collectionSettings.runtime === 'object' && collectionSettings.runtime
+      ? (collectionSettings.runtime as Record<string, unknown>)
+      : null;
+
+  if (runtime && typeof runtime.variables === 'object' && runtime.variables) {
+    return runtime.variables;
+  }
+
+  return undefined;
+};
+
+const collectMissingExecutionVariables = ({
+  request,
+  variables,
+  resolvedUrl,
+  resolvedHeaders,
+  resolvedBody,
+}: {
+  request: ProjectRequest;
+  variables: Record<string, string>;
+  resolvedUrl: string;
+  resolvedHeaders: Record<string, string>;
+  resolvedBody?: string;
+}) => {
+  const templateValues: string[] = [resolvedUrl];
+
+  request.query_params.filter(isEnabledRequestKeyValue).forEach(queryParam => {
+    templateValues.push(resolveTemplateValue(queryParam.key.trim(), variables));
+    templateValues.push(resolveTemplateValue(queryParam.value, variables));
+  });
+
+  Object.entries(resolvedHeaders).forEach(([key, value]) => {
+    templateValues.push(key, value);
+  });
+
+  if (request.auth?.type === 'basic' && request.auth.basic) {
+    templateValues.push(
+      resolveTemplateValue(request.auth.basic.username, variables),
+      resolveTemplateValue(request.auth.basic.password, variables)
+    );
+  }
+
+  if (request.auth?.type === 'bearer' && request.auth.bearer?.token) {
+    templateValues.push(resolveTemplateValue(request.auth.bearer.token, variables));
+  }
+
+  if (request.auth?.type === 'api-key' && request.auth.api_key) {
+    templateValues.push(
+      resolveTemplateValue(request.auth.api_key.key ?? '', variables),
+      resolveTemplateValue(request.auth.api_key.value ?? '', variables)
+    );
+  }
+
+  if (resolvedBody) {
+    templateValues.push(resolvedBody);
+  }
+
+  return findUnresolvedTemplateKeys(templateValues);
+};
+
 const applyPathParamsToUrl = (url: string, pathParams: Record<string, string>) => {
   let resolvedUrl = url;
 
@@ -1386,18 +1490,18 @@ const applyPathParamsToUrl = (url: string, pathParams: Record<string, string>) =
 
 const buildExecutableRequestUrl = (
   request: ProjectRequest,
-  environment: ProjectEnvironment | null | undefined,
+  variableLayers: RequestRuntimeVariableLayers,
   t: ProjectTranslationFn
 ) => {
-  const variables = buildExecutionVariables(environment);
+  const variables = variableLayers.merged;
   const resolvedPathParams = resolveExecutionPathParams(request.path_params ?? {}, variables);
   const resolvedUrl = resolveTemplateValue(
     applyPathParamsToUrl(request.url, resolvedPathParams),
     variables
   );
   const missingVariableMessage = getMissingVariableMessage(
-    findUnresolvedTemplateKeys(resolvedUrl),
-    environment,
+    findUnresolvedTemplateKeys([resolvedUrl]),
+    variableLayers.environment.base_url ? ({ name: '', base_url: variableLayers.environment.base_url } as ProjectEnvironment) : undefined,
     t
   );
   if (missingVariableMessage) {
@@ -1437,10 +1541,11 @@ const buildExecutableRequestUrl = (
 const buildDirectRequestHeaders = (
   request: ProjectRequest,
   environment: ProjectEnvironment | null | undefined,
+  variableLayers: RequestRuntimeVariableLayers,
   base64UnavailableMessage: string
 ) => {
   const headers = new Headers();
-  const variables = buildExecutionVariables(environment);
+  const variables = variableLayers.merged;
 
   Object.entries(environment?.headers ?? {}).forEach(([key, value]) => {
     headers.set(
@@ -1526,13 +1631,13 @@ const buildDirectRequestPayload = (
   request: ProjectRequest,
   tab: RequestPageTab,
   t: ProjectTranslationFn,
-  environment?: ProjectEnvironment | null
+  variableLayers: RequestRuntimeVariableLayers
 ): DirectRequestExecutionPayload => {
   if (request.method === 'GET' || request.method === 'HEAD') {
     return {};
   }
 
-  const variables = buildExecutionVariables(environment);
+  const variables = variableLayers.merged;
 
   switch (request.body_type) {
     case 'form-data': {
@@ -1645,6 +1750,63 @@ const buildDirectRequestPayload = (
       };
     }
   }
+};
+
+const buildExecutableRequestState = ({
+  request,
+  environment,
+  projectSettings,
+  collectionSettings,
+  runtimeVariables,
+  tab,
+  t,
+}: {
+  request: ProjectRequest;
+  environment: ProjectEnvironment | null | undefined;
+  projectSettings?: Record<string, unknown>;
+  collectionSettings?: Record<string, unknown>;
+  runtimeVariables: Record<string, string>;
+  tab: RequestPageTab;
+  t: ProjectTranslationFn;
+}): ExecutableRequestState => {
+  const variableLayers = buildRuntimeVariableLayers({
+    workspaceVariables: getWorkspaceVariableSource(projectSettings),
+    collectionVariables: getCollectionVariableSource(collectionSettings),
+    environment,
+    runtimeVariables,
+  });
+  const executableUrl = buildExecutableRequestUrl(request, variableLayers, t);
+  const executableHeaders = headersToObject(
+    buildDirectRequestHeaders(
+      request,
+      environment,
+      variableLayers,
+      t('collections.base64Unavailable')
+    )
+  );
+  const executablePayload = buildDirectRequestPayload(request, tab, t, variableLayers);
+  const missingVariableMessage = getMissingVariableMessage(
+    collectMissingExecutionVariables({
+      request,
+      variables: variableLayers.merged,
+      resolvedUrl: executableUrl,
+      resolvedHeaders: executableHeaders,
+      resolvedBody: executablePayload.body,
+    }),
+    environment,
+    t
+  );
+
+  if (missingVariableMessage) {
+    throw new Error(missingVariableMessage);
+  }
+
+  return {
+    variableLayers,
+    executableUrl,
+    executableHeaders,
+    executablePayload,
+  };
 };
 
 const flattenCollectionTree = (nodes: ProjectCollectionTreeNode[]): ProjectCollectionTreeNode[] =>
@@ -1773,6 +1935,7 @@ const buildWorkbenchStateFromServer = (
     name: collection.name,
     colorTone: getCollectionColorTone(index),
     isFolder: collection.is_folder,
+    settings: collection.settings,
     requestIds: (requestsByCollectionId[String(collection.id)] ?? []).map(
       request => `request-${request.id}`
     ),
@@ -1958,6 +2121,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
   const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [variableDialogState, setVariableDialogState] = useState<VariableDialogState | null>(null);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
   const [viewingExampleId, setViewingExampleId] = useState<number | string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<number | string | null>(null);
@@ -1970,6 +2134,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
+  const updateProjectMutation = useUpdateProject();
   const importPostmanMutation = useImportPostmanCollection(projectId);
   const importMarkdownMutation = useImportMarkdownCollection(projectId);
   const environmentsQuery = useEnvironments(projectId);
@@ -2078,6 +2243,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     () => (activeTabId ? (tabMap.get(activeTabId) ?? null) : (openTabs[0] ?? null)),
     [activeTabId, openTabs, tabMap]
   );
+  const projectQuery = useProject(projectId);
   const persistedActiveCollectionId = useMemo(() => {
     if (!activeTab?.collectionId || !isPersistedCollectionId(activeTab.collectionId)) {
       return null;
@@ -2135,6 +2301,17 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       null
     );
   }, [exampleDetailQuery.data, requestExamples, selectedExampleId]);
+  const collectionSettingsById = useMemo(
+    () =>
+      new Map(
+        serverCollections.map(collection => [
+          String(collection.id),
+          collection.settings ?? undefined,
+        ])
+      ),
+    [serverCollections]
+  );
+  const projectSettings = projectQuery.data?.settings;
   const scratchpadTabs = useMemo(() => tabs.filter(tab => !tab.collectionId), [tabs]);
 
   const collectionViews = useMemo(() => {
@@ -2727,6 +2904,9 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       const createdCollection = await createCollectionMutation.mutateAsync({
         name: getDefaultCollectionName(t, collectionNumber),
         description: '',
+        settings: {
+          variables: {},
+        },
         is_folder: false,
         sort_order: collections.length,
       });
@@ -2735,6 +2915,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         name: createdCollection.name,
         colorTone: getCollectionColorTone(collectionNumber - 1),
         isFolder: createdCollection.is_folder,
+        settings: createdCollection.settings,
         requestIds: [],
       };
 
@@ -2767,6 +2948,75 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       parentCollectionName: null,
     });
     setImportFile(null);
+  };
+
+  const openWorkspaceVariablesDialog = () => {
+    setVariableDialogState({ scope: 'workspace' });
+  };
+
+  const openCollectionVariablesDialog = (collection: CollectionNode) => {
+    setVariableDialogState({
+      scope: 'collection',
+      collectionId: collection.id,
+      collectionName: collection.name,
+    });
+  };
+
+  const handleSaveScopedVariables = async (rows: KeyValueRow[]) => {
+    const variables = toRuntimeVariableRecord(rows);
+
+    if (variableDialogState?.scope === 'workspace') {
+      const currentRuntime =
+        typeof projectSettings?.runtime === 'object' && projectSettings?.runtime
+          ? (projectSettings.runtime as Record<string, unknown>)
+          : {};
+
+      await updateProjectMutation.mutateAsync({
+        id: projectId,
+        data: {
+          settings: {
+            ...(projectSettings ?? {}),
+            runtime: {
+              ...currentRuntime,
+              variables,
+            },
+          },
+        } as never,
+      });
+      setVariableDialogState(null);
+      return;
+    }
+
+    if (variableDialogState?.scope === 'collection' && variableDialogState.collectionId) {
+      const currentCollection = collections.find(
+        collection => collection.id === variableDialogState.collectionId
+      );
+
+      await updateCollectionMutation.mutateAsync({
+        collectionId: variableDialogState.collectionId,
+        data: {
+          settings: {
+            ...(currentCollection?.settings ?? {}),
+            variables,
+          },
+        },
+      });
+
+      updateCollections(current =>
+        current.map(collection =>
+          collection.id === variableDialogState.collectionId
+            ? {
+                ...collection,
+                settings: {
+                  ...(collection.settings ?? {}),
+                  variables,
+                },
+              }
+            : collection
+        )
+      );
+      setVariableDialogState(null);
+    }
   };
 
   const closeImportDialog = (open: boolean) => {
@@ -3095,6 +3345,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     let executableHeaders: Record<string, string> = {};
     let executablePayload: DirectRequestExecutionPayload = {};
     let historyRequestBody: string | undefined;
+    const runtimeVariables = toRuntimeVariableRecord(tabSnapshot.runtimeVariables);
+    let collectionSettings: Record<string, unknown> | undefined;
 
     updateTab(tabId, tab => ({
       ...tab,
@@ -3110,6 +3362,10 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         tabSnapshot.collectionId && isPersistedCollectionId(tabSnapshot.collectionId)
           ? tabSnapshot.collectionId
           : null;
+      collectionSettings =
+        persistedCollectionId != null
+          ? collectionSettingsById.get(String(persistedCollectionId))
+          : undefined;
 
       if (persistedCollectionId) {
         persistedRequest = await persistTabRequest(tabSnapshot, {
@@ -3131,20 +3387,19 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         throw new Error(t('collections.workbench.persistCookiesUnavailable'));
       }
 
-      executableUrl = buildExecutableRequestUrl(runnableRequest, selectedEnvironment, t);
-      executableHeaders = headersToObject(
-        buildDirectRequestHeaders(
-          runnableRequest,
-          selectedEnvironment,
-          t('collections.base64Unavailable')
-        )
-      );
-      executablePayload = buildDirectRequestPayload(
-        runnableRequest,
-        tabSnapshot,
+      ({
+        executableUrl,
+        executableHeaders,
+        executablePayload,
+      } = buildExecutableRequestState({
+        request: runnableRequest,
+        environment: selectedEnvironment,
+        projectSettings,
+        collectionSettings,
+        runtimeVariables,
+        tab: tabSnapshot,
         t,
-        selectedEnvironment
-      );
+      }));
       const { historyBody: nextHistoryBody, ...runnerPayload } = executablePayload;
       historyRequestBody = nextHistoryBody;
       const response = await localRunnerService.execute({
@@ -3205,20 +3460,19 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
 
       if (persistedRequest) {
         if (!executableUrl) {
-          executableUrl = buildExecutableRequestUrl(persistedRequest, selectedEnvironment, t);
-          executableHeaders = headersToObject(
-            buildDirectRequestHeaders(
-              persistedRequest,
-              selectedEnvironment,
-              t('collections.base64Unavailable')
-            )
-          );
-          executablePayload = buildDirectRequestPayload(
-            persistedRequest,
-            tabSnapshot,
+          ({
+            executableUrl,
+            executableHeaders,
+            executablePayload,
+          } = buildExecutableRequestState({
+            request: persistedRequest,
+            environment: selectedEnvironment,
+            projectSettings,
+            collectionSettings,
+            runtimeVariables,
+            tab: tabSnapshot,
             t,
-            selectedEnvironment
-          );
+          }));
           historyRequestBody = executablePayload.historyBody;
         }
 
@@ -3497,6 +3751,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               selectedEnvironmentId={selectedEnvironmentId}
               isLoading={environmentsQuery.isLoading}
               onEnvironmentChange={setSelectedEnvironmentId}
+              onEditWorkspaceVariables={openWorkspaceVariablesDialog}
             />
           </div>
         </div>
@@ -3535,6 +3790,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
             onImportCollectionMarkdown={collection =>
               openCollectionImportDialog(collection, 'markdown')
             }
+            onEditCollectionVariables={openCollectionVariablesDialog}
             onDeleteRequest={setDeleteRequestTarget}
             onRenameCollection={openRenameCollectionDialog}
             onRenameRequest={openRenameRequestDialog}
@@ -3768,6 +4024,39 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         onFileChange={setImportFile}
         onSubmit={handleImportCollection}
       />
+      <VariableScopeDialog
+        open={variableDialogState !== null}
+        title={
+          variableDialogState?.scope === 'workspace'
+            ? t('collections.workbench.variables.workspaceDialogTitle')
+            : t('collections.workbench.variables.collectionDialogTitle', {
+                name: variableDialogState?.collectionName ?? '',
+              })
+        }
+        description={
+          variableDialogState?.scope === 'workspace'
+            ? t('collections.workbench.variables.workspaceDialogDescription')
+            : t('collections.workbench.variables.collectionDialogDescription')
+        }
+        initialRows={
+          variableDialogState?.scope === 'workspace'
+            ? toVariableRows(
+                getWorkspaceVariableSource(projectSettings) as Record<string, unknown> | undefined
+              )
+            : toVariableRows(
+                collections.find(
+                  collection => collection.id === variableDialogState?.collectionId
+                )?.settings?.variables as Record<string, unknown> | undefined
+              )
+        }
+        isSubmitting={updateProjectMutation.isPending || updateCollectionMutation.isPending}
+        onOpenChange={open => {
+          if (!open) {
+            setVariableDialogState(null);
+          }
+        }}
+        onSubmit={handleSaveScopedVariables}
+      />
     </main>
   );
 }
@@ -3799,6 +4088,7 @@ function CollectionsSidebar({
   onDeleteCollection,
   onImportCollectionPostman,
   onImportCollectionMarkdown,
+  onEditCollectionVariables,
   onDeleteRequest,
   onRenameCollection,
   onRenameRequest,
@@ -3831,6 +4121,7 @@ function CollectionsSidebar({
   onDeleteCollection: (collection: CollectionNode) => void;
   onImportCollectionPostman: (collection: CollectionNode) => void;
   onImportCollectionMarkdown: (collection: CollectionNode) => void;
+  onEditCollectionVariables: (collection: CollectionNode) => void;
   onDeleteRequest: (request: RequestPageTab) => void;
   onRenameCollection: (collection: CollectionNode) => void;
   onRenameRequest: (request: RequestPageTab) => void;
@@ -4048,6 +4339,7 @@ function CollectionsSidebar({
                     onCreateRequest={() => void onCreateRequest(collection)}
                     onImportPostman={() => onImportCollectionPostman(collection)}
                     onImportMarkdown={() => onImportCollectionMarkdown(collection)}
+                    onEditVariables={() => onEditCollectionVariables(collection)}
                     onRename={() => onRenameCollection(collection)}
                     onDelete={() => void onDeleteCollection(collection)}
                   />
@@ -4237,6 +4529,7 @@ function CollectionActionsMenu({
   onCreateRequest,
   onImportPostman,
   onImportMarkdown,
+  onEditVariables,
   onRename,
   onDelete,
 }: {
@@ -4249,6 +4542,7 @@ function CollectionActionsMenu({
   onCreateRequest: () => void;
   onImportPostman: () => void;
   onImportMarkdown: () => void;
+  onEditVariables: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -4287,6 +4581,9 @@ function CollectionActionsMenu({
         </DropdownMenuItem>
         <DropdownMenuItem>{t('collections.workbench.actions.export')}</DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={onEditVariables}>
+          {t('collections.workbench.variables.collectionAction')}
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
           {t('collections.workbench.actions.rename')}
         </DropdownMenuItem>
@@ -4295,6 +4592,66 @@ function CollectionActionsMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function VariableScopeDialog({
+  open,
+  title,
+  description,
+  initialRows,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  initialRows: KeyValueRow[];
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (rows: KeyValueRow[]) => Promise<void>;
+}) {
+  const t = useT('project');
+  const [rows, setRows] = useState<KeyValueRow[]>(initialRows);
+
+  useEffect(() => {
+    if (open) {
+      setRows(initialRows);
+    }
+  }, [initialRows, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+
+        <DialogBody>
+          <KeyValueEditor
+            title={t('common.variables')}
+            description={t('collections.workbench.variables.dialogEditorDescription')}
+            mode="table"
+            rows={rows}
+            bulkValue={rowsToBulkText(rows)}
+            onModeChange={() => {}}
+            onRowsChange={setRows}
+            onBulkChange={bulkValue => setRows(bulkTextToRows(bulkValue))}
+          />
+        </DialogBody>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="button" loading={isSubmitting} onClick={() => void onSubmit(rows)}>
+            {t('collections.workbench.actions.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -5580,11 +5937,13 @@ function EnvironmentSwitcher({
   selectedEnvironmentId,
   isLoading,
   onEnvironmentChange,
+  onEditWorkspaceVariables,
 }: {
   environments: ProjectEnvironment[];
   selectedEnvironmentId: string;
   isLoading: boolean;
   onEnvironmentChange: (value: string) => void;
+  onEditWorkspaceVariables: () => void;
 }) {
   const t = useT('project');
 
@@ -5621,6 +5980,15 @@ function EnvironmentSwitcher({
           ))}
         </SelectContent>
       </Select>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 rounded-full px-2"
+        onClick={onEditWorkspaceVariables}
+      >
+        {t('collections.workbench.variables.workspaceButton')}
+      </Button>
     </div>
   );
 }
@@ -5920,6 +6288,7 @@ function RequestSectionPanel({
       return (
         <SettingsPanel
           settings={tab.settings}
+          runtimeVariables={tab.runtimeVariables}
           onSettingChange={(key, value) =>
             onTabChange(current => ({
               ...current,
@@ -5927,6 +6296,12 @@ function RequestSectionPanel({
                 ...current.settings,
                 [key]: value,
               },
+            }))
+          }
+          onRuntimeVariablesChange={runtimeVariables =>
+            onTabChange(current => ({
+              ...current,
+              runtimeVariables,
             }))
           }
         />
@@ -6675,10 +7050,14 @@ function ScriptsPanel({
 
 function SettingsPanel({
   settings,
+  runtimeVariables,
   onSettingChange,
+  onRuntimeVariablesChange,
 }: {
   settings: RequestPageTab['settings'];
+  runtimeVariables: KeyValueRow[];
   onSettingChange: (key: keyof RequestPageTab['settings'], value: boolean) => void;
+  onRuntimeVariablesChange: (rows: KeyValueRow[]) => void;
 }) {
   const t = useT('project');
   const settingItems: Array<{
@@ -6704,23 +7083,36 @@ function SettingsPanel({
   ];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      {settingItems.map(item => (
-        <Card key={item.key} className="rounded-xl border-border-subtle bg-bg-canvas py-0">
-          <CardHeader className="border-b border-border-subtle py-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription className="mt-1">{item.description}</CardDescription>
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {settingItems.map(item => (
+          <Card key={item.key} className="rounded-xl border-border-subtle bg-bg-canvas py-0">
+            <CardHeader className="border-b border-border-subtle py-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle>{item.title}</CardTitle>
+                  <CardDescription className="mt-1">{item.description}</CardDescription>
+                </div>
+                <Switch
+                  checked={settings[item.key]}
+                  onCheckedChange={checked => onSettingChange(item.key, checked)}
+                />
               </div>
-              <Switch
-                checked={settings[item.key]}
-                onCheckedChange={checked => onSettingChange(item.key, checked)}
-              />
-            </div>
-          </CardHeader>
-        </Card>
-      ))}
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+
+      <KeyValueEditor
+        title={t('collections.workbench.settings.runtimeVariablesTitle')}
+        description={t('collections.workbench.settings.runtimeVariablesDescription')}
+        mode="table"
+        rows={runtimeVariables}
+        bulkValue={rowsToBulkText(runtimeVariables)}
+        onModeChange={() => {}}
+        onRowsChange={onRuntimeVariablesChange}
+        onBulkChange={bulkValue => onRuntimeVariablesChange(bulkTextToRows(bulkValue))}
+      />
     </div>
   );
 }
@@ -6795,13 +7187,6 @@ function ResponsePanel({
               {t('collections.workbench.response.sendingDescription')}
             </p>
           </div>
-        ) : response.error ? (
-          <div className="flex flex-1 flex-col justify-center rounded-xl border border-border-subtle bg-bg-surface p-6">
-            <p className="text-sm font-medium text-text-main">
-              {t('collections.workbench.response.errorTitle')}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-text-main">{response.error}</p>
-          </div>
         ) : response.status === null ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border-subtle bg-bg-soft text-center">
             <p className="text-base font-medium text-text-main">
@@ -6813,6 +7198,14 @@ function ResponsePanel({
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
+            {response.error ? (
+              <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                <p className="text-sm font-medium text-text-main">
+                  {t('collections.workbench.response.errorTitle')}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-text-main">{response.error}</p>
+              </div>
+            ) : null}
             {responseHeaders ? (
               <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">

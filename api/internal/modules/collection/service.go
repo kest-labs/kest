@@ -56,6 +56,7 @@ func (s *service) Create(ctx context.Context, req *CreateCollectionRequest) (*Co
 		Name:        req.Name,
 		Description: req.Description,
 		WorkspaceID: req.WorkspaceID,
+		Settings:    req.Settings,
 		ParentID:    parentID,
 		IsFolder:    req.IsFolder,
 		SortOrder:   req.SortOrder,
@@ -94,6 +95,9 @@ func (s *service) Update(ctx context.Context, id, workspaceID string, req *Updat
 	}
 	if req.Description != nil {
 		collection.Description = *req.Description
+	}
+	if req.Settings != nil {
+		collection.Settings = *req.Settings
 	}
 	if req.ParentID != nil {
 		parentID := normalizeParentID(req.ParentID)
@@ -237,6 +241,7 @@ func buildTree(collections []*Collection) []*CollectionTreeNode {
 			Name:        c.Name,
 			Description: c.Description,
 			WorkspaceID: c.WorkspaceID,
+			Settings:    c.Settings,
 			ParentID:    c.ParentID,
 			IsFolder:    c.IsFolder,
 			SortOrder:   c.SortOrder,

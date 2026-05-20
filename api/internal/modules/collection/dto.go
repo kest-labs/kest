@@ -7,6 +7,7 @@ type CreateCollectionRequest struct {
 	Name        string  `json:"name" binding:"required,min=1,max=100"`
 	Description string  `json:"description" binding:"max=500"`
 	WorkspaceID string  `json:"workspace_id"`
+	Settings    map[string]interface{} `json:"settings,omitempty"`
 	ParentID    *string `json:"parent_id,omitempty"`
 	IsFolder    bool    `json:"is_folder"`
 	SortOrder   int     `json:"sort_order"`
@@ -16,6 +17,7 @@ type CreateCollectionRequest struct {
 type UpdateCollectionRequest struct {
 	Name        *string `json:"name" binding:"omitempty,min=1,max=100"`
 	Description *string `json:"description" binding:"omitempty,max=500"`
+	Settings    *map[string]interface{} `json:"settings,omitempty"`
 	ParentID    *string `json:"parent_id,omitempty"`
 	SortOrder   *int    `json:"sort_order,omitempty"`
 }
@@ -32,6 +34,7 @@ type CollectionResponse struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	WorkspaceID string    `json:"workspace_id"`
+	Settings    map[string]interface{} `json:"settings,omitempty"`
 	ParentID    *string   `json:"parent_id,omitempty"`
 	IsFolder    bool      `json:"is_folder"`
 	SortOrder   int       `json:"sort_order"`
@@ -45,6 +48,7 @@ type CollectionTreeNode struct {
 	Name         string                `json:"name"`
 	Description  string                `json:"description"`
 	WorkspaceID  string                `json:"workspace_id"`
+	Settings     map[string]interface{} `json:"settings,omitempty"`
 	ParentID     *string               `json:"parent_id,omitempty"`
 	IsFolder     bool                  `json:"is_folder"`
 	SortOrder    int                   `json:"sort_order"`
@@ -62,6 +66,7 @@ func toResponse(c *Collection) *CollectionResponse {
 		Name:        c.Name,
 		Description: c.Description,
 		WorkspaceID: c.WorkspaceID,
+		Settings:    c.Settings,
 		ParentID:    c.ParentID,
 		IsFolder:    c.IsFolder,
 		SortOrder:   c.SortOrder,

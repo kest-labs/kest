@@ -9,22 +9,21 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/kest-labs/kest/api/internal/modules/member"
-	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/dbutil"
 )
 
 type Repository interface {
 	CreateInvitation(ctx context.Context, invitation *ProjectInvitation, tokenHash string) error
-	ListInvitationsByProject(ctx context.Context, projectID string) ([]*ProjectInvitation, error)
+	ListInvitationsByWorkspace(ctx context.Context, workspaceID string) ([]*ProjectInvitation, error)
 	ListInvitationsByInvitedUser(ctx context.Context, userID string) ([]*ProjectInvitation, error)
-	GetInvitationByProject(ctx context.Context, projectID, invitationID string) (*ProjectInvitation, error)
+	GetInvitationByWorkspace(ctx context.Context, workspaceID, invitationID string) (*ProjectInvitation, error)
 	GetInvitationBySlug(ctx context.Context, slug string) (*ProjectInvitation, error)
 	UpdateInvitation(ctx context.Context, invitation *ProjectInvitation) error
-	GetProjectSummary(ctx context.Context, projectID string) (*ProjectSummary, error)
+	GetWorkspaceSummary(ctx context.Context, workspaceID string) (*WorkspaceSummary, error)
 	AcceptInvitation(ctx context.Context, invitation *ProjectInvitation, userID string, acceptedAt time.Time) error
-	RevokeActiveInvitationsForUser(ctx context.Context, projectID, userID string) error
-	HasProjectMember(ctx context.Context, projectID, userID string) (bool, error)
+	RevokeActiveInvitationsForUser(ctx context.Context, workspaceID, userID string) error
+	HasWorkspaceMember(ctx context.Context, workspaceID, userID string) (bool, error)
 }
 
 type repository struct {
@@ -47,11 +46,11 @@ func (r *repository) CreateInvitation(ctx context.Context, invitation *ProjectIn
 	return nil
 }
 
-func (r *repository) ListInvitationsByProject(ctx context.Context, projectID string) ([]*ProjectInvitation, error) {
+func (r *repository) ListInvitationsByWorkspace(ctx context.Context, workspaceID string) ([]*ProjectInvitation, error) {
 	var poList []ProjectInvitationPO
 	if err := r.db.WithContext(ctx).
 		Preload("InvitedUser").
-		Where("project_id = ?", projectID).
+		Where("project_id = ?", workspaceID).
 		Order("created_at DESC").
 		Find(&poList).Error; err != nil {
 		return nil, err
@@ -84,14 +83,14 @@ func (r *repository) ListInvitationsByInvitedUser(
 	return result, nil
 }
 
-func (r *repository) GetInvitationByProject(
+func (r *repository) GetInvitationByWorkspace(
 	ctx context.Context,
-	projectID, invitationID string,
+	workspaceID, invitationID string,
 ) (*ProjectInvitation, error) {
 	var po ProjectInvitationPO
 	if err := r.db.WithContext(ctx).
 		Preload("InvitedUser").
-		Where("project_id = ? AND id = ?", projectID, invitationID).
+		Where("project_id = ? AND id = ?", workspaceID, invitationID).
 		First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -134,27 +133,27 @@ func (r *repository) UpdateInvitation(ctx context.Context, invitation *ProjectIn
 
 func (r *repository) RevokeActiveInvitationsForUser(
 	ctx context.Context,
-	projectID, userID string,
+	workspaceID, userID string,
 ) error {
 	return r.db.WithContext(ctx).
 		Model(&ProjectInvitationPO{}).
-		Where("project_id = ? AND invited_user_id = ? AND status = ?", projectID, userID, InvitationStatusActive).
+		Where("project_id = ? AND invited_user_id = ? AND status = ?", workspaceID, userID, InvitationStatusActive).
 		Updates(map[string]any{
 			"status":     InvitationStatusRevoked,
 			"updated_at": time.Now().UTC(),
 		}).Error
 }
 
-func (r *repository) GetProjectSummary(ctx context.Context, projectID string) (*ProjectSummary, error) {
-	var po project.ProjectPO
-	if err := dbutil.ByID(r.db.WithContext(ctx), projectID).First(&po).Error; err != nil {
+func (r *repository) GetWorkspaceSummary(ctx context.Context, workspaceID string) (*WorkspaceSummary, error) {
+	var po workspace.WorkspacePO
+	if err := dbutil.ByID(r.db.WithContext(ctx), workspaceID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	return &ProjectSummary{
+	return &WorkspaceSummary{
 		ID:   po.ID,
 		Name: po.Name,
 		Slug: po.Slug,
@@ -190,21 +189,23 @@ func (r *repository) AcceptInvitation(
 			return err
 		}
 
-		var existing member.ProjectMemberPO
-		if err := tx.Where("project_id = ? AND user_id = ?", current.ProjectID, userID).
+		var existing workspace.WorkspaceMemberPO
+		if err := tx.Where("workspace_id = ? AND user_id = ?", current.WorkspaceID, userID).
 			First(&existing).Error; err == nil {
 			return ErrProjectInvitationAlreadyMember
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 
-		projectMember := &member.ProjectMemberPO{
-			ProjectID: current.ProjectID,
-			UserID:    userID,
-			Role:      current.Role,
+		workspaceMember := &workspace.WorkspaceMemberPO{
+			WorkspaceID: current.WorkspaceID,
+			UserID:      userID,
+			Role:        current.Role,
+			InvitedBy:   current.CreatedBy,
+			JoinedAt:    acceptedAt,
 		}
-		if err := tx.Create(projectMember).Error; err != nil {
-			if looksLikeProjectMemberConflict(err) {
+		if err := tx.Create(workspaceMember).Error; err != nil {
+			if looksLikeWorkspaceMemberConflict(err) {
 				return ErrProjectInvitationAlreadyMember
 			}
 			return err
@@ -220,20 +221,20 @@ func (r *repository) AcceptInvitation(
 	})
 }
 
-func looksLikeProjectMemberConflict(err error) bool {
+func looksLikeWorkspaceMemberConflict(err error) bool {
 	if err == nil {
 		return false
 	}
 
 	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "unique") || strings.Contains(msg, "idx_project_user")
+	return strings.Contains(msg, "unique") || strings.Contains(msg, "idx_workspace_user")
 }
 
-func (r *repository) HasProjectMember(ctx context.Context, projectID, userID string) (bool, error) {
+func (r *repository) HasWorkspaceMember(ctx context.Context, workspaceID, userID string) (bool, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).
-		Model(&member.ProjectMemberPO{}).
-		Where("project_id = ? AND user_id = ?", projectID, userID).
+		Model(&workspace.WorkspaceMemberPO{}).
+		Where("workspace_id = ? AND user_id = ?", workspaceID, userID).
 		Count(&count).Error; err != nil {
 		return false, err
 	}

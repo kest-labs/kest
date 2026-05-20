@@ -10,32 +10,32 @@ import type { CreateProjectInvitationRequest } from '@/types/project-invitation'
 
 export const projectInvitationKeys = {
   all: ['project-invitations'] as const,
-  project: (projectId: number | string) =>
-    [...projectInvitationKeys.all, 'project', projectId] as const,
-  list: (projectId: number | string) =>
-    [...projectInvitationKeys.project(projectId), 'list'] as const,
+  workspace: (workspaceId: number | string) =>
+    [...projectInvitationKeys.all, 'workspace', workspaceId] as const,
+  list: (workspaceId: number | string) =>
+    [...projectInvitationKeys.workspace(workspaceId), 'list'] as const,
   received: () => [...projectInvitationKeys.all, 'received'] as const,
   details: () => [...projectInvitationKeys.all, 'detail'] as const,
   detail: (slug: string) => [...projectInvitationKeys.details(), slug] as const,
 };
 
-export function useProjectInvitations(projectId?: number | string, enabled = true) {
+export function useProjectInvitations(workspaceId?: number | string, enabled = true) {
   return useQuery({
-    queryKey: projectInvitationKeys.list(projectId ?? 'unknown'),
-    queryFn: () => projectInvitationService.list(projectId as number | string),
-    enabled: enabled && projectId !== undefined && projectId !== null && projectId !== '',
+    queryKey: projectInvitationKeys.list(workspaceId ?? 'unknown'),
+    queryFn: () => projectInvitationService.list(workspaceId as number | string),
+    enabled: enabled && workspaceId !== undefined && workspaceId !== null && workspaceId !== '',
   });
 }
 
-export function useCreateProjectInvitation(projectId: number | string) {
+export function useCreateProjectInvitation(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: (data: CreateProjectInvitationRequest) =>
-      projectInvitationService.create(projectId, data),
+      projectInvitationService.create(workspaceId, data),
     onSuccess: (invitation, variables) => {
-      queryClient.invalidateQueries({ queryKey: projectInvitationKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: projectInvitationKeys.workspace(workspaceId) });
       queryClient.setQueryData(projectInvitationKeys.detail(invitation.slug), invitation);
       toast.success(
         variables.invited_user_id
@@ -46,15 +46,15 @@ export function useCreateProjectInvitation(projectId: number | string) {
   });
 }
 
-export function useDeleteProjectInvitation(projectId: number | string) {
+export function useDeleteProjectInvitation(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: (invitationId: number | string) =>
-      projectInvitationService.revoke(projectId, invitationId),
+      projectInvitationService.revoke(workspaceId, invitationId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectInvitationKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: projectInvitationKeys.workspace(workspaceId) });
       toast.success(t.project('toasts.inviteLinkRevoked'));
     },
   });
@@ -90,8 +90,8 @@ export function useAcceptProjectInvitation(slug?: string) {
       }
       queryClient.invalidateQueries({ queryKey: projectInvitationKeys.received() });
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.projectStats(result.project_id) });
-      queryClient.invalidateQueries({ queryKey: memberKeys.project(result.project_id) });
+      queryClient.invalidateQueries({ queryKey: projectKeys.projectStats(result.workspace_id) });
+      queryClient.invalidateQueries({ queryKey: memberKeys.project(result.workspace_id) });
       toast.success(t.project('toasts.invitationAccepted'));
     },
   });

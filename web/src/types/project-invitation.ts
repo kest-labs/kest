@@ -11,7 +11,7 @@ export interface ProjectInvitationUserSummary {
 
 export interface ProjectInvitation {
   id: string;
-  project_id: string;
+  workspace_id: string;
   token_prefix: string;
   slug: string;
   role: ProjectInvitationRole;
@@ -36,9 +36,9 @@ export interface CreateProjectInvitationRequest {
 }
 
 export interface PublicProjectInvitation {
-  project_id: string;
-  project_name: string;
-  project_slug: string;
+  workspace_id: string;
+  workspace_name: string;
+  workspace_slug: string;
   role: ProjectInvitationRole;
   status: ProjectInvitationStatus;
   expires_at: string | null;
@@ -47,7 +47,7 @@ export interface PublicProjectInvitation {
 }
 
 export interface AcceptProjectInvitationResponse {
-  project_id: string;
+  workspace_id: string;
   member: {
     user_id: string;
     role: ProjectInvitationRole;
@@ -61,9 +61,9 @@ export interface RejectProjectInvitationResponse {
 
 export interface ReceivedProjectInvitation {
   id: string;
-  project_id: string;
-  project_name: string;
-  project_slug: string;
+  workspace_id: string;
+  workspace_name: string;
+  workspace_slug: string;
   slug: string;
   role: ProjectInvitationRole;
   status: ProjectInvitationStatus;

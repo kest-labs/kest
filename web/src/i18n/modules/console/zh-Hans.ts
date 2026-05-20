@@ -89,11 +89,11 @@ const messages = {
     note: '当前后端会对两个路由返回相似的认证用户结构，这里保留对 `info` 路由的独立展示，方便后续与正式公共信息接口对齐。',
   },
   dashboard: {
-    searchProjects: '搜索项目',
-    createProject: '创建项目',
-    projects: '项目',
-    unableToLoadProjects: '无法加载项目',
-    unableToLoadProjectsDescription: '控制台无法从当前 API 加载项目列表。',
+    searchProjects: '搜索 Workspace',
+    createProject: '创建 Workspace',
+    projects: 'Workspace',
+    unableToLoadProjects: '无法加载 Workspace',
+    unableToLoadProjectsDescription: '控制台无法从当前 API 加载 Workspace 列表。',
     selected: '已选择',
   },
 };

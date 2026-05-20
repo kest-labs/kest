@@ -14,31 +14,31 @@ import (
 )
 
 var (
-	ErrProjectInvitationNotFound      = errors.New("project invitation not found")
-	ErrProjectInvitationInvalidRole   = errors.New("invalid project invitation role")
+	ErrProjectInvitationNotFound      = errors.New("workspace invitation not found")
+	ErrProjectInvitationInvalidRole   = errors.New("invalid workspace invitation role")
 	ErrProjectInvitationInvalidUses   = errors.New("max_uses must be greater than or equal to 0")
 	ErrProjectInvitationInvalidExpiry = errors.New("expires_at must be in the future")
-	ErrProjectInvitationExpired       = errors.New("project invitation has expired")
-	ErrProjectInvitationRejected      = errors.New("project invitation has been rejected")
-	ErrProjectInvitationRevoked       = errors.New("project invitation has been revoked")
-	ErrProjectInvitationUsedUp        = errors.New("project invitation has no remaining uses")
-	ErrProjectInvitationAlreadyMember = errors.New("user is already a member of this project")
-	ErrProjectInvitationNotRecipient  = errors.New("project invitation is not assigned to this user")
+	ErrProjectInvitationExpired       = errors.New("workspace invitation has expired")
+	ErrProjectInvitationRejected      = errors.New("workspace invitation has been rejected")
+	ErrProjectInvitationRevoked       = errors.New("workspace invitation has been revoked")
+	ErrProjectInvitationUsedUp        = errors.New("workspace invitation has no remaining uses")
+	ErrProjectInvitationAlreadyMember = errors.New("user is already a member of this workspace")
+	ErrProjectInvitationNotRecipient  = errors.New("workspace invitation is not assigned to this user")
 )
 
 type Service interface {
 	CreateInvitation(
 		ctx context.Context,
-		projectID string,
+		workspaceID string,
 		createdBy string,
 		req *CreateProjectInvitationRequest,
 	) (*ProjectInvitationResponse, error)
-	ListInvitations(ctx context.Context, projectID string) ([]*ProjectInvitationResponse, error)
+	ListInvitations(ctx context.Context, workspaceID string) ([]*ProjectInvitationResponse, error)
 	ListReceivedInvitations(
 		ctx context.Context,
 		userID string,
 	) ([]*ReceivedProjectInvitationResponse, error)
-	RevokeInvitation(ctx context.Context, projectID, invitationID string) error
+	RevokeInvitation(ctx context.Context, workspaceID, invitationID string) error
 	GetInvitationDetail(
 		ctx context.Context,
 		slug string,
@@ -65,7 +65,7 @@ func NewService(repo Repository) Service {
 
 func (s *service) CreateInvitation(
 	ctx context.Context,
-	projectID string,
+	workspaceID string,
 	createdBy string,
 	req *CreateProjectInvitationRequest,
 ) (*ProjectInvitationResponse, error) {
@@ -94,7 +94,7 @@ func (s *service) CreateInvitation(
 	}
 
 	if invitedUserID != "" {
-		isMember, err := s.repo.HasProjectMember(ctx, projectID, invitedUserID)
+		isMember, err := s.repo.HasWorkspaceMember(ctx, workspaceID, invitedUserID)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func (s *service) CreateInvitation(
 		// Direct invitations are one-to-one and always single-use. Replace any
 		// previously pending direct invite so the recipient sees a single action.
 		maxUses = 1
-		if err := s.repo.RevokeActiveInvitationsForUser(ctx, projectID, invitedUserID); err != nil {
+		if err := s.repo.RevokeActiveInvitationsForUser(ctx, workspaceID, invitedUserID); err != nil {
 			return nil, err
 		}
 	}
@@ -121,7 +121,7 @@ func (s *service) CreateInvitation(
 	}
 
 	invitation := &ProjectInvitation{
-		ProjectID:     projectID,
+		WorkspaceID:   workspaceID,
 		TokenPrefix:   tokenPrefix,
 		Slug:          rawToken,
 		Role:          role,
@@ -141,9 +141,9 @@ func (s *service) CreateInvitation(
 
 func (s *service) ListInvitations(
 	ctx context.Context,
-	projectID string,
+	workspaceID string,
 ) ([]*ProjectInvitationResponse, error) {
-	invitations, err := s.repo.ListInvitationsByProject(ctx, projectID)
+	invitations, err := s.repo.ListInvitationsByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -172,22 +172,22 @@ func (s *service) ListReceivedInvitations(
 			continue
 		}
 
-		projectSummary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+		workspaceSummary, err := s.repo.GetWorkspaceSummary(ctx, invitation.WorkspaceID)
 		if err != nil {
 			return nil, err
 		}
-		if projectSummary == nil {
+		if workspaceSummary == nil {
 			continue
 		}
 
-		result = append(result, toReceivedProjectInvitationResponse(invitation, projectSummary, now))
+		result = append(result, toReceivedProjectInvitationResponse(invitation, workspaceSummary, now))
 	}
 
 	return result, nil
 }
 
-func (s *service) RevokeInvitation(ctx context.Context, projectID, invitationID string) error {
-	invitation, err := s.repo.GetInvitationByProject(ctx, projectID, invitationID)
+func (s *service) RevokeInvitation(ctx context.Context, workspaceID, invitationID string) error {
+	invitation, err := s.repo.GetInvitationByWorkspace(ctx, workspaceID, invitationID)
 	if err != nil {
 		return err
 	}
@@ -219,15 +219,15 @@ func (s *service) GetInvitationDetail(
 		return nil, ErrProjectInvitationNotFound
 	}
 
-	projectSummary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+	workspaceSummary, err := s.repo.GetWorkspaceSummary(ctx, invitation.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
-	if projectSummary == nil {
+	if workspaceSummary == nil {
 		return nil, ErrProjectInvitationNotFound
 	}
 
-	return toPublicProjectInvitationResponse(invitation, projectSummary, time.Now().UTC()), nil
+	return toPublicProjectInvitationResponse(invitation, workspaceSummary, time.Now().UTC()), nil
 }
 
 func (s *service) AcceptInvitation(
@@ -256,12 +256,12 @@ func (s *service) AcceptInvitation(
 	}
 
 	return &AcceptProjectInvitationResponse{
-		ProjectID: invitation.ProjectID,
+		WorkspaceID: invitation.WorkspaceID,
 		Member: AcceptedProjectInvitationMember{
 			UserID: userID,
 			Role:   invitation.Role,
 		},
-		RedirectTo: fmt.Sprintf("/project/%s", invitation.ProjectID),
+		RedirectTo: fmt.Sprintf("/workspace/%s/api-specs", invitation.WorkspaceID),
 	}, nil
 }
 

@@ -3,6 +3,7 @@ export interface ProjectCollection {
   name: string;
   description: string;
   project_id: number | string;
+  settings?: Record<string, unknown>;
   parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
@@ -33,6 +34,7 @@ export interface ProjectCollectionTreeNode {
   name: string;
   description: string;
   project_id: number | string;
+  settings?: Record<string, unknown>;
   parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
@@ -43,6 +45,7 @@ export interface ProjectCollectionTreeNode {
 export interface CreateCollectionRequest {
   name: string;
   description?: string;
+  settings?: Record<string, unknown>;
   parent_id?: number | string | null;
   is_folder?: boolean;
   sort_order?: number;
@@ -51,6 +54,7 @@ export interface CreateCollectionRequest {
 export interface UpdateCollectionRequest {
   name?: string;
   description?: string;
+  settings?: Record<string, unknown>;
   parent_id?: number | string | null;
   sort_order?: number;
 }

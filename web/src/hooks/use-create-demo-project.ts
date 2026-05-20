@@ -228,7 +228,7 @@ export function useCreateDemoProject() {
       queryClient.invalidateQueries({ queryKey: environmentKeys.project(project.id) });
       queryClient.invalidateQueries({ queryKey: collectionKeys.project(project.id) });
       queryClient.invalidateQueries({ queryKey: requestKeys.project(project.id) });
-      queryClient.invalidateQueries({ queryKey: testCaseKeys.project(project.id) });
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.workspace(project.id) });
       toast.success(t('toasts.projectCreated', { name: project.name }));
     },
     onError: () => {

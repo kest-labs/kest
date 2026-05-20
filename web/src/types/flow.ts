@@ -7,7 +7,7 @@ export interface FlowVariableMappingRule {
 
 export interface ProjectFlow {
   id: string;
-  project_id: string;
+  workspace_id: string;
   name: string;
   description: string;
   created_by: string;

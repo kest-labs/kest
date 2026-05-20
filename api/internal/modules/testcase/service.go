@@ -12,15 +12,15 @@ import (
 // Service defines the interface for test case business logic
 type Service interface {
 	CreateTestCase(ctx context.Context, req *CreateTestCaseRequest) (*TestCaseResponse, error)
-	GetTestCase(ctx context.Context, id string) (*TestCaseResponse, error)
+	GetTestCase(ctx context.Context, workspaceID, id string) (*TestCaseResponse, error)
 	ListTestCases(ctx context.Context, filter *ListFilter) ([]*TestCaseResponse, *PaginationMeta, error)
-	UpdateTestCase(ctx context.Context, id string, req *UpdateTestCaseRequest) (*TestCaseResponse, error)
-	DeleteTestCase(ctx context.Context, id string) error
-	DuplicateTestCase(ctx context.Context, id string, req *DuplicateRequest) (*TestCaseResponse, error)
+	UpdateTestCase(ctx context.Context, workspaceID, id string, req *UpdateTestCaseRequest) (*TestCaseResponse, error)
+	DeleteTestCase(ctx context.Context, workspaceID, id string) error
+	DuplicateTestCase(ctx context.Context, workspaceID, id string, req *DuplicateRequest) (*TestCaseResponse, error)
 	CreateTestCaseFromSpec(ctx context.Context, req *FromSpecRequest) (*TestCaseResponse, error)
-	RunTestCase(ctx context.Context, id string, req *RunTestCaseRequest) (*RunTestCaseResponse, error)
+	RunTestCase(ctx context.Context, workspaceID, id string, req *RunTestCaseRequest) (*RunTestCaseResponse, error)
 	ListRuns(ctx context.Context, filter *ListRunsFilter) ([]*TestRunResponse, *PaginationMeta, error)
-	GetRun(ctx context.Context, runID string) (*TestRunResponse, error)
+	GetRun(ctx context.Context, workspaceID, testCaseID, runID string) (*TestRunResponse, error)
 }
 
 // Runner defines the interface for executing test cases
@@ -47,6 +47,14 @@ func NewService(repo Repository, apiSpecRepo apispec.Repository, envRepo environ
 
 // CreateTestCase creates a new test case
 func (s *service) CreateTestCase(ctx context.Context, req *CreateTestCaseRequest) (*TestCaseResponse, error) {
+	spec, err := s.apiSpecRepo.GetSpecByIDAndWorkspace(ctx, req.APISpecID, req.WorkspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get api spec: %w", err)
+	}
+	if spec == nil {
+		return nil, fmt.Errorf("api spec not found")
+	}
+
 	tc, err := req.ToTestCasePO()
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert request: %w", err)
@@ -60,8 +68,8 @@ func (s *service) CreateTestCase(ctx context.Context, req *CreateTestCaseRequest
 }
 
 // GetTestCase gets a test case by ID
-func (s *service) GetTestCase(ctx context.Context, id string) (*TestCaseResponse, error) {
-	tc, err := s.repo.GetByID(ctx, id)
+func (s *service) GetTestCase(ctx context.Context, workspaceID, id string) (*TestCaseResponse, error) {
+	tc, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get test case: %w", err)
 	}
@@ -101,8 +109,8 @@ func (s *service) ListTestCases(ctx context.Context, filter *ListFilter) ([]*Tes
 }
 
 // UpdateTestCase updates a test case
-func (s *service) UpdateTestCase(ctx context.Context, id string, req *UpdateTestCaseRequest) (*TestCaseResponse, error) {
-	tc, err := s.repo.GetByID(ctx, id)
+func (s *service) UpdateTestCase(ctx context.Context, workspaceID, id string, req *UpdateTestCaseRequest) (*TestCaseResponse, error) {
+	tc, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get test case: %w", err)
 	}
@@ -159,8 +167,8 @@ func (s *service) UpdateTestCase(ctx context.Context, id string, req *UpdateTest
 }
 
 // DeleteTestCase deletes a test case
-func (s *service) DeleteTestCase(ctx context.Context, id string) error {
-	tc, err := s.repo.GetByID(ctx, id)
+func (s *service) DeleteTestCase(ctx context.Context, workspaceID, id string) error {
+	tc, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return err
 	}
@@ -172,8 +180,8 @@ func (s *service) DeleteTestCase(ctx context.Context, id string) error {
 }
 
 // DuplicateTestCase duplicates a test case
-func (s *service) DuplicateTestCase(ctx context.Context, id string, req *DuplicateRequest) (*TestCaseResponse, error) {
-	source, err := s.repo.GetByID(ctx, id)
+func (s *service) DuplicateTestCase(ctx context.Context, workspaceID, id string, req *DuplicateRequest) (*TestCaseResponse, error) {
+	source, err := s.repo.GetByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +214,7 @@ func (s *service) DuplicateTestCase(ctx context.Context, id string, req *Duplica
 
 // CreateTestCaseFromSpec creates a test case from an API spec
 func (s *service) CreateTestCaseFromSpec(ctx context.Context, req *FromSpecRequest) (*TestCaseResponse, error) {
-	spec, err := s.apiSpecRepo.GetSpecByID(ctx, req.APISpecID)
+	spec, err := s.apiSpecRepo.GetSpecByIDAndWorkspace(ctx, req.APISpecID, req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -262,8 +270,8 @@ func (s *service) CreateTestCaseFromSpec(ctx context.Context, req *FromSpecReque
 }
 
 // RunTestCase executes a test case
-func (s *service) RunTestCase(ctx context.Context, id string, req *RunTestCaseRequest) (*RunTestCaseResponse, error) {
-	tc, err := s.GetTestCase(ctx, id)
+func (s *service) RunTestCase(ctx context.Context, workspaceID, id string, req *RunTestCaseRequest) (*RunTestCaseResponse, error) {
+	tc, err := s.GetTestCase(ctx, workspaceID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -273,11 +281,9 @@ func (s *service) RunTestCase(ctx context.Context, id string, req *RunTestCaseRe
 
 	var env *environment.EnvironmentPO
 	if req.EnvID != nil {
-		env, _ = s.envRepo.GetByID(ctx, *req.EnvID)
+		env, _ = s.envRepo.GetByIDAndWorkspace(ctx, *req.EnvID, workspaceID)
 	} else if tc.Env != "" {
-		// Environment name lookup is workspace-scoped after the Workspace-first
-		// migration. Test case runs should pass EnvID until TestCase itself is
-		// migrated to carry workspace context.
+		env, _ = s.envRepo.GetByWorkspaceAndName(ctx, workspaceID, tc.Env)
 	}
 
 	if env != nil {
@@ -384,12 +390,22 @@ func (s *service) ListRuns(ctx context.Context, filter *ListRunsFilter) ([]*Test
 }
 
 // GetRun returns a single run record
-func (s *service) GetRun(ctx context.Context, runID string) (*TestRunResponse, error) {
+func (s *service) GetRun(ctx context.Context, workspaceID, testCaseID, runID string) (*TestRunResponse, error) {
 	run, err := s.repo.GetRunByID(ctx, runID)
 	if err != nil {
 		return nil, err
 	}
 	if run == nil {
+		return nil, fmt.Errorf("run not found")
+	}
+	if run.TestCaseID != testCaseID {
+		return nil, fmt.Errorf("run not found")
+	}
+	tc, err := s.repo.GetByIDAndWorkspace(ctx, run.TestCaseID, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if tc == nil {
 		return nil, fmt.Errorf("run not found")
 	}
 	return toTestRunResponse(run), nil
@@ -442,6 +458,7 @@ func (s *service) populateResponse(ctx context.Context, tc *TestCasePO) (*TestCa
 	// Fill Method and Path from APISpec
 	spec, err := s.apiSpecRepo.GetSpecByID(ctx, tc.APISpecID)
 	if err == nil && spec != nil {
+		resp.WorkspaceID = spec.WorkspaceID
 		resp.Method = spec.Method
 		resp.Path = spec.Path
 	}

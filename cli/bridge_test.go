@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestNormalizeBridgeOrigins(t *testing.T) {
@@ -155,5 +158,47 @@ func TestExecuteBridgeRequestSupportsBinaryBodyBase64(t *testing.T) {
 	}
 	if resp.Body != "done" {
 		t.Fatalf("expected response body done, got %q", resp.Body)
+	}
+}
+
+func TestExecuteBridgeRequestReturnsTimeoutError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(40 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("slow"))
+	}))
+	defer server.Close()
+
+	_, err := executeBridgeRequest(bridgeRunRequest{
+		Method:    http.MethodGet,
+		URL:       server.URL,
+		TimeoutMS: 5,
+	})
+	if err == nil {
+		t.Fatalf("expected timeout error")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "timeout") {
+		t.Fatalf("expected timeout error, got %v", err)
+	}
+}
+
+func TestExecuteBridgeRequestRejectsOversizedResponseBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, strings.Repeat("a", maxBridgeResponseBodyBytes+1))
+	}))
+	defer server.Close()
+
+	_, err := executeBridgeRequest(bridgeRunRequest{
+		Method: http.MethodGet,
+		URL:    server.URL,
+	})
+	if err == nil {
+		t.Fatalf("expected oversized response error")
+	}
+
+	expected := fmt.Sprintf("response body too large: %d bytes exceeds %d byte limit", maxBridgeResponseBodyBytes+1, maxBridgeResponseBodyBytes)
+	if err.Error() != expected {
+		t.Fatalf("expected %q, got %q", expected, err.Error())
 	}
 }
