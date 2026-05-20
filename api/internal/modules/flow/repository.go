@@ -76,7 +76,7 @@ func (r *repository) GetFlowByID(ctx context.Context, id string) (*FlowPO, error
 func (r *repository) ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error) {
 	var flows []*FlowPO
 	err := r.db.WithContext(ctx).
-		Where("project_id = ?", workspaceID).
+		Where("workspace_id = ?", workspaceID).
 		Order("created_at DESC").
 		Find(&flows).Error
 	return flows, err
