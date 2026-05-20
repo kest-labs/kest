@@ -101,7 +101,7 @@ import {
 import { useEnvironments } from '@/hooks/use-environments';
 import { useCreateProjectHistory } from '@/hooks/use-histories';
 import { useImportMarkdownCollection, useImportPostmanCollection } from '@/hooks/use-importer';
-import { useProject } from '@/hooks/use-projects';
+import { useProject, useUpdateProject } from '@/hooks/use-projects';
 import { useT } from '@/i18n/client';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
@@ -250,6 +250,7 @@ interface CollectionNode {
   name: string;
   colorTone: CollectionColorTone;
   isFolder: boolean;
+  settings?: Record<string, unknown>;
   requestIds: string[];
 }
 
@@ -273,6 +274,12 @@ interface ImportDialogTarget {
   kind: ImportDialogKind;
   parentCollectionId: string | null;
   parentCollectionName: string | null;
+}
+
+interface VariableDialogState {
+  scope: 'workspace' | 'collection';
+  collectionId?: string;
+  collectionName?: string;
 }
 
 type ImportDialogKind = 'postman' | 'markdown';
@@ -1364,6 +1371,19 @@ const toRuntimeVariableRecord = (rows: KeyValueRow[]) =>
     return variables;
   }, {});
 
+const toVariableRows = (value: Record<string, unknown> | Record<string, string> | undefined) => {
+  if (!value || Object.keys(value).length === 0) {
+    return [createKeyValueRow()];
+  }
+
+  return [
+    ...Object.entries(value).map(([key, entryValue]) =>
+      createKeyValueRow(key, typeof entryValue === 'string' ? entryValue : JSON.stringify(entryValue))
+    ),
+    createKeyValueRow(),
+  ];
+};
+
 const getWorkspaceVariableSource = (projectSettings?: Record<string, unknown>) => {
   if (!projectSettings) {
     return undefined;
@@ -1915,6 +1935,7 @@ const buildWorkbenchStateFromServer = (
     name: collection.name,
     colorTone: getCollectionColorTone(index),
     isFolder: collection.is_folder,
+    settings: collection.settings,
     requestIds: (requestsByCollectionId[String(collection.id)] ?? []).map(
       request => `request-${request.id}`
     ),
@@ -2100,6 +2121,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
   const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [variableDialogState, setVariableDialogState] = useState<VariableDialogState | null>(null);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
   const [viewingExampleId, setViewingExampleId] = useState<number | string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<number | string | null>(null);
@@ -2112,6 +2134,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const createCollectionMutation = useCreateCollection(projectId);
   const deleteCollectionMutation = useDeleteCollection(projectId);
   const updateCollectionMutation = useUpdateCollection(projectId);
+  const updateProjectMutation = useUpdateProject();
   const importPostmanMutation = useImportPostmanCollection(projectId);
   const importMarkdownMutation = useImportMarkdownCollection(projectId);
   const environmentsQuery = useEnvironments(projectId);
@@ -2881,6 +2904,9 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       const createdCollection = await createCollectionMutation.mutateAsync({
         name: getDefaultCollectionName(t, collectionNumber),
         description: '',
+        settings: {
+          variables: {},
+        },
         is_folder: false,
         sort_order: collections.length,
       });
@@ -2889,6 +2915,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         name: createdCollection.name,
         colorTone: getCollectionColorTone(collectionNumber - 1),
         isFolder: createdCollection.is_folder,
+        settings: createdCollection.settings,
         requestIds: [],
       };
 
@@ -2921,6 +2948,75 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       parentCollectionName: null,
     });
     setImportFile(null);
+  };
+
+  const openWorkspaceVariablesDialog = () => {
+    setVariableDialogState({ scope: 'workspace' });
+  };
+
+  const openCollectionVariablesDialog = (collection: CollectionNode) => {
+    setVariableDialogState({
+      scope: 'collection',
+      collectionId: collection.id,
+      collectionName: collection.name,
+    });
+  };
+
+  const handleSaveScopedVariables = async (rows: KeyValueRow[]) => {
+    const variables = toRuntimeVariableRecord(rows);
+
+    if (variableDialogState?.scope === 'workspace') {
+      const currentRuntime =
+        typeof projectSettings?.runtime === 'object' && projectSettings?.runtime
+          ? (projectSettings.runtime as Record<string, unknown>)
+          : {};
+
+      await updateProjectMutation.mutateAsync({
+        id: projectId,
+        data: {
+          settings: {
+            ...(projectSettings ?? {}),
+            runtime: {
+              ...currentRuntime,
+              variables,
+            },
+          },
+        } as never,
+      });
+      setVariableDialogState(null);
+      return;
+    }
+
+    if (variableDialogState?.scope === 'collection' && variableDialogState.collectionId) {
+      const currentCollection = collections.find(
+        collection => collection.id === variableDialogState.collectionId
+      );
+
+      await updateCollectionMutation.mutateAsync({
+        collectionId: variableDialogState.collectionId,
+        data: {
+          settings: {
+            ...(currentCollection?.settings ?? {}),
+            variables,
+          },
+        },
+      });
+
+      updateCollections(current =>
+        current.map(collection =>
+          collection.id === variableDialogState.collectionId
+            ? {
+                ...collection,
+                settings: {
+                  ...(collection.settings ?? {}),
+                  variables,
+                },
+              }
+            : collection
+        )
+      );
+      setVariableDialogState(null);
+    }
   };
 
   const closeImportDialog = (open: boolean) => {
@@ -3655,6 +3751,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
               selectedEnvironmentId={selectedEnvironmentId}
               isLoading={environmentsQuery.isLoading}
               onEnvironmentChange={setSelectedEnvironmentId}
+              onEditWorkspaceVariables={openWorkspaceVariablesDialog}
             />
           </div>
         </div>
@@ -3693,6 +3790,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
             onImportCollectionMarkdown={collection =>
               openCollectionImportDialog(collection, 'markdown')
             }
+            onEditCollectionVariables={openCollectionVariablesDialog}
             onDeleteRequest={setDeleteRequestTarget}
             onRenameCollection={openRenameCollectionDialog}
             onRenameRequest={openRenameRequestDialog}
@@ -3926,6 +4024,39 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
         onFileChange={setImportFile}
         onSubmit={handleImportCollection}
       />
+      <VariableScopeDialog
+        open={variableDialogState !== null}
+        title={
+          variableDialogState?.scope === 'workspace'
+            ? t('collections.workbench.variables.workspaceDialogTitle')
+            : t('collections.workbench.variables.collectionDialogTitle', {
+                name: variableDialogState?.collectionName ?? '',
+              })
+        }
+        description={
+          variableDialogState?.scope === 'workspace'
+            ? t('collections.workbench.variables.workspaceDialogDescription')
+            : t('collections.workbench.variables.collectionDialogDescription')
+        }
+        initialRows={
+          variableDialogState?.scope === 'workspace'
+            ? toVariableRows(
+                getWorkspaceVariableSource(projectSettings) as Record<string, unknown> | undefined
+              )
+            : toVariableRows(
+                collections.find(
+                  collection => collection.id === variableDialogState?.collectionId
+                )?.settings?.variables as Record<string, unknown> | undefined
+              )
+        }
+        isSubmitting={updateProjectMutation.isPending || updateCollectionMutation.isPending}
+        onOpenChange={open => {
+          if (!open) {
+            setVariableDialogState(null);
+          }
+        }}
+        onSubmit={handleSaveScopedVariables}
+      />
     </main>
   );
 }
@@ -3957,6 +4088,7 @@ function CollectionsSidebar({
   onDeleteCollection,
   onImportCollectionPostman,
   onImportCollectionMarkdown,
+  onEditCollectionVariables,
   onDeleteRequest,
   onRenameCollection,
   onRenameRequest,
@@ -3989,6 +4121,7 @@ function CollectionsSidebar({
   onDeleteCollection: (collection: CollectionNode) => void;
   onImportCollectionPostman: (collection: CollectionNode) => void;
   onImportCollectionMarkdown: (collection: CollectionNode) => void;
+  onEditCollectionVariables: (collection: CollectionNode) => void;
   onDeleteRequest: (request: RequestPageTab) => void;
   onRenameCollection: (collection: CollectionNode) => void;
   onRenameRequest: (request: RequestPageTab) => void;
@@ -4206,6 +4339,7 @@ function CollectionsSidebar({
                     onCreateRequest={() => void onCreateRequest(collection)}
                     onImportPostman={() => onImportCollectionPostman(collection)}
                     onImportMarkdown={() => onImportCollectionMarkdown(collection)}
+                    onEditVariables={() => onEditCollectionVariables(collection)}
                     onRename={() => onRenameCollection(collection)}
                     onDelete={() => void onDeleteCollection(collection)}
                   />
@@ -4395,6 +4529,7 @@ function CollectionActionsMenu({
   onCreateRequest,
   onImportPostman,
   onImportMarkdown,
+  onEditVariables,
   onRename,
   onDelete,
 }: {
@@ -4407,6 +4542,7 @@ function CollectionActionsMenu({
   onCreateRequest: () => void;
   onImportPostman: () => void;
   onImportMarkdown: () => void;
+  onEditVariables: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -4445,6 +4581,9 @@ function CollectionActionsMenu({
         </DropdownMenuItem>
         <DropdownMenuItem>{t('collections.workbench.actions.export')}</DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={onEditVariables}>
+          {t('collections.workbench.variables.collectionAction')}
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={isRenaming} onSelect={onRename}>
           {t('collections.workbench.actions.rename')}
         </DropdownMenuItem>
@@ -4453,6 +4592,66 @@ function CollectionActionsMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function VariableScopeDialog({
+  open,
+  title,
+  description,
+  initialRows,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  initialRows: KeyValueRow[];
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (rows: KeyValueRow[]) => Promise<void>;
+}) {
+  const t = useT('project');
+  const [rows, setRows] = useState<KeyValueRow[]>(initialRows);
+
+  useEffect(() => {
+    if (open) {
+      setRows(initialRows);
+    }
+  }, [initialRows, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+
+        <DialogBody>
+          <KeyValueEditor
+            title={t('common.variables')}
+            description={t('collections.workbench.variables.dialogEditorDescription')}
+            mode="table"
+            rows={rows}
+            bulkValue={rowsToBulkText(rows)}
+            onModeChange={() => {}}
+            onRowsChange={setRows}
+            onBulkChange={bulkValue => setRows(bulkTextToRows(bulkValue))}
+          />
+        </DialogBody>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="button" loading={isSubmitting} onClick={() => void onSubmit(rows)}>
+            {t('collections.workbench.actions.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -5738,11 +5937,13 @@ function EnvironmentSwitcher({
   selectedEnvironmentId,
   isLoading,
   onEnvironmentChange,
+  onEditWorkspaceVariables,
 }: {
   environments: ProjectEnvironment[];
   selectedEnvironmentId: string;
   isLoading: boolean;
   onEnvironmentChange: (value: string) => void;
+  onEditWorkspaceVariables: () => void;
 }) {
   const t = useT('project');
 
@@ -5779,6 +5980,15 @@ function EnvironmentSwitcher({
           ))}
         </SelectContent>
       </Select>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 rounded-full px-2"
+        onClick={onEditWorkspaceVariables}
+      >
+        {t('collections.workbench.variables.workspaceButton')}
+      </Button>
     </div>
   );
 }

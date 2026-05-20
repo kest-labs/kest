@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -14,7 +15,10 @@ type testWorkspaceRepo struct {
 }
 
 func (r *testWorkspaceRepo) Create(workspace *WorkspacePO) error { return nil }
-func (r *testWorkspaceRepo) Update(workspace *WorkspacePO) error { return nil }
+func (r *testWorkspaceRepo) Update(workspace *WorkspacePO) error {
+	r.workspace = workspace
+	return nil
+}
 func (r *testWorkspaceRepo) Delete(id string) error              { return nil }
 func (r *testWorkspaceRepo) FindByID(id string) (*WorkspacePO, error) {
 	if r.workspace == nil || r.workspace.ID != id {
@@ -188,5 +192,49 @@ func TestValidateCLITokenRejectsWorkspaceMismatchScopeMismatchAndExpiry(t *testi
 	repo.token.ExpiresAt = nil
 	if _, _, err := svc.ValidateCLIToken(context.Background(), "12", "kest_pat_example", []string{CLITokenScopeCollectionRead}); err != ErrCLITokenScopeDenied {
 		t.Fatalf("expected ErrCLITokenScopeDenied, got %v", err)
+	}
+}
+
+func TestUpdateWorkspacePersistsSettings(t *testing.T) {
+	repo := &testWorkspaceRepo{
+		workspace: &WorkspacePO{
+			ID:         "12",
+			Name:       "Catalog Workspace",
+			OwnerID:    "7",
+			Visibility: VisibilityTeam,
+		},
+	}
+	svc := NewService(repo)
+	settings := map[string]interface{}{
+		"runtime": map[string]interface{}{
+			"variables": map[string]interface{}{
+				"base_url": "https://api.example.com",
+				"token":    "secret",
+			},
+		},
+	}
+
+	workspace, err := svc.UpdateWorkspace("12", &UpdateWorkspaceRequest{
+		Settings: &settings,
+	}, "7", false)
+	if err != nil {
+		t.Fatalf("UpdateWorkspace returned error: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	if err := json.Unmarshal([]byte(repo.workspace.Settings), &decoded); err != nil {
+		t.Fatalf("expected persisted settings JSON, got %v", err)
+	}
+
+	if workspace.Settings == nil {
+		t.Fatalf("expected domain workspace settings to be populated")
+	}
+	runtime, ok := workspace.Settings["runtime"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected runtime settings map, got %#v", workspace.Settings["runtime"])
+	}
+	variables, ok := runtime["variables"].(map[string]interface{})
+	if !ok || variables["base_url"] != "https://api.example.com" {
+		t.Fatalf("expected runtime variables to round-trip, got %#v", runtime["variables"])
 	}
 }

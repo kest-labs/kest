@@ -57,6 +57,7 @@ const toUpdateWorkspacePayload = (data: UpdateProjectRequest) =>
     name: data.name,
     visibility: data.visibility,
     description: data.description,
+    settings: data.settings,
   });
 
 // 项目服务层。

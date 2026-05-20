@@ -875,6 +875,18 @@ const messages: ProjectMessages = {
         runtimeVariablesDescription:
           'Provide request-scoped overrides here. These values win over environment, collection, and workspace variables for the next send.',
       },
+      variables: {
+        workspaceButton: 'Workspace vars',
+        collectionAction: 'Edit variables',
+        workspaceDialogTitle: 'Edit workspace variables',
+        workspaceDialogDescription:
+          'These variables apply across the whole workspace unless a collection, environment, or runtime override replaces them.',
+        collectionDialogTitle: 'Edit variables for {name}',
+        collectionDialogDescription:
+          'These variables apply to requests inside this collection unless environment or runtime overrides replace them.',
+        dialogEditorDescription:
+          'Use plain string values here. Runtime overrides still take highest priority when sending a request.',
+      },
       examples: {
         nameRequired: 'Example name is required.',
         saveDialogTitle: 'Save Request Example',

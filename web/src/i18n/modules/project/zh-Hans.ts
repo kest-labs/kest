@@ -817,6 +817,18 @@ const messages = {
         runtimeVariablesDescription:
           '在这里填写请求级临时覆盖值。下一次发送时，它们的优先级高于 environment、collection 和 workspace 变量。',
       },
+      variables: {
+        workspaceButton: '工作区变量',
+        collectionAction: '编辑变量',
+        workspaceDialogTitle: '编辑工作区变量',
+        workspaceDialogDescription:
+          '这些变量会作用于整个工作区，除非被 collection、environment 或 runtime 覆盖。',
+        collectionDialogTitle: '编辑 {name} 的变量',
+        collectionDialogDescription:
+          '这些变量会作用于当前 collection 下的请求，除非被 environment 或 runtime 覆盖。',
+        dialogEditorDescription:
+          '这里先使用纯字符串值。发送请求时，runtime overrides 仍然拥有最高优先级。',
+      },
       examples: {
         nameRequired: '示例名称是必填项。',
         saveDialogTitle: '保存请求示例',

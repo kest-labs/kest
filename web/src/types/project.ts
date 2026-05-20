@@ -98,6 +98,7 @@ export interface UpdateProjectRequest {
   status?: ProjectStatus;
   visibility?: WorkspaceVisibility;
   description?: string;
+  settings?: Record<string, unknown>;
 }
 
 export interface DeleteProjectResponse {

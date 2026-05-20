@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -141,6 +142,13 @@ func (s *service) UpdateWorkspace(id string, req *UpdateWorkspaceRequest, userID
 	}
 	if req.Visibility != nil {
 		workspace.Visibility = *req.Visibility
+	}
+	if req.Settings != nil {
+		settingsBytes, err := json.Marshal(req.Settings)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal workspace settings: %w", err)
+		}
+		workspace.Settings = string(settingsBytes)
 	}
 
 	if err := s.repo.Update(workspace); err != nil {
