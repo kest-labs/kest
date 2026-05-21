@@ -248,6 +248,7 @@ func TestParseMarkdownFileExposesStructuredEndpointMetadata(t *testing.T) {
 
 type stubCollectionService struct {
 	created   []*collection.CreateCollectionRequest
+	deleted   []string
 	nextID    int
 	createErr error
 }
@@ -280,7 +281,8 @@ func (s *stubCollectionService) Update(context.Context, string, string, *collect
 	return nil, nil
 }
 
-func (s *stubCollectionService) Delete(context.Context, string, string) error {
+func (s *stubCollectionService) Delete(_ context.Context, id, _ string) error {
+	s.deleted = append(s.deleted, id)
 	return nil
 }
 
@@ -297,11 +299,19 @@ func (s *stubCollectionService) Move(context.Context, string, string, *collectio
 }
 
 type stubRequestService struct {
-	created []*request.CreateRequestRequest
-	nextID  int
+	created      []*request.CreateRequestRequest
+	deleted      []string
+	nextID       int
+	createErr    error
+	failOnCreate int
 }
 
 func (s *stubRequestService) Create(_ context.Context, _ string, req *request.CreateRequestRequest) (*request.Request, error) {
+	nextID := s.nextID + 1
+	if s.createErr != nil && (s.failOnCreate == 0 || s.failOnCreate == nextID) {
+		return nil, s.createErr
+	}
+
 	s.nextID++
 	s.created = append(s.created, cloneCreateRequestRequest(req))
 	id := stringID(s.nextID)
@@ -329,7 +339,12 @@ func (s *stubRequestService) Update(context.Context, string, string, string, *re
 	return nil, nil
 }
 
-func (s *stubRequestService) Delete(context.Context, string, string, string) error {
+func (s *stubRequestService) GenDoc(context.Context, string, string, string, string) (*request.Request, error) {
+	return nil, nil
+}
+
+func (s *stubRequestService) Delete(_ context.Context, id, _ string, _ string) error {
+	s.deleted = append(s.deleted, id)
 	return nil
 }
 

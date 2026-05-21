@@ -35,6 +35,11 @@ type MarkdownImportModuleResult struct {
 	RequestCount int    `json:"request_count"`
 }
 
+type createdMarkdownRequest struct {
+	ID           string
+	CollectionID string
+}
+
 type markdownDocument struct {
 	Title        string
 	BaseURL      string
@@ -155,6 +160,12 @@ func (s *service) importMarkdownDocument(
 		RootFolderName: rootFolder.Name,
 		Modules:        make([]MarkdownImportModuleResult, 0, len(doc.Modules)),
 	}
+	createdRequests := make([]createdMarkdownRequest, 0)
+
+	fail := func(err error) (*MarkdownImportResult, error) {
+		s.cleanupMarkdownImport(ctx, workspaceID, rootFolder.ID, createdRequests)
+		return nil, err
+	}
 
 	for moduleIndex, module := range doc.Modules {
 		moduleReq := &collection.CreateCollectionRequest{
@@ -167,7 +178,7 @@ func (s *service) importMarkdownDocument(
 
 		moduleCollection, err := s.collectionService.Create(ctx, moduleReq)
 		if err != nil {
-			return nil, err
+			return fail(err)
 		}
 
 		moduleResult := MarkdownImportModuleResult{
@@ -190,8 +201,15 @@ func (s *service) importMarkdownDocument(
 				SortOrder:    requestIndex,
 			}
 
-			if _, err := s.requestService.Create(ctx, workspaceID, req); err != nil {
-				return nil, err
+			createdRequest, err := s.requestService.Create(ctx, workspaceID, req)
+			if err != nil {
+				return fail(err)
+			}
+			if createdRequest != nil && createdRequest.ID != "" {
+				createdRequests = append(createdRequests, createdMarkdownRequest{
+					ID:           createdRequest.ID,
+					CollectionID: moduleCollection.ID,
+				})
 			}
 
 			moduleResult.RequestCount++
@@ -203,6 +221,25 @@ func (s *service) importMarkdownDocument(
 	}
 
 	return result, nil
+}
+
+func (s *service) cleanupMarkdownImport(
+	ctx context.Context,
+	workspaceID string,
+	rootFolderID string,
+	createdRequests []createdMarkdownRequest,
+) {
+	for index := len(createdRequests) - 1; index >= 0; index-- {
+		createdRequest := createdRequests[index]
+		if createdRequest.ID == "" || createdRequest.CollectionID == "" {
+			continue
+		}
+		_ = s.requestService.Delete(ctx, createdRequest.ID, createdRequest.CollectionID, workspaceID)
+	}
+
+	if rootFolderID != "" {
+		_ = s.collectionService.Delete(ctx, rootFolderID, workspaceID)
+	}
 }
 
 func parseMarkdownDocument(filename string, content []byte, baseURLOverride string) (*markdownDocument, error) {

@@ -532,6 +532,45 @@ func TestImportMarkdownPropagatesInvalidParentError(t *testing.T) {
 	}
 }
 
+func TestImportMarkdownCleansUpCreatedResourcesWhenRequestCreateFails(t *testing.T) {
+	requestCreateErr := errors.New("request create failed")
+	collectionService := &stubCollectionService{}
+	requestService := &stubRequestService{createErr: requestCreateErr, failOnCreate: 2}
+	service := NewService(collectionService, requestService).(*service)
+
+	doc := &markdownDocument{
+		Title: "Categories API",
+		Modules: []markdownModule{
+			{
+				Name: "Categories",
+				Endpoints: []markdownEndpoint{
+					{
+						Name:   "List categories",
+						Method: "GET",
+						URL:    "{{base_url}}/categories",
+					},
+					{
+						Name:   "Create category",
+						Method: "POST",
+						URL:    "{{base_url}}/categories",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := service.importMarkdownDocument(context.Background(), "1", "", doc)
+	if !errors.Is(err, requestCreateErr) {
+		t.Fatalf("expected request create error, got %v", err)
+	}
+	if len(requestService.deleted) != 1 || requestService.deleted[0] != "1" {
+		t.Fatalf("expected created request to be cleaned up, got %#v", requestService.deleted)
+	}
+	if len(collectionService.deleted) != 1 || collectionService.deleted[0] != "1" {
+		t.Fatalf("expected root collection cleanup, got %#v", collectionService.deleted)
+	}
+}
+
 func TestImportMarkdownAlwaysAppendsRequestsOnRepeatedImport(t *testing.T) {
 	doc := &markdownDocument{
 		Title: "API 文档",
