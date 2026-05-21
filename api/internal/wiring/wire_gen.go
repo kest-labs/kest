@@ -71,7 +71,7 @@ func InitApplication() (*app.Application, error) {
 	workspaceService := workspace.NewService(workspaceRepository)
 	workspaceHandler := workspace.NewHandler(workspaceService)
 	projectRepository := project.NewRepository(db)
-	projectService := project.NewService(projectRepository, memberService)
+	projectService := project.NewService(projectRepository, memberService, workspaceService)
 	projectinviteRepository := projectinvite.NewRepository(db)
 	projectinviteService := projectinvite.NewService(projectinviteRepository)
 	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)

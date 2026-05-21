@@ -48,7 +48,7 @@ func TestUpdateProjectAppliesEditableFields(t *testing.T) {
 			Status:   1,
 		},
 	}
-	svc := NewService(repo, nil)
+	svc := NewService(repo, nil, nil)
 	inactive := 0
 
 	project, err := svc.Update(context.Background(), "12", &UpdateProjectRequest{

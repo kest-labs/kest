@@ -16,22 +16,25 @@ type UpdateProjectRequest struct {
 
 // ProjectResponse is the response for project endpoints
 type ProjectResponse struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Slug      string `json:"slug"`
-	Platform  string `json:"platform"`
-	Status    int    `json:"status"`
-	CreatedAt string `json:"created_at"`
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Platform    string `json:"platform"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // ProjectListResponse is the response for listing projects
 type ProjectListResponse struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	Platform string `json:"platform"`
-	Role     string `json:"role"`
-	Status   int    `json:"status"`
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Platform    string `json:"platform"`
+	Role        string `json:"role"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // toResponse converts Project to ProjectResponse
@@ -40,12 +43,13 @@ func toResponse(p *Project) *ProjectResponse {
 		return nil
 	}
 	return &ProjectResponse{
-		ID:        p.ID,
-		Name:      p.Name,
-		Slug:      p.Slug,
-		Platform:  p.Platform,
-		Status:    p.Status,
-		CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:          p.ID,
+		WorkspaceID: p.WorkspaceID,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Platform:    p.Platform,
+		Status:      p.Status,
+		CreatedAt:   p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 
@@ -55,12 +59,14 @@ func toListResponse(p *Project) *ProjectListResponse {
 		return nil
 	}
 	return &ProjectListResponse{
-		ID:       p.ID,
-		Name:     p.Name,
-		Slug:     p.Slug,
-		Platform: p.Platform,
-		Role:     p.Role,
-		Status:   p.Status,
+		ID:          p.ID,
+		WorkspaceID: p.WorkspaceID,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Platform:    p.Platform,
+		Role:        p.Role,
+		Status:      p.Status,
+		CreatedAt:   p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 

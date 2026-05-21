@@ -134,9 +134,18 @@ func (r *repository) List(ctx context.Context, userID string, offset, limit int)
 func (r *repository) GetStats(ctx context.Context, projectID string) (*ProjectStats, error) {
 	stats := &ProjectStats{}
 	db := r.db.WithContext(ctx)
+	project, err := r.GetByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
 
 	db.Table("api_flows").Where("project_id = ?", projectID).Count(&stats.FlowCount)
 	db.Table("project_members").Where("project_id = ?", projectID).Count(&stats.MemberCount)
+	if project != nil && project.WorkspaceID != "" {
+		db.Table("api_specs").Where("workspace_id = ?", project.WorkspaceID).Count(&stats.APISpecCount)
+		db.Table("environments").Where("workspace_id = ?", project.WorkspaceID).Count(&stats.EnvironmentCount)
+		db.Table("api_categories").Where("workspace_id = ?", project.WorkspaceID).Count(&stats.CategoryCount)
+	}
 
 	return stats, nil
 }
