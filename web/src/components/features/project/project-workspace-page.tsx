@@ -156,6 +156,7 @@ import { useGenerateProjectCliToken, useProject } from '@/hooks/use-projects';
 import type {
   ApiSpec,
   ApiSpecAIDraftSpec,
+  ApiSpecMarkdownDraftPreviewItem,
   ImportApiSpecMarkdownDraftResponse,
   ApiSpecExportFormat,
   ApiSpecLanguage,
@@ -2010,9 +2011,9 @@ function ApiSpecsWorkspaceSection({
   };
 
   const handleImportAllMarkdownDrafts = async (
-    preview: ImportApiSpecMarkdownDraftResponse
+    drafts: ApiSpecMarkdownDraftPreviewItem[]
   ) => {
-    const specs: CreateApiSpecRequest[] = preview.drafts.map(item =>
+    const specs: CreateApiSpecRequest[] = drafts.map(item =>
       convertMarkdownDraftToCreateSpecRequest(item.draft)
     );
 

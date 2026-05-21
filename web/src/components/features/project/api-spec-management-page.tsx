@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Bot,
@@ -35,6 +35,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ActionMenu, type ActionMenuItem } from '@/components/features/project/action-menu';
 import {
   Dialog,
@@ -201,6 +202,8 @@ interface BatchGenDraft {
 interface AiActionDraft {
   lang: ApiSpecLanguage;
 }
+
+const MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD = 0.8;
 
 // 项目平台显示文案解析器。
 // 作用：把 project.platform 转换成适合页面展示的文本。
@@ -1048,11 +1051,54 @@ export function ImportMarkdownDraftDialog({
   preview: ImportApiSpecMarkdownDraftResponse | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: { file: File; base_url_override?: string }) => Promise<void>;
-  onImportAll: (preview: ImportApiSpecMarkdownDraftResponse) => Promise<void>;
+  onImportAll: (drafts: ApiSpecMarkdownDraftPreviewItem[]) => Promise<void>;
 }) {
   const t = useT('project');
   const [draft, setDraft] = useState<MarkdownDraftImportDraft>(() => getMarkdownDraftImportDraft());
   const [error, setError] = useState('');
+  const [selectedDraftKeys, setSelectedDraftKeys] = useState<string[]>([]);
+  const [showLowConfidenceOnly, setShowLowConfidenceOnly] = useState(false);
+
+  const previewEntries = useMemo(
+    () =>
+      (preview?.drafts ?? []).map((item, index) => ({
+        key: `${index}:${item.module_name}:${item.draft.method}:${item.draft.path}`,
+        item,
+      })),
+    [preview]
+  );
+  const visiblePreviewEntries = useMemo(
+    () =>
+      previewEntries.filter(entry =>
+        showLowConfidenceOnly ? entry.item.confidence < MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD : true
+      ),
+    [previewEntries, showLowConfidenceOnly]
+  );
+  const selectedDrafts = useMemo(
+    () =>
+      previewEntries
+        .filter(entry => selectedDraftKeys.includes(entry.key))
+        .map(entry => entry.item),
+    [previewEntries, selectedDraftKeys]
+  );
+  const allVisibleSelected =
+    visiblePreviewEntries.length > 0 &&
+    visiblePreviewEntries.every(entry => selectedDraftKeys.includes(entry.key));
+
+  useEffect(() => {
+    if (!preview) {
+      setSelectedDraftKeys([]);
+      setShowLowConfidenceOnly(false);
+      return;
+    }
+
+    setSelectedDraftKeys(
+      preview.drafts.map(
+        (item, index) => `${index}:${item.module_name}:${item.draft.method}:${item.draft.path}`
+      )
+    );
+    setShowLowConfidenceOnly(false);
+  }, [preview]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1074,16 +1120,32 @@ export function ImportMarkdownDraftDialog({
   };
 
   const handleImportAll = async () => {
-    if (!preview) {
+    if (!preview || selectedDrafts.length === 0) {
+      setError('Select at least one draft to import.');
       return;
     }
 
     try {
       setError('');
-      await onImportAll(preview);
+      await onImportAll(selectedDrafts);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Unknown error');
     }
+  };
+
+  const handleToggleDraft = (draftKey: string, checked: boolean) => {
+    setSelectedDraftKeys(current =>
+      checked ? Array.from(new Set([...current, draftKey])) : current.filter(key => key !== draftKey)
+    );
+  };
+
+  const handleToggleVisibleDrafts = (checked: boolean) => {
+    const visibleKeys = visiblePreviewEntries.map(entry => entry.key);
+    setSelectedDraftKeys(current =>
+      checked
+        ? Array.from(new Set([...current, ...visibleKeys]))
+        : current.filter(key => !visibleKeys.includes(key))
+    );
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -1156,10 +1218,46 @@ export function ImportMarkdownDraftDialog({
                   </Alert>
                 ) : null}
 
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-subtle bg-bg-canvas p-3">
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-text-muted">
+                    <label className="flex items-center gap-2 text-text-main">
+                      <Checkbox
+                        checked={allVisibleSelected}
+                        onCheckedChange={checked =>
+                          handleToggleVisibleDrafts(Boolean(checked))
+                        }
+                      />
+                      <span>Select visible drafts</span>
+                    </label>
+                    <span>{selectedDrafts.length} selected</span>
+                    <span>{visiblePreviewEntries.length} visible</span>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-text-main">
+                    <Switch
+                      checked={showLowConfidenceOnly}
+                      onCheckedChange={setShowLowConfidenceOnly}
+                    />
+                    <span>
+                      Low confidence only ({`< ${Math.round(MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD * 100)}%`})
+                    </span>
+                  </label>
+                </div>
+
                 <div className="space-y-3">
-                  {preview.drafts.slice(0, 8).map(item => (
-                    <MarkdownDraftPreviewCard key={`${item.module_name}-${item.draft.method}-${item.draft.path}`} item={item} />
-                  ))}
+                  {visiblePreviewEntries.length > 0 ? (
+                    visiblePreviewEntries.map(entry => (
+                      <MarkdownDraftPreviewCard
+                        key={entry.key}
+                        item={entry.item}
+                        selected={selectedDraftKeys.includes(entry.key)}
+                        onSelectedChange={checked => handleToggleDraft(entry.key, checked)}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-sm text-text-muted">
+                      No drafts match the current confidence filter.
+                    </p>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -1170,8 +1268,14 @@ export function ImportMarkdownDraftDialog({
             {t('common.cancel')}
           </Button>
           {preview ? (
-            <Button type="button" variant="outline" loading={isImporting} onClick={() => void handleImportAll()}>
-              Import all drafts
+            <Button
+              type="button"
+              variant="outline"
+              loading={isImporting}
+              disabled={selectedDrafts.length === 0}
+              onClick={() => void handleImportAll()}
+            >
+              Import selected ({selectedDrafts.length})
             </Button>
           ) : null}
           <Button type="submit" form="api-spec-markdown-draft-form" loading={isSubmitting}>
@@ -1183,16 +1287,30 @@ export function ImportMarkdownDraftDialog({
   );
 }
 
-function MarkdownDraftPreviewCard({ item }: { item: ApiSpecMarkdownDraftPreviewItem }) {
+function MarkdownDraftPreviewCard({
+  item,
+  selected,
+  onSelectedChange,
+}: {
+  item: ApiSpecMarkdownDraftPreviewItem;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+}) {
   return (
     <div className="rounded-md border border-border-subtle bg-bg-canvas p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline">{item.module_name}</Badge>
-        <Badge variant="outline">
-          {item.draft.method} {item.draft.path}
-        </Badge>
-        <Badge variant="outline">confidence {item.confidence.toFixed(2)}</Badge>
-        {item.auth_type ? <Badge variant="outline">{item.auth_type}</Badge> : null}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-text-main">
+            <Checkbox checked={selected} onCheckedChange={checked => onSelectedChange(Boolean(checked))} />
+            <span>Select</span>
+          </label>
+          <Badge variant="outline">{item.module_name}</Badge>
+          <Badge variant="outline">
+            {item.draft.method} {item.draft.path}
+          </Badge>
+          <Badge variant="outline">confidence {item.confidence.toFixed(2)}</Badge>
+          {item.auth_type ? <Badge variant="outline">{item.auth_type}</Badge> : null}
+        </div>
       </div>
 
       <div className="mt-2 space-y-1">
