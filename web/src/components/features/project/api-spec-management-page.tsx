@@ -110,6 +110,7 @@ import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
 import type {
   ApiSpec,
+  ApiSpecAIDraftSpec,
   ApiSpecDocSource,
   ApiSpecMarkdownDraftPreviewItem,
   ImportApiSpecMarkdownDraftResponse,
@@ -201,6 +202,24 @@ interface BatchGenDraft {
 
 interface AiActionDraft {
   lang: ApiSpecLanguage;
+}
+
+interface MarkdownDraftEditorForm {
+  method: HttpMethod;
+  path: string;
+  summary: string;
+  description: string;
+  version: string;
+  isPublic: boolean;
+  tags: string;
+  requestBody: string;
+  parameters: string;
+  responses: string;
+}
+
+interface MarkdownDraftPreviewEntry {
+  key: string;
+  item: ApiSpecMarkdownDraftPreviewItem;
 }
 
 const MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD = 0.8;
@@ -384,6 +403,29 @@ const getImportDraft = (): ImportDraft => ({
 const getMarkdownDraftImportDraft = (): MarkdownDraftImportDraft => ({
   file: null,
   baseUrlOverride: '',
+});
+
+const getMarkdownDraftPreviewEntries = (
+  preview: ImportApiSpecMarkdownDraftResponse
+): MarkdownDraftPreviewEntry[] =>
+  preview.drafts.map((item, index) => ({
+    key: `draft-${index}`,
+    item,
+  }));
+
+const getMarkdownDraftEditorForm = (
+  draft: ApiSpecAIDraftSpec
+): MarkdownDraftEditorForm => ({
+  method: draft.method,
+  path: draft.path,
+  summary: draft.summary,
+  description: draft.description,
+  version: draft.version,
+  isPublic: draft.is_public,
+  tags: formatTags(draft.tags),
+  requestBody: formatJson(draft.request_body),
+  parameters: formatJson(draft.parameters),
+  responses: formatJson(draft.responses),
 });
 
 const getExportDraft = (): ExportDraft => ({
@@ -1056,17 +1098,10 @@ export function ImportMarkdownDraftDialog({
   const t = useT('project');
   const [draft, setDraft] = useState<MarkdownDraftImportDraft>(() => getMarkdownDraftImportDraft());
   const [error, setError] = useState('');
+  const [previewEntries, setPreviewEntries] = useState<MarkdownDraftPreviewEntry[]>([]);
   const [selectedDraftKeys, setSelectedDraftKeys] = useState<string[]>([]);
   const [showLowConfidenceOnly, setShowLowConfidenceOnly] = useState(false);
-
-  const previewEntries = useMemo(
-    () =>
-      (preview?.drafts ?? []).map((item, index) => ({
-        key: `${index}:${item.module_name}:${item.draft.method}:${item.draft.path}`,
-        item,
-      })),
-    [preview]
-  );
+  const [editingDraftKey, setEditingDraftKey] = useState<string | null>(null);
   const visiblePreviewEntries = useMemo(
     () =>
       previewEntries.filter(entry =>
@@ -1087,18 +1122,24 @@ export function ImportMarkdownDraftDialog({
 
   useEffect(() => {
     if (!preview) {
+      setPreviewEntries([]);
       setSelectedDraftKeys([]);
       setShowLowConfidenceOnly(false);
+      setEditingDraftKey(null);
       return;
     }
 
-    setSelectedDraftKeys(
-      preview.drafts.map(
-        (item, index) => `${index}:${item.module_name}:${item.draft.method}:${item.draft.path}`
-      )
-    );
+    const nextEntries = getMarkdownDraftPreviewEntries(preview);
+    setPreviewEntries(nextEntries);
+    setSelectedDraftKeys(nextEntries.map(entry => entry.key));
     setShowLowConfidenceOnly(false);
+    setEditingDraftKey(null);
   }, [preview]);
+
+  const editingDraftEntry =
+    editingDraftKey === null
+      ? null
+      : (previewEntries.find(entry => entry.key === editingDraftKey) ?? null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1146,6 +1187,24 @@ export function ImportMarkdownDraftDialog({
         ? Array.from(new Set([...current, ...visibleKeys]))
         : current.filter(key => !visibleKeys.includes(key))
     );
+  };
+
+  const handleSaveDraftEdits = async (updatedItem: ApiSpecMarkdownDraftPreviewItem) => {
+    if (!editingDraftKey) {
+      return;
+    }
+
+    setPreviewEntries(current =>
+      current.map(entry =>
+        entry.key === editingDraftKey
+          ? {
+              ...entry,
+              item: updatedItem,
+            }
+          : entry
+      )
+    );
+    setEditingDraftKey(null);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -1251,6 +1310,7 @@ export function ImportMarkdownDraftDialog({
                         item={entry.item}
                         selected={selectedDraftKeys.includes(entry.key)}
                         onSelectedChange={checked => handleToggleDraft(entry.key, checked)}
+                        onEdit={() => setEditingDraftKey(entry.key)}
                       />
                     ))
                   ) : (
@@ -1283,6 +1343,16 @@ export function ImportMarkdownDraftDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <MarkdownDraftEditDialog
+        open={Boolean(editingDraftEntry)}
+        item={editingDraftEntry?.item ?? null}
+        onOpenChange={open => {
+          if (!open) {
+            setEditingDraftKey(null);
+          }
+        }}
+        onSubmit={handleSaveDraftEdits}
+      />
     </Dialog>
   );
 }
@@ -1291,11 +1361,15 @@ function MarkdownDraftPreviewCard({
   item,
   selected,
   onSelectedChange,
+  onEdit,
 }: {
   item: ApiSpecMarkdownDraftPreviewItem;
   selected: boolean;
   onSelectedChange: (checked: boolean) => void;
+  onEdit: () => void;
 }) {
+  const t = useT('project');
+
   return (
     <div className="rounded-md border border-border-subtle bg-bg-canvas p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1311,6 +1385,10 @@ function MarkdownDraftPreviewCard({
           <Badge variant="outline">confidence {item.confidence.toFixed(2)}</Badge>
           {item.auth_type ? <Badge variant="outline">{item.auth_type}</Badge> : null}
         </div>
+        <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+          {t('common.edit')}
+        </Button>
       </div>
 
       <div className="mt-2 space-y-1">
@@ -1330,6 +1408,308 @@ function MarkdownDraftPreviewCard({
         <p className="mt-2 text-xs text-amber-700">{item.warnings.join(' ')}</p>
       ) : null}
     </div>
+  );
+}
+
+function MarkdownDraftEditDialog({
+  open,
+  item,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  item: ApiSpecMarkdownDraftPreviewItem | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (item: ApiSpecMarkdownDraftPreviewItem) => Promise<void>;
+}) {
+  const t = useT('project');
+  const rawT = useTranslations('project');
+  const [draft, setDraft] = useState<MarkdownDraftEditorForm>(() =>
+    getMarkdownDraftEditorForm({
+      method: 'GET',
+      path: '',
+      summary: '',
+      description: '',
+      version: '1.0.0',
+      is_public: true,
+    })
+  );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!item) {
+      return;
+    }
+
+    setDraft(getMarkdownDraftEditorForm(item.draft));
+    setErrors({});
+  }, [item]);
+
+  const updateDraft = <K extends keyof MarkdownDraftEditorForm>(
+    key: K,
+    value: MarkdownDraftEditorForm[K]
+  ) => {
+    setDraft(current => ({ ...current, [key]: value }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!item) {
+      return;
+    }
+
+    const nextErrors: Record<string, string> = {};
+    const trimmedPath = draft.path.trim();
+    const trimmedVersion = draft.version.trim();
+
+    if (!trimmedPath) {
+      nextErrors.path = t('common.fieldRequired', { field: t('common.path') });
+    }
+
+    if (!trimmedVersion) {
+      nextErrors.version = t('common.fieldRequired', { field: t('common.version') });
+    }
+
+    let requestBody: RequestBodySpec | undefined;
+    let parameters: ParameterSpec[] | undefined;
+    let responses: Record<string, ResponseSpec> | undefined;
+
+    if (Object.keys(nextErrors).length === 0) {
+      try {
+        requestBody = parseJsonInput<RequestBodySpec>(
+          t,
+          draft.requestBody,
+          t('common.requestBody'),
+          'object'
+        );
+      } catch (submitError) {
+        nextErrors.requestBody =
+          submitError instanceof Error
+            ? submitError.message
+            : t('common.parseFailed', { label: t('common.requestBody') });
+      }
+
+      try {
+        parameters = parseJsonInput<ParameterSpec[]>(
+          t,
+          draft.parameters,
+          t('common.parameters'),
+          'array'
+        );
+      } catch (submitError) {
+        nextErrors.parameters =
+          submitError instanceof Error
+            ? submitError.message
+            : t('common.parseFailed', { label: t('common.parameters') });
+      }
+
+      try {
+        responses = parseJsonInput<Record<string, ResponseSpec>>(
+          t,
+          draft.responses,
+          t('common.responses'),
+          'object'
+        );
+      } catch (submitError) {
+        nextErrors.responses =
+          submitError instanceof Error
+            ? submitError.message
+            : t('common.parseFailed', { label: t('common.responses') });
+      }
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    await onSubmit({
+      ...item,
+      draft: {
+        ...item.draft,
+        method: draft.method,
+        path: trimmedPath,
+        summary: draft.summary.trim(),
+        description: draft.description,
+        version: trimmedVersion,
+        is_public: draft.isPublic,
+        tags: normalizeTags(draft.tags),
+        request_body: requestBody,
+        parameters,
+        responses,
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="full">
+        <DialogHeader>
+          <DialogTitle>Edit Markdown Draft</DialogTitle>
+          <DialogDescription>
+            Review and adjust extracted fields before importing this draft into API specs.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {!item ? null : (
+            <form id="markdown-draft-edit-form" className="space-y-6 py-1" onSubmit={handleSubmit}>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{item.module_name}</Badge>
+                <Badge variant="outline">confidence {item.confidence.toFixed(2)}</Badge>
+                {item.auth_type ? <Badge variant="outline">{item.auth_type}</Badge> : null}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="markdown-draft-method">{t('common.method')}</Label>
+                  <Select
+                    value={draft.method}
+                    onValueChange={value => updateDraft('method', value as HttpMethod)}
+                  >
+                    <SelectTrigger id="markdown-draft-method" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {METHOD_OPTIONS.map(method => (
+                        <SelectItem key={method} value={method}>
+                          {method}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="markdown-draft-path">{t('common.path')}</Label>
+                  <Input
+                    id="markdown-draft-path"
+                    value={draft.path}
+                    onChange={event => updateDraft('path', event.target.value)}
+                    placeholder={t('apiSpecsPage.pathPlaceholder')}
+                    errorText={errors.path}
+                    root
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="markdown-draft-version">{t('common.version')}</Label>
+                  <Input
+                    id="markdown-draft-version"
+                    value={draft.version}
+                    onChange={event => updateDraft('version', event.target.value)}
+                    placeholder={t('apiSpecsPage.versionValuePlaceholder')}
+                    errorText={errors.version}
+                    root
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="markdown-draft-summary">{t('common.summary')}</Label>
+                  <Input
+                    id="markdown-draft-summary"
+                    value={draft.summary}
+                    onChange={event => updateDraft('summary', event.target.value)}
+                    placeholder={t('apiSpecs.shortSummaryPlaceholder')}
+                    root
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-md border border-border-subtle bg-bg-soft px-3 py-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="markdown-draft-public">{t('apiSpecs.publicSpec')}</Label>
+                    <div className="text-xs text-muted-foreground">
+                      {t('apiSpecs.publicSpecDescription')}
+                    </div>
+                  </div>
+                  <Switch
+                    id="markdown-draft-public"
+                    checked={draft.isPublic}
+                    onCheckedChange={checked => updateDraft('isPublic', checked)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="markdown-draft-tags">{t('common.tags')}</Label>
+                <Input
+                  id="markdown-draft-tags"
+                  value={draft.tags}
+                  onChange={event => updateDraft('tags', event.target.value)}
+                  placeholder={t('apiSpecsPage.tagsPlaceholder')}
+                  root
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="markdown-draft-description">{t('common.description')}</Label>
+                <Textarea
+                  id="markdown-draft-description"
+                  value={draft.description}
+                  onChange={event => updateDraft('description', event.target.value)}
+                  placeholder={t('apiSpecs.descriptionPlaceholder')}
+                  rows={4}
+                  root
+                />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="markdown-draft-request-body">
+                    {t('apiSpecsPage.requestBodyJsonLabel')}
+                  </Label>
+                  <Textarea
+                    id="markdown-draft-request-body"
+                    value={draft.requestBody}
+                    onChange={event => updateDraft('requestBody', event.target.value)}
+                    placeholder={rawT.raw('apiSpecsPage.requestBodyJsonPlaceholder')}
+                    rows={12}
+                    errorText={errors.requestBody}
+                    root
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="markdown-draft-parameters">
+                    {t('apiSpecsPage.parametersJsonLabel')}
+                  </Label>
+                  <Textarea
+                    id="markdown-draft-parameters"
+                    value={draft.parameters}
+                    onChange={event => updateDraft('parameters', event.target.value)}
+                    placeholder={rawT.raw('apiSpecsPage.parametersJsonPlaceholder')}
+                    rows={12}
+                    errorText={errors.parameters}
+                    root
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="markdown-draft-responses">
+                    {t('apiSpecsPage.responsesJsonLabel')}
+                  </Label>
+                  <Textarea
+                    id="markdown-draft-responses"
+                    value={draft.responses}
+                    onChange={event => updateDraft('responses', event.target.value)}
+                    placeholder={rawT.raw('apiSpecsPage.responsesJsonPlaceholder')}
+                    rows={12}
+                    errorText={errors.responses}
+                    root
+                  />
+                </div>
+              </div>
+            </form>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" form="markdown-draft-edit-form">
+            {t('common.saveChanges')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
