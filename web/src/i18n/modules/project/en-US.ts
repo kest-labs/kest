@@ -776,7 +776,7 @@ const messages: ProjectMessages = {
         baseUrlOverrideLabel: 'Base URL override',
         baseUrlOverridePlaceholder: 'http://localhost:8025',
         baseUrlOverrideDescription:
-          'Optional. Use this when the markdown only provides a Base Path like `/v1` instead of a full host URL.',
+          'Optional. When the selected environment has a base_url, it is filled automatically. Override it only when the Markdown needs another host.',
         markdownEmptyState: 'Choose an api.md or module Markdown document to import requests.',
         postmanEmptyState: 'Choose a Postman collection export in JSON format.',
         selectedFile: 'Selected file: {name}',

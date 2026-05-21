@@ -1997,6 +1997,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBaseUrlOverride, setImportBaseUrlOverride] = useState('');
+  const [importBaseUrlOverrideEdited, setImportBaseUrlOverrideEdited] = useState(false);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
   const [viewingExampleId, setViewingExampleId] = useState<number | string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<number | string | null>(null);
@@ -2046,6 +2047,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
           null),
     [environments, selectedEnvironmentId]
   );
+  const selectedEnvironmentBaseUrl = selectedEnvironment?.base_url?.trim() ?? '';
   const createDraftTab = useCallback(
     (index: number, overrides: Partial<RequestPageTab> = {}) =>
       createRequestPageTab(index, overrides, {
@@ -2378,6 +2380,14 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       environments.find(environment => environment.base_url?.trim()) ?? environments[0];
     setSelectedEnvironmentId(String(preferredEnvironment.id));
   }, [environments, selectedEnvironmentId]);
+
+  useEffect(() => {
+    if (importDialogTarget?.kind !== 'markdown' || importBaseUrlOverrideEdited) {
+      return;
+    }
+
+    setImportBaseUrlOverride(selectedEnvironmentBaseUrl);
+  }, [importBaseUrlOverrideEdited, importDialogTarget?.kind, selectedEnvironmentBaseUrl]);
 
   const updateActiveTab = (updater: (tab: RequestPageTab) => RequestPageTab) => {
     if (!activeTab) {
@@ -2814,6 +2824,8 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       parentCollectionName: collection.name,
     });
     setImportFile(null);
+    setImportBaseUrlOverride(kind === 'markdown' ? selectedEnvironmentBaseUrl : '');
+    setImportBaseUrlOverrideEdited(false);
   };
 
   const openRootImportDialog = (kind: ImportDialogKind) => {
@@ -2823,6 +2835,8 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       parentCollectionName: null,
     });
     setImportFile(null);
+    setImportBaseUrlOverride(kind === 'markdown' ? selectedEnvironmentBaseUrl : '');
+    setImportBaseUrlOverrideEdited(false);
   };
 
   const closeImportDialog = (open: boolean) => {
@@ -2830,6 +2844,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       setImportDialogTarget(null);
       setImportFile(null);
       setImportBaseUrlOverride('');
+      setImportBaseUrlOverrideEdited(false);
     }
   };
 
@@ -2871,9 +2886,10 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
 
     try {
       if (importDialogTarget.kind === 'markdown') {
+        const baseUrlOverride = importBaseUrlOverride.trim() || selectedEnvironmentBaseUrl;
         await importMarkdownMutation.mutateAsync({
           ...(payload as ImportMarkdownCollectionRequest),
-          base_url_override: importBaseUrlOverride.trim() || undefined,
+          base_url_override: baseUrlOverride || undefined,
         });
       } else {
         await importPostmanMutation.mutateAsync(payload as ImportPostmanCollectionRequest);
@@ -3879,7 +3895,10 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
         isSubmitting={isAnyImportPending}
         onOpenChange={closeImportDialog}
         onFileChange={setImportFile}
-        onBaseUrlOverrideChange={setImportBaseUrlOverride}
+        onBaseUrlOverrideChange={value => {
+          setImportBaseUrlOverride(value);
+          setImportBaseUrlOverrideEdited(true);
+        }}
         onSubmit={handleImportCollection}
       />
     </main>
