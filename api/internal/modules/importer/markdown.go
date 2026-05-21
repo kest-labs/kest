@@ -54,16 +54,37 @@ type markdownEndpoint struct {
 	Method      string
 	Path        string
 	URL         string
+	AuthText    string
 	Headers     []request.KeyValue
 	QueryParams []request.KeyValue
 	PathParams  map[string]string
 	Body        string
 	BodyType    string
+
+	PathParameterDefinitions  []markdownParameterDefinition
+	QueryParameterDefinitions []markdownParameterDefinition
+	RequestBodyFields         []markdownBodyFieldDefinition
 }
 
 type markdownSection struct {
 	Title string
 	Body  string
+}
+
+type markdownParameterDefinition struct {
+	Name         string
+	Type         string
+	Description  string
+	DefaultValue string
+	Required     bool
+}
+
+type markdownBodyFieldDefinition struct {
+	Name         string
+	Type         string
+	Description  string
+	DefaultValue string
+	Required     bool
 }
 
 type curlExample struct {
@@ -324,6 +345,14 @@ func parseEndpointSection(method, path, body, baseURL string) (markdownEndpoint,
 	if len(pathDefaults) == 0 {
 		pathDefaults = parseParameterDefaults(sectionMap["path params"])
 	}
+	endpoint.PathParameterDefinitions = parseParameterDefinitions(
+		firstNonEmpty(sectionMap["path parameters"], sectionMap["path params"]),
+		"path",
+	)
+	endpoint.QueryParameterDefinitions = parseParameterDefinitions(sectionMap["query parameters"], "query")
+	endpoint.RequestBodyFields = parseBodyFieldDefinitions(
+		firstNonEmpty(sectionMap["request body"], sectionMap["example request"], sectionMap["body"]),
+	)
 	example := parseCurlExample(sectionMap["example"])
 	if example.URL == "" {
 		example = parseCurlExample(resolveCurlSection(body, sectionMap))
@@ -353,6 +382,7 @@ func parseEndpointSection(method, path, body, baseURL string) (markdownEndpoint,
 		parseHeaderKeyValues(sectionMap["headers"]),
 		filterNonAuthHeaders(example.Headers),
 	)
+	endpoint.AuthText = extractAuthenticationText(body)
 	if requiresAuth(body) {
 		endpoint.Headers = mergeHeaders(endpoint.Headers, []request.KeyValue{{
 			Key:     "Authorization",
@@ -618,11 +648,15 @@ func parseSingleEndpointDocument(title, content, baseURL string) (markdownModule
 		Method:      method,
 		Path:        path,
 		URL:         finalURL,
+		AuthText:    extractAuthenticationText(content),
 		Headers:     headers,
 		QueryParams: parseQueryParamsFromExample(curlExample.URL),
 		PathParams:  extractPathParamsFromExample(path, curlExample.URL),
 		Body:        requestBody,
 		BodyType:    "none",
+		RequestBodyFields: parseBodyFieldDefinitions(
+			findSectionBody(requestSubsections, "Request Body", "Body", "请求体"),
+		),
 	}
 
 	if endpoint.Body != "" {
@@ -879,6 +913,21 @@ func requiresAuth(content string) bool {
 	return requiresJWTAuth(content)
 }
 
+func extractAuthenticationText(content string) string {
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "**Authentication**") {
+			continue
+		}
+
+		if _, value, ok := strings.Cut(trimmed, ":"); ok {
+			return strings.TrimSpace(strings.Trim(value, "*"))
+		}
+	}
+
+	return ""
+}
+
 func extractSummaryFromBody(content string) string {
 	for _, line := range strings.Split(content, "\n") {
 		trimmed := strings.TrimSpace(line)
@@ -914,6 +963,109 @@ func parseParameterDefaults(section string) map[string]string {
 			continue
 		}
 		result[name] = defaultValueForType(unwrapMarkdownLiteral(row[1]))
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func parseParameterDefinitions(section, location string) []markdownParameterDefinition {
+	rows := parseMarkdownTable(section)
+	if len(rows) <= 1 {
+		return nil
+	}
+
+	headerIndex := markdownHeaderIndex(rows[0])
+	nameIdx, ok := findHeaderIndex(headerIndex, "parameter", "name", "field")
+	if !ok {
+		return nil
+	}
+	typeIdx, hasType := findHeaderIndex(headerIndex, "type")
+	descIdx, hasDescription := findHeaderIndex(headerIndex, "description", "desc")
+	defaultIdx, hasDefault := findHeaderIndex(headerIndex, "default", "default value")
+	requiredIdx, hasRequired := findHeaderIndex(headerIndex, "required")
+
+	result := make([]markdownParameterDefinition, 0, len(rows)-1)
+	for _, row := range rows[1:] {
+		name := markdownCell(row, nameIdx)
+		if name == "" {
+			continue
+		}
+
+		definition := markdownParameterDefinition{
+			Name:     name,
+			Required: strings.EqualFold(location, "path"),
+		}
+		if hasType {
+			definition.Type = unwrapMarkdownLiteral(markdownCell(row, typeIdx))
+		}
+		if hasDescription {
+			definition.Description = unwrapMarkdownLiteral(markdownCell(row, descIdx))
+		}
+		if hasDefault {
+			definition.DefaultValue = unwrapMarkdownLiteral(markdownCell(row, defaultIdx))
+		}
+		if hasRequired {
+			definition.Required = parseMarkdownRequired(markdownCell(row, requiredIdx))
+		}
+		if definition.DefaultValue == "" && definition.Type != "" {
+			definition.DefaultValue = defaultValueForType(definition.Type)
+		}
+
+		result = append(result, definition)
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func parseBodyFieldDefinitions(section string) []markdownBodyFieldDefinition {
+	rows := parseMarkdownTable(section)
+	if len(rows) <= 1 {
+		return nil
+	}
+
+	headerIndex := markdownHeaderIndex(rows[0])
+	nameIdx, ok := findHeaderIndex(headerIndex, "field", "parameter", "name")
+	if !ok {
+		return nil
+	}
+	typeIdx, hasType := findHeaderIndex(headerIndex, "type")
+	descIdx, hasDescription := findHeaderIndex(headerIndex, "description", "desc")
+	defaultIdx, hasDefault := findHeaderIndex(headerIndex, "default", "default value")
+	requiredIdx, hasRequired := findHeaderIndex(headerIndex, "required")
+
+	result := make([]markdownBodyFieldDefinition, 0, len(rows)-1)
+	for _, row := range rows[1:] {
+		name := markdownCell(row, nameIdx)
+		if name == "" {
+			continue
+		}
+
+		field := markdownBodyFieldDefinition{Name: name}
+		if hasType {
+			field.Type = unwrapMarkdownLiteral(markdownCell(row, typeIdx))
+		}
+		if hasDescription {
+			field.Description = unwrapMarkdownLiteral(markdownCell(row, descIdx))
+		}
+		if hasDefault {
+			field.DefaultValue = unwrapMarkdownLiteral(markdownCell(row, defaultIdx))
+		}
+		if hasRequired {
+			field.Required = parseMarkdownRequired(markdownCell(row, requiredIdx))
+		}
+		if field.DefaultValue == "" && field.Type != "" {
+			field.DefaultValue = defaultValueForType(field.Type)
+		}
+
+		result = append(result, field)
 	}
 
 	if len(result) == 0 {
@@ -1002,6 +1154,52 @@ func isMarkdownSeparatorRow(cells []string) bool {
 
 func unwrapMarkdownLiteral(value string) string {
 	return strings.Trim(strings.TrimSpace(value), "`")
+}
+
+func markdownHeaderIndex(row []string) map[string]int {
+	result := make(map[string]int, len(row))
+	for index, cell := range row {
+		result[normalizeSectionTitle(unwrapMarkdownLiteral(cell))] = index
+	}
+	return result
+}
+
+func findHeaderIndex(indexMap map[string]int, names ...string) (int, bool) {
+	for _, name := range names {
+		if index, ok := indexMap[normalizeSectionTitle(name)]; ok {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
+func markdownCell(row []string, index int) string {
+	if index < 0 || index >= len(row) {
+		return ""
+	}
+	return strings.TrimSpace(row[index])
+}
+
+func parseMarkdownRequired(value string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(unwrapMarkdownLiteral(value)))
+	switch {
+	case normalized == "":
+		return false
+	case strings.Contains(normalized, "yes"):
+		return true
+	case strings.Contains(normalized, "required"):
+		return true
+	case strings.Contains(normalized, "true"):
+		return true
+	case strings.Contains(normalized, "✅"):
+		return true
+	case normalized == "y":
+		return true
+	case normalized == "1":
+		return true
+	default:
+		return false
+	}
 }
 
 func defaultValueForType(typeName string) string {

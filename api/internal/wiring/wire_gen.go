@@ -96,7 +96,7 @@ func InitApplication() (*app.Application, error) {
 	apispecRepository := apispec.NewRepository(db)
 	apispecService := apispec.NewService(apispecRepository)
 	testcaseRepository := testcase.NewRepository(db)
-	apispecHandler := provideAPISpecHandler(apispecService, workspaceService, testcaseRepository)
+	apispecHandler := provideAPISpecHandler(apispecService, importerService, workspaceService, testcaseRepository)
 	projectHandler := provideProjectHandler(projectService, memberService, workspaceService, apispecHandler, historyHandler)
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)

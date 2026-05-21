@@ -3,12 +3,16 @@ package apispec
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
@@ -17,7 +21,7 @@ func TestCreateSpecAuthorizesWorkspaceAndUsesRouteWorkspace(t *testing.T) {
 
 	apiSpecService := &stubAPISpecService{}
 	workspaceService := &stubWorkspaceService{allowed: true}
-	handler := NewHandler(apiSpecService, workspaceService)
+	handler := NewHandler(apiSpecService, &stubImporterService{}, workspaceService)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -48,7 +52,7 @@ func TestListSpecsUsesWorkspaceReadPermission(t *testing.T) {
 
 	apiSpecService := &stubAPISpecService{}
 	workspaceService := &stubWorkspaceService{allowed: true}
-	handler := NewHandler(apiSpecService, workspaceService)
+	handler := NewHandler(apiSpecService, &stubImporterService{}, workspaceService)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -70,8 +74,9 @@ func TestListSpecsUsesWorkspaceReadPermission(t *testing.T) {
 }
 
 type stubAPISpecService struct {
-	created    *CreateAPISpecRequest
-	listFilter *SpecListFilter
+	created             *CreateAPISpecRequest
+	listFilter          *SpecListFilter
+	markdownDraftResult *ImportMarkdownAIDraftResponse
 }
 
 func (s *stubAPISpecService) CreateSpec(_ context.Context, req *CreateAPISpecRequest) (*APISpecResponse, error) {
@@ -146,6 +151,13 @@ func (s *stubAPISpecService) RefineAIDraft(context.Context, string, string, *Ref
 
 func (s *stubAPISpecService) AcceptAIDraft(context.Context, string, string, *AcceptAPISpecAIDraftRequest) (*AcceptAPISpecAIDraftResponse, error) {
 	return nil, nil
+}
+
+func (s *stubAPISpecService) ImportMarkdownAIDraft(context.Context, *importer.MarkdownParseResult) (*ImportMarkdownAIDraftResponse, error) {
+	if s.markdownDraftResult != nil {
+		return s.markdownDraftResult, nil
+	}
+	return &ImportMarkdownAIDraftResponse{}, nil
 }
 
 func (s *stubAPISpecService) GetShareBySpecID(context.Context, string, string) (*APISpecShareResponse, error) {
@@ -245,4 +257,137 @@ func (s *stubWorkspaceService) HasPermission(workspaceID, userID string, require
 	s.userID = userID
 	s.requiredRole = requiredRole
 	return s.allowed, s.err
+}
+
+type stubImporterService struct {
+	parseResult *importer.MarkdownParseResult
+	parseErr    error
+}
+
+func (s *stubImporterService) ImportPostman(context.Context, string, string, *multipart.FileHeader) error {
+	return nil
+}
+
+func (s *stubImporterService) ImportMarkdown(context.Context, string, string, *multipart.FileHeader, string) (*importer.MarkdownImportResult, error) {
+	return nil, nil
+}
+
+func (s *stubImporterService) ParseMarkdownFile(_ *multipart.FileHeader, _ string) (*importer.MarkdownParseResult, error) {
+	if s.parseErr != nil {
+		return nil, s.parseErr
+	}
+	if s.parseResult != nil {
+		return s.parseResult, nil
+	}
+	return &importer.MarkdownParseResult{}, nil
+}
+
+func TestImportMarkdownAIDraftParsesUploadedMarkdownAndReturnsPreview(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	apiSpecService := &stubAPISpecService{
+		markdownDraftResult: &ImportMarkdownAIDraftResponse{
+			DocumentTitle: "Authentication & Users API",
+			EndpointCount: 1,
+			DraftCount:    1,
+			Drafts: []ImportMarkdownAIDraftItem{
+				{
+					ModuleName: "Authentication",
+					AuthType:   "public",
+					Confidence: 0.95,
+					Draft: APISpecAIDraftSpec{
+						Method:  "POST",
+						Path:    "/register",
+						Summary: "Register",
+						Version: "v1",
+					},
+				},
+			},
+		},
+	}
+	importerService := &stubImporterService{
+		parseResult: &importer.MarkdownParseResult{
+			Title: "Authentication & Users API",
+			Modules: []importer.MarkdownParseModule{
+				{Name: "Authentication", Endpoints: []importer.MarkdownParseEndpoint{{Method: "POST", Path: "/register"}}},
+			},
+		},
+	}
+	workspaceService := &stubWorkspaceService{allowed: true}
+	handler := NewHandler(apiSpecService, importerService, workspaceService)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "auth.md")
+	if err != nil {
+		t.Fatalf("failed to create multipart file: %v", err)
+	}
+	if _, err := part.Write([]byte("# doc")); err != nil {
+		t.Fatalf("failed to write multipart file: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close multipart body: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/workspaces/7/api-specs/import/markdown-ai", body)
+	ctx.Request.Header.Set("Content-Type", writer.FormDataContentType())
+	ctx.Params = gin.Params{{Key: "id", Value: "7"}}
+	ctx.Set("userID", "42")
+
+	handler.ImportMarkdownAIDraft(ctx)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var resp struct {
+		Code int                           `json:"code"`
+		Data ImportMarkdownAIDraftResponse `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp.Data.DraftCount != 1 || resp.Data.Drafts[0].Draft.Path != "/register" {
+		t.Fatalf("unexpected response payload: %#v", resp.Data)
+	}
+	if workspaceService.requiredRole != workspace.RoleWrite {
+		t.Fatalf("expected write authorization, got %q", workspaceService.requiredRole)
+	}
+}
+
+func TestImportMarkdownAIDraftRejectsInvalidMarkdown(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	apiSpecService := &stubAPISpecService{}
+	importerService := &stubImporterService{parseErr: importer.ErrNoImportableEndpoints}
+	workspaceService := &stubWorkspaceService{allowed: true}
+	handler := NewHandler(apiSpecService, importerService, workspaceService)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "invalid.md")
+	if err != nil {
+		t.Fatalf("failed to create multipart file: %v", err)
+	}
+	if _, err := part.Write([]byte(strings.Repeat("x", 1))); err != nil {
+		t.Fatalf("failed to write multipart file: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close multipart body: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/workspaces/7/api-specs/import/markdown-ai", body)
+	ctx.Request.Header.Set("Content-Type", writer.FormDataContentType())
+	ctx.Params = gin.Params{{Key: "id", Value: "7"}}
+	ctx.Set("userID", "42")
+
+	handler.ImportMarkdownAIDraft(ctx)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d: %s", recorder.Code, recorder.Body.String())
+	}
 }

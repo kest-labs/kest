@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/kest-labs/kest/api/internal/infra/config"
+	"github.com/kest-labs/kest/api/internal/modules/importer"
 )
 
 var (
@@ -52,6 +53,7 @@ type Service interface {
 	GetAIDraft(ctx context.Context, workspaceID, draftID string) (*APISpecAIDraftResponse, error)
 	RefineAIDraft(ctx context.Context, workspaceID, draftID string, req *RefineAPISpecAIDraftRequest) (*APISpecAIDraftResponse, error)
 	AcceptAIDraft(ctx context.Context, workspaceID, draftID string, req *AcceptAPISpecAIDraftRequest) (*AcceptAPISpecAIDraftResponse, error)
+	ImportMarkdownAIDraft(ctx context.Context, parsed *importer.MarkdownParseResult) (*ImportMarkdownAIDraftResponse, error)
 
 	// Share operations
 	GetShareBySpecID(ctx context.Context, workspaceID, specID string) (*APISpecShareResponse, error)

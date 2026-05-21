@@ -12,6 +12,7 @@ func RegisterRoutes(r *router.Router, handler *Handler) {
 		specs.GET("", handler.ListSpecs).WhereUUIDOrNumber("id")
 		specs.POST("", handler.CreateSpec).WhereUUIDOrNumber("id")
 		specs.POST("/import", handler.ImportSpecs).WhereUUIDOrNumber("id")
+		specs.POST("/import/markdown-ai", handler.ImportMarkdownAIDraft).WhereUUIDOrNumber("id")
 		specs.GET("/export", handler.ExportSpecs).WhereUUIDOrNumber("id")
 		specs.POST("/batch-gen-doc", handler.BatchGenDoc).WhereUUIDOrNumber("id")
 		specs.POST("/ai-drafts", handler.CreateAIDraft).WhereUUIDOrNumber("id")

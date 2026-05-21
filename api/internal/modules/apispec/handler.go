@@ -9,12 +9,14 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
+	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
@@ -31,14 +33,16 @@ type TestCaseSaver interface {
 type Handler struct {
 	contracts.BaseModule
 	service          Service
+	importerService  importer.Service
 	workspaceService workspace.Service
 	tcSaver          TestCaseSaver
 }
 
 // NewHandler creates a new API spec handler
-func NewHandler(service Service, workspaceService workspace.Service) *Handler {
+func NewHandler(service Service, importerService importer.Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
 		service:          service,
+		importerService:  importerService,
 		workspaceService: workspaceService,
 	}
 }
@@ -542,6 +546,52 @@ func (h *Handler) ImportSpecs(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "Specs imported successfully"})
+}
+
+// ImportMarkdownAIDraft parses a markdown API document into reviewable API spec drafts.
+func (h *Handler) ImportMarkdownAIDraft(c *gin.Context) {
+	_, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
+	if h.importerService == nil {
+		response.HandleError(c, "Markdown draft import is unavailable", ErrInvalidSpecData)
+		return
+	}
+
+	baseURLOverride := strings.TrimSpace(c.Query("base_url_override"))
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "file is required")
+		return
+	}
+
+	parsed, err := h.importerService.ParseMarkdownFile(file, baseURLOverride)
+	if err != nil {
+		switch {
+		case errors.Is(err, importer.ErrInvalidMarkdownDocument),
+			errors.Is(err, importer.ErrMarkdownBaseURLNotFound),
+			errors.Is(err, importer.ErrNoImportableEndpoints):
+			response.BadRequest(c, err.Error(), err)
+		default:
+			response.HandleError(c, "Failed to parse markdown document", err)
+		}
+		return
+	}
+
+	result, err := h.service.ImportMarkdownAIDraft(c.Request.Context(), parsed)
+	if err != nil {
+		if errors.Is(err, ErrInvalidSpecData) {
+			response.BadRequest(c, err.Error(), err)
+			return
+		}
+		response.HandleError(c, "Failed to build markdown AI draft preview", err)
+		return
+	}
+
+	response.Success(c, result)
 }
 
 // ExportSpecs exports API specifications

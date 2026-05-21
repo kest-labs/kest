@@ -155,6 +155,97 @@ func TestImportPostmanCollectionFlattensNestedFoldersIntoSingleCollection(t *tes
 	}
 }
 
+func TestParseMarkdownFileExposesStructuredEndpointMetadata(t *testing.T) {
+	collectionService := &stubCollectionService{}
+	requestService := &stubRequestService{}
+	service := NewService(collectionService, requestService).(*service)
+
+	result, err := service.parseMarkdownContent("01-authentication.md", markdown(
+		"# Authentication & Users API",
+		"",
+		"## Base Path",
+		"",
+		"```",
+		"/v1",
+		"```",
+		"",
+		"## 1. User Registration",
+		"",
+		"### POST /register",
+		"",
+		"Register a new user account.",
+		"",
+		"**Authentication**: Not required",
+		"",
+		"#### Request Headers",
+		"",
+		"```",
+		"Content-Type: application/json",
+		"```",
+		"",
+		"#### Request Body",
+		"",
+		"| Field | Type | Required | Description |",
+		"|-------|------|----------|-------------|",
+		"| `username` | string | ✅ Yes | Unique username |",
+		"| `password` | string | ✅ Yes | User password |",
+		"| `nickname` | string | ❌ No | Display name |",
+		"",
+		"#### Example Request",
+		"",
+		"```json",
+		`{"username":"john","password":"secret","nickname":"John"}`,
+		"```",
+		"",
+		"## 2. List Users",
+		"",
+		"### GET /users",
+		"",
+		"List all users.",
+		"",
+		"**Authentication**: Required (Admin)",
+		"",
+		"#### Query Parameters",
+		"",
+		"| Parameter | Type | Required | Default | Description |",
+		"|-----------|------|----------|---------|-------------|",
+		"| `page` | integer | ❌ No | 1 | Page number |",
+		"| `status` | string | ❌ No | - | Filter by status |",
+	), "http://localhost:8025")
+	if err != nil {
+		t.Fatalf("expected markdown file to parse, got %v", err)
+	}
+
+	if result.Title != "Authentication & Users API" {
+		t.Fatalf("expected title to be preserved, got %q", result.Title)
+	}
+	if result.BaseURL != "http://localhost:8025/v1" {
+		t.Fatalf("expected base URL override to merge base path, got %q", result.BaseURL)
+	}
+	if len(result.Modules) != 1 || len(result.Modules[0].Endpoints) != 2 {
+		t.Fatalf("expected one aggregated module with two endpoints, got %#v", result.Modules)
+	}
+
+	register := result.Modules[0].Endpoints[0]
+	if register.AuthText != "Not required" {
+		t.Fatalf("expected auth text to be extracted, got %q", register.AuthText)
+	}
+	if len(register.RequestBodyFields) != 3 {
+		t.Fatalf("expected 3 request body fields, got %#v", register.RequestBodyFields)
+	}
+	if !register.RequestBodyFields[0].Required || register.RequestBodyFields[2].Required {
+		t.Fatalf("expected required flags from request body table, got %#v", register.RequestBodyFields)
+	}
+
+	listUsers := result.Modules[0].Endpoints[1]
+	if len(listUsers.QueryParameterDefinitions) != 2 {
+		t.Fatalf("expected query parameter definitions, got %#v", listUsers.QueryParameterDefinitions)
+	}
+	if listUsers.QueryParameterDefinitions[0].DefaultValue != "1" {
+		t.Fatalf("expected query default value to be preserved, got %#v", listUsers.QueryParameterDefinitions[0])
+	}
+}
+
 type stubCollectionService struct {
 	created   []*collection.CreateCollectionRequest
 	nextID    int
