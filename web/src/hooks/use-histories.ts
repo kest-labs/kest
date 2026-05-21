@@ -17,6 +17,7 @@ export function useProjectHistories(params: HistoryListParams) {
   return useQuery({
     queryKey: historyKeys.list(params),
     queryFn: () => historyService.list(params),
+    enabled: Boolean(params.projectId),
     placeholderData: (previousData) => previousData,
   });
 }
@@ -25,11 +26,7 @@ export function useProjectHistory(projectId?: number | string, historyId?: numbe
   return useQuery({
     queryKey: historyKeys.detail(projectId ?? 'unknown', historyId ?? 'unknown'),
     queryFn: () => historyService.getById(projectId as number | string, historyId as number | string),
-    enabled:
-      projectId !== undefined &&
-      projectId !== null &&
-      historyId !== undefined &&
-      historyId !== null,
+    enabled: Boolean(projectId) && Boolean(historyId),
   });
 }
 

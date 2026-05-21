@@ -53,6 +53,7 @@ export function useApiSpecs(params: ApiSpecListParams) {
   return useQuery({
     queryKey: apiSpecKeys.list(params),
     queryFn: () => apiSpecService.list(params),
+    enabled: Boolean(params.projectId),
     placeholderData: previousData => previousData,
   });
 }
@@ -63,8 +64,7 @@ export function useApiSpec(projectId?: number | string, specId?: number | string
   return useQuery({
     queryKey: apiSpecKeys.detail(projectId ?? 'unknown', specId ?? 'unknown'),
     queryFn: () => apiSpecService.getById(projectId as number | string, specId as number | string),
-    enabled:
-      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    enabled: Boolean(projectId) && Boolean(specId),
   });
 }
 
@@ -75,8 +75,7 @@ export function useApiSpecFull(projectId?: number | string, specId?: number | st
     queryKey: apiSpecKeys.full(projectId ?? 'unknown', specId ?? 'unknown'),
     queryFn: () =>
       apiSpecService.getFullById(projectId as number | string, specId as number | string),
-    enabled:
-      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    enabled: Boolean(projectId) && Boolean(specId),
   });
 }
 
@@ -87,8 +86,7 @@ export function useApiSpecExamples(projectId?: number | string, specId?: number 
     queryKey: apiSpecKeys.examples(projectId ?? 'unknown', specId ?? 'unknown'),
     queryFn: () =>
       apiSpecService.listExamples(projectId as number | string, specId as number | string),
-    enabled:
-      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    enabled: Boolean(projectId) && Boolean(specId),
   });
 }
 
@@ -110,8 +108,7 @@ export function useApiSpecShare(projectId?: number | string, specId?: number | s
         throw error;
       }
     },
-    enabled:
-      projectId !== undefined && projectId !== null && specId !== undefined && specId !== null,
+    enabled: Boolean(projectId) && Boolean(specId),
   });
 }
 
@@ -122,8 +119,7 @@ export function useApiSpecAIDraft(projectId?: number | string, draftId?: number 
     queryKey: apiSpecKeys.aiDraft(projectId ?? 'unknown', draftId ?? 'unknown'),
     queryFn: () =>
       apiSpecService.getAIDraft(projectId as number | string, draftId as number | string),
-    enabled:
-      projectId !== undefined && projectId !== null && draftId !== undefined && draftId !== null,
+    enabled: Boolean(projectId) && Boolean(draftId),
   });
 }
 
@@ -133,7 +129,7 @@ export function useProjectApiCategories(projectId?: number | string) {
   return useQuery({
     queryKey: apiSpecKeys.categories(projectId ?? 'unknown'),
     queryFn: () => apiSpecService.listCategories(projectId as number | string),
-    enabled: projectId !== undefined && projectId !== null,
+    enabled: Boolean(projectId),
     staleTime: 60_000,
   });
 }

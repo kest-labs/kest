@@ -28,7 +28,7 @@ export function useEnvironments(projectId?: number | string) {
   return useQuery({
     queryKey: environmentKeys.list(projectId ?? 'unknown'),
     queryFn: () => environmentService.list(projectId as number | string),
-    enabled: projectId !== undefined && projectId !== null,
+    enabled: Boolean(projectId),
   });
 }
 
@@ -39,11 +39,7 @@ export function useEnvironment(projectId?: number | string, environmentId?: numb
     queryKey: environmentKeys.detail(projectId ?? 'unknown', environmentId ?? 'unknown'),
     queryFn: () =>
       environmentService.getById(projectId as number | string, environmentId as number | string),
-    enabled:
-      projectId !== undefined &&
-      projectId !== null &&
-      environmentId !== undefined &&
-      environmentId !== null,
+    enabled: Boolean(projectId) && Boolean(environmentId),
   });
 }
 

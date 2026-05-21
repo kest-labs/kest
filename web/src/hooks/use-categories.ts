@@ -46,11 +46,7 @@ export function useProjectCategory(projectId?: number | string, categoryId?: num
   return useQuery({
     queryKey: categoryKeys.detail(projectId ?? 'unknown', categoryId ?? 'unknown'),
     queryFn: () => categoryService.getById(projectId as number | string, categoryId as number | string),
-    enabled:
-      projectId !== undefined &&
-      projectId !== null &&
-      categoryId !== undefined &&
-      categoryId !== null,
+    enabled: Boolean(projectId) && Boolean(categoryId),
   });
 }
 

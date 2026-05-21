@@ -3,7 +3,8 @@
 
 export interface ProjectEnvironment {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   name: string;
   display_name?: string;
   base_url?: string;

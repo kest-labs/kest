@@ -385,7 +385,7 @@ export const apiSpecService = {
       .then(normalizePublicApiSpecShare),
 
   listCategories: (projectId: number | string) =>
-    request.get<ProjectCategoryListResponse>(`/projects/${projectId}/categories`, {
+    request.get<ProjectCategoryListResponse>(`/workspaces/${projectId}/categories`, {
       params: { tree: true },
     }),
 };

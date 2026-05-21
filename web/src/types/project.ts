@@ -7,6 +7,7 @@ export type ProjectStatus = 0 | 1;
 
 export interface ApiProject {
   id: number | string;
+  workspace_id?: number | string;
   name: string;
   slug: string;
   platform: ProjectPlatform | '';
@@ -25,7 +26,8 @@ export interface ProjectStats {
 
 export interface ProjectCliTokenInfo {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   name: string;
   token_prefix: string;
   scopes: string[];
@@ -43,7 +45,8 @@ export interface GenerateProjectCliTokenRequest {
 export interface GenerateProjectCliTokenResponse {
   token: string;
   token_type: string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   token_info: ProjectCliTokenInfo;
 }
 

@@ -46,7 +46,7 @@ export const projectService = {
 
   generateCliToken: (id: number | string, data: GenerateProjectCliTokenRequest = {}) =>
     request.post<GenerateProjectCliTokenResponse>(
-      `/projects/${id}/cli-tokens`,
+      `/workspaces/${id}/cli-tokens`,
       normalizeProjectPayload(data)
     ),
 

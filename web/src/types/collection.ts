@@ -2,7 +2,8 @@ export interface ProjectCollection {
   id: number | string;
   name: string;
   description: string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
@@ -32,7 +33,8 @@ export interface ProjectCollectionTreeNode {
   id: number | string;
   name: string;
   description: string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;

@@ -14,7 +14,8 @@ export interface CategoryPagination {
 // 作用：统一描述项目分类的树形节点和详情结构。
 export interface ProjectCategory {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   name: string;
   description?: string;
   color?: string;

@@ -53,7 +53,8 @@ export interface ApiSpecExample {
 // 作用：统一描述列表、详情、full 接口共用的数据主体。
 export interface ApiSpec {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   category_id?: number | string | null;
   method: HttpMethod;
   path: string;
@@ -213,7 +214,8 @@ export interface ApiSpecExamplesResponse {
 
 export interface ApiSpecShare {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   api_spec_id: number | string;
   slug: string;
   created_by: string;
@@ -315,7 +317,8 @@ export interface AcceptApiSpecAIDraftRequest {
 
 export interface ApiSpecAIDraft {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
+  project_id?: number | string;
   created_by: string;
   accepted_spec_id?: number | string | null;
   status: string;

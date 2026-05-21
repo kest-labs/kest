@@ -66,7 +66,7 @@ export function useProjectCollectionTree(projectId?: number | string) {
   return useQuery({
     queryKey: collectionKeys.tree(projectId ?? 'unknown'),
     queryFn: () => collectionService.tree(projectId as number | string),
-    enabled: projectId !== undefined && projectId !== null,
+    enabled: Boolean(projectId),
     staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   });
