@@ -1527,7 +1527,7 @@ const messages: ProjectMessages = {
       'The current spec details are still loading. Close this dialog and try again.',
     editDialogTitle: 'Edit API Spec',
     editDialogDescription:
-      'Update the current API spec through PATCH /v1/projects/:id/api-specs/:sid.',
+      'Update the current API spec through PATCH /v1/workspaces/:id/api-specs/:sid.',
     editReadonlyNotice:
       'The PATCH API does not support editing `method` or `version` yet, so both fields remain read-only in edit mode.',
     requestBodyJsonLabel: 'Request Body JSON',
@@ -1548,7 +1548,7 @@ const messages: ProjectMessages = {
     defaultMarkdownEmpty: 'No default markdown stored for this spec.',
     chineseMarkdownEmpty: 'No Chinese markdown stored for this spec.',
     englishMarkdownEmpty: 'No English markdown stored for this spec.',
-    examplesDescription: 'Examples are loaded from GET /projects/:id/api-specs/:sid/examples.',
+    examplesDescription: 'Examples are loaded from GET /workspaces/:id/api-specs/:sid/examples.',
     createExample: 'Create Example',
     exampleStatus: 'Status {status}',
     exampleEmptyTitle: 'No examples yet',
@@ -1578,7 +1578,7 @@ const messages: ProjectMessages = {
     importPayloadLabel: 'Import Payload',
     importPayloadMissingSpecs: 'Import payload must include a `specs` array.',
     importPayloadInvalid: 'Import payload could not be parsed.',
-    importEndpoint: 'Endpoint: POST /v1/projects/:id/api-specs/import',
+    importEndpoint: 'Endpoint: POST /v1/workspaces/:id/api-specs/import',
     importButton: 'Import Specs',
     exportTitle: 'Export API Specs',
     exportDescription: 'Choose the export format and download the response directly.',
@@ -1586,7 +1586,7 @@ const messages: ProjectMessages = {
     exportButton: 'Export',
     batchTitle: 'Batch Generate Docs',
     batchDescription:
-      'Queue a backend generation task with POST /v1/projects/:id/api-specs/batch-gen-doc.',
+      'Queue a backend generation task with POST /v1/workspaces/:id/api-specs/batch-gen-doc.',
     batchLanguageLabel: 'Language',
     batchCategoryLabel: 'Category Scope',
     batchWholeProject: 'Whole project',
@@ -1601,7 +1601,7 @@ const messages: ProjectMessages = {
     aiGenerateTestButton: 'Generate Test',
     exampleCreateTitle: 'Create API Example',
     exampleCreateDescription:
-      'Add a request/response example through POST /v1/projects/:id/api-specs/:sid/examples.',
+      'Add a request/response example through POST /v1/workspaces/:id/api-specs/:sid/examples.',
     exampleNameLabel: 'Example Name',
     exampleNamePlaceholder: 'Successful login',
     exampleResponseStatusLabel: 'Response Status',
@@ -1617,7 +1617,7 @@ const messages: ProjectMessages = {
     deleteDescription: 'This permanently removes {target} and its examples.',
     deleteFallbackTarget: 'the selected API spec',
     deleteWarning:
-      'The backend immediately executes `DELETE /projects/:id/api-specs/:sid`, and the record cannot be restored.',
+      'The backend immediately executes `DELETE /workspaces/:id/api-specs/:sid`, and the record cannot be restored.',
   },
   testCasesPage: {
     title: 'Test Cases',

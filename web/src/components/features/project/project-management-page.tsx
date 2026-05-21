@@ -416,7 +416,7 @@ export function ProjectManagementPage() {
                   <div>GET {projectStatsPath}</div>
                   <div>GET {buildApiPath('/projects/:id/environments')}</div>
                   <div>GET {buildApiPath('/projects/:id/categories')}</div>
-                  <div>GET {buildApiPath('/projects/:id/api-specs')}</div>
+                  <div>GET {buildApiPath('/workspaces/:id/api-specs')}</div>
                   <div>GET {buildApiPath('/projects/:id/test-cases')}</div>
                   <div>POST {buildApiPath('/projects/:id/test-cases')}</div>
                 </div>

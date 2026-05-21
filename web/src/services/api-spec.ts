@@ -157,7 +157,7 @@ export const apiSpecService = {
     keyword,
   }: ApiSpecListParams) =>
     request
-      .get<ApiSpecListResponse>(`/projects/${projectId}/api-specs`, {
+      .get<ApiSpecListResponse>(`/workspaces/${projectId}/api-specs`, {
         params: normalizePayload({
           page,
           page_size: pageSize,
@@ -170,19 +170,21 @@ export const apiSpecService = {
       .then(normalizeApiSpecListResponse),
 
   getById: (projectId: number | string, specId: number | string) =>
-    request.get<ApiSpec>(`/projects/${projectId}/api-specs/${specId}`).then(normalizeApiSpec),
+    request.get<ApiSpec>(`/workspaces/${projectId}/api-specs/${specId}`).then(normalizeApiSpec),
 
   getFullById: (projectId: number | string, specId: number | string) =>
-    request.get<ApiSpec>(`/projects/${projectId}/api-specs/${specId}/full`).then(normalizeApiSpec),
+    request
+      .get<ApiSpec>(`/workspaces/${projectId}/api-specs/${specId}/full`)
+      .then(normalizeApiSpec),
 
   create: (projectId: number | string, data: CreateApiSpecRequest) =>
     request
-      .post<ApiSpec>(`/projects/${projectId}/api-specs`, normalizePayload(data))
+      .post<ApiSpec>(`/workspaces/${projectId}/api-specs`, normalizePayload(data))
       .then(normalizeApiSpec),
 
   createAIDraft: (projectId: number | string, data: CreateApiSpecAIDraftRequest) =>
     request.post<ApiSpecAIDraft>(
-      `/projects/${projectId}/api-specs/ai-drafts`,
+      `/workspaces/${projectId}/api-specs/ai-drafts`,
       normalizePayload(data)
     ),
 
@@ -192,19 +194,22 @@ export const apiSpecService = {
     options: ApiSpecAIDraftStreamOptions = {}
   ): Promise<ApiSpecAIDraft> => {
     const { accessToken } = getAuthTokens();
-    const response = await fetch(buildApiUrl(`/projects/${projectId}/api-specs/ai-drafts/stream`), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : {}),
-      },
-      body: JSON.stringify(normalizePayload(data)),
-      signal: options.signal,
-    });
+    const response = await fetch(
+      buildApiUrl(`/workspaces/${projectId}/api-specs/ai-drafts/stream`),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : {}),
+        },
+        body: JSON.stringify(normalizePayload(data)),
+        signal: options.signal,
+      }
+    );
 
     if (!response.ok) {
       await parseFetchError(response);
@@ -269,7 +274,7 @@ export const apiSpecService = {
   },
 
   getAIDraft: (projectId: number | string, draftId: number | string) =>
-    request.get<ApiSpecAIDraft>(`/projects/${projectId}/api-specs/ai-drafts/${draftId}`),
+    request.get<ApiSpecAIDraft>(`/workspaces/${projectId}/api-specs/ai-drafts/${draftId}`),
 
   refineAIDraft: (
     projectId: number | string,
@@ -277,7 +282,7 @@ export const apiSpecService = {
     data: RefineApiSpecAIDraftRequest
   ) =>
     request.post<ApiSpecAIDraft>(
-      `/projects/${projectId}/api-specs/ai-drafts/${draftId}/refine`,
+      `/workspaces/${projectId}/api-specs/ai-drafts/${draftId}/refine`,
       normalizePayload(data)
     ),
 
@@ -287,20 +292,20 @@ export const apiSpecService = {
     data: AcceptApiSpecAIDraftRequest
   ) =>
     request.post<AcceptApiSpecAIDraftResponse>(
-      `/projects/${projectId}/api-specs/ai-drafts/${draftId}/accept`,
+      `/workspaces/${projectId}/api-specs/ai-drafts/${draftId}/accept`,
       normalizePayload(data)
     ),
 
   update: (projectId: number | string, specId: number | string, data: UpdateApiSpecRequest) =>
     request
-      .patch<ApiSpec>(`/projects/${projectId}/api-specs/${specId}`, normalizePayload(data))
+      .patch<ApiSpec>(`/workspaces/${projectId}/api-specs/${specId}`, normalizePayload(data))
       .then(normalizeApiSpec),
 
   delete: (projectId: number | string, specId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/api-specs/${specId}`),
+    request.delete<void>(`/workspaces/${projectId}/api-specs/${specId}`),
 
   import: (projectId: number | string, data: ImportApiSpecsRequest) =>
-    request.post<ImportApiSpecsResponse>(`/projects/${projectId}/api-specs/import`, data),
+    request.post<ImportApiSpecsResponse>(`/workspaces/${projectId}/api-specs/import`, data),
 
   importMarkdownDraftPreview: (
     projectId: number | string,
@@ -310,7 +315,7 @@ export const apiSpecService = {
     formData.append('file', data.file);
 
     return request.post<ImportApiSpecMarkdownDraftResponse>(
-      `/projects/${projectId}/api-specs/import/markdown-ai`,
+      `/workspaces/${projectId}/api-specs/import/markdown-ai`,
       formData,
       {
         params: data.base_url_override
@@ -326,18 +331,18 @@ export const apiSpecService = {
   },
 
   export: (projectId: number | string, format: ApiSpecExportFormat) =>
-    request.get<ApiSpecExportPayload>(`/projects/${projectId}/api-specs/export`, {
+    request.get<ApiSpecExportPayload>(`/workspaces/${projectId}/api-specs/export`, {
       params: { format },
     }),
 
   genDoc: (projectId: number | string, specId: number | string, lang: ApiSpecLanguage) =>
-    request.post<ApiSpec>(`/projects/${projectId}/api-specs/${specId}/gen-doc`, undefined, {
+    request.post<ApiSpec>(`/workspaces/${projectId}/api-specs/${specId}/gen-doc`, undefined, {
       params: { lang },
     }),
 
   genTest: (projectId: number | string, specId: number | string, lang: ApiSpecLanguage) =>
     request.post<GenApiTestResponse>(
-      `/projects/${projectId}/api-specs/${specId}/gen-test`,
+      `/workspaces/${projectId}/api-specs/${specId}/gen-test`,
       undefined,
       {
         params: { lang },
@@ -346,12 +351,12 @@ export const apiSpecService = {
 
   batchGenDoc: (projectId: number | string, data: BatchGenDocRequest) =>
     request.post<BatchGenDocResponse>(
-      `/projects/${projectId}/api-specs/batch-gen-doc`,
+      `/workspaces/${projectId}/api-specs/batch-gen-doc`,
       normalizePayload(data)
     ),
 
   listExamples: (projectId: number | string, specId: number | string) =>
-    request.get<ApiSpecExamplesResponse>(`/projects/${projectId}/api-specs/${specId}/examples`),
+    request.get<ApiSpecExamplesResponse>(`/workspaces/${projectId}/api-specs/${specId}/examples`),
 
   createExample: (
     projectId: number | string,
@@ -359,18 +364,18 @@ export const apiSpecService = {
     data: CreateApiExampleRequest
   ) =>
     request.post<ApiSpecExample>(
-      `/projects/${projectId}/api-specs/${specId}/examples`,
+      `/workspaces/${projectId}/api-specs/${specId}/examples`,
       normalizePayload(data)
     ),
 
   getShare: (projectId: number | string, specId: number | string) =>
-    request.get<ApiSpecShare>(`/projects/${projectId}/api-specs/${specId}/share`),
+    request.get<ApiSpecShare>(`/workspaces/${projectId}/api-specs/${specId}/share`),
 
   publishShare: (projectId: number | string, specId: number | string) =>
-    request.post<ApiSpecShare>(`/projects/${projectId}/api-specs/${specId}/share`),
+    request.post<ApiSpecShare>(`/workspaces/${projectId}/api-specs/${specId}/share`),
 
   deleteShare: (projectId: number | string, specId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/api-specs/${specId}/share`),
+    request.delete<void>(`/workspaces/${projectId}/api-specs/${specId}/share`),
 
   getPublicShare: (slug: string) =>
     request
