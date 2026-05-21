@@ -155,6 +155,7 @@ import { useProjectHistories, useProjectHistory } from '@/hooks/use-histories';
 import { useGenerateProjectCliToken, useProject } from '@/hooks/use-projects';
 import type {
   ApiSpec,
+  ApiSpecAIDraftSpec,
   ImportApiSpecMarkdownDraftResponse,
   ApiSpecExportFormat,
   ApiSpecLanguage,
@@ -225,6 +226,22 @@ const formatJson = (value: unknown) => {
 
   return JSON.stringify(value, null, 2);
 };
+
+const convertMarkdownDraftToCreateSpecRequest = (
+  draft: ApiSpecAIDraftSpec
+): CreateApiSpecRequest => ({
+  category_id: draft.category_id ?? undefined,
+  method: draft.method,
+  path: draft.path,
+  summary: draft.summary,
+  description: draft.description,
+  tags: draft.tags ?? [],
+  request_body: draft.request_body,
+  parameters: draft.parameters ?? [],
+  responses: draft.responses ?? {},
+  version: draft.version,
+  is_public: draft.is_public,
+});
 
 const getHistoryDataRecord = (history?: ProjectHistory | null) => {
   if (!history?.data || typeof history.data !== 'object' || Array.isArray(history.data)) {
@@ -1992,6 +2009,24 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
+  const handleImportAllMarkdownDrafts = async (
+    preview: ImportApiSpecMarkdownDraftResponse
+  ) => {
+    const specs: CreateApiSpecRequest[] = preview.drafts.map(item =>
+      convertMarkdownDraftToCreateSpecRequest(item.draft)
+    );
+
+    try {
+      await importSpecsMutation.mutateAsync({ specs });
+      setIsMarkdownDraftImportOpen(false);
+      setMarkdownDraftPreview(null);
+      setSearchQuery('');
+      await specsQuery.refetch();
+    } catch {
+      // HTTP errors are handled globally.
+    }
+  };
+
   const handleExport = async (format: ApiSpecExportFormat) => {
     try {
       const payload = await exportSpecsMutation.mutateAsync({ format });
@@ -2686,6 +2721,7 @@ function ApiSpecsWorkspaceSection({
       <ImportMarkdownDraftDialog
         open={isMarkdownDraftImportOpen}
         isSubmitting={importMarkdownDraftMutation.isPending}
+        isImporting={importSpecsMutation.isPending}
         preview={markdownDraftPreview}
         onOpenChange={open => {
           setIsMarkdownDraftImportOpen(open);
@@ -2694,6 +2730,7 @@ function ApiSpecsWorkspaceSection({
           }
         }}
         onSubmit={handleImportMarkdownDraft}
+        onImportAll={handleImportAllMarkdownDrafts}
       />
 
       <ExportSpecsDialog

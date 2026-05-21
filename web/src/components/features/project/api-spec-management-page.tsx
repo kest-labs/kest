@@ -1036,15 +1036,19 @@ export function ImportSpecsDialog({
 export function ImportMarkdownDraftDialog({
   open,
   isSubmitting,
+  isImporting,
   preview,
   onOpenChange,
   onSubmit,
+  onImportAll,
 }: {
   open: boolean;
   isSubmitting: boolean;
+  isImporting: boolean;
   preview: ImportApiSpecMarkdownDraftResponse | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: { file: File; base_url_override?: string }) => Promise<void>;
+  onImportAll: (preview: ImportApiSpecMarkdownDraftResponse) => Promise<void>;
 }) {
   const t = useT('project');
   const [draft, setDraft] = useState<MarkdownDraftImportDraft>(() => getMarkdownDraftImportDraft());
@@ -1064,6 +1068,19 @@ export function ImportMarkdownDraftDialog({
         file: draft.file,
         base_url_override: draft.baseUrlOverride.trim() || undefined,
       });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unknown error');
+    }
+  };
+
+  const handleImportAll = async () => {
+    if (!preview) {
+      return;
+    }
+
+    try {
+      setError('');
+      await onImportAll(preview);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Unknown error');
     }
@@ -1152,6 +1169,11 @@ export function ImportMarkdownDraftDialog({
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
+          {preview ? (
+            <Button type="button" variant="outline" loading={isImporting} onClick={() => void handleImportAll()}>
+              Import all drafts
+            </Button>
+          ) : null}
           <Button type="submit" form="api-spec-markdown-draft-form" loading={isSubmitting}>
             Preview drafts
           </Button>
