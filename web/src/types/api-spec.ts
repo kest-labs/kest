@@ -148,6 +148,39 @@ export interface ImportApiSpecsResponse {
   message: string;
 }
 
+export interface ImportApiSpecMarkdownDraftRequest {
+  file: File;
+  base_url_override?: string;
+}
+
+export interface ApiSpecMarkdownDraftPreviewFieldInsight {
+  source: string;
+  confidence: number;
+}
+
+export interface ApiSpecMarkdownDraftPreviewItem {
+  module_name: string;
+  auth_type?: string;
+  confidence: number;
+  warnings?: string[];
+  observed_fields?: string[];
+  inferred_fields?: string[];
+  example_request_body?: string;
+  draft: ApiSpecAIDraftSpec;
+  field_insights?: Record<string, ApiSpecMarkdownDraftPreviewFieldInsight>;
+}
+
+export interface ImportApiSpecMarkdownDraftResponse {
+  document_title: string;
+  base_url?: string;
+  base_path?: string;
+  source_format?: string;
+  endpoint_count: number;
+  draft_count: number;
+  warnings?: string[];
+  drafts: ApiSpecMarkdownDraftPreviewItem[];
+}
+
 export interface BatchGenDocRequest {
   category_id?: number | string;
   lang?: ApiSpecLanguage;

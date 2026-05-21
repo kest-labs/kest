@@ -14,6 +14,7 @@ import type {
   CreateApiSpecAIDraftRequest,
   CreateApiExampleRequest,
   CreateApiSpecRequest,
+  ImportApiSpecMarkdownDraftRequest,
   ImportApiSpecsRequest,
   RefineApiSpecAIDraftRequest,
   UpdateApiSpecRequest,
@@ -324,6 +325,22 @@ export function useImportApiSpecs(projectId: number | string) {
     onSuccess: result => {
       queryClient.invalidateQueries({ queryKey: apiSpecKeys.lists(projectId) });
       toast.success(result.message || t.project('toasts.specsImported'));
+    },
+  });
+}
+
+// Markdown 预览导入 mutation。
+// 作用：把 Markdown 文档先转换成 reviewable draft 列表，供页面决定是否继续落库。
+export function useImportApiSpecMarkdownDraft(projectId: number | string) {
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (data: ImportApiSpecMarkdownDraftRequest) =>
+      apiSpecService.importMarkdownDraftPreview(projectId, data),
+    onSuccess: result => {
+      toast.success(t.project('toasts.aiDraftGenerated'), {
+        description: `${result.document_title}: ${result.draft_count} drafts`,
+      });
     },
   });
 }

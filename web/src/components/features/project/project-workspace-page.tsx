@@ -88,6 +88,7 @@ import {
   downloadExportPayload,
   ExampleFormDialog,
   ExportSpecsDialog,
+  ImportMarkdownDraftDialog,
   ImportSpecsDialog,
   SpecFormDialog,
 } from '@/components/features/project/api-spec-management-page';
@@ -129,6 +130,7 @@ import {
   useGenApiDoc,
   useGenApiTest,
   useGeneratedApiTest,
+  useImportApiSpecMarkdownDraft,
   useImportApiSpecs,
   usePublishApiSpecShare,
   useProjectApiCategories,
@@ -153,6 +155,7 @@ import { useProjectHistories, useProjectHistory } from '@/hooks/use-histories';
 import { useGenerateProjectCliToken, useProject } from '@/hooks/use-projects';
 import type {
   ApiSpec,
+  ImportApiSpecMarkdownDraftResponse,
   ApiSpecExportFormat,
   ApiSpecLanguage,
   BatchGenDocRequest,
@@ -1655,6 +1658,9 @@ function ApiSpecsWorkspaceSection({
     null
   );
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isMarkdownDraftImportOpen, setIsMarkdownDraftImportOpen] = useState(false);
+  const [markdownDraftPreview, setMarkdownDraftPreview] =
+    useState<ImportApiSpecMarkdownDraftResponse | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBatchGenOpen, setIsBatchGenOpen] = useState(false);
   const [isExampleOpen, setIsExampleOpen] = useState(false);
@@ -1693,6 +1699,7 @@ function ApiSpecsWorkspaceSection({
   const acceptAIDraftMutation = useAcceptApiSpecAIDraft(projectId);
   const deleteSpecMutation = useDeleteApiSpec(projectId);
   const importSpecsMutation = useImportApiSpecs(projectId);
+  const importMarkdownDraftMutation = useImportApiSpecMarkdownDraft(projectId);
   const exportSpecsMutation = useExportApiSpecs(projectId);
   const batchGenMutation = useBatchGenApiDocs(projectId);
   const genDocMutation = useGenApiDoc(projectId);
@@ -1973,6 +1980,18 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
+  const handleImportMarkdownDraft = async (payload: {
+    file: File;
+    base_url_override?: string;
+  }) => {
+    try {
+      const result = await importMarkdownDraftMutation.mutateAsync(payload);
+      setMarkdownDraftPreview(result);
+    } catch {
+      // HTTP errors are handled globally.
+    }
+  };
+
   const handleExport = async (format: ApiSpecExportFormat) => {
     try {
       const payload = await exportSpecsMutation.mutateAsync({ format });
@@ -2194,6 +2213,13 @@ function ApiSpecsWorkspaceSection({
       icon: Upload,
       disabled: !canWrite,
       onSelect: () => setIsImportOpen(true),
+    },
+    {
+      key: 'api-specs-import-markdown-preview',
+      label: 'Markdown Draft Preview',
+      icon: FileCode2,
+      disabled: !canWrite,
+      onSelect: () => setIsMarkdownDraftImportOpen(true),
     },
     {
       key: 'api-specs-export',
@@ -2655,6 +2681,19 @@ function ApiSpecsWorkspaceSection({
         isSubmitting={importSpecsMutation.isPending}
         onOpenChange={setIsImportOpen}
         onSubmit={handleImport}
+      />
+
+      <ImportMarkdownDraftDialog
+        open={isMarkdownDraftImportOpen}
+        isSubmitting={importMarkdownDraftMutation.isPending}
+        preview={markdownDraftPreview}
+        onOpenChange={open => {
+          setIsMarkdownDraftImportOpen(open);
+          if (!open) {
+            setMarkdownDraftPreview(null);
+          }
+        }}
+        onSubmit={handleImportMarkdownDraft}
       />
 
       <ExportSpecsDialog

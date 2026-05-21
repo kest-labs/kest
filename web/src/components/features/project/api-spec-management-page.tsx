@@ -110,6 +110,8 @@ import type { ScopedTranslations } from '@/i18n/shared';
 import type {
   ApiSpec,
   ApiSpecDocSource,
+  ApiSpecMarkdownDraftPreviewItem,
+  ImportApiSpecMarkdownDraftResponse,
   ApiSpecExample,
   ApiSpecExportFormat,
   ApiSpecExportPayload,
@@ -179,6 +181,11 @@ interface ExampleDraft {
 
 interface ImportDraft {
   payload: string;
+}
+
+interface MarkdownDraftImportDraft {
+  file: File | null;
+  baseUrlOverride: string;
 }
 
 interface ExportDraft {
@@ -369,6 +376,11 @@ const getExampleDraft = (): ExampleDraft => ({
 
 const getImportDraft = (): ImportDraft => ({
   payload: '{\n  "specs": []\n}',
+});
+
+const getMarkdownDraftImportDraft = (): MarkdownDraftImportDraft => ({
+  file: null,
+  baseUrlOverride: '',
 });
 
 const getExportDraft = (): ExportDraft => ({
@@ -1018,6 +1030,166 @@ export function ImportSpecsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function ImportMarkdownDraftDialog({
+  open,
+  isSubmitting,
+  preview,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  isSubmitting: boolean;
+  preview: ImportApiSpecMarkdownDraftResponse | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: { file: File; base_url_override?: string }) => Promise<void>;
+}) {
+  const t = useT('project');
+  const [draft, setDraft] = useState<MarkdownDraftImportDraft>(() => getMarkdownDraftImportDraft());
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!draft.file) {
+      setError(t('common.fieldRequired', { field: 'Markdown file' }));
+      return;
+    }
+
+    try {
+      setError('');
+      await onSubmit({
+        file: draft.file,
+        base_url_override: draft.baseUrlOverride.trim() || undefined,
+      });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unknown error');
+    }
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) {
+      setDraft(getMarkdownDraftImportDraft());
+      setError('');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>Markdown Draft Preview</DialogTitle>
+          <DialogDescription>
+            Upload a Markdown API document and preview extracted API spec drafts before building the
+            review flow.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form id="api-spec-markdown-draft-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="api-spec-markdown-file">Markdown file</Label>
+              <Input
+                id="api-spec-markdown-file"
+                type="file"
+                accept=".md,text/markdown"
+                onChange={event =>
+                  setDraft(current => ({
+                    ...current,
+                    file: event.target.files?.[0] ?? null,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="api-spec-markdown-base-url">Base URL override</Label>
+              <Input
+                id="api-spec-markdown-base-url"
+                placeholder="https://api.example.com"
+                value={draft.baseUrlOverride}
+                onChange={event =>
+                  setDraft(current => ({
+                    ...current,
+                    baseUrlOverride: event.target.value,
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Use this when the document only provides a base path like <code>/v1</code>.
+              </p>
+            </div>
+
+            {error ? <p className="text-sm font-medium text-destructive">{error}</p> : null}
+
+            {preview ? (
+              <div className="space-y-4 rounded-lg border border-border-subtle bg-bg-subtle/40 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{preview.document_title}</Badge>
+                  <Badge variant="outline">{preview.draft_count} drafts</Badge>
+                  <Badge variant="outline">{preview.endpoint_count} endpoints</Badge>
+                </div>
+
+                {preview.warnings?.length ? (
+                  <Alert>
+                    <AlertTitle>Warnings</AlertTitle>
+                    <AlertDescription>{preview.warnings.join(' ')}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className="space-y-3">
+                  {preview.drafts.slice(0, 8).map(item => (
+                    <MarkdownDraftPreviewCard key={`${item.module_name}-${item.draft.method}-${item.draft.path}`} item={item} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" form="api-spec-markdown-draft-form" loading={isSubmitting}>
+            Preview drafts
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MarkdownDraftPreviewCard({ item }: { item: ApiSpecMarkdownDraftPreviewItem }) {
+  return (
+    <div className="rounded-md border border-border-subtle bg-bg-canvas p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline">{item.module_name}</Badge>
+        <Badge variant="outline">
+          {item.draft.method} {item.draft.path}
+        </Badge>
+        <Badge variant="outline">confidence {item.confidence.toFixed(2)}</Badge>
+        {item.auth_type ? <Badge variant="outline">{item.auth_type}</Badge> : null}
+      </div>
+
+      <div className="mt-2 space-y-1">
+        <p className="text-sm font-medium text-text-main">{item.draft.summary}</p>
+        {item.draft.description ? (
+          <p className="text-sm text-text-muted">{item.draft.description}</p>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-4 text-xs text-text-muted">
+        <span>params {item.draft.parameters?.length ?? 0}</span>
+        <span>body {item.draft.request_body ? 'yes' : 'no'}</span>
+        <span>tags {(item.draft.tags ?? []).length}</span>
+      </div>
+
+      {item.warnings?.length ? (
+        <p className="mt-2 text-xs text-amber-700">{item.warnings.join(' ')}</p>
+      ) : null}
+    </div>
   );
 }
 

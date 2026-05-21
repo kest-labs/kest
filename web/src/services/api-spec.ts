@@ -22,6 +22,8 @@ import type {
   CreateApiExampleRequest,
   CreateApiSpecRequest,
   GenApiTestResponse,
+  ImportApiSpecMarkdownDraftRequest,
+  ImportApiSpecMarkdownDraftResponse,
   ImportApiSpecsRequest,
   ImportApiSpecsResponse,
   PublicApiSpecShare,
@@ -299,6 +301,29 @@ export const apiSpecService = {
 
   import: (projectId: number | string, data: ImportApiSpecsRequest) =>
     request.post<ImportApiSpecsResponse>(`/projects/${projectId}/api-specs/import`, data),
+
+  importMarkdownDraftPreview: (
+    projectId: number | string,
+    data: ImportApiSpecMarkdownDraftRequest
+  ) => {
+    const formData = new FormData();
+    formData.append('file', data.file);
+
+    return request.post<ImportApiSpecMarkdownDraftResponse>(
+      `/projects/${projectId}/api-specs/import/markdown-ai`,
+      formData,
+      {
+        params: data.base_url_override
+          ? {
+              base_url_override: data.base_url_override,
+            }
+          : undefined,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+  },
 
   export: (projectId: number | string, format: ApiSpecExportFormat) =>
     request.get<ApiSpecExportPayload>(`/projects/${projectId}/api-specs/export`, {
