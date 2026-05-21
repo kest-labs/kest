@@ -141,6 +141,10 @@ func (s *service) importMarkdownDocument(
 		return nil, ErrNoImportableEndpoints
 	}
 
+	if len(doc.Modules) == 1 {
+		return s.importSingleMarkdownModule(ctx, workspaceID, parentID, doc.Modules[0])
+	}
+
 	rootReq := &collection.CreateCollectionRequest{
 		WorkspaceID: workspaceID,
 		Name:        doc.Title,
@@ -168,59 +172,141 @@ func (s *service) importMarkdownDocument(
 	}
 
 	for moduleIndex, module := range doc.Modules {
-		moduleReq := &collection.CreateCollectionRequest{
-			WorkspaceID: workspaceID,
-			Name:        module.Name,
-			ParentID:    &rootFolder.ID,
-			IsFolder:    false,
-			SortOrder:   moduleIndex,
-		}
-
-		moduleCollection, err := s.collectionService.Create(ctx, moduleReq)
+		moduleCollection, err := s.createMarkdownModuleCollection(
+			ctx,
+			workspaceID,
+			&rootFolder.ID,
+			module.Name,
+			moduleIndex,
+		)
 		if err != nil {
 			return fail(err)
 		}
 
-		moduleResult := MarkdownImportModuleResult{
-			Name:         module.Name,
-			CollectionID: moduleCollection.ID,
-		}
-
-		for requestIndex, endpoint := range module.Endpoints {
-			req := &request.CreateRequestRequest{
-				CollectionID: moduleCollection.ID,
-				Name:         endpoint.Name,
-				Description:  endpoint.Description,
-				Method:       endpoint.Method,
-				URL:          endpoint.URL,
-				Headers:      endpoint.Headers,
-				QueryParams:  endpoint.QueryParams,
-				PathParams:   endpoint.PathParams,
-				Body:         endpoint.Body,
-				BodyType:     endpoint.BodyType,
-				SortOrder:    requestIndex,
-			}
-
-			createdRequest, err := s.requestService.Create(ctx, workspaceID, req)
-			if err != nil {
-				return fail(err)
-			}
-			if createdRequest != nil && createdRequest.ID != "" {
-				createdRequests = append(createdRequests, createdMarkdownRequest{
-					ID:           createdRequest.ID,
-					CollectionID: moduleCollection.ID,
-				})
-			}
-
-			moduleResult.RequestCount++
-			result.RequestsCreated++
+		moduleResult, requestCount, err := s.importMarkdownModuleRequests(
+			ctx,
+			workspaceID,
+			moduleCollection.ID,
+			module,
+			&createdRequests,
+		)
+		if err != nil {
+			return fail(err)
 		}
 
 		result.CollectionsCreated++
+		result.RequestsCreated += requestCount
 		result.Modules = append(result.Modules, moduleResult)
 	}
 
 	return result, nil
+}
+
+func (s *service) importSingleMarkdownModule(
+	ctx context.Context,
+	workspaceID, parentID string,
+	module markdownModule,
+) (*MarkdownImportResult, error) {
+	var parentIDPtr *string
+	if parentID != "" {
+		parentIDPtr = &parentID
+	}
+
+	moduleCollection, err := s.createMarkdownModuleCollection(
+		ctx,
+		workspaceID,
+		parentIDPtr,
+		module.Name,
+		0,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	createdRequests := make([]createdMarkdownRequest, 0)
+	fail := func(err error) (*MarkdownImportResult, error) {
+		s.cleanupMarkdownImport(ctx, workspaceID, moduleCollection.ID, createdRequests)
+		return nil, err
+	}
+
+	moduleResult, requestCount, err := s.importMarkdownModuleRequests(
+		ctx,
+		workspaceID,
+		moduleCollection.ID,
+		module,
+		&createdRequests,
+	)
+	if err != nil {
+		return fail(err)
+	}
+
+	return &MarkdownImportResult{
+		RootFolderID:       moduleCollection.ID,
+		RootFolderName:     moduleCollection.Name,
+		CollectionsCreated: 1,
+		RequestsCreated:    requestCount,
+		Modules:            []MarkdownImportModuleResult{moduleResult},
+	}, nil
+}
+
+func (s *service) createMarkdownModuleCollection(
+	ctx context.Context,
+	workspaceID string,
+	parentID *string,
+	name string,
+	sortOrder int,
+) (*collection.Collection, error) {
+	return s.collectionService.Create(ctx, &collection.CreateCollectionRequest{
+		WorkspaceID: workspaceID,
+		Name:        name,
+		ParentID:    parentID,
+		IsFolder:    false,
+		SortOrder:   sortOrder,
+	})
+}
+
+func (s *service) importMarkdownModuleRequests(
+	ctx context.Context,
+	workspaceID string,
+	collectionID string,
+	module markdownModule,
+	createdRequests *[]createdMarkdownRequest,
+) (MarkdownImportModuleResult, int, error) {
+	moduleResult := MarkdownImportModuleResult{
+		Name:         module.Name,
+		CollectionID: collectionID,
+	}
+
+	for requestIndex, endpoint := range module.Endpoints {
+		req := &request.CreateRequestRequest{
+			CollectionID: collectionID,
+			Name:         endpoint.Name,
+			Description:  endpoint.Description,
+			Method:       endpoint.Method,
+			URL:          endpoint.URL,
+			Headers:      endpoint.Headers,
+			QueryParams:  endpoint.QueryParams,
+			PathParams:   endpoint.PathParams,
+			Body:         endpoint.Body,
+			BodyType:     endpoint.BodyType,
+			SortOrder:    requestIndex,
+		}
+
+		createdRequest, err := s.requestService.Create(ctx, workspaceID, req)
+		if err != nil {
+			return moduleResult, moduleResult.RequestCount, err
+		}
+		if createdRequest != nil && createdRequest.ID != "" {
+			*createdRequests = append(*createdRequests, createdMarkdownRequest{
+				ID:           createdRequest.ID,
+				CollectionID: collectionID,
+			})
+		}
+
+		moduleResult.RequestCount++
+	}
+
+	return moduleResult, moduleResult.RequestCount, nil
 }
 
 func (s *service) cleanupMarkdownImport(

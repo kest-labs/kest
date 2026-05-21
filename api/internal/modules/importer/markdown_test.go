@@ -164,6 +164,66 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 	}
 }
 
+func TestImportMarkdownSingleModuleCreatesOnlyOneCollection(t *testing.T) {
+	collectionService := &stubCollectionService{}
+	requestService := &stubRequestService{}
+	service := NewService(collectionService, requestService).(*service)
+	parentID := "9"
+
+	result, err := service.importMarkdownDocument(context.Background(), "7", parentID, &markdownDocument{
+		Title: "Members & Invitations API",
+		Modules: []markdownModule{
+			{
+				Name: "Members & Invitations",
+				Endpoints: []markdownEndpoint{
+					{
+						Name:   "List all active members",
+						Method: "GET",
+						URL:    "{{base_url}}/members",
+					},
+					{
+						Name:   "Create invitation",
+						Method: "POST",
+						URL:    "{{base_url}}/invitations",
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected import to succeed, got %v", err)
+	}
+
+	if result.RootFolderName != "Members & Invitations" {
+		t.Fatalf("expected result name to match the created collection, got %q", result.RootFolderName)
+	}
+	if result.CollectionsCreated != 1 {
+		t.Fatalf("expected one collection, got %d", result.CollectionsCreated)
+	}
+	if result.RequestsCreated != 2 {
+		t.Fatalf("expected two requests, got %d", result.RequestsCreated)
+	}
+	if len(collectionService.created) != 1 {
+		t.Fatalf("expected only one collection to be created, got %d", len(collectionService.created))
+	}
+
+	createdCollection := collectionService.created[0]
+	if createdCollection.IsFolder {
+		t.Fatal("expected single-module import to create a request collection, not a folder")
+	}
+	if createdCollection.ParentID == nil || *createdCollection.ParentID != parentID {
+		t.Fatalf("expected collection parent_id %s, got %#v", parentID, createdCollection.ParentID)
+	}
+	if len(requestService.created) != 2 {
+		t.Fatalf("expected two requests to be created, got %d", len(requestService.created))
+	}
+	for _, createdRequest := range requestService.created {
+		if createdRequest.CollectionID != result.RootFolderID {
+			t.Fatalf("expected request to belong to collection %s, got %s", result.RootFolderID, createdRequest.CollectionID)
+		}
+	}
+}
+
 func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *testing.T) {
 	doc, err := parseMarkdownDocument("apispec.md", markdown(
 		"# Apispec API",
