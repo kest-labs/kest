@@ -164,13 +164,14 @@ export function CategoryManagementPage({
   // 远程数据查询与 mutation。
   // 作用：汇总项目信息、权限、分类列表和所有分类写操作。
   const projectQuery = useProject(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const projectStatsQuery = useProjectStats(projectId);
   const memberRoleQuery = useProjectMemberRole(projectId);
-  const categoriesQuery = useProjectCategories({ projectId, tree: true });
-  const createCategoryMutation = useCreateCategory(projectId);
-  const updateCategoryMutation = useUpdateCategory(projectId);
-  const deleteCategoryMutation = useDeleteCategory(projectId);
-  const sortCategoriesMutation = useSortCategories(projectId);
+  const categoriesQuery = useProjectCategories({ projectId: workspaceId, tree: true });
+  const createCategoryMutation = useCreateCategory(workspaceId);
+  const updateCategoryMutation = useUpdateCategory(workspaceId);
+  const deleteCategoryMutation = useDeleteCategory(workspaceId);
+  const sortCategoriesMutation = useSortCategories(workspaceId);
 
   // 分类树与扁平结构。
   // 作用：同时满足“层级详情展示”和“表格扫描/排序”两类视图需求。
@@ -235,7 +236,7 @@ export function CategoryManagementPage({
       ? effectiveSelectedCategoryId
       : selectableCategories[0]?.id ?? null;
   const visibleCategories = filteredCategories.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const selectedCategoryQuery = useProjectCategory(projectId, activeCategoryId ?? undefined);
+  const selectedCategoryQuery = useProjectCategory(workspaceId, activeCategoryId ?? undefined);
   const selectedCategoryFromTree = findProjectCategory(categoryTree, activeCategoryId);
   const selectedCategory = selectedCategoryQuery.data ?? selectedCategoryFromTree;
   const selectedParent = findProjectCategory(categoryTree, selectedCategory?.parent_id ?? null);

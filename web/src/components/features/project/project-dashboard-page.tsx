@@ -562,9 +562,10 @@ function ProjectCard({
   isDeleting: boolean;
 }) {
   const t = useT('project');
+  const workspaceId = project.workspace_id;
   const statsQuery = useProjectStats(project.id);
   const apiSpecsQuery = useApiSpecs({
-    projectId: project.id,
+    projectId: workspaceId ?? '',
     page: 1,
     pageSize: MAX_PREVIEW_SPECS,
   });

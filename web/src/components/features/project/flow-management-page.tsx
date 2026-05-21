@@ -2202,15 +2202,16 @@ export function ProjectFlowManagementPage({
   const router = useRouter();
   const isMobile = useIsMobile();
   const projectQuery = useProject(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const projectName = projectQuery.data?.name || t('flowPage.projectFallback', { id: projectId });
   const memberRoleQuery = useProjectMemberRole(projectId);
   const flowListQuery = useFlows(projectId);
-  const environmentsQuery = useEnvironments(projectId);
+  const environmentsQuery = useEnvironments(workspaceId);
   const createFlowMutation = useCreateFlow(projectId);
   const deleteFlowMutation = useDeleteFlow(projectId);
   const saveFlowMutation = useSaveFlow(projectId);
   const runFlowMutation = useRunFlow(projectId);
-  const createHistoryMutation = useCreateProjectHistory(projectId);
+  const createHistoryMutation = useCreateProjectHistory(workspaceId);
 
   const [searchValue, setSearchValue] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);

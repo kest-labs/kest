@@ -1605,12 +1605,13 @@ export function TestCaseManagementPage({
   const deferredKeyword = useDeferredValue(keyword.trim());
 
   const projectQuery = useProject(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const apiSpecsQuery = useApiSpecs({
-    projectId,
+    projectId: workspaceId,
     page: 1,
     pageSize: 100,
   });
-  const environmentsQuery = useEnvironments(projectId);
+  const environmentsQuery = useEnvironments(workspaceId);
   const memberRoleQuery = useProjectMemberRole(projectId);
 
   const testCasesQuery = useTestCases({

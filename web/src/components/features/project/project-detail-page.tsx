@@ -450,6 +450,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
   const generateCliTokenMutation = useGenerateProjectCliToken();
 
   const project = projectQuery.data;
+  const workspaceId = project?.workspace_id;
   const projectStats = projectStatsQuery.data;
   const nextAction = getProjectNextAction(t, projectId, projectStats);
   const workflowSteps = getProjectWorkflowSteps(t, projectId, projectStats);
@@ -537,16 +538,16 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
   };
 
   const handleGenerateCliToken = async () => {
-    if (!project) {
+    if (!project || !workspaceId) {
       return;
     }
 
     try {
       const token = await generateCliTokenMutation.mutateAsync({
-        id: project.id,
+        id: workspaceId,
         data: {
           name: `${project.name} CLI sync`,
-          scopes: ['spec:write', 'run:write'],
+          scopes: ['collection:read', 'collection:run'],
         },
       });
       setGeneratedCliToken(token);
@@ -846,7 +847,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
                   <Button
                     type="button"
                     onClick={() => void handleGenerateCliToken()}
-                    disabled={!project || generateCliTokenMutation.isPending}
+                    disabled={!project || !workspaceId || generateCliTokenMutation.isPending}
                   >
                     <Key className="h-4 w-4" />
                     {generateCliTokenMutation.isPending

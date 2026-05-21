@@ -1377,15 +1377,35 @@ export function ProjectWorkspacePage({
 }) {
   const t = useT('project');
   const projectQuery = useProject(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const projectName = projectQuery.data?.name || `${t('common.project')} #${projectId}`;
+
+  if (!workspaceId && projectQuery.isLoading) {
+    return (
+      <div className="p-6">
+        <DetailSkeleton />
+      </div>
+    );
+  }
+
+  if (!workspaceId) {
+    return (
+      <PlaceholderWorkspaceSection
+        projectId={projectId}
+        projectName={projectName}
+        module={module}
+      />
+    );
+  }
 
   switch (module) {
     case 'collections':
-      return <CollectionsWorkspaceSection projectId={projectId} />;
+      return <CollectionsWorkspaceSection workspaceId={workspaceId} />;
     case 'api-specs':
       return (
         <ApiSpecsWorkspaceSection
           projectId={projectId}
+          workspaceId={workspaceId}
           projectName={projectName}
           selectedItemId={selectedItemId}
           autoOpenAICreate={autoOpenAICreate}
@@ -1395,6 +1415,7 @@ export function ProjectWorkspacePage({
       return (
         <EnvironmentsWorkspaceSection
           projectId={projectId}
+          workspaceId={workspaceId}
           projectName={projectName}
           selectedItemId={selectedItemId}
         />
@@ -1403,17 +1424,25 @@ export function ProjectWorkspacePage({
       return (
         <CategoriesWorkspaceSection
           projectId={projectId}
+          workspaceId={workspaceId}
           projectName={projectName}
           selectedItemId={selectedItemId}
         />
       );
     case 'keys':
-      return <ProjectKeysWorkspaceSection projectId={projectId} projectName={projectName} />;
+      return (
+        <ProjectKeysWorkspaceSection
+          projectId={projectId}
+          workspaceId={workspaceId}
+          projectName={projectName}
+        />
+      );
     case 'histories':
       return (
         <HistoryWorkspaceSection
           key={`histories:${initialHistoryEntityType?.trim() || 'all'}`}
           projectId={projectId}
+          workspaceId={workspaceId}
           projectName={projectName}
           selectedItemId={selectedItemId}
           initialEntityTypeFilter={initialHistoryEntityType}
@@ -1434,9 +1463,11 @@ export function ProjectWorkspacePage({
 
 function ProjectKeysWorkspaceSection({
   projectId,
+  workspaceId,
   projectName,
 }: {
   projectId: number | string;
+  workspaceId: number | string;
   projectName: string;
 }) {
   const t = useT('project');
@@ -1474,16 +1505,16 @@ function ProjectKeysWorkspaceSection({
   };
 
   const handleGenerateCliToken = async () => {
-    if (!project) {
+    if (!project || !workspaceId) {
       return;
     }
 
     try {
       const token = await generateCliTokenMutation.mutateAsync({
-        id: project.id,
+        id: workspaceId,
         data: {
           name: `${project.name} CLI sync`,
-          scopes: ['spec:write', 'run:write'],
+          scopes: ['collection:read', 'collection:run'],
         },
       });
       setGeneratedCliToken(token);
@@ -1528,7 +1559,7 @@ function ProjectKeysWorkspaceSection({
             <Button
               type="button"
               onClick={() => void handleGenerateCliToken()}
-              disabled={!project || generateCliTokenMutation.isPending}
+              disabled={!project || !workspaceId || generateCliTokenMutation.isPending}
             >
               <KeyRound className="h-4 w-4" />
               {generateCliTokenMutation.isPending
@@ -1559,7 +1590,7 @@ function ProjectKeysWorkspaceSection({
                     <span className="font-mono">{scopedProjectId}</span>
                   </DetailField>
                   <DetailField label={t('keysPage.scopes')}>
-                    <span className="font-mono text-xs">spec:write, run:write</span>
+                    <span className="font-mono text-xs">collection:read, collection:run</span>
                   </DetailField>
                   <DetailField label={t('keysPage.autoSyncHistory')}>
                     {t('keysPage.autoSyncHistoryEnabled')}
@@ -1654,11 +1685,13 @@ function ProjectKeysWorkspaceSection({
 
 function ApiSpecsWorkspaceSection({
   projectId,
+  workspaceId,
   projectName,
   selectedItemId,
   autoOpenAICreate,
 }: {
   projectId: number | string;
+  workspaceId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
   autoOpenAICreate?: boolean;
@@ -1696,7 +1729,7 @@ function ApiSpecsWorkspaceSection({
   );
 
   const specsQuery = useApiSpecs({
-    projectId,
+    projectId: workspaceId,
     page: 1,
     pageSize: MAX_MODULE_ITEMS,
   });
@@ -1705,24 +1738,24 @@ function ApiSpecsWorkspaceSection({
       ? null
       : selectedItemId;
 
-  const selectedSpecQuery = useApiSpecFull(projectId, effectiveSelectedItemId ?? undefined);
-  const editingSpecQuery = useApiSpec(projectId, editingSpecId ?? undefined);
+  const selectedSpecQuery = useApiSpecFull(workspaceId, effectiveSelectedItemId ?? undefined);
+  const editingSpecQuery = useApiSpec(workspaceId, editingSpecId ?? undefined);
   const memberRoleQuery = useProjectMemberRole(projectId);
-  const categoriesQuery = useProjectApiCategories(projectId);
-  const createCategoryMutation = useCreateCategory(projectId);
-  const createSpecMutation = useCreateApiSpec(projectId);
-  const updateSpecMutation = useUpdateApiSpec(projectId);
-  const createAIDraftStream = useCreateApiSpecAIDraftStream(projectId);
-  const refineAIDraftMutation = useRefineApiSpecAIDraft(projectId);
-  const acceptAIDraftMutation = useAcceptApiSpecAIDraft(projectId);
-  const deleteSpecMutation = useDeleteApiSpec(projectId);
-  const importSpecsMutation = useImportApiSpecs(projectId);
-  const importMarkdownDraftMutation = useImportApiSpecMarkdownDraft(projectId);
-  const exportSpecsMutation = useExportApiSpecs(projectId);
-  const batchGenMutation = useBatchGenApiDocs(projectId);
-  const genDocMutation = useGenApiDoc(projectId);
-  const genTestMutation = useGenApiTest(projectId);
-  const createExampleMutation = useCreateApiExample(projectId);
+  const categoriesQuery = useProjectApiCategories(workspaceId);
+  const createCategoryMutation = useCreateCategory(workspaceId);
+  const createSpecMutation = useCreateApiSpec(workspaceId);
+  const updateSpecMutation = useUpdateApiSpec(workspaceId);
+  const createAIDraftStream = useCreateApiSpecAIDraftStream(workspaceId);
+  const refineAIDraftMutation = useRefineApiSpecAIDraft(workspaceId);
+  const acceptAIDraftMutation = useAcceptApiSpecAIDraft(workspaceId);
+  const deleteSpecMutation = useDeleteApiSpec(workspaceId);
+  const importSpecsMutation = useImportApiSpecs(workspaceId);
+  const importMarkdownDraftMutation = useImportApiSpecMarkdownDraft(workspaceId);
+  const exportSpecsMutation = useExportApiSpecs(workspaceId);
+  const batchGenMutation = useBatchGenApiDocs(workspaceId);
+  const genDocMutation = useGenApiDoc(workspaceId);
+  const genTestMutation = useGenApiTest(workspaceId);
+  const createExampleMutation = useCreateApiExample(workspaceId);
 
   const specs = specsQuery.data?.items ?? EMPTY_SPECS;
   const categories = categoriesQuery.data?.items ?? EMPTY_CATEGORIES;
@@ -2773,8 +2806,12 @@ function ApiSpecsWorkspaceSection({
   );
 }
 
-function CollectionsWorkspaceSection({ projectId }: { projectId: number | string }) {
-  return <ApiRequestWorkbench projectId={projectId} />;
+function CollectionsWorkspaceSection({
+  workspaceId,
+}: {
+  workspaceId: number | string;
+}) {
+  return <ApiRequestWorkbench workspaceId={workspaceId} />;
 }
 
 function ApiSpecDirectoryList({
@@ -3010,10 +3047,12 @@ function ApiSpecDragPreview({ spec }: { spec: ApiSpec }) {
 
 function EnvironmentsWorkspaceSection({
   projectId,
+  workspaceId,
   projectName,
   selectedItemId,
 }: {
   projectId: number | string;
+  workspaceId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
 }) {
@@ -3036,13 +3075,13 @@ function EnvironmentsWorkspaceSection({
       : selectedItemId;
 
   const memberRoleQuery = useProjectMemberRole(projectId);
-  const environmentsQuery = useEnvironments(projectId);
-  const selectedEnvironmentQuery = useEnvironment(projectId, effectiveSelectedItemId ?? undefined);
-  const editingEnvironmentQuery = useEnvironment(projectId, editingEnvironmentId ?? undefined);
-  const createEnvironmentMutation = useCreateEnvironment(projectId);
-  const updateEnvironmentMutation = useUpdateEnvironment(projectId);
-  const deleteEnvironmentMutation = useDeleteEnvironment(projectId);
-  const duplicateEnvironmentMutation = useDuplicateEnvironment(projectId);
+  const environmentsQuery = useEnvironments(workspaceId);
+  const selectedEnvironmentQuery = useEnvironment(workspaceId, effectiveSelectedItemId ?? undefined);
+  const editingEnvironmentQuery = useEnvironment(workspaceId, editingEnvironmentId ?? undefined);
+  const createEnvironmentMutation = useCreateEnvironment(workspaceId);
+  const updateEnvironmentMutation = useUpdateEnvironment(workspaceId);
+  const deleteEnvironmentMutation = useDeleteEnvironment(workspaceId);
+  const duplicateEnvironmentMutation = useDuplicateEnvironment(workspaceId);
 
   const environments = environmentsQuery.data?.items ?? EMPTY_ENVIRONMENTS;
   const filteredEnvironments = useMemo(() => {
@@ -3065,10 +3104,10 @@ function EnvironmentsWorkspaceSection({
   const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
   const listPreview =
     normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
-  const environmentsPath = `/projects/${projectId}/environments`;
+  const environmentsPath = `/workspaces/${workspaceId}/environments`;
   const activeEnvironmentPath = selectedEnvironment
-    ? `/projects/${projectId}/environments/${selectedEnvironment.id}`
-    : `/projects/${projectId}/environments/:eid`;
+    ? `/workspaces/${workspaceId}/environments/${selectedEnvironment.id}`
+    : `/workspaces/${workspaceId}/environments/:eid`;
 
   const closeEnvironmentForm = () => {
     setIsFormOpen(false);
@@ -3625,10 +3664,12 @@ POST ${activeEnvironmentPath}/duplicate`}</code>
 
 function CategoriesWorkspaceSection({
   projectId,
+  workspaceId,
   projectName,
   selectedItemId,
 }: {
   projectId: number | string;
+  workspaceId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
 }) {
@@ -3637,10 +3678,10 @@ function CategoriesWorkspaceSection({
   const deferredSearch = useDeferredValue(searchQuery);
 
   const categoriesQuery = useProjectCategories({
-    projectId,
+    projectId: workspaceId,
     tree: true,
   });
-  const selectedCategoryQuery = useProjectCategory(projectId, selectedItemId ?? undefined);
+  const selectedCategoryQuery = useProjectCategory(workspaceId, selectedItemId ?? undefined);
 
   const flatCategories = flattenProjectCategories(categoriesQuery.data?.items);
   const filteredCategories = useMemo(() => {
@@ -3834,7 +3875,7 @@ function CategoriesWorkspaceSection({
                       {formatDate(selectedCategory.updated_at, 'YYYY-MM-DD HH:mm')}
                     </DetailField>
                     <DetailField label={t('common.projectId')}>
-                      {selectedCategory.project_id}
+                      {selectedCategory.workspace_id ?? selectedCategory.project_id}
                     </DetailField>
                   </CardContent>
                 </Card>
@@ -3877,11 +3918,13 @@ function CategoriesWorkspaceSection({
 
 function HistoryWorkspaceSection({
   projectId,
+  workspaceId,
   projectName,
   selectedItemId,
   initialEntityTypeFilter,
 }: {
   projectId: number | string;
+  workspaceId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
   initialEntityTypeFilter?: string | null;
@@ -3894,13 +3937,13 @@ function HistoryWorkspaceSection({
   const deferredSearch = useDeferredValue(searchQuery);
 
   const historiesQuery = useProjectHistories({
-    projectId: String(projectId),
+    projectId: String(workspaceId),
     page: 1,
     pageSize: MAX_MODULE_ITEMS,
     entityType: entityTypeFilter !== 'all' ? entityTypeFilter : undefined,
   });
   const selectedHistoryQuery = useProjectHistory(
-    String(projectId),
+    String(workspaceId),
     selectedItemId != null ? String(selectedItemId) : undefined
   );
 
@@ -4143,7 +4186,7 @@ function HistoryWorkspaceSection({
                   <CardContent className="grid gap-4 md:grid-cols-2">
                     <DetailField label={t('history.recordId')}>{selectedHistory.id}</DetailField>
                     <DetailField label={t('common.projectId')}>
-                      {selectedHistory.project_id}
+                      {selectedHistory.workspace_id ?? selectedHistory.project_id}
                     </DetailField>
                     <DetailField label={t('history.entityType')}>
                       {selectedHistory.entity_type}

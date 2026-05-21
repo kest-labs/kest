@@ -2223,9 +2223,10 @@ export function ApiSpecManagementPage({
   const normalizedTag = tag.trim();
 
   const projectQuery = useProject(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const projectStatsQuery = useProjectStats(projectId);
   const memberRoleQuery = useProjectMemberRole(projectId);
-  const categoriesQuery = useProjectApiCategories(projectId);
+  const categoriesQuery = useProjectApiCategories(workspaceId);
   const resetToFirstPage = () => {
     if (page !== 1) {
       setPage(1);
@@ -2233,7 +2234,7 @@ export function ApiSpecManagementPage({
   };
 
   const specsQuery = useApiSpecs({
-    projectId,
+    projectId: workspaceId,
     page,
     pageSize: PAGE_SIZE,
     keyword: deferredKeyword || undefined,
@@ -2256,16 +2257,16 @@ export function ApiSpecManagementPage({
       : selectedSpecId;
   const activeSpecId = effectiveSelectedSpecId ?? selectableSpecs[0]?.id ?? null;
   const selectedSpecSummary = specs.find(spec => spec.id === activeSpecId) ?? null;
-  const specDetailQuery = useApiSpec(projectId, activeSpecId ?? undefined);
-  const specFullQuery = useApiSpecFull(projectId, activeSpecId ?? undefined);
-  const specExamplesQuery = useApiSpecExamples(projectId, activeSpecId ?? undefined);
-  const specShareQuery = useApiSpecShare(projectId, activeSpecId ?? undefined);
+  const specDetailQuery = useApiSpec(workspaceId, activeSpecId ?? undefined);
+  const specFullQuery = useApiSpecFull(workspaceId, activeSpecId ?? undefined);
+  const specExamplesQuery = useApiSpecExamples(workspaceId, activeSpecId ?? undefined);
+  const specShareQuery = useApiSpecShare(workspaceId, activeSpecId ?? undefined);
   const generatedTestQuery = useGeneratedApiTest(
-    projectId,
+    workspaceId,
     activeSpecId ?? undefined,
     generatedTestLanguage
   );
-  const editingSpecQuery = useApiSpec(projectId, editingSpecId ?? undefined);
+  const editingSpecQuery = useApiSpec(workspaceId, editingSpecId ?? undefined);
 
   const selectedSpec = specFullQuery.data || specDetailQuery.data || selectedSpecSummary;
   const categoryOptions = useMemo(
@@ -2299,20 +2300,20 @@ export function ApiSpecManagementPage({
     ? buildApiPath(`/workspaces/${projectId}/api-specs/${activeSpecId}/share`)
     : buildApiPath(`/workspaces/${projectId}/api-specs/:sid/share`);
 
-  const createSpecMutation = useCreateApiSpec(projectId);
-  const updateSpecMutation = useUpdateApiSpec(projectId);
-  const createAIDraftStream = useCreateApiSpecAIDraftStream(projectId);
-  const refineAIDraftMutation = useRefineApiSpecAIDraft(projectId);
-  const acceptAIDraftMutation = useAcceptApiSpecAIDraft(projectId);
-  const deleteSpecMutation = useDeleteApiSpec(projectId);
+  const createSpecMutation = useCreateApiSpec(workspaceId);
+  const updateSpecMutation = useUpdateApiSpec(workspaceId);
+  const createAIDraftStream = useCreateApiSpecAIDraftStream(workspaceId);
+  const refineAIDraftMutation = useRefineApiSpecAIDraft(workspaceId);
+  const acceptAIDraftMutation = useAcceptApiSpecAIDraft(workspaceId);
+  const deleteSpecMutation = useDeleteApiSpec(workspaceId);
   const publishShareMutation = usePublishApiSpecShare(projectId);
   const deleteShareMutation = useDeleteApiSpecShare(projectId);
-  const importSpecsMutation = useImportApiSpecs(projectId);
-  const exportSpecsMutation = useExportApiSpecs(projectId);
-  const genDocMutation = useGenApiDoc(projectId);
-  const genTestMutation = useGenApiTest(projectId);
-  const batchGenMutation = useBatchGenApiDocs(projectId);
-  const createExampleMutation = useCreateApiExample(projectId);
+  const importSpecsMutation = useImportApiSpecs(workspaceId);
+  const exportSpecsMutation = useExportApiSpecs(workspaceId);
+  const genDocMutation = useGenApiDoc(workspaceId);
+  const genTestMutation = useGenApiTest(workspaceId);
+  const batchGenMutation = useBatchGenApiDocs(workspaceId);
+  const createExampleMutation = useCreateApiExample(workspaceId);
   const shareRoute = specShareQuery.data?.slug
     ? buildApiSpecShareRoute(specShareQuery.data.slug)
     : null;
@@ -3130,7 +3131,9 @@ export function ApiSpecManagementPage({
                             <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">
                               {t('common.projectId')}
                             </div>
-                            <div className="mt-2 font-mono text-sm">{selectedSpec.project_id}</div>
+                            <div className="mt-2 font-mono text-sm">
+                              {selectedSpec.workspace_id ?? selectedSpec.project_id}
+                            </div>
                           </div>
                           <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
                             <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">

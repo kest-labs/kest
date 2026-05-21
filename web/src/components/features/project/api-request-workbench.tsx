@@ -1680,7 +1680,7 @@ const buildCollectionTreeFromList = (
       id: collection.id,
       name: collection.name,
       description: collection.description,
-      project_id: collection.project_id,
+      project_id: collection.project_id ?? collection.workspace_id ?? '',
       parent_id: collection.parent_id,
       is_folder: collection.is_folder,
       sort_order: collection.sort_order,
@@ -1714,7 +1714,7 @@ const buildCollectionTreeFromList = (
 };
 
 const fetchAllProjectCollections = async (
-  projectId: number | string
+  workspaceId: number | string
 ): Promise<ProjectCollectionTreeNode[]> => {
   const items: ProjectCollection[] = [];
   let page = 1;
@@ -1722,7 +1722,7 @@ const fetchAllProjectCollections = async (
 
   do {
     const response = await collectionService.list({
-      projectId,
+      projectId: workspaceId,
       page,
       perPage: WORKBENCH_PAGE_SIZE,
     });
@@ -1740,7 +1740,7 @@ const fetchAllProjectCollections = async (
 };
 
 const fetchAllCollectionRequests = async (
-  projectId: number | string,
+  workspaceId: number | string,
   collectionId: number | string
 ): Promise<ProjectRequest[]> => {
   const items: ProjectRequest[] = [];
@@ -1749,7 +1749,7 @@ const fetchAllCollectionRequests = async (
 
   do {
     const response = await requestService.list({
-      projectId,
+      projectId: workspaceId,
       collectionId,
       page,
       perPage: WORKBENCH_PAGE_SIZE,
@@ -1923,7 +1923,7 @@ const getInitialWorkbenchState = (): InitialWorkbenchState => {
   };
 };
 
-export function ApiRequestWorkbench({ projectId }: { projectId: number | string }) {
+export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | string }) {
   const t = useT('project');
   const defaultRequestTitle = t('collections.workbench.defaultRequestTitle');
   const pathname = usePathname();
@@ -1968,25 +1968,25 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   );
   const [defaultingExampleId, setDefaultingExampleId] = useState<number | string | null>(null);
   const [deletingExampleId, setDeletingExampleId] = useState<number | string | null>(null);
-  const createCollectionMutation = useCreateCollection(projectId);
-  const deleteCollectionMutation = useDeleteCollection(projectId);
-  const updateCollectionMutation = useUpdateCollection(projectId);
-  const importPostmanMutation = useImportPostmanCollection(projectId);
-  const importMarkdownMutation = useImportMarkdownCollection(projectId);
-  const environmentsQuery = useEnvironments(projectId);
-  const createRequestMutation = useCreateRequest(projectId);
-  const updateRequestMutation = useUpdateRequest(projectId);
-  const deleteRequestMutation = useDeleteRequest(projectId);
-  const createHistoryMutation = useCreateProjectHistory(projectId);
-  const createExampleMutation = useCreateRequestExample(projectId);
-  const updateExampleMutation = useUpdateRequestExample(projectId);
-  const deleteExampleMutation = useDeleteRequestExample(projectId);
-  const saveExampleResponseMutation = useSaveRequestExampleResponse(projectId);
-  const setDefaultExampleMutation = useSetDefaultRequestExample(projectId);
+  const createCollectionMutation = useCreateCollection(workspaceId);
+  const deleteCollectionMutation = useDeleteCollection(workspaceId);
+  const updateCollectionMutation = useUpdateCollection(workspaceId);
+  const importPostmanMutation = useImportPostmanCollection(workspaceId);
+  const importMarkdownMutation = useImportMarkdownCollection(workspaceId);
+  const environmentsQuery = useEnvironments(workspaceId);
+  const createRequestMutation = useCreateRequest(workspaceId);
+  const updateRequestMutation = useUpdateRequest(workspaceId);
+  const deleteRequestMutation = useDeleteRequest(workspaceId);
+  const createHistoryMutation = useCreateProjectHistory(workspaceId);
+  const createExampleMutation = useCreateRequestExample(workspaceId);
+  const updateExampleMutation = useUpdateRequestExample(workspaceId);
+  const deleteExampleMutation = useDeleteRequestExample(workspaceId);
+  const saveExampleResponseMutation = useSaveRequestExampleResponse(workspaceId);
+  const setDefaultExampleMutation = useSetDefaultRequestExample(workspaceId);
   const collectionTreeQuery = useQuery({
-    queryKey: collectionKeys.workbenchTree(projectId),
-    queryFn: () => fetchAllProjectCollections(projectId),
-    enabled: Boolean(projectId),
+    queryKey: collectionKeys.workbenchTree(workspaceId),
+    queryFn: () => fetchAllProjectCollections(workspaceId),
+    enabled: Boolean(workspaceId),
     staleTime: 60_000,
     placeholderData: previousData => previousData,
   });
@@ -2031,7 +2031,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     queryKey: [
       'collections',
       'project',
-      projectId,
+      workspaceId,
       'workbench-requests',
       persistedRequestCollectionIds,
     ],
@@ -2039,7 +2039,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       const entries = await Promise.all(
         persistedRequestCollectionIds.map(async collectionId => {
           try {
-            const requests = await fetchAllCollectionRequests(projectId, collectionId);
+            const requests = await fetchAllCollectionRequests(workspaceId, collectionId);
             return [collectionId, requests] as const;
           } catch {
             return [collectionId, []] as const;
@@ -2092,8 +2092,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   );
   const examplesQuery = useRequestExamples(
     persistedActiveCollectionId && persistedActiveRequestId
-      ? {
-          projectId,
+        ? {
+          projectId: workspaceId,
           collectionId: persistedActiveCollectionId,
           requestId: persistedActiveRequestId,
         }
@@ -2117,8 +2117,8 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   const selectedExampleId = viewingExampleId ?? editingExampleId;
   const exampleDetailQuery = useRequestExample(
     persistedActiveCollectionId && persistedActiveRequestId && selectedExampleId
-      ? {
-          projectId,
+        ? {
+          projectId: workspaceId,
           collectionId: persistedActiveCollectionId,
           requestId: persistedActiveRequestId,
           exampleId: selectedExampleId,
@@ -2189,14 +2189,14 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   };
 
   const refreshWorkbenchFromServer = useCallback(async () => {
-    const treeNodes = await fetchAllProjectCollections(projectId);
+    const treeNodes = await fetchAllProjectCollections(workspaceId);
     const flattenedCollections = flattenCollectionTree(treeNodes);
     const requestEntries = await Promise.all(
       flattenedCollections
         .filter(collection => !collection.is_folder)
         .map(async collection => {
           try {
-            const requests = await fetchAllCollectionRequests(projectId, collection.id);
+            const requests = await fetchAllCollectionRequests(workspaceId, collection.id);
             return [collection.id, requests] as const;
           } catch {
             return [collection.id, []] as const;
@@ -2225,7 +2225,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
       return areStringArraysEqual(current, mergedIds) ? current : mergedIds;
     });
     setNextTabIndex(current => Math.max(current, nextState.nextTabIndex));
-  }, [projectId, updateCollections]);
+  }, [updateCollections, workspaceId]);
 
   useEffect(() => {
     if (!collectionTreeQuery.isSuccess) {
@@ -2486,7 +2486,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
     const persistedRequestId = getPersistedRequestId(tab.id);
     if (persistedRequestId) {
       return requestService.update(
-        projectId,
+        workspaceId,
         persistedCollectionId,
         persistedRequestId,
         buildUpdatePayloadFromTab(tab, options.name)
@@ -2495,7 +2495,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
 
     const targetCollection = collections.find(collection => collection.id === tab.collectionId);
     return requestService.create(
-      projectId,
+      workspaceId,
       persistedCollectionId,
       buildCreatePayloadFromTab(
         tab,
@@ -2719,7 +2719,7 @@ export function ApiRequestWorkbench({ projectId }: { projectId: number | string 
   };
 
   const createCollection = async () => {
-    if (createCollectionMutation.isPending) {
+    if (!workspaceId || createCollectionMutation.isPending) {
       return;
     }
 

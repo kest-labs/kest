@@ -37,8 +37,12 @@ export function useCreateDemoProject() {
       });
 
       const projectId = project.id;
+      const workspaceId = project.workspace_id;
+      if (!workspaceId) {
+        throw new Error('Workspace binding is missing for the demo project');
+      }
 
-      const environment = await environmentService.create(projectId, {
+      const environment = await environmentService.create(workspaceId, {
         name: 'demo',
         display_name: 'Demo Store API',
         base_url: 'https://dummyjson.com',
@@ -52,7 +56,7 @@ export function useCreateDemoProject() {
         },
       });
 
-      await apiSpecService.create(projectId, {
+      await apiSpecService.create(workspaceId, {
         method: 'GET',
         path: '/products',
         summary: '商品列表',
@@ -85,7 +89,7 @@ export function useCreateDemoProject() {
         },
       });
 
-      const getProductSpec = await apiSpecService.create(projectId, {
+      const getProductSpec = await apiSpecService.create(workspaceId, {
         method: 'GET',
         path: '/products/{id}',
         summary: '商品详情',
@@ -118,7 +122,7 @@ export function useCreateDemoProject() {
         },
       });
 
-      const addCartSpec = await apiSpecService.create(projectId, {
+      const addCartSpec = await apiSpecService.create(workspaceId, {
         method: 'POST',
         path: '/carts/add',
         summary: '加入购物车',
@@ -163,7 +167,7 @@ export function useCreateDemoProject() {
         },
       });
 
-      await apiSpecService.createExample(projectId, getProductSpec.id, {
+      await apiSpecService.createExample(workspaceId, getProductSpec.id, {
         name: '商品详情成功',
         response_status: 200,
         duration_ms: 180,
@@ -176,14 +180,14 @@ export function useCreateDemoProject() {
       });
 
       // Request endpoints can only live under non-folder collections.
-      const requestCollection = await collectionService.create(projectId, {
+      const requestCollection = await collectionService.create(workspaceId, {
         name: 'Demo Requests',
         description: '开箱即用的电商 API 请求集合',
         is_folder: false,
         sort_order: 1,
       });
 
-      await requestService.create(projectId, requestCollection.id, {
+      await requestService.create(workspaceId, requestCollection.id, {
         name: 'List products',
         method: 'GET',
         url: '{{base_url}}/products?limit=3',
@@ -198,7 +202,7 @@ export function useCreateDemoProject() {
         sort_order: 1,
       });
 
-      await requestService.create(projectId, requestCollection.id, {
+      await requestService.create(workspaceId, requestCollection.id, {
         name: 'Add item to cart',
         method: 'POST',
         url: '{{base_url}}/carts/add',
@@ -222,12 +226,15 @@ export function useCreateDemoProject() {
       return { project };
     },
     onSuccess: ({ project }) => {
+      const workspaceId = project.workspace_id;
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
       queryClient.invalidateQueries({ queryKey: projectKeys.projectStats(project.id) });
-      queryClient.invalidateQueries({ queryKey: apiSpecKeys.project(project.id) });
-      queryClient.invalidateQueries({ queryKey: environmentKeys.project(project.id) });
-      queryClient.invalidateQueries({ queryKey: collectionKeys.project(project.id) });
-      queryClient.invalidateQueries({ queryKey: requestKeys.project(project.id) });
+      if (workspaceId) {
+        queryClient.invalidateQueries({ queryKey: apiSpecKeys.project(workspaceId) });
+        queryClient.invalidateQueries({ queryKey: environmentKeys.project(workspaceId) });
+        queryClient.invalidateQueries({ queryKey: collectionKeys.project(workspaceId) });
+        queryClient.invalidateQueries({ queryKey: requestKeys.project(workspaceId) });
+      }
       queryClient.invalidateQueries({ queryKey: testCaseKeys.project(project.id) });
       toast.success(t('toasts.projectCreated', { name: project.name }));
     },

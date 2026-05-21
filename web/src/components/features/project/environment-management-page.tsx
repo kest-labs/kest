@@ -1283,15 +1283,16 @@ export function EnvironmentManagementPage({
   const deferredSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
 
   const projectQuery = useProject(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const projectStatsQuery = useProjectStats(projectId);
   const memberRoleQuery = useProjectMemberRole(projectId);
-  const environmentsQuery = useEnvironments(projectId);
-  const editingEnvironmentQuery = useEnvironment(projectId, editingEnvironmentId ?? undefined);
+  const environmentsQuery = useEnvironments(workspaceId);
+  const editingEnvironmentQuery = useEnvironment(workspaceId, editingEnvironmentId ?? undefined);
 
-  const createEnvironmentMutation = useCreateEnvironment(projectId);
-  const updateEnvironmentMutation = useUpdateEnvironment(projectId);
-  const deleteEnvironmentMutation = useDeleteEnvironment(projectId);
-  const duplicateEnvironmentMutation = useDuplicateEnvironment(projectId);
+  const createEnvironmentMutation = useCreateEnvironment(workspaceId);
+  const updateEnvironmentMutation = useUpdateEnvironment(workspaceId);
+  const deleteEnvironmentMutation = useDeleteEnvironment(workspaceId);
+  const duplicateEnvironmentMutation = useDuplicateEnvironment(workspaceId);
 
   const environments = environmentsQuery.data?.items ?? EMPTY_ENVIRONMENTS;
   // 环境列表接口没有 search 参数：
@@ -1334,7 +1335,7 @@ export function EnvironmentManagementPage({
     )
       ? effectiveSelectedEnvironmentId
       : selectableEnvironments[0]?.id ?? null;
-  const environmentDetailQuery = useEnvironment(projectId, activeEnvironmentId ?? undefined);
+  const environmentDetailQuery = useEnvironment(workspaceId, activeEnvironmentId ?? undefined);
 
   // 详情优先使用单条详情接口返回的数据；
   // 若详情尚未加载完成，则回退到列表中的摘要数据，避免右侧面板闪空。
@@ -1354,10 +1355,10 @@ export function EnvironmentManagementPage({
     (environment) => Object.keys(environment.headers || {}).length > 0
   ).length;
 
-  const environmentsPath = buildApiPath(`/projects/${projectId}/environments`);
+  const environmentsPath = buildApiPath(`/workspaces/${workspaceId}/environments`);
   const activeEnvironmentPath = activeEnvironmentId
-    ? buildApiPath(`/projects/${projectId}/environments/${activeEnvironmentId}`)
-    : buildApiPath(`/projects/${projectId}/environments/:eid`);
+    ? buildApiPath(`/workspaces/${workspaceId}/environments/${activeEnvironmentId}`)
+    : buildApiPath(`/workspaces/${workspaceId}/environments/:eid`);
 
   // 打开创建弹窗时清空编辑态，避免沿用上一条环境记录的数据。
   const openCreateDialog = () => {
@@ -1817,7 +1818,9 @@ export function EnvironmentManagementPage({
                       </div>
                       <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
                         <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{t('common.projectId')}</div>
-                        <div className="mt-2 font-mono text-sm">{selectedEnvironment.project_id}</div>
+                        <div className="mt-2 font-mono text-sm">
+                          {selectedEnvironment.workspace_id ?? selectedEnvironment.project_id}
+                        </div>
                       </div>
                       <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
                         <div className="text-xs uppercase tracking-[0.03125rem] text-muted-foreground">{t('common.created')}</div>
