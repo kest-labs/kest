@@ -164,6 +164,8 @@ const messages: ProjectMessages = {
     testCaseDeleted: 'Test case deleted',
     testCaseDuplicated: 'Duplicated test case "{name}"',
     testCaseFromSpecCreated: 'Created test case from API spec "{name}"',
+    testCasesBatchFromSpecsCreated:
+      'Created {created} test cases, skipped {skipped}, failed {failed}',
     testCaseRunPassed: 'Test case run passed',
     testCaseRunFinished: 'Test case run finished with status {status}',
     apiSpecCreated: 'Created API spec {method} {path}',

@@ -101,6 +101,29 @@ export interface CreateTestCaseFromSpecRequest {
   example_id?: number | string;
 }
 
+export interface BatchCreateTestCasesFromSpecsRequest {
+  spec_ids: Array<number | string>;
+  name_prefix?: string;
+  env?: string;
+  use_example?: boolean;
+}
+
+export interface BatchCreateTestCasesFromSpecsResultItem {
+  spec_id: number | string;
+  status: 'created' | 'skipped' | 'failed';
+  test_case?: ProjectTestCase;
+  message?: string;
+  skipped_reason?: string;
+}
+
+export interface BatchCreateTestCasesFromSpecsResponse {
+  total: number;
+  created: number;
+  skipped: number;
+  failed: number;
+  items: BatchCreateTestCasesFromSpecsResultItem[];
+}
+
 export interface RunRequestInfo {
   method: string;
   url: string;

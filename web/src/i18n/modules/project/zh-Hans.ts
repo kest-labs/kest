@@ -158,6 +158,7 @@ const messages = {
     testCaseDeleted: '测试用例已删除',
     testCaseDuplicated: '已复制测试用例 "{name}"',
     testCaseFromSpecCreated: '已从 API 规格创建测试用例 "{name}"',
+    testCasesBatchFromSpecsCreated: '已创建 {created} 个测试用例，跳过 {skipped} 个，失败 {failed} 个',
     testCaseRunPassed: '测试用例运行通过',
     testCaseRunFinished: '测试用例运行完成，状态为 {status}',
     apiSpecCreated: '已创建 API 规格 {method} {path}',

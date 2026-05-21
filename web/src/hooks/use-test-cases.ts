@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useT } from '@/i18n/client';
 import { testCaseService } from '@/services/test-case';
 import type {
+  BatchCreateTestCasesFromSpecsRequest,
   CreateTestCaseFromSpecRequest,
   CreateTestCaseRequest,
   DuplicateTestCaseRequest,
@@ -181,6 +182,26 @@ export function useCreateTestCaseFromSpec(projectId: number | string) {
         testCase
       );
       toast.success(t.project('toasts.testCaseFromSpecCreated', { name: testCase.name }));
+    },
+  });
+}
+
+export function useCreateTestCasesFromSpecs(projectId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (data: BatchCreateTestCasesFromSpecsRequest) =>
+      testCaseService.batchFromSpecs(projectId, data),
+    onSuccess: result => {
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(projectId) });
+      toast.success(
+        t.project('toasts.testCasesBatchFromSpecsCreated', {
+          created: result.created,
+          skipped: result.skipped,
+          failed: result.failed,
+        })
+      );
     },
   });
 }

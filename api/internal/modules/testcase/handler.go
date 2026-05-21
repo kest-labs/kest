@@ -41,6 +41,8 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
 		tc.POST("/from-spec", h.FromSpec).
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+		tc.POST("/batch-from-specs", h.BatchFromSpecs).
+			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
 
 		tc.GET("/:tcid", h.Get).
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
@@ -263,6 +265,22 @@ func (h *Handler) CreateFromSpec(c *gin.Context) {
 	response.Created(c, testCase)
 }
 
+func (h *Handler) BatchCreateFromSpecs(c *gin.Context) {
+	var req BatchFromSpecsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := h.service.CreateTestCasesFromSpecs(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // ListRuns handles GET /projects/:id/test-cases/:tcid/runs
 func (h *Handler) ListRuns(c *gin.Context) {
 	tcid := c.Param("tcid")
@@ -344,4 +362,8 @@ func (h *Handler) Duplicate(c *gin.Context) {
 
 func (h *Handler) FromSpec(c *gin.Context) {
 	h.CreateFromSpec(c)
+}
+
+func (h *Handler) BatchFromSpecs(c *gin.Context) {
+	h.BatchCreateFromSpecs(c)
 }

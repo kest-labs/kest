@@ -1,5 +1,7 @@
 import request from '@/http';
 import type {
+  BatchCreateTestCasesFromSpecsRequest,
+  BatchCreateTestCasesFromSpecsResponse,
   CreateTestCaseFromSpecRequest,
   CreateTestCaseRequest,
   DuplicateTestCaseRequest,
@@ -73,6 +75,15 @@ export const testCaseService = {
   fromSpec: (projectId: number | string, data: CreateTestCaseFromSpecRequest) =>
     request.post<ProjectTestCase>(
       `/projects/${projectId}/test-cases/from-spec`,
+      normalizePayload(data)
+    ),
+
+  batchFromSpecs: (
+    projectId: number | string,
+    data: BatchCreateTestCasesFromSpecsRequest
+  ) =>
+    request.post<BatchCreateTestCasesFromSpecsResponse>(
+      `/projects/${projectId}/test-cases/batch-from-specs`,
       normalizePayload(data)
     ),
 
