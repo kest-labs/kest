@@ -196,6 +196,7 @@ const messages = {
     defaultExampleSet: '已将 "{name}" 设为默认示例',
     postmanImported: 'Postman collection 已导入',
     markdownImported: '已从 API Markdown 导入 {count} 个请求',
+    markdownImportedDetail: '已创建根目录“{name}”，包含 {modules} 个模块集合和 {requests} 个请求。',
   },
   workspace: {
     unableToLoadModuleList: '无法加载模块列表',

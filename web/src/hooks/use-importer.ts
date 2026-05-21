@@ -36,7 +36,13 @@ export function useImportMarkdownCollection(projectId: number | string) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: collectionKeys.project(projectId) });
       queryClient.invalidateQueries({ queryKey: requestKeys.project(projectId) });
-      toast.success(t.project('toasts.markdownImported', { count: result.requests_created }));
+      toast.success(t.project('toasts.markdownImported', { count: result.requests_created }), {
+        description: t.project('toasts.markdownImportedDetail', {
+          name: result.root_folder_name,
+          modules: result.collections_created,
+          requests: result.requests_created,
+        }),
+      });
     },
   });
 }

@@ -202,6 +202,8 @@ const messages: ProjectMessages = {
     defaultExampleSet: 'Set "{name}" as default example',
     postmanImported: 'Postman collection imported',
     markdownImported: 'Imported {count} request(s) from API Markdown',
+    markdownImportedDetail:
+      'Created root "{name}" with {modules} module collection(s) and {requests} request(s).',
   },
   workspace: {
     unableToLoadModuleList: 'Unable to load module list',
