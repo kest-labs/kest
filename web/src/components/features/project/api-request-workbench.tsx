@@ -1996,8 +1996,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   const [renameRequestDraftName, setRenameRequestDraftName] = useState('');
   const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importBaseUrlOverride, setImportBaseUrlOverride] = useState('');
-  const [importBaseUrlOverrideEdited, setImportBaseUrlOverrideEdited] = useState(false);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
   const [viewingExampleId, setViewingExampleId] = useState<number | string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<number | string | null>(null);
@@ -2380,14 +2378,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       environments.find(environment => environment.base_url?.trim()) ?? environments[0];
     setSelectedEnvironmentId(String(preferredEnvironment.id));
   }, [environments, selectedEnvironmentId]);
-
-  useEffect(() => {
-    if (importDialogTarget?.kind !== 'markdown' || importBaseUrlOverrideEdited) {
-      return;
-    }
-
-    setImportBaseUrlOverride(selectedEnvironmentBaseUrl);
-  }, [importBaseUrlOverrideEdited, importDialogTarget?.kind, selectedEnvironmentBaseUrl]);
 
   const updateActiveTab = (updater: (tab: RequestPageTab) => RequestPageTab) => {
     if (!activeTab) {
@@ -2824,8 +2814,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       parentCollectionName: collection.name,
     });
     setImportFile(null);
-    setImportBaseUrlOverride(kind === 'markdown' ? selectedEnvironmentBaseUrl : '');
-    setImportBaseUrlOverrideEdited(false);
   };
 
   const openRootImportDialog = (kind: ImportDialogKind) => {
@@ -2835,16 +2823,12 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       parentCollectionName: null,
     });
     setImportFile(null);
-    setImportBaseUrlOverride(kind === 'markdown' ? selectedEnvironmentBaseUrl : '');
-    setImportBaseUrlOverrideEdited(false);
   };
 
   const closeImportDialog = (open: boolean) => {
     if (!open) {
       setImportDialogTarget(null);
       setImportFile(null);
-      setImportBaseUrlOverride('');
-      setImportBaseUrlOverrideEdited(false);
     }
   };
 
@@ -2886,10 +2870,9 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
 
     try {
       if (importDialogTarget.kind === 'markdown') {
-        const baseUrlOverride = importBaseUrlOverride.trim() || selectedEnvironmentBaseUrl;
         await importMarkdownMutation.mutateAsync({
           ...(payload as ImportMarkdownCollectionRequest),
-          base_url_override: baseUrlOverride || undefined,
+          base_url_override: selectedEnvironmentBaseUrl || undefined,
         });
       } else {
         await importPostmanMutation.mutateAsync(payload as ImportPostmanCollectionRequest);
@@ -3891,14 +3874,9 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
         kind={importDialogTarget?.kind ?? null}
         targetLabel={importDialogTarget?.parentCollectionName ?? null}
         file={importFile}
-        baseUrlOverride={importBaseUrlOverride}
         isSubmitting={isAnyImportPending}
         onOpenChange={closeImportDialog}
         onFileChange={setImportFile}
-        onBaseUrlOverrideChange={value => {
-          setImportBaseUrlOverride(value);
-          setImportBaseUrlOverrideEdited(true);
-        }}
         onSubmit={handleImportCollection}
       />
     </main>
@@ -4436,22 +4414,18 @@ function ImportCollectionDialog({
   kind,
   targetLabel,
   file,
-  baseUrlOverride,
   isSubmitting,
   onOpenChange,
   onFileChange,
-  onBaseUrlOverrideChange,
   onSubmit,
 }: {
   open: boolean;
   kind: ImportDialogKind | null;
   targetLabel: string | null;
   file: File | null;
-  baseUrlOverride: string;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onFileChange: (file: File | null) => void;
-  onBaseUrlOverrideChange: (value: string) => void;
   onSubmit: () => Promise<void>;
 }) {
   const t = useT('project');
@@ -4502,23 +4476,6 @@ function ImportCollectionDialog({
                 onChange={event => onFileChange(event.target.files?.[0] ?? null)}
               />
             </div>
-            {isMarkdownImport ? (
-              <div className="space-y-2">
-                <Label htmlFor="import-markdown-base-url">
-                  {t('collections.workbench.importDialog.baseUrlOverrideLabel')}
-                </Label>
-                <Input
-                  id="import-markdown-base-url"
-                  value={baseUrlOverride}
-                  onChange={event => onBaseUrlOverrideChange(event.target.value)}
-                  placeholder={t('collections.workbench.importDialog.baseUrlOverridePlaceholder')}
-                  className="rounded-xl"
-                />
-                <p className="text-xs text-text-muted">
-                  {t('collections.workbench.importDialog.baseUrlOverrideDescription')}
-                </p>
-              </div>
-            ) : null}
             <p className="text-sm text-text-muted">
               {file
                 ? t('collections.workbench.importDialog.selectedFile', { name: file.name })
