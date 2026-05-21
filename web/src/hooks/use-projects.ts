@@ -92,7 +92,7 @@ export function useProject(id?: number | string, options: ProjectQueryOptions = 
 }
 
 // 项目统计查询。
-// 作用：读取 `/projects/:id/stats`，展示 API specs、flows、members 等聚合信息。
+// 作用：读取 `/workspaces/:id/stats`，展示 API specs、flows、members 等聚合信息。
 export function useProjectStats(id?: number | string, options: ProjectQueryOptions = {}) {
   const isEnabled = options.enabled ?? true;
   return useQuery<ProjectStats>({

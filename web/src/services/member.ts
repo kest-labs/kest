@@ -15,10 +15,10 @@ const normalizePayload = <T extends object>(payload: T) =>
 // 作用：集中封装项目成员列表、当前角色和成员管理相关 HTTP 请求。
 export const memberService = {
   list: (projectId: number | string) =>
-    request.get<ProjectMember[]>(`/projects/${projectId}/members`),
+    request.get<ProjectMember[]>(`/workspaces/${projectId}/members`),
 
   getMyRole: (projectId: number | string) =>
-    request.get<ProjectMember>(`/projects/${projectId}/members/me`),
+    request.get<ProjectMember>(`/workspaces/${projectId}/members/me`),
 
   update: (
     projectId: number | string,
@@ -26,12 +26,12 @@ export const memberService = {
     data: UpdateProjectMemberRequest
   ) =>
     request.patch<ProjectMember>(
-      `/projects/${projectId}/members/${userId}`,
+      `/workspaces/${projectId}/members/${userId}`,
       normalizePayload(data)
     ),
 
   delete: (projectId: number | string, userId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/members/${userId}`),
+    request.delete<void>(`/workspaces/${projectId}/members/${userId}`),
 };
 
 export type MemberService = typeof memberService;

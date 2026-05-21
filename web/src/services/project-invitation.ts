@@ -15,29 +15,29 @@ const normalizePayload = <T extends object>(payload: T) =>
 
 export const projectInvitationService = {
   list: (projectId: number | string) =>
-    request.get<ProjectInvitation[]>(`/projects/${projectId}/invitations`),
+    request.get<ProjectInvitation[]>(`/workspaces/${projectId}/invitations`),
 
   create: (projectId: number | string, data: CreateProjectInvitationRequest) =>
-    request.post<ProjectInvitation>(`/projects/${projectId}/invitations`, normalizePayload(data)),
+    request.post<ProjectInvitation>(`/workspaces/${projectId}/invitations`, normalizePayload(data)),
 
   revoke: (projectId: number | string, invitationId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/invitations/${invitationId}`),
+    request.delete<void>(`/workspaces/${projectId}/invitations/${invitationId}`),
 
   listReceived: () =>
-    request.get<ReceivedProjectInvitation[]>('/project-invitations/received', {
+    request.get<ReceivedProjectInvitation[]>('/workspace-invitations/received', {
       skipErrorHandler: true,
     }),
 
   getDetail: (slug: string) =>
-    request.get<PublicProjectInvitation>(`/project-invitations/${slug}`, {
+    request.get<PublicProjectInvitation>(`/workspace-invitations/${slug}`, {
       skipErrorHandler: true,
     }),
 
   accept: (slug: string) =>
-    request.post<AcceptProjectInvitationResponse>(`/project-invitations/${slug}/accept`),
+    request.post<AcceptProjectInvitationResponse>(`/workspace-invitations/${slug}/accept`),
 
   reject: (slug: string) =>
-    request.post<RejectProjectInvitationResponse>(`/project-invitations/${slug}/reject`),
+    request.post<RejectProjectInvitationResponse>(`/workspace-invitations/${slug}/reject`),
 };
 
 export type ProjectInvitationService = typeof projectInvitationService;

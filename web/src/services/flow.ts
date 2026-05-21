@@ -60,31 +60,31 @@ const readSSEEvent = (
 
 export const flowService = {
   list: (projectId: number | string) =>
-    request.get<FlowListResponse>(`/projects/${projectId}/flows`),
+    request.get<FlowListResponse>(`/workspaces/${projectId}/flows`),
 
   getById: (projectId: number | string, flowId: number | string) =>
-    request.get<FlowDetail>(`/projects/${projectId}/flows/${flowId}`),
+    request.get<FlowDetail>(`/workspaces/${projectId}/flows/${flowId}`),
 
   create: (projectId: number | string, data: CreateFlowRequest) =>
-    request.post<ProjectFlow>(`/projects/${projectId}/flows`, normalizePayload(data)),
+    request.post<ProjectFlow>(`/workspaces/${projectId}/flows`, normalizePayload(data)),
 
   update: (projectId: number | string, flowId: number | string, data: UpdateFlowRequest) =>
-    request.patch<ProjectFlow>(`/projects/${projectId}/flows/${flowId}`, normalizePayload(data)),
+    request.patch<ProjectFlow>(`/workspaces/${projectId}/flows/${flowId}`, normalizePayload(data)),
 
   delete: (projectId: number | string, flowId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/flows/${flowId}`),
+    request.delete<void>(`/workspaces/${projectId}/flows/${flowId}`),
 
   save: (projectId: number | string, flowId: number | string, data: SaveFlowRequest) =>
-    request.put<FlowDetail>(`/projects/${projectId}/flows/${flowId}`, normalizePayload(data)),
+    request.put<FlowDetail>(`/workspaces/${projectId}/flows/${flowId}`, normalizePayload(data)),
 
   run: (projectId: number | string, flowId: number | string) =>
-    request.post<FlowRun>(`/projects/${projectId}/flows/${flowId}/run`),
+    request.post<FlowRun>(`/workspaces/${projectId}/flows/${flowId}/run`),
 
   listRuns: (projectId: number | string, flowId: number | string) =>
-    request.get<FlowRunListResponse>(`/projects/${projectId}/flows/${flowId}/runs`),
+    request.get<FlowRunListResponse>(`/workspaces/${projectId}/flows/${flowId}/runs`),
 
   getRun: (projectId: number | string, flowId: number | string, runId: number | string) =>
-    request.get<FlowRun>(`/projects/${projectId}/flows/${flowId}/runs/${runId}`),
+    request.get<FlowRun>(`/workspaces/${projectId}/flows/${flowId}/runs/${runId}`),
 
   streamRun: async (
     projectId: number | string,
@@ -93,7 +93,7 @@ export const flowService = {
     options: StreamFlowRunOptions = {}
   ) => {
     const { accessToken } = getAuthTokens();
-    let streamUrl = buildApiUrl(`/projects/${projectId}/flows/${flowId}/runs/${runId}/events`);
+    let streamUrl = buildApiUrl(`/workspaces/${projectId}/flows/${flowId}/runs/${runId}/events`);
     const selectedBaseUrl = options.baseUrl?.trim();
     if (selectedBaseUrl) {
       const separator = streamUrl.includes('?') ? '&' : '?';
