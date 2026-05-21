@@ -158,6 +158,10 @@ func (s *service) deleteTree(ctx context.Context, id, workspaceID string) error 
 		}
 	}
 
+	if err := s.repo.DeleteCollectionContents(ctx, id); err != nil {
+		return err
+	}
+
 	return s.repo.Delete(ctx, id)
 }
 

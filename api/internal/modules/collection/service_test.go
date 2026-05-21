@@ -134,15 +134,19 @@ func TestServiceDeleteRemovesDescendantCollections(t *testing.T) {
 	if len(repo.collections) != 0 {
 		t.Fatalf("expected all descendant collections to be deleted, got %#v", repo.collections)
 	}
+	if got, want := repo.deletedContents, []string{grandchildID, childID, rootID}; !stringSlicesEqual(got, want) {
+		t.Fatalf("expected content delete order %#v, got %#v", want, got)
+	}
 	if got, want := repo.deletedIDs, []string{grandchildID, childID, rootID}; !stringSlicesEqual(got, want) {
 		t.Fatalf("expected delete order %#v, got %#v", want, got)
 	}
 }
 
 type stubCollectionRepository struct {
-	collections  map[string]*Collection
-	deletedIDs   []string
-	listAllCalls int
+	collections     map[string]*Collection
+	deletedIDs      []string
+	deletedContents []string
+	listAllCalls    int
 }
 
 func (r *stubCollectionRepository) Create(_ context.Context, collection *Collection) error {
@@ -171,6 +175,11 @@ func (r *stubCollectionRepository) Update(_ context.Context, collection *Collect
 func (r *stubCollectionRepository) Delete(_ context.Context, id string) error {
 	r.deletedIDs = append(r.deletedIDs, id)
 	delete(r.collections, id)
+	return nil
+}
+
+func (r *stubCollectionRepository) DeleteCollectionContents(_ context.Context, collectionID string) error {
+	r.deletedContents = append(r.deletedContents, collectionID)
 	return nil
 }
 

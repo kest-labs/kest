@@ -3,6 +3,7 @@ package collection
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -26,6 +27,7 @@ type Repository interface {
 	ListAll(ctx context.Context, workspaceID string) ([]*Collection, error)
 	GetByParentID(ctx context.Context, workspaceID string, parentID *string) ([]*Collection, error)
 	GetStats(ctx context.Context, collectionID string) (*CollectionStats, error)
+	DeleteCollectionContents(ctx context.Context, collectionID string) error
 }
 
 // repository implements Repository interface
@@ -78,6 +80,29 @@ func (r *repository) Update(ctx context.Context, collection *Collection) error {
 
 func (r *repository) Delete(ctx context.Context, id string) error {
 	return dbutil.DeleteByID(r.db.WithContext(ctx), &CollectionPO{}, id).Error
+}
+
+func (r *repository) DeleteCollectionContents(ctx context.Context, collectionID string) error {
+	db := r.db.WithContext(ctx)
+	now := time.Now()
+	requestIDs := db.
+		Table("requests").
+		Select("id").
+		Where("collection_id = ? AND deleted_at IS NULL", collectionID)
+
+	if err := db.
+		Table("examples").
+		Where("request_id IN (?) AND deleted_at IS NULL", requestIDs).
+		Update("deleted_at", now).
+		Error; err != nil {
+		return err
+	}
+
+	return db.
+		Table("requests").
+		Where("collection_id = ? AND deleted_at IS NULL", collectionID).
+		Update("deleted_at", now).
+		Error
 }
 
 func (r *repository) List(ctx context.Context, workspaceID string, offset, limit int) ([]*Collection, int64, error) {
