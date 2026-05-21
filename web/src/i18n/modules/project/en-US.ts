@@ -745,6 +745,10 @@ const messages: ProjectMessages = {
           'Upload a Postman collection JSON file and import all requests into one collection at the project root.',
         markdownFile: 'Markdown file',
         collectionFile: 'Collection file',
+        baseUrlOverrideLabel: 'Base URL override',
+        baseUrlOverridePlaceholder: 'http://localhost:8025',
+        baseUrlOverrideDescription:
+          'Optional. Use this when the markdown only provides a Base Path like `/v1` instead of a full host URL.',
         markdownEmptyState: 'Choose an api.md or module Markdown document to import requests.',
         postmanEmptyState: 'Choose a Postman collection export in JSON format.',
         selectedFile: 'Selected file: {name}',

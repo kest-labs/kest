@@ -37,7 +37,15 @@ export const importerService = {
       `/projects/${projectId}/collections/import/markdown`,
       formData,
       {
-        params: data.parent_id ? { parent_id: data.parent_id } : undefined,
+        params:
+          data.parent_id || data.base_url_override
+            ? {
+                ...(data.parent_id ? { parent_id: data.parent_id } : {}),
+                ...(data.base_url_override
+                  ? { base_url_override: data.base_url_override }
+                  : {}),
+              }
+            : undefined,
         headers: {
           'Content-Type': 'multipart/form-data',
         },

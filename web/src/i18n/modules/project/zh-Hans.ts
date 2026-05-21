@@ -693,6 +693,10 @@ const messages = {
           '上传 Postman 集合 JSON 文件，并把全部请求导入到项目根目录下的一个集合中。',
         markdownFile: 'Markdown 文件',
         collectionFile: '集合文件',
+        baseUrlOverrideLabel: 'Base URL 覆盖',
+        baseUrlOverridePlaceholder: 'http://localhost:8025',
+        baseUrlOverrideDescription:
+          '可选。当 Markdown 只提供 `/v1` 这类 Base Path，而没有完整主机地址时，填这里。',
         markdownEmptyState: '选择一个 api.md 或模块 Markdown 文档来导入请求。',
         postmanEmptyState: '选择 JSON 格式的 Postman 集合导出文件。',
         selectedFile: '已选择文件：{name}',
