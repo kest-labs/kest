@@ -1,4 +1,4 @@
-package projectinvite
+package workspaceinvite
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestResolveInvitationBaseURLPrefersForwardedHeaders(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "https://api.kest.dev/v1/projects/60/invitations", nil)
+	req := httptest.NewRequest(http.MethodPost, "https://api.kest.dev/v1/workspaces/60/invitations", nil)
 	req.Header.Set("X-Forwarded-Proto", "https")
 	req.Header.Set("X-Forwarded-Host", "www.kest.run")
 
@@ -19,7 +19,7 @@ func TestResolveInvitationBaseURLPrefersForwardedHeaders(t *testing.T) {
 }
 
 func TestResolveInvitationBaseURLFallsBackToForwardedHeader(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "http://api.kest.dev/v1/projects/60/invitations", nil)
+	req := httptest.NewRequest(http.MethodPost, "http://api.kest.dev/v1/workspaces/60/invitations", nil)
 	req.Header.Set("Forwarded", `for=203.0.113.10;proto=https;host=members.kest.run`)
 
 	if got := resolveInvitationBaseURL(req); got != "https://members.kest.run" {
@@ -28,22 +28,22 @@ func TestResolveInvitationBaseURLFallsBackToForwardedHeader(t *testing.T) {
 }
 
 func TestResolveInvitationBaseURLFallsBackToRequestHost(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "https://api.kest.dev/v1/projects/60/invitations", nil)
+	req := httptest.NewRequest(http.MethodPost, "https://api.kest.dev/v1/workspaces/60/invitations", nil)
 
 	if got := resolveInvitationBaseURL(req); got != "https://api.kest.dev" {
 		t.Fatalf("expected request host base URL, got %q", got)
 	}
 }
 
-func TestBuildProjectInvitationURLForBase(t *testing.T) {
-	got := buildProjectInvitationURLForBase("pji_demo", "https://www.kest.run/")
+func TestBuildWorkspaceInvitationURLForBase(t *testing.T) {
+	got := buildWorkspaceInvitationURLForBase("wsi_demo", "https://www.kest.run/")
 
-	if got != "https://www.kest.run/invite/project/pji_demo" {
+	if got != "https://www.kest.run/invite/workspace/wsi_demo" {
 		t.Fatalf("unexpected invite URL %q", got)
 	}
 }
 
-func TestBuildProjectInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
+func TestBuildWorkspaceInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
 	previous := config.GlobalConfig
 	config.GlobalConfig = &config.Config{
 		App: config.AppConfig{
@@ -54,23 +54,23 @@ func TestBuildProjectInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
 		config.GlobalConfig = previous
 	}()
 
-	got := buildProjectInvitationURLForBase("pji_demo", "http://localhost:3000")
+	got := buildWorkspaceInvitationURLForBase("wsi_demo", "http://localhost:3000")
 
-	if got != "https://kest.run/invite/project/pji_demo" {
+	if got != "https://kest.run/invite/workspace/wsi_demo" {
 		t.Fatalf("expected configured frontend URL, got %q", got)
 	}
 }
 
-func TestBuildProjectInvitationURLForBaseIgnoresLoopbackRequestBase(t *testing.T) {
+func TestBuildWorkspaceInvitationURLForBaseIgnoresLoopbackRequestBase(t *testing.T) {
 	previous := config.GlobalConfig
 	config.GlobalConfig = nil
 	defer func() {
 		config.GlobalConfig = previous
 	}()
 
-	got := buildProjectInvitationURLForBase("pji_demo", "http://127.0.0.1:3000")
+	got := buildWorkspaceInvitationURLForBase("wsi_demo", "http://127.0.0.1:3000")
 
-	if got != "/invite/project/pji_demo" {
+	if got != "/invite/workspace/wsi_demo" {
 		t.Fatalf("expected relative path fallback, got %q", got)
 	}
 }

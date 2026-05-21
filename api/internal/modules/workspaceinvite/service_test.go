@@ -1,4 +1,4 @@
-package projectinvite
+package workspaceinvite
 
 import (
 	"context"
@@ -6,21 +6,21 @@ import (
 	"time"
 )
 
-type testProjectInviteRepo struct {
-	invitation             *ProjectInvitation
-	userInvitations        []*ProjectInvitation
-	projectSummary         *ProjectSummary
-	projectSummaries       map[string]*ProjectSummary
-	acceptedUserID         string
-	acceptedAt             *time.Time
-	hasProjectMember       bool
-	revokedDirectProjectID string
-	revokedDirectUserID    string
+type testWorkspaceInviteRepo struct {
+	invitation               *WorkspaceInvitation
+	userInvitations          []*WorkspaceInvitation
+	workspaceSummary         *WorkspaceSummary
+	workspaceSummaries       map[string]*WorkspaceSummary
+	acceptedUserID           string
+	acceptedAt               *time.Time
+	hasWorkspaceMember       bool
+	revokedDirectWorkspaceID string
+	revokedDirectUserID      string
 }
 
-func (r *testProjectInviteRepo) CreateInvitation(
+func (r *testWorkspaceInviteRepo) CreateInvitation(
 	_ context.Context,
-	invitation *ProjectInvitation,
+	invitation *WorkspaceInvitation,
 	_ string,
 ) error {
 	invitation.ID = "9"
@@ -30,58 +30,58 @@ func (r *testProjectInviteRepo) CreateInvitation(
 	return nil
 }
 
-func (r *testProjectInviteRepo) ListInvitationsByProject(
+func (r *testWorkspaceInviteRepo) ListInvitationsByWorkspace(
 	_ context.Context,
 	_ string,
-) ([]*ProjectInvitation, error) {
+) ([]*WorkspaceInvitation, error) {
 	if r.invitation == nil {
 		return nil, nil
 	}
-	return []*ProjectInvitation{r.invitation}, nil
+	return []*WorkspaceInvitation{r.invitation}, nil
 }
 
-func (r *testProjectInviteRepo) ListInvitationsByInvitedUser(
+func (r *testWorkspaceInviteRepo) ListInvitationsByInvitedUser(
 	_ context.Context,
 	_ string,
-) ([]*ProjectInvitation, error) {
+) ([]*WorkspaceInvitation, error) {
 	return r.userInvitations, nil
 }
 
-func (r *testProjectInviteRepo) GetInvitationByProject(
+func (r *testWorkspaceInviteRepo) GetInvitationByWorkspace(
 	_ context.Context,
 	_, invitationID string,
-) (*ProjectInvitation, error) {
+) (*WorkspaceInvitation, error) {
 	if r.invitation == nil || r.invitation.ID != invitationID {
 		return nil, nil
 	}
 	return r.invitation, nil
 }
 
-func (r *testProjectInviteRepo) GetInvitationBySlug(_ context.Context, slug string) (*ProjectInvitation, error) {
+func (r *testWorkspaceInviteRepo) GetInvitationBySlug(_ context.Context, slug string) (*WorkspaceInvitation, error) {
 	if r.invitation == nil || r.invitation.Slug != slug {
 		return nil, nil
 	}
 	return r.invitation, nil
 }
 
-func (r *testProjectInviteRepo) UpdateInvitation(
+func (r *testWorkspaceInviteRepo) UpdateInvitation(
 	_ context.Context,
-	invitation *ProjectInvitation,
+	invitation *WorkspaceInvitation,
 ) error {
 	r.invitation = invitation
 	return nil
 }
 
-func (r *testProjectInviteRepo) GetProjectSummary(_ context.Context, projectID string) (*ProjectSummary, error) {
-	if r.projectSummaries != nil {
-		return r.projectSummaries[projectID], nil
+func (r *testWorkspaceInviteRepo) GetWorkspaceSummary(_ context.Context, workspaceID string) (*WorkspaceSummary, error) {
+	if r.workspaceSummaries != nil {
+		return r.workspaceSummaries[workspaceID], nil
 	}
-	return r.projectSummary, nil
+	return r.workspaceSummary, nil
 }
 
-func (r *testProjectInviteRepo) AcceptInvitation(
+func (r *testWorkspaceInviteRepo) AcceptInvitation(
 	_ context.Context,
-	invitation *ProjectInvitation,
+	invitation *WorkspaceInvitation,
 	userID string,
 	acceptedAt time.Time,
 ) error {
@@ -94,35 +94,35 @@ func (r *testProjectInviteRepo) AcceptInvitation(
 	return nil
 }
 
-func (r *testProjectInviteRepo) RevokeActiveInvitationsForUser(
+func (r *testWorkspaceInviteRepo) RevokeActiveInvitationsForUser(
 	_ context.Context,
-	projectID, userID string,
+	workspaceID, userID string,
 ) error {
-	r.revokedDirectProjectID = projectID
+	r.revokedDirectWorkspaceID = workspaceID
 	r.revokedDirectUserID = userID
 	return nil
 }
 
-func (r *testProjectInviteRepo) HasProjectMember(
+func (r *testWorkspaceInviteRepo) HasWorkspaceMember(
 	_ context.Context,
 	_, _ string,
 ) (bool, error) {
-	return r.hasProjectMember, nil
+	return r.hasWorkspaceMember, nil
 }
 
 func TestCreateInvitationDefaults(t *testing.T) {
-	repo := &testProjectInviteRepo{}
+	repo := &testWorkspaceInviteRepo{}
 	svc := NewService(repo)
 
-	resp, err := svc.CreateInvitation(context.Background(), "12", "7", &CreateProjectInvitationRequest{
+	resp, err := svc.CreateInvitation(context.Background(), "12", "7", &CreateWorkspaceInvitationRequest{
 		Role: memberRoleRead,
 	})
 	if err != nil {
 		t.Fatalf("CreateInvitation returned error: %v", err)
 	}
 
-	if resp.ProjectID != "12" {
-		t.Fatalf("expected project id 12, got %s", resp.ProjectID)
+	if resp.WorkspaceID != "12" {
+		t.Fatalf("expected workspace id 12, got %s", resp.WorkspaceID)
 	}
 	if resp.Role != memberRoleRead {
 		t.Fatalf("expected role %q, got %q", memberRoleRead, resp.Role)
@@ -142,10 +142,10 @@ func TestCreateInvitationDefaults(t *testing.T) {
 }
 
 func TestCreateInvitationDirectInviteForcesSingleUse(t *testing.T) {
-	repo := &testProjectInviteRepo{}
+	repo := &testWorkspaceInviteRepo{}
 	svc := NewService(repo)
 
-	resp, err := svc.CreateInvitation(context.Background(), "12", "7", &CreateProjectInvitationRequest{
+	resp, err := svc.CreateInvitation(context.Background(), "12", "7", &CreateWorkspaceInvitationRequest{
 		Role:          memberRoleRead,
 		MaxUses:       intPtr(0),
 		InvitedUserID: "99",
@@ -154,8 +154,8 @@ func TestCreateInvitationDirectInviteForcesSingleUse(t *testing.T) {
 		t.Fatalf("CreateInvitation returned error: %v", err)
 	}
 
-	if repo.revokedDirectProjectID != "12" || repo.revokedDirectUserID != "99" {
-		t.Fatalf("expected previous direct invites to be revoked, got project=%q user=%q", repo.revokedDirectProjectID, repo.revokedDirectUserID)
+	if repo.revokedDirectWorkspaceID != "12" || repo.revokedDirectUserID != "99" {
+		t.Fatalf("expected previous direct invites to be revoked, got workspace=%q user=%q", repo.revokedDirectWorkspaceID, repo.revokedDirectUserID)
 	}
 	if resp.MaxUses != 1 {
 		t.Fatalf("expected direct invite to force single use, got %d", resp.MaxUses)
@@ -166,50 +166,50 @@ func TestCreateInvitationDirectInviteForcesSingleUse(t *testing.T) {
 }
 
 func TestAcceptInvitationRejectsAlreadyUsedUpLink(t *testing.T) {
-	repo := &testProjectInviteRepo{
-		invitation: &ProjectInvitation{
-			ID:        "3",
-			ProjectID: "12",
-			Slug:      "pji_usedup",
-			Role:      memberRoleRead,
-			Status:    InvitationStatusActive,
-			MaxUses:   1,
-			UsedCount: 1,
+	repo := &testWorkspaceInviteRepo{
+		invitation: &WorkspaceInvitation{
+			ID:          "3",
+			WorkspaceID: "12",
+			Slug:        "wsi_usedup",
+			Role:        memberRoleRead,
+			Status:      InvitationStatusActive,
+			MaxUses:     1,
+			UsedCount:   1,
 		},
 	}
 	svc := NewService(repo)
 
-	if _, err := svc.AcceptInvitation(context.Background(), "pji_usedup", "99"); err != ErrProjectInvitationUsedUp {
-		t.Fatalf("expected ErrProjectInvitationUsedUp, got %v", err)
+	if _, err := svc.AcceptInvitation(context.Background(), "wsi_usedup", "99"); err != ErrWorkspaceInvitationUsedUp {
+		t.Fatalf("expected ErrWorkspaceInvitationUsedUp, got %v", err)
 	}
 }
 
 func TestAcceptInvitationReturnsRedirect(t *testing.T) {
-	repo := &testProjectInviteRepo{
-		invitation: &ProjectInvitation{
-			ID:        "4",
-			ProjectID: "18",
-			Slug:      "pji_accept",
-			Role:      memberRoleWrite,
-			Status:    InvitationStatusActive,
-			MaxUses:   1,
+	repo := &testWorkspaceInviteRepo{
+		invitation: &WorkspaceInvitation{
+			ID:          "4",
+			WorkspaceID: "18",
+			Slug:        "wsi_accept",
+			Role:        memberRoleWrite,
+			Status:      InvitationStatusActive,
+			MaxUses:     1,
 		},
 	}
 	svc := NewService(repo)
 
-	resp, err := svc.AcceptInvitation(context.Background(), "pji_accept", "42")
+	resp, err := svc.AcceptInvitation(context.Background(), "wsi_accept", "42")
 	if err != nil {
 		t.Fatalf("AcceptInvitation returned error: %v", err)
 	}
 
-	if resp.ProjectID != "18" {
-		t.Fatalf("expected project id 18, got %s", resp.ProjectID)
+	if resp.WorkspaceID != "18" {
+		t.Fatalf("expected workspace id 18, got %s", resp.WorkspaceID)
 	}
 	if resp.Member.UserID != "42" || resp.Member.Role != memberRoleWrite {
 		t.Fatalf("unexpected member payload: %#v", resp.Member)
 	}
-	if resp.RedirectTo != "/project/18" {
-		t.Fatalf("expected redirect /project/18, got %q", resp.RedirectTo)
+	if resp.RedirectTo != "/workspace/18" {
+		t.Fatalf("expected redirect /workspace/18, got %q", resp.RedirectTo)
 	}
 	if repo.acceptedAt == nil {
 		t.Fatal("expected accept time to be recorded")
@@ -218,11 +218,11 @@ func TestAcceptInvitationReturnsRedirect(t *testing.T) {
 
 func TestAcceptInvitationRejectsWrongRecipient(t *testing.T) {
 	invitedUserID := "88"
-	repo := &testProjectInviteRepo{
-		invitation: &ProjectInvitation{
+	repo := &testWorkspaceInviteRepo{
+		invitation: &WorkspaceInvitation{
 			ID:            "5",
-			ProjectID:     "18",
-			Slug:          "pji_direct",
+			WorkspaceID:   "18",
+			Slug:          "wsi_direct",
 			Role:          memberRoleWrite,
 			Status:        InvitationStatusActive,
 			MaxUses:       1,
@@ -231,18 +231,18 @@ func TestAcceptInvitationRejectsWrongRecipient(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	if _, err := svc.AcceptInvitation(context.Background(), "pji_direct", "42"); err != ErrProjectInvitationNotRecipient {
-		t.Fatalf("expected ErrProjectInvitationNotRecipient, got %v", err)
+	if _, err := svc.AcceptInvitation(context.Background(), "wsi_direct", "42"); err != ErrWorkspaceInvitationNotRecipient {
+		t.Fatalf("expected ErrWorkspaceInvitationNotRecipient, got %v", err)
 	}
 }
 
 func TestRejectInvitationMarksDirectInviteRejected(t *testing.T) {
 	invitedUserID := "42"
-	repo := &testProjectInviteRepo{
-		invitation: &ProjectInvitation{
+	repo := &testWorkspaceInviteRepo{
+		invitation: &WorkspaceInvitation{
 			ID:            "6",
-			ProjectID:     "18",
-			Slug:          "pji_reject",
+			WorkspaceID:   "18",
+			Slug:          "wsi_reject",
 			Role:          memberRoleRead,
 			Status:        InvitationStatusActive,
 			MaxUses:       1,
@@ -251,7 +251,7 @@ func TestRejectInvitationMarksDirectInviteRejected(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	resp, err := svc.RejectInvitation(context.Background(), "pji_reject", "42")
+	resp, err := svc.RejectInvitation(context.Background(), "wsi_reject", "42")
 	if err != nil {
 		t.Fatalf("RejectInvitation returned error: %v", err)
 	}
@@ -266,12 +266,12 @@ func TestRejectInvitationMarksDirectInviteRejected(t *testing.T) {
 
 func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 	invitedUserID := "42"
-	repo := &testProjectInviteRepo{
-		userInvitations: []*ProjectInvitation{
+	repo := &testWorkspaceInviteRepo{
+		userInvitations: []*WorkspaceInvitation{
 			{
 				ID:            "7",
-				ProjectID:     "18",
-				Slug:          "pji_active",
+				WorkspaceID:   "18",
+				Slug:          "wsi_active",
 				Role:          memberRoleRead,
 				Status:        InvitationStatusActive,
 				MaxUses:       1,
@@ -279,15 +279,15 @@ func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 			},
 			{
 				ID:            "8",
-				ProjectID:     "19",
-				Slug:          "pji_rejected",
+				WorkspaceID:   "19",
+				Slug:          "wsi_rejected",
 				Role:          memberRoleRead,
 				Status:        InvitationStatusRejected,
 				MaxUses:       1,
 				InvitedUserID: &invitedUserID,
 			},
 		},
-		projectSummaries: map[string]*ProjectSummary{
+		workspaceSummaries: map[string]*WorkspaceSummary{
 			"18": {ID: "18", Name: "Payments", Slug: "payments"},
 			"19": {ID: "19", Name: "Orders", Slug: "orders"},
 		},
@@ -302,7 +302,7 @@ func TestListReceivedInvitationsReturnsOnlyActiveDirectInvites(t *testing.T) {
 	if len(resp) != 1 {
 		t.Fatalf("expected 1 active direct invite, got %d", len(resp))
 	}
-	if resp[0].ProjectSlug != "payments" || resp[0].Slug != "pji_active" {
+	if resp[0].WorkspaceSlug != "payments" || resp[0].Slug != "wsi_active" {
 		t.Fatalf("unexpected response payload: %#v", resp[0])
 	}
 }

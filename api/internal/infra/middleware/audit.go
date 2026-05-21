@@ -51,7 +51,7 @@ func AuditLog() gin.HandlerFunc {
 		}
 
 		// Determine resource from path (simple heuristic)
-		// e.g., /api/v1/projects -> projects
+		// e.g., /api/v1/workspaces -> workspaces
 		path := c.Request.URL.Path
 
 		// Create log entry

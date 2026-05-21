@@ -1,4 +1,4 @@
-package projectinvite
+package workspaceinvite
 
 import (
 	"errors"
@@ -28,41 +28,41 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 }
 
 func (h *Handler) Name() string {
-	return "projectinvite"
+	return "workspaceinvite"
 }
 
 func (h *Handler) RegisterRoutes(r *router.Router) {
 	r.Group("", func(auth *router.Router) {
 		auth.WithMiddleware("auth")
 
-		auth.POST("/projects/:id/invitations", h.CreateInvitation).
-			Name("projects.invitations.create").
+		auth.POST("/workspaces/:id/invitations", h.CreateInvitation).
+			Name("workspaces.invitations.create").
 			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
-		auth.GET("/projects/:id/invitations", h.ListInvitations).
-			Name("projects.invitations.list").
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleAdmin))
+		auth.GET("/workspaces/:id/invitations", h.ListInvitations).
+			Name("workspaces.invitations.list").
 			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
-		auth.DELETE("/projects/:id/invitations/:inviteId", h.DeleteInvitation).
-			Name("projects.invitations.delete").
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleAdmin))
+		auth.DELETE("/workspaces/:id/invitations/:inviteId", h.DeleteInvitation).
+			Name("workspaces.invitations.delete").
 			WhereUUIDOrNumber("id").
 			WhereUUID("inviteId").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
-		auth.GET("/project-invitations/received", h.ListReceivedInvitations).
-			Name("project_invitations.received")
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleAdmin))
+		auth.GET("/workspace-invitations/received", h.ListReceivedInvitations).
+			Name("workspace_invitations.received")
 
-		auth.POST("/project-invitations/:slug/accept", h.AcceptInvitation).
-			Name("project_invitations.accept")
-		auth.POST("/project-invitations/:slug/reject", h.RejectInvitation).
-			Name("project_invitations.reject")
+		auth.POST("/workspace-invitations/:slug/accept", h.AcceptInvitation).
+			Name("workspace_invitations.accept")
+		auth.POST("/workspace-invitations/:slug/reject", h.RejectInvitation).
+			Name("workspace_invitations.reject")
 	})
 
-	r.GET("/project-invitations/:slug", h.GetInvitation).
-		Name("project_invitations.show")
+	r.GET("/workspace-invitations/:slug", h.GetInvitation).
+		Name("workspace_invitations.show")
 }
 
 func (h *Handler) CreateInvitation(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {
 		return
 	}
@@ -72,18 +72,18 @@ func (h *Handler) CreateInvitation(c *gin.Context) {
 		return
 	}
 
-	var req CreateProjectInvitationRequest
+	var req CreateWorkspaceInvitationRequest
 	if !handler.BindJSON(c, &req) {
 		return
 	}
 
 	baseURL := resolveInvitationBaseURL(c.Request)
-	invitation, err := h.service.CreateInvitation(c.Request.Context(), projectID, userID, &req)
+	invitation, err := h.service.CreateInvitation(c.Request.Context(), workspaceID, userID, &req)
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrProjectInvitationInvalidRole),
-			errors.Is(err, ErrProjectInvitationInvalidUses),
-			errors.Is(err, ErrProjectInvitationInvalidExpiry):
+		case errors.Is(err, ErrWorkspaceInvitationInvalidRole),
+			errors.Is(err, ErrWorkspaceInvitationInvalidUses),
+			errors.Is(err, ErrWorkspaceInvitationInvalidExpiry):
 			response.BadRequest(c, err.Error(), err)
 		default:
 			response.InternalServerError(c, err.Error(), err)
@@ -95,13 +95,13 @@ func (h *Handler) CreateInvitation(c *gin.Context) {
 }
 
 func (h *Handler) ListInvitations(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {
 		return
 	}
 
 	baseURL := resolveInvitationBaseURL(c.Request)
-	invitations, err := h.service.ListInvitations(c.Request.Context(), projectID)
+	invitations, err := h.service.ListInvitations(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -114,7 +114,7 @@ func (h *Handler) ListInvitations(c *gin.Context) {
 }
 
 func (h *Handler) DeleteInvitation(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {
 		return
 	}
@@ -124,8 +124,8 @@ func (h *Handler) DeleteInvitation(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RevokeInvitation(c.Request.Context(), projectID, invitationID); err != nil {
-		if errors.Is(err, ErrProjectInvitationNotFound) {
+	if err := h.service.RevokeInvitation(c.Request.Context(), workspaceID, invitationID); err != nil {
+		if errors.Is(err, ErrWorkspaceInvitationNotFound) {
 			response.NotFound(c, err.Error(), err)
 			return
 		}
@@ -160,7 +160,7 @@ func (h *Handler) GetInvitation(c *gin.Context) {
 
 	invitation, err := h.service.GetInvitationDetail(c.Request.Context(), slug)
 	if err != nil {
-		if errors.Is(err, ErrProjectInvitationNotFound) {
+		if errors.Is(err, ErrWorkspaceInvitationNotFound) {
 			response.NotFound(c, err.Error(), err)
 			return
 		}
@@ -186,14 +186,14 @@ func (h *Handler) AcceptInvitation(c *gin.Context) {
 	result, err := h.service.AcceptInvitation(c.Request.Context(), slug, userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrProjectInvitationNotFound):
+		case errors.Is(err, ErrWorkspaceInvitationNotFound):
 			response.NotFound(c, err.Error(), err)
-		case errors.Is(err, ErrProjectInvitationExpired),
-			errors.Is(err, ErrProjectInvitationRejected),
-			errors.Is(err, ErrProjectInvitationRevoked),
-			errors.Is(err, ErrProjectInvitationUsedUp),
-			errors.Is(err, ErrProjectInvitationAlreadyMember),
-			errors.Is(err, ErrProjectInvitationNotRecipient):
+		case errors.Is(err, ErrWorkspaceInvitationExpired),
+			errors.Is(err, ErrWorkspaceInvitationRejected),
+			errors.Is(err, ErrWorkspaceInvitationRevoked),
+			errors.Is(err, ErrWorkspaceInvitationUsedUp),
+			errors.Is(err, ErrWorkspaceInvitationAlreadyMember),
+			errors.Is(err, ErrWorkspaceInvitationNotRecipient):
 			response.ErrorWithDetails(c, http.StatusConflict, err.Error(), err)
 		default:
 			response.InternalServerError(c, err.Error(), err)
@@ -219,9 +219,9 @@ func (h *Handler) RejectInvitation(c *gin.Context) {
 	result, err := h.service.RejectInvitation(c.Request.Context(), slug, userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrProjectInvitationNotFound):
+		case errors.Is(err, ErrWorkspaceInvitationNotFound):
 			response.NotFound(c, err.Error(), err)
-		case errors.Is(err, ErrProjectInvitationNotRecipient):
+		case errors.Is(err, ErrWorkspaceInvitationNotRecipient):
 			response.ErrorWithDetails(c, http.StatusConflict, err.Error(), err)
 		default:
 			response.InternalServerError(c, err.Error(), err)

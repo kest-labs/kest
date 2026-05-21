@@ -1,4 +1,4 @@
-package projectinvite
+package workspaceinvite
 
 import (
 	"fmt"

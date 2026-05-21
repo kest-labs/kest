@@ -45,7 +45,7 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 
 // --- helpers ---
 
-func (h *Handler) projectID(c *gin.Context) (string, bool) {
+func (h *Handler) workspaceID(c *gin.Context) (string, bool) {
 	return handler.ParseID(c, "id")
 }
 
@@ -102,9 +102,9 @@ func respondFlowError(c *gin.Context, err error) {
 
 // --- Flow handlers ---
 
-// ListFlows handles GET /projects/:id/flows
+// ListFlows handles GET /workspaces/:id/flows
 func (h *Handler) ListFlows(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	pid, ok := h.workspaceID(c)
 	if !ok {
 		return
 	}
@@ -121,9 +121,9 @@ func (h *Handler) ListFlows(c *gin.Context) {
 	})
 }
 
-// CreateFlow handles POST /projects/:id/flows
+// CreateFlow handles POST /workspaces/:id/flows
 func (h *Handler) CreateFlow(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	pid, ok := h.workspaceID(c)
 	if !ok {
 		return
 	}
@@ -143,7 +143,7 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 	response.Created(c, flow)
 }
 
-// GetFlow handles GET /projects/:id/flows/:fid
+// GetFlow handles GET /workspaces/:id/flows/:fid
 func (h *Handler) GetFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -159,7 +159,7 @@ func (h *Handler) GetFlow(c *gin.Context) {
 	response.Success(c, flow)
 }
 
-// UpdateFlow handles PATCH /projects/:id/flows/:fid
+// UpdateFlow handles PATCH /workspaces/:id/flows/:fid
 func (h *Handler) UpdateFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -181,7 +181,7 @@ func (h *Handler) UpdateFlow(c *gin.Context) {
 	response.Success(c, flow)
 }
 
-// DeleteFlow handles DELETE /projects/:id/flows/:fid
+// DeleteFlow handles DELETE /workspaces/:id/flows/:fid
 func (h *Handler) DeleteFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -196,7 +196,7 @@ func (h *Handler) DeleteFlow(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// SaveFlow handles PUT /projects/:id/flows/:fid (full save with steps + edges)
+// SaveFlow handles PUT /workspaces/:id/flows/:fid (full save with steps + edges)
 func (h *Handler) SaveFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -220,7 +220,7 @@ func (h *Handler) SaveFlow(c *gin.Context) {
 
 // --- Step handlers ---
 
-// CreateStep handles POST /projects/:id/flows/:fid/steps
+// CreateStep handles POST /workspaces/:id/flows/:fid/steps
 func (h *Handler) CreateStep(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -242,7 +242,7 @@ func (h *Handler) CreateStep(c *gin.Context) {
 	response.Created(c, step)
 }
 
-// UpdateStep handles PATCH /projects/:id/flows/:fid/steps/:sid
+// UpdateStep handles PATCH /workspaces/:id/flows/:fid/steps/:sid
 func (h *Handler) UpdateStep(c *gin.Context) {
 	sid, ok := h.stepID(c)
 	if !ok {
@@ -264,7 +264,7 @@ func (h *Handler) UpdateStep(c *gin.Context) {
 	response.Success(c, step)
 }
 
-// DeleteStep handles DELETE /projects/:id/flows/:fid/steps/:sid
+// DeleteStep handles DELETE /workspaces/:id/flows/:fid/steps/:sid
 func (h *Handler) DeleteStep(c *gin.Context) {
 	sid, ok := h.stepID(c)
 	if !ok {
@@ -281,7 +281,7 @@ func (h *Handler) DeleteStep(c *gin.Context) {
 
 // --- Edge handlers ---
 
-// CreateEdge handles POST /projects/:id/flows/:fid/edges
+// CreateEdge handles POST /workspaces/:id/flows/:fid/edges
 func (h *Handler) CreateEdge(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -303,7 +303,7 @@ func (h *Handler) CreateEdge(c *gin.Context) {
 	response.Created(c, edge)
 }
 
-// DeleteEdge handles DELETE /projects/:id/flows/:fid/edges/:eid
+// DeleteEdge handles DELETE /workspaces/:id/flows/:fid/edges/:eid
 func (h *Handler) DeleteEdge(c *gin.Context) {
 	eid, ok := h.edgeID(c)
 	if !ok {
@@ -320,7 +320,7 @@ func (h *Handler) DeleteEdge(c *gin.Context) {
 
 // --- Run handlers ---
 
-// ExecuteFlowSSE handles GET /projects/:id/flows/:fid/runs/:rid/events (SSE)
+// ExecuteFlowSSE handles GET /workspaces/:id/flows/:fid/runs/:rid/events (SSE)
 // Streams real-time step execution events to the client
 func (h *Handler) ExecuteFlowSSE(c *gin.Context) {
 	rid, ok := h.runID(c)
@@ -363,7 +363,7 @@ func (h *Handler) ExecuteFlowSSE(c *gin.Context) {
 	})
 }
 
-// RunFlow handles POST /projects/:id/flows/:fid/run
+// RunFlow handles POST /workspaces/:id/flows/:fid/run
 func (h *Handler) RunFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -379,7 +379,7 @@ func (h *Handler) RunFlow(c *gin.Context) {
 	response.Created(c, run)
 }
 
-// GetRun handles GET /projects/:id/flows/:fid/runs/:rid
+// GetRun handles GET /workspaces/:id/flows/:fid/runs/:rid
 func (h *Handler) GetRun(c *gin.Context) {
 	rid, ok := h.runID(c)
 	if !ok {
@@ -395,7 +395,7 @@ func (h *Handler) GetRun(c *gin.Context) {
 	response.Success(c, run)
 }
 
-// ListRuns handles GET /projects/:id/flows/:fid/runs
+// ListRuns handles GET /workspaces/:id/flows/:fid/runs
 func (h *Handler) ListRuns(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {

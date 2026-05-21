@@ -27,28 +27,28 @@ func NewHandler(service Service) *Handler {
 
 // RegisterRoutes registers member routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/members", func(members *router.Router) {
+	r.Group("/workspaces/:id/members", func(members *router.Router) {
 		members.WithMiddleware("auth")
 
 		members.GET("", h.List).
-			Middleware(middleware.RequireProjectRole(h.service, RoleRead))
+			Middleware(middleware.RequireWorkspaceRole(h.service, RoleRead))
 		members.GET("/me", h.GetMyRole).
-			Middleware(middleware.RequireProjectRole(h.service, RoleRead))
+			Middleware(middleware.RequireWorkspaceRole(h.service, RoleRead))
 		members.PATCH("/:uid", h.Update).
-			Middleware(middleware.RequireProjectRole(h.service, RoleAdmin))
+			Middleware(middleware.RequireWorkspaceRole(h.service, RoleAdmin))
 		members.DELETE("/:uid", h.Delete).
-			Middleware(middleware.RequireProjectRole(h.service, RoleAdmin))
+			Middleware(middleware.RequireWorkspaceRole(h.service, RoleAdmin))
 	})
 }
 
 func (h *Handler) ListMembers(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID := c.Param("id")
+	if workspaceID == "" {
+		response.Error(c, http.StatusBadRequest, "Invalid workspace ID")
 		return
 	}
 
-	members, err := h.service.ListMembers(c.Request.Context(), projectID)
+	members, err := h.service.ListMembers(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -58,9 +58,9 @@ func (h *Handler) ListMembers(c *gin.Context) {
 }
 
 func (h *Handler) UpdateMember(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID := c.Param("id")
+	if workspaceID == "" {
+		response.Error(c, http.StatusBadRequest, "Invalid workspace ID")
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *Handler) UpdateMember(c *gin.Context) {
 		return
 	}
 
-	member, err := h.service.UpdateMember(c.Request.Context(), projectID, userID, &req)
+	member, err := h.service.UpdateMember(c.Request.Context(), workspaceID, userID, &req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -85,9 +85,9 @@ func (h *Handler) UpdateMember(c *gin.Context) {
 }
 
 func (h *Handler) RemoveMember(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID := c.Param("id")
+	if workspaceID == "" {
+		response.Error(c, http.StatusBadRequest, "Invalid workspace ID")
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *Handler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RemoveMember(c.Request.Context(), projectID, userID); err != nil {
+	if err := h.service.RemoveMember(c.Request.Context(), workspaceID, userID); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -117,11 +117,11 @@ func (h *Handler) Delete(c *gin.Context) {
 	h.RemoveMember(c)
 }
 
-// GetMyRole returns the current user's role in the project
+// GetMyRole returns the current user's role in the workspace
 func (h *Handler) GetMyRole(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID := c.Param("id")
+	if workspaceID == "" {
+		response.Error(c, http.StatusBadRequest, "Invalid workspace ID")
 		return
 	}
 
@@ -131,9 +131,9 @@ func (h *Handler) GetMyRole(c *gin.Context) {
 		return
 	}
 
-	member, err := h.service.GetMember(c.Request.Context(), projectID, userID)
+	member, err := h.service.GetMember(c.Request.Context(), workspaceID, userID)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "Not a member of this project")
+		response.Error(c, http.StatusNotFound, "Not a member of this workspace")
 		return
 	}
 

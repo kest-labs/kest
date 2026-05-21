@@ -7,11 +7,11 @@ import (
 )
 
 type Repository interface {
-	AddMember(ctx context.Context, member *ProjectMemberPO) error
-	UpdateMember(ctx context.Context, member *ProjectMemberPO) error
-	DeleteMember(ctx context.Context, projectID string, userID string) error
-	GetMember(ctx context.Context, projectID string, userID string) (*ProjectMemberPO, error)
-	ListMembers(ctx context.Context, projectID string) ([]ProjectMemberPO, error)
+	AddMember(ctx context.Context, member *WorkspaceMemberPO) error
+	UpdateMember(ctx context.Context, member *WorkspaceMemberPO) error
+	DeleteMember(ctx context.Context, workspaceID string, userID string) error
+	GetMember(ctx context.Context, workspaceID string, userID string) (*WorkspaceMemberPO, error)
+	ListMembers(ctx context.Context, workspaceID string) ([]WorkspaceMemberPO, error)
 }
 
 type repository struct {
@@ -22,24 +22,24 @@ func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) AddMember(ctx context.Context, member *ProjectMemberPO) error {
+func (r *repository) AddMember(ctx context.Context, member *WorkspaceMemberPO) error {
 	return r.db.WithContext(ctx).Create(member).Error
 }
 
-func (r *repository) UpdateMember(ctx context.Context, member *ProjectMemberPO) error {
+func (r *repository) UpdateMember(ctx context.Context, member *WorkspaceMemberPO) error {
 	return r.db.WithContext(ctx).Save(member).Error
 }
 
-func (r *repository) DeleteMember(ctx context.Context, projectID string, userID string) error {
+func (r *repository) DeleteMember(ctx context.Context, workspaceID string, userID string) error {
 	return r.db.WithContext(ctx).
-		Where("project_id = ? AND user_id = ?", projectID, userID).
-		Delete(&ProjectMemberPO{}).Error
+		Where("workspace_id = ? AND user_id = ?", workspaceID, userID).
+		Delete(&WorkspaceMemberPO{}).Error
 }
 
-func (r *repository) GetMember(ctx context.Context, projectID string, userID string) (*ProjectMemberPO, error) {
-	var member ProjectMemberPO
+func (r *repository) GetMember(ctx context.Context, workspaceID string, userID string) (*WorkspaceMemberPO, error) {
+	var member WorkspaceMemberPO
 	err := r.db.WithContext(ctx).
-		Where("project_id = ? AND user_id = ?", projectID, userID).
+		Where("workspace_id = ? AND user_id = ?", workspaceID, userID).
 		Preload("User").
 		First(&member).Error
 	if err != nil {
@@ -48,10 +48,10 @@ func (r *repository) GetMember(ctx context.Context, projectID string, userID str
 	return &member, nil
 }
 
-func (r *repository) ListMembers(ctx context.Context, projectID string) ([]ProjectMemberPO, error) {
-	var members []ProjectMemberPO
+func (r *repository) ListMembers(ctx context.Context, workspaceID string) ([]WorkspaceMemberPO, error) {
+	var members []WorkspaceMemberPO
 	err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Preload("User").
 		Find(&members).Error
 	return members, err
