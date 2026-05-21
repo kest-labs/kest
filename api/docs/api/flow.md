@@ -10,27 +10,27 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/flows` | List Flows flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows` | Create Flow flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid` | Get Flow flow | 🔒 |
-| `PATCH` | `/v1/projects/:id/flows/:fid` | Update Flow flow | 🔒 |
-| `PUT` | `/v1/projects/:id/flows/:fid` | Save Flow flow | 🔒 |
-| `DELETE` | `/v1/projects/:id/flows/:fid` | Delete Flow flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows/:fid/steps` | Create Step flow | 🔒 |
-| `PATCH` | `/v1/projects/:id/flows/:fid/steps/:sid` | Update Step flow | 🔒 |
-| `DELETE` | `/v1/projects/:id/flows/:fid/steps/:sid` | Delete Step flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows/:fid/edges` | Create Edge flow | 🔒 |
-| `DELETE` | `/v1/projects/:id/flows/:fid/edges/:eid` | Delete Edge flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows/:fid/run` | Run Flow flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid/runs` | List Runs flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid/runs/:rid` | Get Run flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid/runs/:rid/events` | Execute Flow S S E flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows` | List Flows flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows` | Create Flow flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid` | Get Flow flow | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/flows/:fid` | Update Flow flow | 🔒 |
+| `PUT` | `/v1/workspaces/:id/flows/:fid` | Save Flow flow | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/flows/:fid` | Delete Flow flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows/:fid/steps` | Create Step flow | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/flows/:fid/steps/:sid` | Update Step flow | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/flows/:fid/steps/:sid` | Delete Step flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows/:fid/edges` | Create Edge flow | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/flows/:fid/edges/:eid` | Delete Edge flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows/:fid/run` | Run Flow flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid/runs` | List Runs flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid/runs/:rid` | Get Run flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid/runs/:rid/events` | Execute Flow S S E flow | 🔒 |
 
 ---
 
 ## Details
 
-### GET `/v1/projects/:id/flows`
+### GET `/v1/workspaces/:id/flows`
 
 **List Flows flow**
 
@@ -47,13 +47,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows`
+### POST `/v1/workspaces/:id/flows`
 
 **Create Flow flow**
 
@@ -84,7 +84,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"description": "string","name": "John Doe"}'
@@ -92,7 +92,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows' \
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid`
+### GET `/v1/workspaces/:id/flows/:fid`
 
 **Get Flow flow**
 
@@ -110,13 +110,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/flows/:fid`
+### PATCH `/v1/workspaces/:id/flows/:fid`
 
 **Update Flow flow**
 
@@ -148,7 +148,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"description": null,"name": null}'
@@ -156,7 +156,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1' \
 
 ---
 
-### PUT `/v1/projects/:id/flows/:fid`
+### PUT `/v1/workspaces/:id/flows/:fid`
 
 **Save Flow flow**
 
@@ -192,7 +192,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X PUT 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"description": null,"edges": [],"name": null,"steps": []}'
@@ -200,7 +200,7 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/flows/1' \
 
 ---
 
-### DELETE `/v1/projects/:id/flows/:fid`
+### DELETE `/v1/workspaces/:id/flows/:fid`
 
 **Delete Flow flow**
 
@@ -218,13 +218,13 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows/:fid/steps`
+### POST `/v1/workspaces/:id/flows/:fid/steps`
 
 **Create Step flow**
 
@@ -272,7 +272,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/steps' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows/1/steps' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"asserts": "string","body": "string","captures": "string","headers": "string","method": "string","name": "John Doe","position_x": 1,"position_y": 1,"sort_order": 1,"url": "https://example.com"}'
@@ -280,7 +280,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/steps' \
 
 ---
 
-### PATCH `/v1/projects/:id/flows/:fid/steps/:sid`
+### PATCH `/v1/workspaces/:id/flows/:fid/steps/:sid`
 
 **Update Step flow**
 
@@ -329,7 +329,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/steps' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/flows/1/steps/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"asserts": null,"body": null,"captures": null,"headers": null,"method": null,"name": null,"position_x": null,"position_y": null,"sort_order": null,"url": null}'
@@ -337,7 +337,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
 
 ---
 
-### DELETE `/v1/projects/:id/flows/:fid/steps/:sid`
+### DELETE `/v1/workspaces/:id/flows/:fid/steps/:sid`
 
 **Delete Step flow**
 
@@ -356,13 +356,13 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/flows/1/steps/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows/:fid/edges`
+### POST `/v1/workspaces/:id/flows/:fid/edges`
 
 **Create Edge flow**
 
@@ -396,7 +396,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/edges' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows/1/edges' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"source_step_id": 1,"target_step_id": 1,"variable_mapping": "string"}'
@@ -404,7 +404,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/edges' \
 
 ---
 
-### DELETE `/v1/projects/:id/flows/:fid/edges/:eid`
+### DELETE `/v1/workspaces/:id/flows/:fid/edges/:eid`
 
 **Delete Edge flow**
 
@@ -423,13 +423,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/edges' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/edges/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/flows/1/edges/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows/:fid/run`
+### POST `/v1/workspaces/:id/flows/:fid/run`
 
 **Run Flow flow**
 
@@ -447,13 +447,13 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/edges/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/run' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows/1/run' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid/runs`
+### GET `/v1/workspaces/:id/flows/:fid/runs`
 
 **List Runs flow**
 
@@ -471,13 +471,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/run' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1/runs' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid/runs/:rid`
+### GET `/v1/workspaces/:id/flows/:fid/runs/:rid`
 
 **Get Run flow**
 
@@ -496,13 +496,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1/runs/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid/runs/:rid/events`
+### GET `/v1/workspaces/:id/flows/:fid/runs/:rid/events`
 
 **Execute Flow S S E flow**
 
@@ -527,7 +527,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1/events?base_url=https%3A%2F%2Fapi.example.com' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1/runs/1/events?base_url=https%3A%2F%2Fapi.example.com' \
   -H 'Authorization: Bearer <token>'
 ```
 

@@ -29,7 +29,7 @@ curl -fsSL https://kest.dev/install.sh | sh
 
 ### 2. Basic Usage
 ```bash
-kest init                                                    # Initialize project
+kest init                                                    # Initialize workspace
 kest get /api/users -a "status==200"                         # Test an endpoint
 kest post /api/login -d '{"user":"admin"}' -c "token=data.token"  # Capture token
 kest run auth.flow.md                                        # Run a Markdown flow
@@ -37,20 +37,20 @@ kest run auth.flow.md                                        # Run a Markdown fl
 
 ### 3. Connect CLI To The Web Console
 
-Use this flow when you want to push local CLI history back into a Kest project as API Specs.
+Use this flow when you want to push local CLI history back into a Kest workspace as API Specs.
 
-1. Open the target project in the Web Console.
-2. Go to the project detail page.
+1. Open the target workspace in the Web Console.
+2. Go to the workspace detail page.
 3. In the `CLI Sync` card, click `Generate CLI Token`.
 4. Copy the one-time token or the generated setup command.
 
-Then configure the CLI once inside your local Kest project:
+Then configure the CLI once inside your local Kest workspace:
 
 ```bash
 kest sync config \
   --platform-url "https://api.kest.dev/v1" \
   --platform-token "kest_pat_..." \
-  --project-id "12"
+  --workspace-id "12"
 ```
 
 This writes the following fields into `.kest/config.yaml`:
@@ -58,7 +58,7 @@ This writes the following fields into `.kest/config.yaml`:
 ```yaml
 platform_url: https://api.kest.dev/v1
 platform_token: kest_pat_...
-platform_project_id: "12"
+platform_workspace_id: "12"
 ```
 
 Check the saved configuration:
@@ -81,9 +81,9 @@ kest sync push
 
 Notes:
 
-- `platform_token` is a Kest project token, not an OpenAI `sk-...` key.
-- The token is scoped to a single project and is checked against the URL project ID on upload.
-- The CLI upload endpoint is `POST /v1/projects/:id/cli/spec-sync`.
+- `platform_token` is a Kest workspace token, not an OpenAI `sk-...` key.
+- The token is scoped to a single workspace and is checked against the URL workspace ID on upload.
+- The CLI upload endpoint is `POST /v1/workspaces/:id/cli/spec-sync`.
 
 ---
 

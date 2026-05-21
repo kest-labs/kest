@@ -199,6 +199,10 @@ func (s *stubWorkspaceService) ListWorkspaces(string, bool) ([]*workspace.Worksp
 	return nil, nil
 }
 
+func (s *stubWorkspaceService) GetStats(context.Context, string) (*workspace.WorkspaceStats, error) {
+	return nil, nil
+}
+
 func (s *stubWorkspaceService) AddMember(string, *workspace.AddMemberRequest, string, bool) error {
 	return nil
 }

@@ -7,26 +7,26 @@ The Test Cases module manages API test cases, including creation, execution, and
 ## Base Path
 
 ```
-/v1/projects/:id/test-cases
+/v1/workspaces/:id/test-cases
 ```
 
-All test case endpoints require authentication and are scoped to a specific project.
+All test case endpoints require authentication and are scoped to a specific workspace.
 
 ---
 
 ## 1. List Test Cases
 
-### GET /projects/:id/test-cases
+### GET /workspaces/:id/test-cases
 
-List all test cases for a project.
+List all test cases for a workspace.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
@@ -43,7 +43,7 @@ List all test cases for a project.
 #### Example Request
 
 ```
-GET /projects/1/test-cases?page=1&per_page=10&api_spec_id=1&env=production
+GET /workspaces/1/test-cases?page=1&per_page=10&api_spec_id=1&env=production
 ```
 
 #### Response (200 OK)
@@ -105,17 +105,17 @@ GET /projects/1/test-cases?page=1&per_page=10&api_spec_id=1&env=production
 
 ## 2. Create Test Case
 
-### POST /projects/:id/test-cases
+### POST /workspaces/:id/test-cases
 
 Create a new test case.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -212,17 +212,17 @@ Create a new test case.
 
 ## 3. Get Test Case
 
-### GET /projects/:id/test-cases/:tcid
+### GET /workspaces/:id/test-cases/:tcid
 
 Get a specific test case details.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Test case ID |
 
 #### Response (200 OK)
@@ -280,17 +280,17 @@ Get a specific test case details.
 
 ## 4. Update Test Case
 
-### PATCH /projects/:id/test-cases/:tcid
+### PATCH /workspaces/:id/test-cases/:tcid
 
 Update an existing test case.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Test case ID |
 
 #### Request Body
@@ -337,17 +337,17 @@ Same fields as Create Test Case, all optional.
 
 ## 5. Delete Test Case
 
-### DELETE /projects/:id/test-cases/:tcid
+### DELETE /workspaces/:id/test-cases/:tcid
 
 Delete a test case.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Test case ID |
 
 #### Response (200 OK)
@@ -364,17 +364,17 @@ Delete a test case.
 
 ## 6. Duplicate Test Case
 
-### POST /projects/:id/test-cases/:tcid/duplicate
+### POST /workspaces/:id/test-cases/:tcid/duplicate
 
 Duplicate a test case with modifications.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Source Test Case ID |
 
 #### Request Body
@@ -414,17 +414,17 @@ Duplicate a test case with modifications.
 
 ## 7. Generate Test Cases from API Spec
 
-### POST /projects/:id/test-cases/from-spec
+### POST /workspaces/:id/test-cases/from-spec
 
 Generate test cases automatically from an API specification.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -482,17 +482,17 @@ Generate test cases automatically from an API specification.
 
 ## 8. Run Test Case
 
-### POST /projects/:id/test-cases/:tcid/run
+### POST /workspaces/:id/test-cases/:tcid/run
 
 Execute a single test case.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Test case ID |
 
 #### Request Body
@@ -589,17 +589,17 @@ Execute a single test case.
 
 ## 9. List Test Run History
 
-### GET /projects/:id/test-cases/:tcid/runs
+### GET /workspaces/:id/test-cases/:tcid/runs
 
 List execution history for a specific test case.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Test case ID |
 
 #### Query Parameters
@@ -613,7 +613,7 @@ List execution history for a specific test case.
 #### Example Request
 
 ```
-GET /projects/1/test-cases/5/runs?page=1&page_size=10&status=failed
+GET /workspaces/1/test-cases/5/runs?page=1&page_size=10&status=failed
 ```
 
 #### Response (200 OK)
@@ -651,17 +651,17 @@ GET /projects/1/test-cases/5/runs?page=1&page_size=10&status=failed
 
 ## 10. Get Single Test Run
 
-### GET /projects/:id/test-cases/:tcid/runs/:rid
+### GET /workspaces/:id/test-cases/:tcid/runs/:rid
 
 Get the full detail of a single test run, including request, response, and assertion results.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `tcid` | integer | ✅ Yes | Test case ID |
 | `rid` | integer | ✅ Yes | Run ID |
 
@@ -794,11 +794,11 @@ Operators: `equals`, `not_equals`, `exists`, `not_exists`, `contains`, `greater_
 
 ```javascript
 const token = 'your-jwt-token';
-const projectId = 1;
+const workspaceId = 1;
 
 // Create test case
 const createTestCase = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/test-cases`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/test-cases`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -817,7 +817,7 @@ const createTestCase = async () => {
 
 // Run test case
 const runTestCase = async (testCaseId) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/test-cases/${testCaseId}/run`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/test-cases/${testCaseId}/run`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -834,7 +834,7 @@ const runTestCase = async (testCaseId) => {
 
 // Generate from API spec
 const generateFromSpec = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/test-cases/from-spec`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/test-cases/from-spec`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -858,7 +858,7 @@ const generateFromSpec = async () => {
 
 ```bash
 # Create test case
-curl -X POST http://localhost:8025/projects/1/test-cases \
+curl -X POST http://localhost:8025/workspaces/1/test-cases \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -869,7 +869,7 @@ curl -X POST http://localhost:8025/projects/1/test-cases \
   }'
 
 # Run test case
-curl -X POST http://localhost:8025/projects/1/test-cases/1/run \
+curl -X POST http://localhost:8025/workspaces/1/test-cases/1/run \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -877,7 +877,7 @@ curl -X POST http://localhost:8025/projects/1/test-cases/1/run \
   }'
 
 # Generate from spec
-curl -X POST http://localhost:8025/projects/1/test-cases/from-spec \
+curl -X POST http://localhost:8025/workspaces/1/test-cases/from-spec \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{

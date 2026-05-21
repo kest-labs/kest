@@ -33,7 +33,7 @@ Total endpoints: **135**
 - [Importer](#importer) (1 endpoints)
 - [Member](#member) (11 endpoints)
 - [Permission](#permission) (9 endpoints)
-- [Project](#project) (9 endpoints)
+- [Workspace](#workspace) (9 endpoints)
 - [Request](#request) (7 endpoints)
 - [Run](#run) (1 endpoints)
 - [System](#system) (2 endpoints)
@@ -1640,23 +1640,23 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/export/post
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/flows` | List Flows flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows` | Create Flow flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid` | Get Flow flow | 🔒 |
-| `PATCH` | `/v1/projects/:id/flows/:fid` | Update Flow flow | 🔒 |
-| `PUT` | `/v1/projects/:id/flows/:fid` | Save Flow flow | 🔒 |
-| `DELETE` | `/v1/projects/:id/flows/:fid` | Delete Flow flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows/:fid/steps` | Create Step flow | 🔒 |
-| `PATCH` | `/v1/projects/:id/flows/:fid/steps/:sid` | Update Step flow | 🔒 |
-| `DELETE` | `/v1/projects/:id/flows/:fid/steps/:sid` | Delete Step flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows/:fid/edges` | Create Edge flow | 🔒 |
-| `DELETE` | `/v1/projects/:id/flows/:fid/edges/:eid` | Delete Edge flow | 🔒 |
-| `POST` | `/v1/projects/:id/flows/:fid/run` | Run Flow flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid/runs` | List Runs flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid/runs/:rid` | Get Run flow | 🔒 |
-| `GET` | `/v1/projects/:id/flows/:fid/runs/:rid/events` | Execute Flow S S E flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows` | List Flows flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows` | Create Flow flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid` | Get Flow flow | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/flows/:fid` | Update Flow flow | 🔒 |
+| `PUT` | `/v1/workspaces/:id/flows/:fid` | Save Flow flow | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/flows/:fid` | Delete Flow flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows/:fid/steps` | Create Step flow | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/flows/:fid/steps/:sid` | Update Step flow | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/flows/:fid/steps/:sid` | Delete Step flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows/:fid/edges` | Create Edge flow | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/flows/:fid/edges/:eid` | Delete Edge flow | 🔒 |
+| `POST` | `/v1/workspaces/:id/flows/:fid/run` | Run Flow flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid/runs` | List Runs flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid/runs/:rid` | Get Run flow | 🔒 |
+| `GET` | `/v1/workspaces/:id/flows/:fid/runs/:rid/events` | Execute Flow S S E flow | 🔒 |
 
-### GET `/v1/projects/:id/flows`
+### GET `/v1/workspaces/:id/flows`
 
 **List Flows flow**
 
@@ -1673,13 +1673,13 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/export/post
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows`
+### POST `/v1/workspaces/:id/flows`
 
 **Create Flow flow**
 
@@ -1710,7 +1710,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"description": "string","name": "John Doe"}'
@@ -1718,7 +1718,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows' \
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid`
+### GET `/v1/workspaces/:id/flows/:fid`
 
 **Get Flow flow**
 
@@ -1736,13 +1736,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/flows/:fid`
+### PATCH `/v1/workspaces/:id/flows/:fid`
 
 **Update Flow flow**
 
@@ -1774,7 +1774,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"description": null,"name": null}'
@@ -1782,7 +1782,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1' \
 
 ---
 
-### PUT `/v1/projects/:id/flows/:fid`
+### PUT `/v1/workspaces/:id/flows/:fid`
 
 **Save Flow flow**
 
@@ -1818,7 +1818,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X PUT 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"description": null,"edges": [],"name": null,"steps": []}'
@@ -1826,7 +1826,7 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/flows/1' \
 
 ---
 
-### DELETE `/v1/projects/:id/flows/:fid`
+### DELETE `/v1/workspaces/:id/flows/:fid`
 
 **Delete Flow flow**
 
@@ -1844,13 +1844,13 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/flows/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows/:fid/steps`
+### POST `/v1/workspaces/:id/flows/:fid/steps`
 
 **Create Step flow**
 
@@ -1898,7 +1898,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/steps' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows/1/steps' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"asserts": "string","body": "string","captures": "string","headers": "string","method": "string","name": "John Doe","position_x": 1,"position_y": 1,"sort_order": 1,"url": "https://example.com"}'
@@ -1906,7 +1906,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/steps' \
 
 ---
 
-### PATCH `/v1/projects/:id/flows/:fid/steps/:sid`
+### PATCH `/v1/workspaces/:id/flows/:fid/steps/:sid`
 
 **Update Step flow**
 
@@ -1955,7 +1955,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/steps' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/flows/1/steps/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"asserts": null,"body": null,"captures": null,"headers": null,"method": null,"name": null,"position_x": null,"position_y": null,"sort_order": null,"url": null}'
@@ -1963,7 +1963,7 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
 
 ---
 
-### DELETE `/v1/projects/:id/flows/:fid/steps/:sid`
+### DELETE `/v1/workspaces/:id/flows/:fid/steps/:sid`
 
 **Delete Step flow**
 
@@ -1982,13 +1982,13 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/flows/1/steps/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows/:fid/edges`
+### POST `/v1/workspaces/:id/flows/:fid/edges`
 
 **Create Edge flow**
 
@@ -2022,7 +2022,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/steps/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/edges' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows/1/edges' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"source_step_id": 1,"target_step_id": 1,"variable_mapping": "string"}'
@@ -2030,7 +2030,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/edges' \
 
 ---
 
-### DELETE `/v1/projects/:id/flows/:fid/edges/:eid`
+### DELETE `/v1/workspaces/:id/flows/:fid/edges/:eid`
 
 **Delete Edge flow**
 
@@ -2049,13 +2049,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/edges' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/edges/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/flows/1/edges/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/flows/:fid/run`
+### POST `/v1/workspaces/:id/flows/:fid/run`
 
 **Run Flow flow**
 
@@ -2073,13 +2073,13 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/flows/1/edges/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/run' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/flows/1/run' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid/runs`
+### GET `/v1/workspaces/:id/flows/:fid/runs`
 
 **List Runs flow**
 
@@ -2097,13 +2097,13 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/flows/1/run' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1/runs' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid/runs/:rid`
+### GET `/v1/workspaces/:id/flows/:fid/runs/:rid`
 
 **Get Run flow**
 
@@ -2122,13 +2122,13 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1/runs/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/flows/:fid/runs/:rid/events`
+### GET `/v1/workspaces/:id/flows/:fid/runs/:rid/events`
 
 **Execute Flow S S E flow**
 
@@ -2153,7 +2153,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/flows/1/runs/1/events?base_url=https%3A%2F%2Fapi.example.com' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/flows/1/runs/1/events?base_url=https%3A%2F%2Fapi.example.com' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -2331,44 +2331,21 @@ curl -X POST 'http://localhost:8025/api/v1/workspaces/1/collections/import/postm
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/members` | List project members | 🔒 |
-| `GET` | `/v1/projects/:id/members/me` | Get current user project role | 🔒 |
-| `PATCH` | `/v1/projects/:id/members/:uid` | Update project member role | 🔒 |
-| `DELETE` | `/v1/projects/:id/members/:uid` | Remove project member | 🔒 |
-| `POST` | `/v1/projects/:id/invitations` | Create project invitation | 🔒 |
-| `GET` | `/v1/projects/:id/invitations` | List project invitations | 🔒 |
-| `DELETE` | `/v1/projects/:id/invitations/:inviteId` | Revoke project invitation | 🔒 |
-| `GET` | `/v1/project-invitations/received` | List current user project invitations | 🔒 |
-| `GET` | `/v1/project-invitations/:slug` | Get public project invitation | 🔓 |
-| `POST` | `/v1/project-invitations/:slug/accept` | Accept project invitation | 🔒 |
-| `POST` | `/v1/project-invitations/:slug/reject` | Reject project invitation | 🔒 |
+| `GET` | `/v1/workspaces/:id/members` | List workspace members | 🔒 |
+| `GET` | `/v1/workspaces/:id/members/me` | Get current user workspace role | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/members/:uid` | Update workspace member role | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/members/:uid` | Remove workspace member | 🔒 |
+| `POST` | `/v1/workspaces/:id/invitations` | Create workspace invitation | 🔒 |
+| `GET` | `/v1/workspaces/:id/invitations` | List workspace invitations | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/invitations/:inviteId` | Revoke workspace invitation | 🔒 |
+| `GET` | `/v1/workspace-invitations/received` | List current user workspace invitations | 🔒 |
+| `GET` | `/v1/workspace-invitations/:slug` | Get public workspace invitation | 🔓 |
+| `POST` | `/v1/workspace-invitations/:slug/accept` | Accept workspace invitation | 🔒 |
+| `POST` | `/v1/workspace-invitations/:slug/reject` | Reject workspace invitation | 🔒 |
 
-### GET `/v1/projects/:id/members`
+### GET `/v1/workspaces/:id/members`
 
-**List project members**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
-  -H 'Authorization: Bearer <token>'
-```
-
----
-
-### GET `/v1/projects/:id/members/me`
-
-**Get current user project role**
+**List workspace members**
 
 | Property | Value |
 |----------|-------|
@@ -2383,15 +2360,38 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/members/me' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/members' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/members/:uid`
+### GET `/v1/workspaces/:id/members/me`
 
-**Update project member role**
+**Get current user workspace role**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/members/me' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### PATCH `/v1/workspaces/:id/members/:uid`
+
+**Update workspace member role**
 
 | Property | Value |
 |----------|-------|
@@ -2419,7 +2419,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members/me' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/members/1' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"role":"write"}'
@@ -2427,9 +2427,9 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/1' \
 
 ---
 
-### DELETE `/v1/projects/:id/members/:uid`
+### DELETE `/v1/workspaces/:id/members/:uid`
 
-**Remove project member**
+**Remove workspace member**
 
 | Property | Value |
 |----------|-------|
@@ -2445,15 +2445,15 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/members/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/invitations`
+### POST `/v1/workspaces/:id/invitations`
 
-**Create project invitation**
+**Create workspace invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2486,7 +2486,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/invitations' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"expires_at":"2026-05-01T00:00:00Z","invited_user_id":"user_123","role":"read"}'
@@ -2494,9 +2494,9 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
 
 ---
 
-### GET `/v1/projects/:id/invitations`
+### GET `/v1/workspaces/:id/invitations`
 
-**List project invitations**
+**List workspace invitations**
 
 | Property | Value |
 |----------|-------|
@@ -2511,15 +2511,15 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/invitations' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/invitations' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/invitations/:inviteId`
+### DELETE `/v1/workspaces/:id/invitations/:inviteId`
 
-**Revoke project invitation**
+**Revoke workspace invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2535,15 +2535,15 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/invitations' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/invitations/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/invitations/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/project-invitations/received`
+### GET `/v1/workspace-invitations/received`
 
-**List current user project invitations**
+**List current user workspace invitations**
 
 | Property | Value |
 |----------|-------|
@@ -2552,15 +2552,15 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/invitations/1' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/project-invitations/received' \
+curl -X GET 'http://localhost:8025/api/v1/workspace-invitations/received' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/project-invitations/:slug`
+### GET `/v1/workspace-invitations/:slug`
 
-**Get public project invitation**
+**Get public workspace invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2575,14 +2575,14 @@ curl -X GET 'http://localhost:8025/api/v1/project-invitations/received' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/project-invitations/pji_example'
+curl -X GET 'http://localhost:8025/api/v1/workspace-invitations/wsi_example'
 ```
 
 ---
 
-### POST `/v1/project-invitations/:slug/accept`
+### POST `/v1/workspace-invitations/:slug/accept`
 
-**Accept project invitation**
+**Accept workspace invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2597,15 +2597,15 @@ curl -X GET 'http://localhost:8025/api/v1/project-invitations/pji_example'
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/project-invitations/pji_example/accept' \
+curl -X POST 'http://localhost:8025/api/v1/workspace-invitations/wsi_example/accept' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/project-invitations/:slug/reject`
+### POST `/v1/workspace-invitations/:slug/reject`
 
-**Reject project invitation**
+**Reject workspace invitation**
 
 | Property | Value |
 |----------|-------|
@@ -2620,7 +2620,7 @@ curl -X POST 'http://localhost:8025/api/v1/project-invitations/pji_example/accep
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/project-invitations/pji_example/reject' \
+curl -X POST 'http://localhost:8025/api/v1/workspace-invitations/wsi_example/reject' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -2628,7 +2628,7 @@ curl -X POST 'http://localhost:8025/api/v1/project-invitations/pji_example/rejec
 
 ## Permission
 
-> ⚠️ Reminder: mounted but currently unused in the main project authorization flow. Project-level access control is still enforced by the `Member` module (`/v1/projects/:id/members` + project role checks).
+> ⚠️ Reminder: mounted but currently unused in the main workspace authorization flow. Workspace-level access control is still enforced by the `Member` module (`/v1/workspaces/:id/members` + workspace role checks).
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
@@ -3017,28 +3017,28 @@ curl -X GET 'http://localhost:8025/api/v1/permissions' \
 
 ---
 
-## Project
+## Workspace
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v1/projects` | Create project | 🔒 |
-| `GET` | `/v1/projects` | List projects | 🔒 |
-| `GET` | `/v1/projects/:id` | Get project details | 🔒 |
-| `PUT` | `/v1/projects/:id` | Update project | 🔒 |
-| `PATCH` | `/v1/projects/:id` | Update project | 🔒 |
-| `DELETE` | `/v1/projects/:id` | Delete project | 🔒 |
-| `GET` | `/v1/projects/:id/stats` | Get Stats project | 🔒 |
-| `POST` | `/v1/projects/:id/cli/spec-sync` | Sync Specs From C L I project | 🔒 |
-| `POST` | `/v1/projects/:id/cli/history-sync` | Sync History From C L I project | 🔒 |
+| `POST` | `/v1/workspaces` | Create workspace | 🔒 |
+| `GET` | `/v1/workspaces` | List workspaces | 🔒 |
+| `GET` | `/v1/workspaces/:id` | Get workspace details | 🔒 |
+| `PUT` | `/v1/workspaces/:id` | Update workspace | 🔒 |
+| `PATCH` | `/v1/workspaces/:id` | Update workspace | 🔒 |
+| `DELETE` | `/v1/workspaces/:id` | Delete workspace | 🔒 |
+| `GET` | `/v1/workspaces/:id/stats` | Get Stats workspace | 🔒 |
+| `POST` | `/v1/workspaces/:id/cli/spec-sync` | Sync Specs From C L I workspace | 🔒 |
+| `POST` | `/v1/workspaces/:id/cli/history-sync` | Sync History From C L I workspace | 🔒 |
 
-### POST `/v1/projects`
+### POST `/v1/workspaces`
 
-**Create project**
+**Create workspace**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `projects.create` |
+| Route Name | `workspaces.create` |
 
 #### Response
 
@@ -3058,20 +3058,20 @@ curl -X GET 'http://localhost:8025/api/v1/permissions' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects`
+### GET `/v1/workspaces`
 
-**List projects**
+**List workspaces**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `projects.list` |
+| Route Name | `workspaces.list` |
 
 #### Response
 
@@ -3088,15 +3088,15 @@ curl -X POST 'http://localhost:8025/api/v1/projects' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id`
+### GET `/v1/workspaces/:id`
 
-**Get project details**
+**Get workspace details**
 
 | Property | Value |
 |----------|-------|
@@ -3126,15 +3126,15 @@ curl -X GET 'http://localhost:8025/api/v1/projects' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PUT `/v1/projects/:id`
+### PUT `/v1/workspaces/:id`
 
-**Update project**
+**Update workspace**
 
 | Property | Value |
 |----------|-------|
@@ -3164,15 +3164,15 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1' \
 #### Example
 
 ```bash
-curl -X PUT 'http://localhost:8025/api/v1/projects/1' \
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id`
+### PATCH `/v1/workspaces/:id`
 
-**Update project**
+**Update workspace**
 
 | Property | Value |
 |----------|-------|
@@ -3202,15 +3202,15 @@ curl -X PUT 'http://localhost:8025/api/v1/projects/1' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id`
+### DELETE `/v1/workspaces/:id`
 
-**Delete project**
+**Delete workspace**
 
 | Property | Value |
 |----------|-------|
@@ -3240,15 +3240,15 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/stats`
+### GET `/v1/workspaces/:id/stats`
 
-**Get Stats project**
+**Get Stats workspace**
 
 | Property | Value |
 |----------|-------|
@@ -3278,15 +3278,15 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/stats' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/stats' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/cli/spec-sync`
+### POST `/v1/workspaces/:id/cli/spec-sync`
 
-**Sync Specs From C L I project**
+**Sync Specs From C L I workspace**
 
 | Property | Value |
 |----------|-------|
@@ -3316,15 +3316,15 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/stats' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/cli/spec-sync' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/cli/spec-sync' \
   -H 'Authorization: Bearer <workspace-cli-token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/cli/history-sync`
+### POST `/v1/workspaces/:id/cli/history-sync`
 
-**Sync History From C L I project**
+**Sync History From C L I workspace**
 
 | Property | Value |
 |----------|-------|
@@ -3339,7 +3339,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/cli/spec-sync' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/cli/history-sync' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/cli/history-sync' \
   -H 'Authorization: Bearer <workspace-cli-token>'
 ```
 
@@ -3804,41 +3804,18 @@ curl -X GET 'http://localhost:8025/api/v1/setup-status'
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/test-cases` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases` | Require Project Role testcase | 🔒 |
-| `GET` | `/v1/projects/:id/test-cases/:tcid` | Require Project Role testcase | 🔒 |
-| `PATCH` | `/v1/projects/:id/test-cases/:tcid` | Require Project Role testcase | 🔒 |
-| `DELETE` | `/v1/projects/:id/test-cases/:tcid` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases/:tcid/duplicate` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases/from-spec` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases/:tcid/run` | Require Project Role testcase | 🔒 |
+| `GET` | `/v1/workspaces/:id/test-cases` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases` | Require Workspace Role testcase | 🔒 |
+| `GET` | `/v1/workspaces/:id/test-cases/:tcid` | Require Workspace Role testcase | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/test-cases/:tcid` | Require Workspace Role testcase | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/test-cases/:tcid` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases/:tcid/duplicate` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases/from-spec` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases/:tcid/run` | Require Workspace Role testcase | 🔒 |
 
-### GET `/v1/projects/:id/test-cases`
+### GET `/v1/workspaces/:id/test-cases`
 
-**Require Project Role testcase**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases' \
-  -H 'Authorization: Bearer <token>'
-```
-
----
-
-### POST `/v1/projects/:id/test-cases`
-
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3853,15 +3830,38 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/test-cases' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/test-cases/:tcid`
+### POST `/v1/workspaces/:id/test-cases`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### GET `/v1/workspaces/:id/test-cases/:tcid`
+
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3877,15 +3877,15 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/test-cases/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/test-cases/:tcid`
+### PATCH `/v1/workspaces/:id/test-cases/:tcid`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3901,15 +3901,15 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/test-cases/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/test-cases/:tcid`
+### DELETE `/v1/workspaces/:id/test-cases/:tcid`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3925,15 +3925,15 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/test-cases/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/test-cases/:tcid/duplicate`
+### POST `/v1/workspaces/:id/test-cases/:tcid/duplicate`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3949,15 +3949,15 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/1/duplicate' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases/1/duplicate' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/test-cases/from-spec`
+### POST `/v1/workspaces/:id/test-cases/from-spec`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3972,15 +3972,15 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/1/duplicate' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/from-spec' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases/from-spec' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/test-cases/:tcid/run`
+### POST `/v1/workspaces/:id/test-cases/:tcid/run`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -3996,7 +3996,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/from-spec' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/1/run' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases/1/run' \
   -H 'Authorization: Bearer <token>'
 ```
 

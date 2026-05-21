@@ -1,8 +1,8 @@
-# Projects API
+# Workspaces API
 
 ## Overview
 
-The Projects module manages API projects, including creation, configuration, project stats, and CLI sync credentials.
+The Workspaces module manages API workspaces, including creation, configuration, workspace stats, and CLI sync credentials.
 
 ## Base Path
 
@@ -10,15 +10,15 @@ The Projects module manages API projects, including creation, configuration, pro
 /v1
 ```
 
-All project endpoints require authentication.
+All workspace endpoints require authentication.
 
 ---
 
-## 1. Create Project
+## 1. Create Workspace
 
-### POST /projects
+### POST /workspaces
 
-Create a new API project.
+Create a new API workspace.
 
 **Authentication**: Required
 
@@ -33,7 +33,7 @@ Authorization: Bearer <token>
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ✅ Yes | min: 1, max: 100 | Project name |
+| `name` | string | ✅ Yes | min: 1, max: 100 | Workspace name |
 | `slug` | string | ❌ No | min: 1, max: 50 | URL-friendly slug (auto-generated if not provided) |
 | `platform` | string | ❌ No | enum: go, javascript, python, java, ruby, php, csharp | Primary platform/language |
 
@@ -58,7 +58,7 @@ Authorization: Bearer <token>
     "name": "My E-commerce API",
     "slug": "ecommerce-api",
     "public_key": "pk_live_51H2K3j...kLmN",
-    "dsn": "https://api.kest.com/v1/ingest?public_key=pk_live_51H2K3j...kLmN&project_id=1",
+    "dsn": "https://api.kest.com/v1/ingest?public_key=pk_live_51H2K3j...kLmN&workspace_id=1",
     "platform": "javascript",
     "status": 1,
     "rate_limit_per_minute": 1000,
@@ -70,15 +70,15 @@ Authorization: Bearer <token>
 #### Error Responses
 
 - **400 Bad Request**: Validation failed
-- **409 Conflict**: Project slug already exists
+- **409 Conflict**: Workspace slug already exists
 
 ---
 
-## 2. List Projects
+## 2. List Workspaces
 
-### GET /projects
+### GET /workspaces
 
-List all projects for the authenticated user.
+List all workspaces for the authenticated user.
 
 **Authentication**: Required
 
@@ -95,7 +95,7 @@ List all projects for the authenticated user.
 #### Example Request
 
 ```
-GET /projects?page=1&per_page=10&status=1
+GET /workspaces?page=1&per_page=10&status=1
 ```
 
 #### Response (200 OK)
@@ -135,11 +135,11 @@ GET /projects?page=1&per_page=10&status=1
 
 ---
 
-## 3. Get Project
+## 3. Get Workspace
 
-### GET /projects/:id
+### GET /workspaces/:id
 
-Get detailed project information.
+Get detailed workspace information.
 
 **Authentication**: Required
 
@@ -147,7 +147,7 @@ Get detailed project information.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Response (200 OK)
 
@@ -160,7 +160,7 @@ Get detailed project information.
     "name": "My E-commerce API",
     "slug": "ecommerce-api",
     "public_key": "pk_live_51H2K3j...kLmN",
-    "dsn": "https://api.kest.com/v1/ingest?public_key=pk_live_51H2K3j...kLmN&project_id=1",
+    "dsn": "https://api.kest.com/v1/ingest?public_key=pk_live_51H2K3j...kLmN&workspace_id=1",
     "platform": "javascript",
     "status": 1,
     "rate_limit_per_minute": 1000,
@@ -171,16 +171,16 @@ Get detailed project information.
 
 #### Error Responses
 
-- **404 Not Found**: Project not found
-- **403 Forbidden**: No access to project
+- **404 Not Found**: Workspace not found
+- **403 Forbidden**: No access to workspace
 
 ---
 
-## 4. Update Project
+## 4. Update Workspace
 
-### PUT /projects/:id
+### PUT /workspaces/:id
 
-Update project information.
+Update workspace information.
 
 **Authentication**: Required
 
@@ -188,15 +188,15 @@ Update project information.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| `name` | string | ❌ No | min: 1, max: 100 | Project name |
+| `name` | string | ❌ No | min: 1, max: 100 | Workspace name |
 | `platform` | string | ❌ No | enum: go, javascript, python, java, ruby, php, csharp | Primary platform |
-| `status` | integer | ❌ No | enum: 0, 1 | Project status (0=inactive, 1=active) |
+| `status` | integer | ❌ No | enum: 0, 1 | Workspace status (0=inactive, 1=active) |
 | `rate_limit_per_minute` | integer | ❌ No | min: 0, max: 100000 | Rate limit per minute |
 
 #### Example Request
@@ -214,13 +214,13 @@ Update project information.
 ```json
 {
   "code": 0,
-  "message": "Project updated successfully",
+  "message": "Workspace updated successfully",
   "data": {
     "id": 1,
     "name": "Updated E-commerce API",
     "slug": "ecommerce-api",
     "public_key": "pk_live_51H2K3j...kLmN",
-    "dsn": "https://api.kest.com/v1/ingest?public_key=pk_live_51H2K3j...kLmN&project_id=1",
+    "dsn": "https://api.kest.com/v1/ingest?public_key=pk_live_51H2K3j...kLmN&workspace_id=1",
     "platform": "typescript",
     "status": 1,
     "rate_limit_per_minute": 2000,
@@ -231,23 +231,23 @@ Update project information.
 
 ---
 
-## 5. Patch Project
+## 5. Patch Workspace
 
-### PATCH /projects/:id
+### PATCH /workspaces/:id
 
-Partially update project information (same as PUT but only updates provided fields).
+Partially update workspace information (same as PUT but only updates provided fields).
 
 **Authentication**: Required
 
-Same parameters and response as PUT /projects/:id.
+Same parameters and response as PUT /workspaces/:id.
 
 ---
 
-## 6. Delete Project
+## 6. Delete Workspace
 
-### DELETE /projects/:id
+### DELETE /workspaces/:id
 
-Delete a project and all associated data.
+Delete a workspace and all associated data.
 
 **⚠️ Warning**: This action is irreversible and will delete all API specs, test cases, and test results.
 
@@ -257,17 +257,17 @@ Delete a project and all associated data.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 ---
 
 ## 7. Generate CLI Token
 
-### POST /projects/:id/cli-tokens
+### POST /workspaces/:id/cli-tokens
 
-Generate a project-scoped CLI token for `kest sync` uploads.
+Generate a workspace-scoped CLI token for `kest sync` uploads.
 
-**Authentication**: Required + project write access
+**Authentication**: Required + workspace write access
 
 #### Request Body
 
@@ -287,10 +287,10 @@ Generate a project-scoped CLI token for `kest sync` uploads.
   "data": {
     "token": "kest_pat_3f3b7c...",
     "token_type": "bearer",
-    "project_id": 12,
+    "workspace_id": 12,
     "token_info": {
       "id": 5,
-      "project_id": 12,
+      "workspace_id": 12,
       "name": "Catalog API CLI sync",
       "token_prefix": "kest_pat_3f3b7c12",
       "scopes": ["spec:write"],
@@ -310,17 +310,17 @@ Generate a project-scoped CLI token for `kest sync` uploads.
 
 ## 8. Upload Specs From CLI
 
-### POST /projects/:id/cli/spec-sync
+### POST /workspaces/:id/cli/spec-sync
 
 Upload API specs inferred from local CLI history.
 
-**Authentication**: Project-scoped CLI token with `spec:write`
+**Authentication**: Workspace-scoped CLI token with `spec:write`
 
 #### Request Body
 
 ```json
 {
-  "project_id": 12,
+  "workspace_id": 12,
   "source": "cli",
   "specs": [
     {
@@ -351,7 +351,7 @@ Upload API specs inferred from local CLI history.
 
 #### Notes
 
-- The URL project ID and token scope must match.
+- The URL workspace ID and token scope must match.
 - Common auth headers and secret-shaped JSON fields are redacted before examples are stored.
 
 #### Response (200 OK)
@@ -359,7 +359,7 @@ Upload API specs inferred from local CLI history.
 ```json
 {
   "code": 0,
-  "message": "Project deleted successfully",
+  "message": "Workspace deleted successfully",
   "data": null
 }
 ```
@@ -373,41 +373,41 @@ Upload API specs inferred from local CLI history.
 ```javascript
 const token = 'your-jwt-token';
 
-// Create a new project
-const createProject = async () => {
-  const response = await fetch('http://localhost:8025/projects', {
+// Create a new workspace
+const createWorkspace = async () => {
+  const response = await fetch('http://localhost:8025/workspaces', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
-      name: 'My API Project',
+      name: 'My API Workspace',
       platform: 'javascript'
     })
   });
   
   const data = await response.json();
-  console.log('Project created:', data.data);
+  console.log('Workspace created:', data.data);
   return data.data;
 };
 
-// List projects
-const listProjects = async () => {
-  const response = await fetch('http://localhost:8025/projects?page=1&per_page=10', {
+// List workspaces
+const listWorkspaces = async () => {
+  const response = await fetch('http://localhost:8025/workspaces?page=1&per_page=10', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
   
   const data = await response.json();
-  console.log('Projects:', data.data.items);
+  console.log('Workspaces:', data.data.items);
   return data.data;
 };
 
 // Generate a CLI token
-const createCliToken = async (projectId) => {
-  const response = await fetch(`http://localhost:8025/v1/projects/${projectId}/cli-tokens`, {
+const createCliToken = async (workspaceId) => {
+  const response = await fetch(`http://localhost:8025/v1/workspaces/${workspaceId}/cli-tokens`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -428,34 +428,34 @@ const createCliToken = async (projectId) => {
 ### cURL
 
 ```bash
-# Create project
-curl -X POST http://localhost:8025/projects \
+# Create workspace
+curl -X POST http://localhost:8025/workspaces \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
-    "name": "My API Project",
+    "name": "My API Workspace",
     "platform": "go"
   }'
 
-# List projects
-curl -X GET "http://localhost:8025/projects?page=1&per_page=10" \
+# List workspaces
+curl -X GET "http://localhost:8025/workspaces?page=1&per_page=10" \
   -H "Authorization: Bearer TOKEN"
 
-# Get project details
-curl -X GET http://localhost:8025/projects/1 \
+# Get workspace details
+curl -X GET http://localhost:8025/workspaces/1 \
   -H "Authorization: Bearer TOKEN"
 
-# Update project
-curl -X PUT http://localhost:8025/projects/1 \
+# Update workspace
+curl -X PUT http://localhost:8025/workspaces/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
-    "name": "Updated Project Name",
+    "name": "Updated Workspace Name",
     "rate_limit_per_minute": 5000
   }'
 
 # Generate CLI token
-curl -X POST http://localhost:8025/v1/projects/1/cli-tokens \
+curl -X POST http://localhost:8025/v1/workspaces/1/cli-tokens \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -468,13 +468,13 @@ curl -X POST http://localhost:8025/v1/projects/1/cli-tokens \
 
 ## CLI Configuration
 
-After generating a project-scoped CLI token, run this inside your Kest project:
+After generating a workspace-scoped CLI token, run this inside your Kest workspace:
 
 ```bash
 kest sync config \
   --platform-url "https://api.kest.dev/v1" \
   --platform-token "kest_pat_..." \
-  --project-id "1"
+  --workspace-id "1"
 ```
 
 Then push local request history:
@@ -487,7 +487,7 @@ kest sync push
 
 ## Rate Limits
 
-Each project has its own rate limit:
+Each workspace has its own rate limit:
 
 - **Default**: 1000 requests per minute
 - **Maximum**: 100,000 requests per minute
@@ -505,22 +505,22 @@ X-RateLimit-Reset: 1641234567
 
 ## Security Considerations
 
-1. **CLI Token Scope**: Generate CLI tokens per project and keep them scoped as tightly as possible.
+1. **CLI Token Scope**: Generate CLI tokens per workspace and keep them scoped as tightly as possible.
 2. **One-Time Copy**: The full CLI token is only returned once. Store it securely in `.kest/config.yaml`.
 3. **HTTPS**: Always use HTTPS for production CLI uploads.
-4. **Environment Separation**: Use different projects for dev, staging, and production.
-5. **Access Control**: Only members with project write access should generate upload tokens.
+4. **Environment Separation**: Use different workspaces for dev, staging, and production.
+5. **Access Control**: Only members with workspace write access should generate upload tokens.
 
 ---
 
 ## Testing
 
-Run the project tests:
+Run the workspace tests:
 
 ```bash
 # Unit tests
-go test ./internal/modules/project/...
+go test ./internal/modules/workspace/...
 
 # Integration tests
-go test ./tests/feature/project_test.go
+go test ./tests/feature/workspace_test.go
 ```

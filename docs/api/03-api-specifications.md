@@ -2,23 +2,23 @@
 
 ## Overview
 
-The API Specifications module manages OpenAPI/Swagger specifications for projects, including CRUD operations, import/export, and example management.
+The API Specifications module manages OpenAPI/Swagger specifications for workspaces, including CRUD operations, import/export, and example management.
 
 ## Base Path
 
 ```
-/v1/projects/:id/api-specs
+/v1/workspaces/:id/api-specs
 ```
 
-All API spec endpoints require authentication and are scoped to a specific project.
+All API spec endpoints require authentication and are scoped to a specific workspace.
 
 ---
 
 ## 1. List API Specifications
 
-### GET /projects/:id/api-specs
+### GET /workspaces/:id/api-specs
 
-List all API specifications for a project.
+List all API specifications for a workspace.
 
 **Authentication**: Required
 
@@ -26,7 +26,7 @@ List all API specifications for a project.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
@@ -42,7 +42,7 @@ List all API specifications for a project.
 #### Example Request
 
 ```
-GET /projects/1/api-specs?method=POST&tag=auth&keyword=login&page=1&page_size=10
+GET /workspaces/1/api-specs?method=POST&tag=auth&keyword=login&page=1&page_size=10
 ```
 
 #### Response (200 OK)
@@ -90,7 +90,7 @@ GET /projects/1/api-specs?method=POST&tag=auth&keyword=login&page=1&page_size=10
 
 ## 2. Create API Specification
 
-### POST /projects/:id/api-specs
+### POST /workspaces/:id/api-specs
 
 Create a new API specification.
 
@@ -100,7 +100,7 @@ Create a new API specification.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -176,7 +176,7 @@ Create a new API specification.
 
 ## 3. Get API Specification
 
-### GET /projects/:id/api-specs/:sid
+### GET /workspaces/:id/api-specs/:sid
 
 Get a specific API specification.
 
@@ -186,7 +186,7 @@ Get a specific API specification.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Response (200 OK)
@@ -223,7 +223,7 @@ Get a specific API specification.
 
 ## 4. Get API Specification with Examples
 
-### GET /projects/:id/api-specs/:sid/full
+### GET /workspaces/:id/api-specs/:sid/full
 
 Get API specification including all request/response examples.
 
@@ -233,7 +233,7 @@ Get API specification including all request/response examples.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Response (200 OK)
@@ -290,7 +290,7 @@ Get API specification including all request/response examples.
 
 ## 5. Update API Specification
 
-### PATCH /projects/:id/api-specs/:sid
+### PATCH /workspaces/:id/api-specs/:sid
 
 Update an existing API specification.
 
@@ -300,7 +300,7 @@ Update an existing API specification.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Request Body
@@ -355,7 +355,7 @@ Update an existing API specification.
 
 ## 6. Delete API Specification
 
-### DELETE /projects/:id/api-specs/:sid
+### DELETE /workspaces/:id/api-specs/:sid
 
 Delete an API specification and all associated examples.
 
@@ -367,7 +367,7 @@ Delete an API specification and all associated examples.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Response (200 OK)
@@ -384,7 +384,7 @@ Delete an API specification and all associated examples.
 
 ## 7. Import API Specifications
 
-### POST /projects/:id/api-specs/import
+### POST /workspaces/:id/api-specs/import
 
 Import API specifications from various sources.
 
@@ -394,7 +394,7 @@ Import API specifications from various sources.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -460,7 +460,7 @@ Import API specifications from various sources.
 
 ## 8. Export API Specifications
 
-### GET /projects/:id/api-specs/export
+### GET /workspaces/:id/api-specs/export
 
 Export API specifications in various formats.
 
@@ -470,7 +470,7 @@ Export API specifications in various formats.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
@@ -483,7 +483,7 @@ Export API specifications in various formats.
 #### Example Request
 
 ```
-GET /projects/1/api-specs/export?format=yaml&include_examples=true
+GET /workspaces/1/api-specs/export?format=yaml&include_examples=true
 ```
 
 #### Response (200 OK)
@@ -492,9 +492,9 @@ GET /projects/1/api-specs/export?format=yaml&include_examples=true
 
 ```json
 {
-  "project": {
+  "workspace": {
     "id": 1,
-    "name": "My Project",
+    "name": "My Workspace",
     "specs": [
       {
         "name": "User API",
@@ -511,7 +511,7 @@ GET /projects/1/api-specs/export?format=yaml&include_examples=true
 
 ## 9. Generate API Documentation (AI)
 
-### POST /projects/:id/api-specs/:sid/gen-doc
+### POST /workspaces/:id/api-specs/:sid/gen-doc
 
 Generate API documentation using AI (LLM). The documentation is stored in the `doc_markdown` field of the API specification.
 
@@ -521,7 +521,7 @@ Generate API documentation using AI (LLM). The documentation is stored in the `d
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Query Parameters
@@ -533,7 +533,7 @@ Generate API documentation using AI (LLM). The documentation is stored in the `d
 #### Example Request
 
 ```
-POST /projects/1/api-specs/1/gen-doc?lang=zh
+POST /workspaces/1/api-specs/1/gen-doc?lang=zh
 ```
 
 #### Response (200 OK)
@@ -566,7 +566,7 @@ Requires LLM configuration via environment variables:
 
 ## 10. Generate Test Cases (AI)
 
-### POST /projects/:id/api-specs/:sid/gen-test
+### POST /workspaces/:id/api-specs/:sid/gen-test
 
 Generate Kest flow test file (`.flow.md`) using AI (LLM). Returns the generated test content directly.
 
@@ -576,7 +576,7 @@ Generate Kest flow test file (`.flow.md`) using AI (LLM). Returns the generated 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Query Parameters
@@ -588,7 +588,7 @@ Generate Kest flow test file (`.flow.md`) using AI (LLM). Returns the generated 
 #### Example Request
 
 ```
-POST /projects/1/api-specs/1/gen-test?lang=zh
+POST /workspaces/1/api-specs/1/gen-test?lang=zh
 ```
 
 #### Response (200 OK)
@@ -616,7 +616,7 @@ The AI generates test cases covering:
 
 ## 11. Batch Generate Documentation (AI)
 
-### POST /projects/:id/api-specs/batch-gen-doc
+### POST /workspaces/:id/api-specs/batch-gen-doc
 
 Trigger AI documentation generation for multiple API specs at once. Returns immediately; generation runs in the background using a goroutine pool (concurrency = 3).
 
@@ -626,13 +626,13 @@ Trigger AI documentation generation for multiple API specs at once. Returns imme
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|--------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `category_id` | integer | ❌ No | - | Scope to a specific category. Omit to process the entire project |
+| `category_id` | integer | ❌ No | - | Scope to a specific category. Omit to process the entire workspace |
 | `lang` | string | ❌ No | `en` | Language for generated doc (`en` or `zh`) |
 | `force` | boolean | ❌ No | `false` | `false` = skip specs that already have a doc; `true` = regenerate all |
 
@@ -681,7 +681,7 @@ Requires LLM configuration via environment variables:
 
 ## 12. Create Example
 
-### POST /projects/:id/api-specs/:sid/examples
+### POST /workspaces/:id/api-specs/:sid/examples
 
 Create a request/response example for an API specification.
 
@@ -691,7 +691,7 @@ Create a request/response example for an API specification.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `sid` | integer | ✅ Yes | Specification ID |
 
 #### Request Body
@@ -760,11 +760,11 @@ Create a request/response example for an API specification.
 
 ```javascript
 const token = 'your-jwt-token';
-const projectId = 1;
+const workspaceId = 1;
 
 // Create a new API specification
 const createSpec = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/api-specs`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/api-specs`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -799,7 +799,7 @@ const createSpec = async () => {
 
 // Import from URL
 const importSpec = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/api-specs/import`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/api-specs/import`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -819,7 +819,7 @@ const importSpec = async () => {
 
 // Export specifications
 const exportSpecs = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/api-specs/export?format=yaml&include_examples=true`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/api-specs/export?format=yaml&include_examples=true`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -834,7 +834,7 @@ const exportSpecs = async () => {
 
 ```bash
 # Create API spec
-curl -X POST http://localhost:8025/projects/1/api-specs \
+curl -X POST http://localhost:8025/workspaces/1/api-specs \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -858,11 +858,11 @@ curl -X POST http://localhost:8025/projects/1/api-specs \
   }'
 
 # List API specs
-curl -X GET "http://localhost:8025/projects/1/api-specs?page=1&per_page=10" \
+curl -X GET "http://localhost:8025/workspaces/1/api-specs?page=1&per_page=10" \
   -H "Authorization: Bearer TOKEN"
 
 # Import from URL
-curl -X POST http://localhost:8025/projects/1/api-specs/import \
+curl -X POST http://localhost:8025/workspaces/1/api-specs/import \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -871,7 +871,7 @@ curl -X POST http://localhost:8025/projects/1/api-specs/import \
   }'
 
 # Export as YAML
-curl -X GET "http://localhost:8025/projects/1/api-specs/export?format=yaml" \
+curl -X GET "http://localhost:8025/workspaces/1/api-specs/export?format=yaml" \
   -H "Authorization: Bearer TOKEN" \
   -o exported-specs.yaml
 ```

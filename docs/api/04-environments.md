@@ -2,31 +2,31 @@
 
 ## Overview
 
-The Environments module manages environment configurations for projects, including variables, secrets, and deployment settings.
+The Environments module manages environment configurations for workspaces, including variables, secrets, and deployment settings.
 
 ## Base Path
 
 ```
-/v1/projects/:id/environments
+/v1/workspaces/:id/environments
 ```
 
-All environment endpoints require authentication and are scoped to a specific project.
+All environment endpoints require authentication and are scoped to a specific workspace.
 
 ---
 
 ## 1. List Environments
 
-### GET /projects/:id/environments
+### GET /workspaces/:id/environments
 
-List all environments for a project.
+List all environments for a workspace.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
@@ -40,7 +40,7 @@ List all environments for a project.
 #### Example Request
 
 ```
-GET /projects/1/environments?page=1&per_page=10
+GET /workspaces/1/environments?page=1&per_page=10
 ```
 
 #### Response (200 OK)
@@ -102,17 +102,17 @@ GET /projects/1/environments?page=1&per_page=10
 
 ## 2. Create Environment
 
-### POST /projects/:id/environments
+### POST /workspaces/:id/environments
 
-Create a new environment for a project.
+Create a new environment for a workspace.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -179,17 +179,17 @@ Create a new environment for a project.
 
 ## 3. Get Environment
 
-### GET /projects/:id/environments/:eid
+### GET /workspaces/:id/environments/:eid
 
 Get a specific environment details.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `eid` | integer | ✅ Yes | Environment ID |
 
 #### Response (200 OK)
@@ -225,17 +225,17 @@ Get a specific environment details.
 
 ## 4. Update Environment
 
-### PATCH /projects/:id/environments/:eid
+### PATCH /workspaces/:id/environments/:eid
 
 Update an existing environment.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `eid` | integer | ✅ Yes | Environment ID |
 
 #### Request Body
@@ -294,19 +294,19 @@ Update an existing environment.
 
 ## 5. Delete Environment
 
-### DELETE /projects/:id/environments/:eid
+### DELETE /workspaces/:id/environments/:eid
 
 Delete an environment.
 
 **⚠️ Warning**: This action is irreversible and will affect all tests using this environment.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `eid` | integer | ✅ Yes | Environment ID |
 
 #### Response (200 OK)
@@ -323,17 +323,17 @@ Delete an environment.
 
 ## 6. Duplicate Environment
 
-### POST /projects/:id/environments/:eid/duplicate
+### POST /workspaces/:id/environments/:eid/duplicate
 
 Duplicate an environment with a new name.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `eid` | integer | ✅ Yes | Source Environment ID |
 
 #### Request Body
@@ -411,7 +411,7 @@ Duplicate an environment with a new name.
 ### Variables
 
 - Plain text key-value pairs
-- Visible to all project members
+- Visible to all workspace members
 - Used for non-sensitive configuration
 
 ### Secrets
@@ -429,11 +429,11 @@ Duplicate an environment with a new name.
 
 ```javascript
 const token = 'your-jwt-token';
-const projectId = 1;
+const workspaceId = 1;
 
 // Create environment
 const createEnvironment = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/environments`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/environments`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -457,7 +457,7 @@ const createEnvironment = async () => {
 
 // Update environment
 const updateEnvironment = async (envId) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/environments/${envId}`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/environments/${envId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -475,7 +475,7 @@ const updateEnvironment = async (envId) => {
 
 // Duplicate environment
 const duplicateEnvironment = async (envId) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/environments/${envId}/duplicate`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/environments/${envId}/duplicate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -495,7 +495,7 @@ const duplicateEnvironment = async (envId) => {
 
 ```bash
 # Create environment
-curl -X POST http://localhost:8025/projects/1/environments \
+curl -X POST http://localhost:8025/workspaces/1/environments \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -511,11 +511,11 @@ curl -X POST http://localhost:8025/projects/1/environments \
   }'
 
 # List environments
-curl -X GET "http://localhost:8025/projects/1/environments?page=1&per_page=10" \
+curl -X GET "http://localhost:8025/workspaces/1/environments?page=1&per_page=10" \
   -H "Authorization: Bearer TOKEN"
 
 # Update environment
-curl -X PATCH http://localhost:8025/projects/1/environments/1 \
+curl -X PATCH http://localhost:8025/workspaces/1/environments/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -525,7 +525,7 @@ curl -X PATCH http://localhost:8025/projects/1/environments/1 \
   }'
 
 # Duplicate environment
-curl -X POST http://localhost:8025/projects/1/environments/1/duplicate \
+curl -X POST http://localhost:8025/workspaces/1/environments/1/duplicate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{

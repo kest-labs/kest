@@ -23,16 +23,16 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		"",
 		"接口总数：**2**",
 		"",
-		`<a id="project"></a>`,
-		"## Project",
+		`<a id="workspace"></a>`,
+		"## Workspace",
 		"",
 		"| 方法 | 接口路径 | 说明 | 认证 |",
 		"|------|----------|------|------|",
-		"| `GET` | `/v1/projects/:id` | Get project details | 🔒 |",
+		"| `GET` | `/v1/workspaces/:id` | Get workspace details | 🔒 |",
 		"",
-		"### GET `/v1/projects/:id`",
+		"### GET `/v1/workspaces/:id`",
 		"",
-		"**Get project details**",
+		"**Get workspace details**",
 		"",
 		"| Property | Value |",
 		"|----------|-------|",
@@ -47,7 +47,7 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		"#### Example",
 		"",
 		"```bash",
-		"curl -X GET 'http://localhost:8025/api/v1/v1/projects/1' \\",
+		"curl -X GET 'http://localhost:8025/api/v1/v1/workspaces/1' \\",
 		"  -H 'Authorization: Bearer <token>'",
 		"```",
 		"",
@@ -56,9 +56,9 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		"",
 		"| 方法 | 接口路径 | 说明 | 认证 |",
 		"|------|----------|------|------|",
-		"| `POST` | `/v1/projects/:id/api-specs/batch-gen-doc` | Batch Gen Doc apispec | 🔒 |",
+		"| `POST` | `/v1/workspaces/:id/api-specs/batch-gen-doc` | Batch Gen Doc apispec | 🔒 |",
 		"",
-		"### POST `/v1/projects/:id/api-specs/batch-gen-doc`",
+		"### POST `/v1/workspaces/:id/api-specs/batch-gen-doc`",
 		"",
 		"**Batch Gen Doc apispec**",
 		"",
@@ -81,7 +81,7 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		"#### Example",
 		"",
 		"```bash",
-		"curl -X POST 'http://localhost:8025/api/v1/v1/projects/1/api-specs/batch-gen-doc' \\",
+		"curl -X POST 'http://localhost:8025/api/v1/v1/workspaces/1/api-specs/batch-gen-doc' \\",
 		"  -H 'Authorization: Bearer <token>' \\",
 		"  -H 'Content-Type: application/json' \\",
 		`  -d '{"force":true}'`,
@@ -126,24 +126,24 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		t.Fatalf("expected root folder parent_id %s, got %#v", parentID, rootFolder.ParentID)
 	}
 
-	projectCollection := collectionService.created[1]
-	if projectCollection.ParentID == nil || *projectCollection.ParentID != result.RootFolderID {
-		t.Fatalf("expected module collection to be under root folder %s, got %#v", result.RootFolderID, projectCollection.ParentID)
+	workspaceCollection := collectionService.created[1]
+	if workspaceCollection.ParentID == nil || *workspaceCollection.ParentID != result.RootFolderID {
+		t.Fatalf("expected module collection to be under root folder %s, got %#v", result.RootFolderID, workspaceCollection.ParentID)
 	}
 
 	if len(requestService.created) != 2 {
 		t.Fatalf("expected 2 requests, got %d", len(requestService.created))
 	}
 
-	getProject := requestService.created[0]
-	if getProject.URL != "{{base_url}}/projects/:id" {
-		t.Fatalf("expected aggregate URL to be templated from base URL, got %q", getProject.URL)
+	getWorkspace := requestService.created[0]
+	if getWorkspace.URL != "{{base_url}}/workspaces/:id" {
+		t.Fatalf("expected aggregate URL to be templated from base URL, got %q", getWorkspace.URL)
 	}
-	if getProject.PathParams.(map[string]string)["id"] != "1" {
-		t.Fatalf("expected path param id=1, got %#v", getProject.PathParams)
+	if getWorkspace.PathParams.(map[string]string)["id"] != "1" {
+		t.Fatalf("expected path param id=1, got %#v", getWorkspace.PathParams)
 	}
-	if len(getProject.Headers) != 1 || getProject.Headers[0].Enabled {
-		t.Fatalf("expected disabled authorization header, got %#v", getProject.Headers)
+	if len(getWorkspace.Headers) != 1 || getWorkspace.Headers[0].Enabled {
+		t.Fatalf("expected disabled authorization header, got %#v", getWorkspace.Headers)
 	}
 
 	postBatch := requestService.created[1]
@@ -236,11 +236,11 @@ func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *te
 		"",
 		"| Method | Endpoint | Description | Auth |",
 		"|--------|----------|-------------|------|",
-		"| `GET` | `/v1/projects/:id/api-specs/export` | Export specs | 🔒 |",
+		"| `GET` | `/v1/workspaces/:id/api-specs/export` | Export specs | 🔒 |",
 		"",
 		"## Details",
 		"",
-		"### GET `/v1/projects/:id/api-specs/export`",
+		"### GET `/v1/workspaces/:id/api-specs/export`",
 		"",
 		"**Export specs**",
 		"",
@@ -257,7 +257,7 @@ func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *te
 		"#### Example",
 		"",
 		"```bash",
-		"curl -X GET 'http://localhost:8025/api/v1/projects/7/api-specs/export?format=markdown' \\",
+		"curl -X GET 'http://localhost:8025/api/v1/workspaces/7/api-specs/export?format=markdown' \\",
 		"  -H 'Authorization: Bearer <token>'",
 		"```",
 	), "")
@@ -276,7 +276,7 @@ func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *te
 	}
 
 	endpoint := doc.Modules[0].Endpoints[0]
-	if endpoint.URL != "{{base_url}}/v1/projects/:id/api-specs/export" {
+	if endpoint.URL != "{{base_url}}/v1/workspaces/:id/api-specs/export" {
 		t.Fatalf("expected URL to preserve placeholder path under base_url template, got %q", endpoint.URL)
 	}
 	if endpoint.PathParams["id"] != "7" {
@@ -390,9 +390,9 @@ func TestParseMarkdownDocumentReturnsBaseURLErrorWhenURLCannotBeDerived(t *testi
 		"",
 		"## Details",
 		"",
-		"### GET `/v1/projects/:id`",
+		"### GET `/v1/workspaces/:id`",
 		"",
-		"**Get project**",
+		"**Get workspace**",
 		"",
 		"#### Path Parameters",
 		"",
@@ -403,7 +403,7 @@ func TestParseMarkdownDocumentReturnsBaseURLErrorWhenURLCannotBeDerived(t *testi
 		"#### Example",
 		"",
 		"```bash",
-		"curl -X GET '/v1/projects/1'",
+		"curl -X GET '/v1/workspaces/1'",
 		"```",
 	), "")
 	if !errors.Is(err, ErrMarkdownBaseURLNotFound) {
@@ -525,7 +525,7 @@ func TestParseMarkdownDocumentKeepsNamedTopLevelSectionsAsSeparateModules(t *tes
 		"",
 		"## Overview",
 		"",
-		"Project access is now managed through two related API groups.",
+		"Workspace access is now managed through two related API groups.",
 		"",
 		"## Base URL",
 		"",
@@ -533,17 +533,17 @@ func TestParseMarkdownDocumentKeepsNamedTopLevelSectionsAsSeparateModules(t *tes
 		"",
 		"## Members",
 		"",
-		"### GET /projects/:id/members",
+		"### GET /workspaces/:id/members",
 		"",
-		"List all active members of a project.",
+		"List all active members of a workspace.",
 		"",
 		"**Authentication**: Required",
 		"",
 		"## Invitations",
 		"",
-		"### POST /projects/:id/invitations",
+		"### POST /workspaces/:id/invitations",
 		"",
-		"Create a project invitation.",
+		"Create a workspace invitation.",
 		"",
 		"**Authentication**: Required",
 		"",
@@ -574,12 +574,12 @@ func TestImportMarkdownPropagatesInvalidParentError(t *testing.T) {
 		Title: "API 文档",
 		Modules: []markdownModule{
 			{
-				Name: "Project",
+				Name: "Workspace",
 				Endpoints: []markdownEndpoint{
 					{
-						Name:   "Get project",
+						Name:   "Get workspace",
 						Method: "GET",
-						URL:    "http://localhost:8025/api/v1/projects/:id",
+						URL:    "http://localhost:8025/api/v1/workspaces/:id",
 					},
 				},
 			},
@@ -636,12 +636,12 @@ func TestImportMarkdownAlwaysAppendsRequestsOnRepeatedImport(t *testing.T) {
 		Title: "API 文档",
 		Modules: []markdownModule{
 			{
-				Name: "Project",
+				Name: "Workspace",
 				Endpoints: []markdownEndpoint{
 					{
-						Name:   "Get project",
+						Name:   "Get workspace",
 						Method: "GET",
-						URL:    "http://localhost:8025/api/v1/projects/:id",
+						URL:    "http://localhost:8025/api/v1/workspaces/:id",
 					},
 				},
 			},

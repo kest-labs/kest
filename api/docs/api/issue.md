@@ -7,10 +7,10 @@
 The `issue` module provides the following API endpoints:
 
 ### {
-  "description": "This endpoint retrieves a list of issues for a specific project. It allows filtering and sorting the issues based on various parameters such as status, level, and last seen. The results can be paginated using the `page` and `per_page` query parameters.",
+  "description": "This endpoint retrieves a list of issues for a specific workspace. It allows filtering and sorting the issues based on various parameters such as status, level, and last seen. The results can be paginated using the `page` and `per_page` query parameters.",
   "request_example": {
     "method": "GET",
-    "url": "/projects/123/issues/?page=1&per_page=20&status=open&level=high&sort_by=last_seen&order=desc"
+    "url": "/workspaces/123/issues/?page=1&per_page=20&status=open&level=high&sort_by=last_seen&order=desc"
   },
   "response_example": {
     "issues": [
@@ -42,7 +42,7 @@ The `issue` module provides the following API endpoints:
 }
 
 **Endpoint:**
-<kbd>GET</kbd> `/projects/:id/issues/`
+<kbd>GET</kbd> `/workspaces/:id/issues/`
 
 **Handler Implementation:**
 `issue.List`
@@ -51,12 +51,12 @@ The `issue` module provides the following API endpoints:
 
 ### ```json
 {
-  "description": "This endpoint retrieves a specific issue within a project by its fingerprint. The fingerprint is a unique identifier for the issue and must be URL-encoded if it contains special characters. The response will include details of the issue if found, or an error message if the issue does not exist or if there are issues with the request parameters.",
+  "description": "This endpoint retrieves a specific issue within a workspace by its fingerprint. The fingerprint is a unique identifier for the issue and must be URL-encoded if it contains special characters. The response will include details of the issue if found, or an error message if the issue does not exist or if there are issues with the request parameters.",
   "request": {
     "method": "GET",
-    "url": "/projects/:id/issues/:fingerprint",
+    "url": "/workspaces/:id/issues/:fingerprint",
     "params": {
-      "id": "The ID of the project where the issue is located.",
+      "id": "The ID of the workspace where the issue is located.",
       "fingerprint": "The fingerprint of the issue to retrieve. This should be URL-encoded if it contains special characters."
     }
   },
@@ -65,7 +65,7 @@ The `issue` module provides the following API endpoints:
       "description": "Successful response with the issue details.",
       "example": {
         "id": 1,
-        "project_id": 123,
+        "workspace_id": 123,
         "fingerprint": "unique-fingerprint-123",
         "title": "Example Issue Title",
         "description": "This is a detailed description of the issue.",
@@ -97,7 +97,7 @@ The `issue` module provides the following API endpoints:
 ```
 
 **Endpoint:**
-<kbd>GET</kbd> `/projects/:id/issues/:fingerprint`
+<kbd>GET</kbd> `/workspaces/:id/issues/:fingerprint`
 
 **Handler Implementation:**
 `issue.Get`
@@ -105,10 +105,10 @@ The `issue` module provides the following API endpoints:
 ---
 
 ### {
-  "description": "This endpoint is used to resolve a specific issue in a project. It requires the project ID and the fingerprint of the issue to be resolved. The fingerprint must be URL-encoded. Upon successful resolution, it returns a success message along with the decoded fingerprint.",
+  "description": "This endpoint is used to resolve a specific issue in a workspace. It requires the workspace ID and the fingerprint of the issue to be resolved. The fingerprint must be URL-encoded. Upon successful resolution, it returns a success message along with the decoded fingerprint.",
   "request_example": {
     "method": "POST",
-    "url": "/projects/123/issues/%2Fexample%2Ffingerprint%2Fresolve",
+    "url": "/workspaces/123/issues/%2Fexample%2Ffingerprint%2Fresolve",
     "body": {},
     "headers": {
       "Content-Type": "application/json"
@@ -124,7 +124,7 @@ The `issue` module provides the following API endpoints:
 }
 
 **Endpoint:**
-<kbd>POST</kbd> `/projects/:id/issues/:fingerprint/resolve`
+<kbd>POST</kbd> `/workspaces/:id/issues/:fingerprint/resolve`
 
 **Handler Implementation:**
 `issue.Resolve`
@@ -132,18 +132,18 @@ The `issue` module provides the following API endpoints:
 ---
 
 ### {
-  "description": "This endpoint allows a user to mark a specific issue within a project as ignored. The issue is identified by its fingerprint, which must be URL-encoded. Once the issue is marked as ignored, it will no longer be actively tracked or reported.",
+  "description": "This endpoint allows a user to mark a specific issue within a workspace as ignored. The issue is identified by its fingerprint, which must be URL-encoded. Once the issue is marked as ignored, it will no longer be actively tracked or reported.",
   "request": {
     "method": "POST",
-    "url": "/projects/:id/issues/:fingerprint/ignore",
+    "url": "/workspaces/:id/issues/:fingerprint/ignore",
     "parameters": {
       "path": {
-        "id": "The ID of the project containing the issue.",
+        "id": "The ID of the workspace containing the issue.",
         "fingerprint": "The URL-encoded fingerprint of the issue to be ignored."
       }
     },
     "example": {
-      "url": "/projects/12345/issues/%2F%2F%3A0x1234abcd%2F%2F/ignore"
+      "url": "/workspaces/12345/issues/%2F%2F%3A0x1234abcd%2F%2F/ignore"
     }
   },
   "response": {
@@ -172,7 +172,7 @@ The `issue` module provides the following API endpoints:
 }
 
 **Endpoint:**
-<kbd>POST</kbd> `/projects/:id/issues/:fingerprint/ignore`
+<kbd>POST</kbd> `/workspaces/:id/issues/:fingerprint/ignore`
 
 **Handler Implementation:**
 `issue.Ignore`
@@ -180,10 +180,10 @@ The `issue` module provides the following API endpoints:
 ---
 
 ### {
-  "description": "This endpoint reopens a previously closed issue in a specific project. It requires the project ID and the fingerprint of the issue to be provided. The fingerprint is URL-encoded, so it needs to be decoded before processing. If the operation is successful, it returns a success message along with the decoded fingerprint.",
+  "description": "This endpoint reopens a previously closed issue in a specific workspace. It requires the workspace ID and the fingerprint of the issue to be provided. The fingerprint is URL-encoded, so it needs to be decoded before processing. If the operation is successful, it returns a success message along with the decoded fingerprint.",
   "request": {
     "method": "POST",
-    "url": "/projects/123/issues/encodedFingerprint/reopen",
+    "url": "/workspaces/123/issues/encodedFingerprint/reopen",
     "body": {},
     "headers": {
       "Content-Type": "application/json"
@@ -199,7 +199,7 @@ The `issue` module provides the following API endpoints:
 }
 
 **Endpoint:**
-<kbd>POST</kbd> `/projects/:id/issues/:fingerprint/reopen`
+<kbd>POST</kbd> `/workspaces/:id/issues/:fingerprint/reopen`
 
 **Handler Implementation:**
 `issue.Reopen`
@@ -207,10 +207,10 @@ The `issue` module provides the following API endpoints:
 ---
 
 ### {
-  "description": "This endpoint retrieves a paginated list of events for a specific issue identified by its fingerprint within a given project. The events can be sorted and ordered based on the provided query parameters. The fingerprint is URL-encoded and must be decoded before use.",
+  "description": "This endpoint retrieves a paginated list of events for a specific issue identified by its fingerprint within a given workspace. The events can be sorted and ordered based on the provided query parameters. The fingerprint is URL-encoded and must be decoded before use.",
   "request": {
     "method": "GET",
-    "url": "/projects/123/issues/encodedFingerprint/events?page=1&per_page=10&sort_by=timestamp&order=desc",
+    "url": "/workspaces/123/issues/encodedFingerprint/events?page=1&per_page=10&sort_by=timestamp&order=desc",
     "query_parameters": {
       "page": "The page number to fetch (default: 1).",
       "per_page": "The number of items per page (default: 10).",
@@ -245,7 +245,7 @@ The `issue` module provides the following API endpoints:
 }
 
 **Endpoint:**
-<kbd>GET</kbd> `/projects/:id/issues/:fingerprint/events`
+<kbd>GET</kbd> `/workspaces/:id/issues/:fingerprint/events`
 
 **Handler Implementation:**
 `issue.GetEvents`

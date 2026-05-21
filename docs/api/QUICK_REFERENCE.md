@@ -13,7 +13,7 @@ Development: http://localhost:8025
 Authorization: Bearer <jwt-token>
 ```
 
-CLI upload endpoints accept a project-scoped CLI token:
+CLI upload endpoints accept a workspace-scoped CLI token:
 
 ```
 Authorization: Bearer <kest_pat_...>
@@ -35,105 +35,105 @@ Authorization: Bearer <kest_pat_...>
 | GET | `/users` | List users (Admin) | Yes |
 | GET | `/users/:id` | Get user (Admin) | Yes |
 
-### Projects
+### Workspaces
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/projects` | Create project | Yes |
-| GET | `/projects` | List projects | Yes |
-| GET | `/projects/:id` | Get project | Yes |
-| PUT | `/projects/:id` | Update project | Yes |
-| DELETE | `/projects/:id` | Delete project | Yes |
-| GET | `/projects/:id/stats` | Get project stats | Yes |
-| POST | `/projects/:id/cli-tokens` | Generate project CLI token | Yes |
-| POST | `/projects/:id/cli/spec-sync` | Upload specs from CLI history | CLI Token |
+| POST | `/workspaces` | Create workspace | Yes |
+| GET | `/workspaces` | List workspaces | Yes |
+| GET | `/workspaces/:id` | Get workspace | Yes |
+| PUT | `/workspaces/:id` | Update workspace | Yes |
+| DELETE | `/workspaces/:id` | Delete workspace | Yes |
+| GET | `/workspaces/:id/stats` | Get workspace stats | Yes |
+| POST | `/workspaces/:id/cli-tokens` | Generate workspace CLI token | Yes |
+| POST | `/workspaces/:id/cli/spec-sync` | Upload specs from CLI history | CLI Token |
 
 ### API Specifications
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/api-specs` | List specs | Yes |
-| POST | `/projects/:id/api-specs` | Create spec | Yes |
-| GET | `/projects/:id/api-specs/:sid` | Get spec | Yes |
-| PATCH | `/projects/:id/api-specs/:sid` | Update spec | Yes |
-| DELETE | `/projects/:id/api-specs/:sid` | Delete spec | Yes |
-| POST | `/projects/:id/api-specs/import` | Import specs | Yes |
-| GET | `/projects/:id/api-specs/export` | Export specs | Yes |
-| POST | `/projects/:id/api-specs/:sid/examples` | Add example | Yes |
+| GET | `/workspaces/:id/api-specs` | List specs | Yes |
+| POST | `/workspaces/:id/api-specs` | Create spec | Yes |
+| GET | `/workspaces/:id/api-specs/:sid` | Get spec | Yes |
+| PATCH | `/workspaces/:id/api-specs/:sid` | Update spec | Yes |
+| DELETE | `/workspaces/:id/api-specs/:sid` | Delete spec | Yes |
+| POST | `/workspaces/:id/api-specs/import` | Import specs | Yes |
+| GET | `/workspaces/:id/api-specs/export` | Export specs | Yes |
+| POST | `/workspaces/:id/api-specs/:sid/examples` | Add example | Yes |
 
 ### Environments
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/environments` | List environments | Yes |
-| POST | `/projects/:id/environments` | Create environment | Yes |
-| GET | `/projects/:id/environments/:eid` | Get environment | Yes |
-| PATCH | `/projects/:id/environments/:eid` | Update environment | Yes |
-| DELETE | `/projects/:id/environments/:eid` | Delete environment | Yes |
-| POST | `/projects/:id/environments/:eid/duplicate` | Duplicate environment | Yes |
+| GET | `/workspaces/:id/environments` | List environments | Yes |
+| POST | `/workspaces/:id/environments` | Create environment | Yes |
+| GET | `/workspaces/:id/environments/:eid` | Get environment | Yes |
+| PATCH | `/workspaces/:id/environments/:eid` | Update environment | Yes |
+| DELETE | `/workspaces/:id/environments/:eid` | Delete environment | Yes |
+| POST | `/workspaces/:id/environments/:eid/duplicate` | Duplicate environment | Yes |
 
 ### Test Cases
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/test-cases` | List test cases | Yes |
-| POST | `/projects/:id/test-cases` | Create test case | Yes |
-| GET | `/projects/:id/test-cases/:tcid` | Get test case | Yes |
-| PATCH | `/projects/:id/test-cases/:tcid` | Update test case | Yes |
-| DELETE | `/projects/:id/test-cases/:tcid` | Delete test case | Yes |
-| POST | `/projects/:id/test-cases/:tcid/duplicate` | Duplicate test case | Yes |
-| POST | `/projects/:id/test-cases/from-spec` | Generate from spec | Yes |
-| POST | `/projects/:id/test-cases/:tcid/run` | Run test case | Yes |
+| GET | `/workspaces/:id/test-cases` | List test cases | Yes |
+| POST | `/workspaces/:id/test-cases` | Create test case | Yes |
+| GET | `/workspaces/:id/test-cases/:tcid` | Get test case | Yes |
+| PATCH | `/workspaces/:id/test-cases/:tcid` | Update test case | Yes |
+| DELETE | `/workspaces/:id/test-cases/:tcid` | Delete test case | Yes |
+| POST | `/workspaces/:id/test-cases/:tcid/duplicate` | Duplicate test case | Yes |
+| POST | `/workspaces/:id/test-cases/from-spec` | Generate from spec | Yes |
+| POST | `/workspaces/:id/test-cases/:tcid/run` | Run test case | Yes |
 
 ### Categories
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/categories` | List categories | Yes |
-| POST | `/projects/:id/categories` | Create category | Yes |
-| GET | `/projects/:id/categories/:cid` | Get category | Yes |
-| PATCH | `/projects/:id/categories/:cid` | Update category | Yes |
-| DELETE | `/projects/:id/categories/:cid` | Delete category | Yes |
+| GET | `/workspaces/:id/categories` | List categories | Yes |
+| POST | `/workspaces/:id/categories` | Create category | Yes |
+| GET | `/workspaces/:id/categories/:cid` | Get category | Yes |
+| PATCH | `/workspaces/:id/categories/:cid` | Update category | Yes |
+| DELETE | `/workspaces/:id/categories/:cid` | Delete category | Yes |
 
 ### Members
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/members` | List members | Yes |
-| GET | `/projects/:id/members/me` | Get current user role | Yes |
-| PATCH | `/projects/:id/members/:uid` | Update role | Yes |
-| DELETE | `/projects/:id/members/:uid` | Remove member | Yes |
-| POST | `/projects/:id/invitations` | Create invitation | Yes |
-| GET | `/projects/:id/invitations` | List invitations | Yes |
-| DELETE | `/projects/:id/invitations/:inviteId` | Revoke invitation | Yes |
-| GET | `/project-invitations/received` | List my invitations | Yes |
-| GET | `/project-invitations/:slug` | Get invitation detail | No |
-| POST | `/project-invitations/:slug/accept` | Accept invitation | Yes |
-| POST | `/project-invitations/:slug/reject` | Reject invitation | Yes |
+| GET | `/workspaces/:id/members` | List members | Yes |
+| GET | `/workspaces/:id/members/me` | Get current user role | Yes |
+| PATCH | `/workspaces/:id/members/:uid` | Update role | Yes |
+| DELETE | `/workspaces/:id/members/:uid` | Remove member | Yes |
+| POST | `/workspaces/:id/invitations` | Create invitation | Yes |
+| GET | `/workspaces/:id/invitations` | List invitations | Yes |
+| DELETE | `/workspaces/:id/invitations/:inviteId` | Revoke invitation | Yes |
+| GET | `/workspace-invitations/received` | List my invitations | Yes |
+| GET | `/workspace-invitations/:slug` | Get invitation detail | No |
+| POST | `/workspace-invitations/:slug/accept` | Accept invitation | Yes |
+| POST | `/workspace-invitations/:slug/reject` | Reject invitation | Yes |
 
 ### Permissions
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/permissions` | List permissions | Yes |
-| GET | `/projects/:id/permissions/roles/:role` | Get role permissions | Yes |
-| POST | `/projects/:id/permissions/check` | Check permission | Yes |
-| POST | `/projects/:id/permissions/roles` | Create custom role | Yes |
-| PATCH | `/projects/:id/permissions/roles/:rid` | Update role | Yes |
-| DELETE | `/projects/:id/permissions/roles/:rid` | Delete role | Yes |
+| GET | `/workspaces/:id/permissions` | List permissions | Yes |
+| GET | `/workspaces/:id/permissions/roles/:role` | Get role permissions | Yes |
+| POST | `/workspaces/:id/permissions/check` | Check permission | Yes |
+| POST | `/workspaces/:id/permissions/roles` | Create custom role | Yes |
+| PATCH | `/workspaces/:id/permissions/roles/:rid` | Update role | Yes |
+| DELETE | `/workspaces/:id/permissions/roles/:rid` | Delete role | Yes |
 
 ### Issues
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/projects/:id/issues` | List issues | Yes |
-| POST | `/projects/:id/issues` | Create issue | Yes |
-| GET | `/projects/:id/issues/:iid` | Get issue | Yes |
-| PATCH | `/projects/:id/issues/:iid` | Update issue | Yes |
-| DELETE | `/projects/:id/issues/:iid` | Delete issue | Yes |
-| POST | `/projects/:id/issues/:iid/comments` | Add comment | Yes |
-| POST | `/projects/:id/issues/:iid/attachments` | Upload attachment | Yes |
-| POST | `/projects/:id/issues/:iid/link` | Link to test case | Yes |
+| GET | `/workspaces/:id/issues` | List issues | Yes |
+| POST | `/workspaces/:id/issues` | Create issue | Yes |
+| GET | `/workspaces/:id/issues/:iid` | Get issue | Yes |
+| PATCH | `/workspaces/:id/issues/:iid` | Update issue | Yes |
+| DELETE | `/workspaces/:id/issues/:iid` | Delete issue | Yes |
+| POST | `/workspaces/:id/issues/:iid/comments` | Add comment | Yes |
+| POST | `/workspaces/:id/issues/:iid/attachments` | Upload attachment | Yes |
+| POST | `/workspaces/:id/issues/:iid/link` | Link to test case | Yes |
 
 ### System
 
@@ -213,11 +213,11 @@ const kest = new Kest({
   token: 'your-jwt-token'
 });
 
-// List projects
-const projects = await kest.projects.list();
+// List workspaces
+const workspaces = await kest.workspaces.list();
 
 // Create test case
-const testCase = await kest.testCases.create(projectId, {
+const testCase = await kest.testCases.create(workspaceId, {
   name: 'API Test',
   method: 'GET',
   path: '/health'
@@ -231,11 +231,11 @@ import "github.com/kest-lab/kest-go"
 
 client := kest.NewClient("https://api.kest.com", "your-jwt-token")
 
-// List projects
-projects, err := client.Projects.List()
+// List workspaces
+workspaces, err := client.Workspaces.List()
 
 // Create test case
-testCase, err := client.TestCases.Create(projectId, &kest.TestCase{
+testCase, err := client.TestCases.Create(workspaceId, &kest.TestCase{
   Name:   "API Test",
   Method: "GET",
   Path:   "/health",
@@ -252,11 +252,11 @@ kest = Kest(
     token='your-jwt-token'
 )
 
-# List projects
-projects = kest.projects.list()
+# List workspaces
+workspaces = kest.workspaces.list()
 
 # Create test case
-test_case = kest.test_cases.create(project_id, {
+test_case = kest.test_cases.create(workspace_id, {
     'name': 'API Test',
     'method': 'GET',
     'path': '/health'

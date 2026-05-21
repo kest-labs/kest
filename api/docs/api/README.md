@@ -6,7 +6,7 @@
 
 - [user.md](./user.md)
 - [permission.md](./permission.md)
-- [project.md](./project.md)
+- [workspace.md](./workspace.md)
 - [member.md](./member.md)
 - [audit.md](./audit.md)
 - [system.md](./system.md)

@@ -2,43 +2,43 @@
 
 ## Overview
 
-The Permissions module provides role-based access control (RBAC) for fine-grained permission management within projects.
+The Permissions module provides role-based access control (RBAC) for fine-grained permission management within workspaces.
 
 ## Base Path
 
 ```
-/v1/projects/:id/permissions
+/v1/workspaces/:id/permissions
 ```
 
-All permission endpoints require authentication and are scoped to a specific project.
+All permission endpoints require authentication and are scoped to a specific workspace.
 
 ---
 
 ## 1. List Available Permissions
 
-### GET /projects/:id/permissions
+### GET /workspaces/:id/permissions
 
 List all available permissions in the system.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `category` | string | ❌ No | - | Filter by category (project, testcase, apispec, environment, member) |
+| `category` | string | ❌ No | - | Filter by category (workspace, testcase, apispec, environment, member) |
 | `role` | string | ❌ No | - | Show permissions for specific role |
 
 #### Example Request
 
 ```
-GET /projects/1/permissions?category=testcase
+GET /workspaces/1/permissions?category=testcase
 ```
 
 #### Response (200 OK)
@@ -86,17 +86,17 @@ GET /projects/1/permissions?category=testcase
 
 ## 2. Get Role Permissions
 
-### GET /projects/:id/permissions/roles/:role
+### GET /workspaces/:id/permissions/roles/:role
 
 Get all permissions for a specific role.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `role` | string | ✅ Yes | Role name (owner, admin, write, read) |
 
 #### Response (200 OK)
@@ -109,10 +109,10 @@ Get all permissions for a specific role.
     "role": "write",
     "permissions": [
       {
-        "category": "project",
+        "category": "workspace",
         "permissions": [
-          "project.read",
-          "project.write"
+          "workspace.read",
+          "workspace.write"
         ]
       },
       {
@@ -145,7 +145,7 @@ Get all permissions for a specific role.
 
 ## 3. Check User Permission
 
-### POST /projects/:id/permissions/check
+### POST /workspaces/:id/permissions/check
 
 Check if a user has a specific permission.
 
@@ -155,7 +155,7 @@ Check if a user has a specific permission.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -194,17 +194,17 @@ Check if a user has a specific permission.
 
 ## 4. Create Custom Role
 
-### POST /projects/:id/permissions/roles
+### POST /workspaces/:id/permissions/roles
 
 Create a custom role with specific permissions (Enterprise feature).
 
-**Authentication**: Required (Project Owner access)
+**Authentication**: Required (Workspace Owner access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -224,7 +224,7 @@ Create a custom role with specific permissions (Enterprise feature).
   "display_name": "Tester",
   "description": "Can run and view tests but cannot modify",
   "permissions": [
-    "project.read",
+    "workspace.read",
     "testcase.read",
     "testcase.run",
     "apispec.read",
@@ -245,7 +245,7 @@ Create a custom role with specific permissions (Enterprise feature).
     "display_name": "Tester",
     "description": "Can run and view tests but cannot modify",
     "permissions": [
-      "project.read",
+      "workspace.read",
       "testcase.read",
       "testcase.run",
       "apispec.read",
@@ -260,17 +260,17 @@ Create a custom role with specific permissions (Enterprise feature).
 
 ## 5. Update Custom Role
 
-### PATCH /projects/:id/permissions/roles/:roleId
+### PATCH /workspaces/:id/permissions/roles/:roleId
 
 Update a custom role.
 
-**Authentication**: Required (Project Owner access)
+**Authentication**: Required (Workspace Owner access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `roleId` | integer | ✅ Yes | Role ID |
 
 #### Request Body
@@ -298,17 +298,17 @@ Update a custom role.
 
 ## 6. Delete Custom Role
 
-### DELETE /projects/:id/permissions/roles/:roleId
+### DELETE /workspaces/:id/permissions/roles/:roleId
 
 Delete a custom role.
 
-**Authentication**: Required (Project Owner access)
+**Authentication**: Required (Workspace Owner access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `roleId` | integer | ✅ Yes | Role ID |
 
 #### Query Parameters
@@ -333,12 +333,12 @@ Delete a custom role.
 
 ## Permission Categories
 
-### Project Permissions
+### Workspace Permissions
 
-- `project.read` - View project details
-- `project.write` - Edit project settings
-- `project.admin` - Manage project (excluding deletion)
-- `project.delete` - Delete project
+- `workspace.read` - View workspace details
+- `workspace.write` - Edit workspace settings
+- `workspace.admin` - Manage workspace (excluding deletion)
+- `workspace.delete` - Delete workspace
 
 ### Test Case Permissions
 
@@ -364,7 +364,7 @@ Delete a custom role.
 
 ### Member Permissions
 
-- `member.read` - View project members
+- `member.read` - View workspace members
 - `member.invite` - Invite new members
 - `member.manage` - Manage member roles
 - `member.remove` - Remove members
@@ -377,11 +377,11 @@ Delete a custom role.
 
 ```javascript
 const token = 'your-jwt-token';
-const projectId = 1;
+const workspaceId = 1;
 
 // Check permission
 const checkPermission = async (permission) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/permissions/check`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/permissions/check`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -397,7 +397,7 @@ const checkPermission = async (permission) => {
 
 // Get all permissions
 const getAllPermissions = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/permissions`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/permissions`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -408,7 +408,7 @@ const getAllPermissions = async () => {
 
 // Get role permissions
 const getRolePermissions = async (role) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/permissions/roles/${role}`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/permissions/roles/${role}`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -433,7 +433,7 @@ const getRolePermissions = async (role) => {
 
 ```bash
 # Check permission
-curl -X POST http://localhost:8025/projects/1/permissions/check \
+curl -X POST http://localhost:8025/workspaces/1/permissions/check \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -441,15 +441,15 @@ curl -X POST http://localhost:8025/projects/1/permissions/check \
   }'
 
 # List all permissions
-curl -X GET "http://localhost:8025/projects/1/permissions" \
+curl -X GET "http://localhost:8025/workspaces/1/permissions" \
   -H "Authorization: Bearer TOKEN"
 
 # Get role permissions
-curl -X GET http://localhost:8025/projects/1/permissions/roles/admin \
+curl -X GET http://localhost:8025/workspaces/1/permissions/roles/admin \
   -H "Authorization: Bearer TOKEN"
 
 # Create custom role
-curl -X POST http://localhost:8025/projects/1/permissions/roles \
+curl -X POST http://localhost:8025/workspaces/1/permissions/roles \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -457,7 +457,7 @@ curl -X POST http://localhost:8025/projects/1/permissions/roles \
     "display_name": "Viewer",
     "description": "Read-only access",
     "permissions": [
-      "project.read",
+      "workspace.read",
       "testcase.read",
       "apispec.read",
       "environment.read"

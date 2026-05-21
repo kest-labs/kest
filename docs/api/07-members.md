@@ -2,37 +2,37 @@
 
 ## Overview
 
-Project access is now managed through two related API groups:
+Workspace access is now managed through two related API groups:
 
-- `Members`: read and maintain users who have already joined a project
+- `Members`: read and maintain users who have already joined a workspace
 - `Invitations`: create direct invitations or shareable invite links before membership is granted
 
-The old direct-add endpoint `POST /v1/projects/:id/members` has been removed. Admins and owners should use the invitation APIs instead, so the invited user can accept or reject access on their own.
+The old direct-add endpoint `POST /v1/workspaces/:id/members` has been removed. Admins and owners should use the invitation APIs instead, so the invited user can accept or reject access on their own.
 
 ## Base Paths
 
 ```text
-/v1/projects/:id/members
-/v1/projects/:id/invitations
-/v1/project-invitations
+/v1/workspaces/:id/members
+/v1/workspaces/:id/invitations
+/v1/workspace-invitations
 ```
 
 All endpoints require authentication unless explicitly marked as public.
 
 ---
 
-## 1. List Project Members
+## 1. List Workspace Members
 
-### GET `/v1/projects/:id/members`
+### GET `/v1/workspaces/:id/members`
 
-List all active members of a project.
+List all active members of a workspace.
 
 **Authentication**: Required (`read` or above)
 
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/members' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -40,16 +40,16 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members' \
 
 ## 2. Get Current User Role
 
-### GET `/v1/projects/:id/members/me`
+### GET `/v1/workspaces/:id/members/me`
 
-Return the current authenticated user's role in the target project.
+Return the current authenticated user's role in the target workspace.
 
 **Authentication**: Required (`read` or above)
 
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/members/me' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/members/me' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -57,7 +57,7 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/members/me' \
 
 ## 3. Update Member Role
 
-### PATCH `/v1/projects/:id/members/:uid`
+### PATCH `/v1/workspaces/:id/members/:uid`
 
 Update an existing member's role.
 
@@ -74,7 +74,7 @@ Update an existing member's role.
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/2' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/members/2' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"role":"write"}'
@@ -84,24 +84,24 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/members/2' \
 
 ## 4. Remove Member
 
-### DELETE `/v1/projects/:id/members/:uid`
+### DELETE `/v1/workspaces/:id/members/:uid`
 
-Remove an existing member from the project.
+Remove an existing member from the workspace.
 
 **Authentication**: Required (`admin` or `owner`)
 
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/members/2' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/members/2' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-## 5. Create Project Invitation
+## 5. Create Workspace Invitation
 
-### POST `/v1/projects/:id/invitations`
+### POST `/v1/workspaces/:id/invitations`
 
 Create either:
 
@@ -128,7 +128,7 @@ Create either:
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/invitations' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"role":"read","invited_user_id":"user_123"}'
@@ -136,26 +136,26 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/invitations' \
 
 ---
 
-## 6. List Project Invitations
+## 6. List Workspace Invitations
 
-### GET `/v1/projects/:id/invitations`
+### GET `/v1/workspaces/:id/invitations`
 
-List invitations created for a project, including direct invitations and shareable invite links.
+List invitations created for a workspace, including direct invitations and shareable invite links.
 
 **Authentication**: Required (`admin` or `owner`)
 
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/invitations' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/invitations' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-## 7. Revoke Project Invitation
+## 7. Revoke Workspace Invitation
 
-### DELETE `/v1/projects/:id/invitations/:inviteId`
+### DELETE `/v1/workspaces/:id/invitations/:inviteId`
 
 Revoke an invitation before it is accepted.
 
@@ -164,7 +164,7 @@ Revoke an invitation before it is accepted.
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/invitations/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/invitations/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -172,7 +172,7 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/invitations/1' \
 
 ## 8. List My Received Invitations
 
-### GET `/v1/project-invitations/received`
+### GET `/v1/workspace-invitations/received`
 
 List active direct invitations addressed to the current user.
 
@@ -181,7 +181,7 @@ List active direct invitations addressed to the current user.
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/project-invitations/received' \
+curl -X GET 'http://localhost:8025/api/v1/workspace-invitations/received' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -189,7 +189,7 @@ curl -X GET 'http://localhost:8025/api/v1/project-invitations/received' \
 
 ## 9. Get Public Invitation Detail
 
-### GET `/v1/project-invitations/:slug`
+### GET `/v1/workspace-invitations/:slug`
 
 Get invitation details for rendering the invitation page.
 
@@ -198,23 +198,23 @@ Get invitation details for rendering the invitation page.
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/project-invitations/abc123'
+curl -X GET 'http://localhost:8025/api/v1/workspace-invitations/abc123'
 ```
 
 ---
 
 ## 10. Accept Invitation
 
-### POST `/v1/project-invitations/:slug/accept`
+### POST `/v1/workspace-invitations/:slug/accept`
 
-Accept an invitation and join the project.
+Accept an invitation and join the workspace.
 
 **Authentication**: Required
 
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/project-invitations/abc123/accept' \
+curl -X POST 'http://localhost:8025/api/v1/workspace-invitations/abc123/accept' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -222,16 +222,16 @@ curl -X POST 'http://localhost:8025/api/v1/project-invitations/abc123/accept' \
 
 ## 11. Reject Invitation
 
-### POST `/v1/project-invitations/:slug/reject`
+### POST `/v1/workspace-invitations/:slug/reject`
 
-Reject an invitation without joining the project.
+Reject an invitation without joining the workspace.
 
 **Authentication**: Required
 
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/project-invitations/abc123/reject' \
+curl -X POST 'http://localhost:8025/api/v1/workspace-invitations/abc123/reject' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -239,8 +239,8 @@ curl -X POST 'http://localhost:8025/api/v1/project-invitations/abc123/reject' \
 
 ## Migration Note
 
-If you previously integrated with `POST /v1/projects/:id/members`, update that flow to:
+If you previously integrated with `POST /v1/workspaces/:id/members`, update that flow to:
 
-1. `POST /v1/projects/:id/invitations`
+1. `POST /v1/workspaces/:id/invitations`
 2. let the invited user review the invitation
-3. `POST /v1/project-invitations/:slug/accept` or `POST /v1/project-invitations/:slug/reject`
+3. `POST /v1/workspace-invitations/:slug/accept` or `POST /v1/workspace-invitations/:slug/reject`

@@ -7,26 +7,26 @@ The Issues module tracks and manages issues found during API testing, including 
 ## Base Path
 
 ```
-/v1/projects/:id/issues
+/v1/workspaces/:id/issues
 ```
 
-All issue endpoints require authentication and are scoped to a specific project.
+All issue endpoints require authentication and are scoped to a specific workspace.
 
 ---
 
 ## 1. List Issues
 
-### GET /projects/:id/issues
+### GET /workspaces/:id/issues
 
-List all issues for a project.
+List all issues for a workspace.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
@@ -44,7 +44,7 @@ List all issues for a project.
 #### Example Request
 
 ```
-GET /projects/1/issues?status=open&severity=high&page=1&per_page=10
+GET /workspaces/1/issues?status=open&severity=high&page=1&per_page=10
 ```
 
 #### Response (200 OK)
@@ -126,17 +126,17 @@ GET /projects/1/issues?status=open&severity=high&page=1&per_page=10
 
 ## 2. Create Issue
 
-### POST /projects/:id/issues
+### POST /workspaces/:id/issues
 
 Create a new issue.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -201,17 +201,17 @@ Create a new issue.
 
 ## 3. Get Issue
 
-### GET /projects/:id/issues/:issueId
+### GET /workspaces/:id/issues/:issueId
 
 Get details of a specific issue.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `issueId` | integer | ✅ Yes | Issue ID |
 
 #### Response (200 OK)
@@ -284,17 +284,17 @@ Get details of a specific issue.
 
 ## 4. Update Issue
 
-### PATCH /projects/:id/issues/:issueId
+### PATCH /workspaces/:id/issues/:issueId
 
 Update an existing issue.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `issueId` | integer | ✅ Yes | Issue ID |
 
 #### Request Body
@@ -339,17 +339,17 @@ Update an existing issue.
 
 ## 5. Delete Issue
 
-### DELETE /projects/:id/issues/:issueId
+### DELETE /workspaces/:id/issues/:issueId
 
 Delete an issue.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `issueId` | integer | ✅ Yes | Issue ID |
 
 #### Response (200 OK)
@@ -366,17 +366,17 @@ Delete an issue.
 
 ## 6. Add Comment
 
-### POST /projects/:id/issues/:issueId/comments
+### POST /workspaces/:id/issues/:issueId/comments
 
 Add a comment to an issue.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `issueId` | integer | ✅ Yes | Issue ID |
 
 #### Request Body
@@ -415,17 +415,17 @@ Add a comment to an issue.
 
 ## 7. Upload Attachment
 
-### POST /projects/:id/issues/:issueId/attachments
+### POST /workspaces/:id/issues/:issueId/attachments
 
 Upload an attachment to an issue.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `issueId` | integer | ✅ Yes | Issue ID |
 
 #### Request Body (multipart/form-data)
@@ -457,17 +457,17 @@ Upload an attachment to an issue.
 
 ## 8. Link Issue to Test Case
 
-### POST /projects/:id/issues/:issueId/link
+### POST /workspaces/:id/issues/:issueId/link
 
 Link an issue to a test case.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `issueId` | integer | ✅ Yes | Issue ID |
 
 #### Request Body
@@ -565,11 +565,11 @@ reopened ← testing
 
 ```javascript
 const token = 'your-jwt-token';
-const projectId = 1;
+const workspaceId = 1;
 
 // Create issue
 const createIssue = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/issues`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/issues`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -591,7 +591,7 @@ const createIssue = async () => {
 
 // List issues
 const listIssues = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/issues?status=open&severity=high`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/issues?status=open&severity=high`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -602,7 +602,7 @@ const listIssues = async () => {
 
 // Add comment
 const addComment = async (issueId) => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/issues/${issueId}/comments`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/issues/${issueId}/comments`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -622,7 +622,7 @@ const addComment = async (issueId) => {
 
 ```bash
 # Create issue
-curl -X POST http://localhost:8025/projects/1/issues \
+curl -X POST http://localhost:8025/workspaces/1/issues \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -634,11 +634,11 @@ curl -X POST http://localhost:8025/projects/1/issues \
   }'
 
 # List issues
-curl -X GET "http://localhost:8025/projects/1/issues?status=open&page=1&per_page=10" \
+curl -X GET "http://localhost:8025/workspaces/1/issues?status=open&page=1&per_page=10" \
   -H "Authorization: Bearer TOKEN"
 
 # Update issue
-curl -X PATCH http://localhost:8025/projects/1/issues/1 \
+curl -X PATCH http://localhost:8025/workspaces/1/issues/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -647,7 +647,7 @@ curl -X PATCH http://localhost:8025/projects/1/issues/1 \
   }'
 
 # Add comment
-curl -X POST http://localhost:8025/projects/1/issues/1/comments \
+curl -X POST http://localhost:8025/workspaces/1/issues/1/comments \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{

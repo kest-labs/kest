@@ -357,8 +357,8 @@ func newConfiguredLLMClient() (*llmClient, error) {
 	}, nil
 }
 
-func conventionsForPrompt(specs []*APISpecPO, useProjectConventions *bool) *APISpecAIDraftConventions {
-	if useProjectConventions != nil && !*useProjectConventions {
+func conventionsForPrompt(specs []*APISpecPO, useWorkspaceConventions *bool) *APISpecAIDraftConventions {
+	if useWorkspaceConventions != nil && !*useWorkspaceConventions {
 		return nil
 	}
 	return deriveAIDraftConventions(specs)
