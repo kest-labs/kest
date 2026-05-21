@@ -28,8 +28,11 @@ import {
   useState,
 } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import {
+  AlertCircle,
   Binary,
   Braces,
   ChevronDown,
@@ -47,6 +50,7 @@ import {
   Save,
   Search,
   SendHorizonal,
+  Sparkles,
   Star,
   Trash2,
   Upload,
@@ -104,7 +108,12 @@ import { useImportMarkdownCollection, useImportPostmanCollection } from '@/hooks
 import { useT } from '@/i18n/client';
 import { collectionService } from '@/services/collection';
 import { localRunnerService } from '@/services/local-runner';
-import { useCreateRequest, useDeleteRequest, useUpdateRequest } from '@/hooks/use-requests';
+import {
+  useCreateRequest,
+  useDeleteRequest,
+  useGenRequestDoc,
+  useUpdateRequest,
+} from '@/hooks/use-requests';
 import { requestService } from '@/services/request';
 import type { ScopedTranslations } from '@/i18n/shared';
 import type { ProjectCollection, ProjectCollectionTreeNode } from '@/types/collection';
@@ -120,6 +129,7 @@ import type {
   ImportMarkdownCollectionRequest,
   ImportPostmanCollectionRequest,
 } from '@/types/importer';
+import type { ApiSpecLanguage } from '@/types/api-spec';
 import type {
   CreateRequestRequest,
   ProjectRequest,
@@ -132,6 +142,7 @@ import { cn } from '@/utils';
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 type RequestSection =
+  | 'docs'
   | 'params'
   | 'authorization'
   | 'headers'
@@ -149,6 +160,8 @@ type BodyMode =
   | 'binary'
   | 'graphql';
 type BodyValueType = 'text' | 'file';
+type RequestDocLanguage = 'default' | ApiSpecLanguage;
+type RequestDocMode = 'preview' | 'edit';
 
 interface KeyValueRow {
   id: string;
@@ -208,6 +221,10 @@ interface RequestPageTab {
   url: string;
   pathParams: Record<string, string>;
   activeSection: RequestSection;
+  docSource: 'manual' | 'ai';
+  docMarkdown: string;
+  docMarkdownZh: string;
+  docMarkdownEn: string;
   paramsMode: BulkMode;
   paramsRows: KeyValueRow[];
   paramsBulk: string;
@@ -265,6 +282,7 @@ type ProjectTranslationFn = ScopedTranslations<'project'>;
 type CollectionColorTone = 'lime' | 'mint' | 'cream' | 'lilac' | 'pink' | 'coral';
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 const PRIMARY_SECTION_ITEMS: RequestSection[] = [
+  'docs',
   'params',
   'authorization',
   'headers',
@@ -323,6 +341,14 @@ const getDefaultCollectionName = (t: ProjectTranslationFn, index: number) =>
 
 const getSectionLabel = (t: ProjectTranslationFn, section: RequestSection) =>
   t(`collections.workbench.sections.${section}`);
+
+const getSectionIcon = (section: RequestSection) => {
+  if (section === 'docs') {
+    return <FileText className="h-4 w-4" />;
+  }
+
+  return null;
+};
 
 const getBodyModeLabel = (
   t: ProjectTranslationFn,
@@ -551,6 +577,10 @@ const toRequestPageTab = (request: ProjectRequest): RequestPageTab => {
       request.url === PERSISTED_DRAFT_URL_PLACEHOLDER ? DEFAULT_NEW_REQUEST_URL : request.url || '',
     pathParams: request.path_params ?? {},
     activeSection: method === 'POST' || method === 'PUT' || method === 'PATCH' ? 'body' : 'params',
+    docSource: request.doc_source === 'ai' ? 'ai' : 'manual',
+    docMarkdown: request.doc_markdown ?? '',
+    docMarkdownZh: request.doc_markdown_zh ?? '',
+    docMarkdownEn: request.doc_markdown_en ?? '',
     paramsRows,
     paramsBulk: rowsToBulkText(paramsRows),
     authorizationMode: toAuthorizationMode(request.auth),
@@ -587,6 +617,10 @@ const createRequestPageTab = (
   url: overrides.url ?? DEFAULT_NEW_REQUEST_URL,
   pathParams: overrides.pathParams ?? {},
   activeSection: overrides.activeSection ?? 'params',
+  docSource: overrides.docSource ?? 'manual',
+  docMarkdown: overrides.docMarkdown ?? '',
+  docMarkdownZh: overrides.docMarkdownZh ?? '',
+  docMarkdownEn: overrides.docMarkdownEn ?? '',
   paramsMode: overrides.paramsMode ?? 'table',
   paramsRows: overrides.paramsRows ?? [createKeyValueRow()],
   paramsBulk: overrides.paramsBulk ?? '',
@@ -1907,6 +1941,10 @@ const areTabsEquivalent = (left: RequestPageTab[], right: RequestPageTab[]) =>
       tab.collectionId === other.collectionId &&
       tab.method === other.method &&
       tab.url === other.url &&
+      tab.docSource === other.docSource &&
+      tab.docMarkdown === other.docMarkdown &&
+      tab.docMarkdownZh === other.docMarkdownZh &&
+      tab.docMarkdownEn === other.docMarkdownEn &&
       JSON.stringify(tab.pathParams) === JSON.stringify(other.pathParams)
     );
   });
@@ -1968,6 +2006,9 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   );
   const [defaultingExampleId, setDefaultingExampleId] = useState<number | string | null>(null);
   const [deletingExampleId, setDeletingExampleId] = useState<number | string | null>(null);
+  const [requestDocGenerationError, setRequestDocGenerationError] = useState<string | null>(null);
+  const [generatingRequestDocLang, setGeneratingRequestDocLang] =
+    useState<ApiSpecLanguage | null>(null);
   const createCollectionMutation = useCreateCollection(workspaceId);
   const deleteCollectionMutation = useDeleteCollection(workspaceId);
   const updateCollectionMutation = useUpdateCollection(workspaceId);
@@ -1976,6 +2017,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   const environmentsQuery = useEnvironments(workspaceId);
   const createRequestMutation = useCreateRequest(workspaceId);
   const updateRequestMutation = useUpdateRequest(workspaceId);
+  const genRequestDocMutation = useGenRequestDoc(workspaceId);
   const deleteRequestMutation = useDeleteRequest(workspaceId);
   const createHistoryMutation = useCreateProjectHistory(workspaceId);
   const createExampleMutation = useCreateRequestExample(workspaceId);
@@ -2303,6 +2345,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     setEditingExampleId(null);
     setDeleteExampleTarget(null);
     setDeletingExampleId(null);
+    setRequestDocGenerationError(null);
   }, [persistedActiveCollectionId, persistedActiveRequestId]);
 
   useEffect(() => {
@@ -2364,6 +2407,10 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       body: tab.bodyContent,
       body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
       auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+      doc_markdown: tab.docMarkdown,
+      doc_markdown_zh: tab.docMarkdownZh,
+      doc_markdown_en: tab.docMarkdownEn,
+      doc_source: tab.docSource,
       pre_request: scripts.pre_request,
       test: scripts.test,
       sort_order: sortOrder,
@@ -2387,6 +2434,10 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       body: tab.bodyContent,
       body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
       auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+      doc_markdown: tab.docMarkdown,
+      doc_markdown_zh: tab.docMarkdownZh,
+      doc_markdown_en: tab.docMarkdownEn,
+      doc_source: tab.docSource,
       pre_request: scripts.pre_request,
       test: scripts.test,
     };
@@ -2408,6 +2459,10 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       body: tab.bodyContent,
       body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
       auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
+      doc_markdown: tab.docMarkdown,
+      doc_markdown_zh: tab.docMarkdownZh,
+      doc_markdown_en: tab.docMarkdownEn,
+      doc_source: tab.docSource,
       pre_request: scripts.pre_request,
       test: scripts.test,
       sort_order: 0,
@@ -3087,6 +3142,52 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     } catch {}
   };
 
+  const handleGenerateRequestDoc = async (lang: ApiSpecLanguage) => {
+    if (!activeTab) {
+      return;
+    }
+
+    setRequestDocGenerationError(null);
+    setGeneratingRequestDocLang(lang);
+
+    const nextName = getPersistedTabName(activeTab);
+    const tabSnapshot = {
+      ...activeTab,
+      title: nextName,
+    };
+
+    if (!tabSnapshot.collectionId || !isPersistedCollectionId(tabSnapshot.collectionId)) {
+      const message = t('collections.workbench.docs.saveBeforeGenerate');
+      setRequestDocGenerationError(message);
+      setGeneratingRequestDocLang(null);
+      toast.error(message);
+      return;
+    }
+
+    try {
+      const persistedRequest = await persistTabRequest(tabSnapshot, { name: nextName });
+      const sourceTabId = syncPersistedRequestInWorkbench(activeTab.id, persistedRequest);
+      const persistedRequestId = getPersistedRequestId(sourceTabId);
+      if (!persistedRequestId) {
+        throw new Error(t('collections.workbench.docs.requestIdMissing'));
+      }
+
+      const generatedRequest = await genRequestDocMutation.mutateAsync({
+        collectionId: tabSnapshot.collectionId,
+        requestId: persistedRequestId,
+        lang,
+      });
+      syncPersistedRequestInWorkbench(sourceTabId, generatedRequest);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('collections.workbench.docs.generateFailed');
+      setRequestDocGenerationError(message);
+      toast.error(message);
+    } finally {
+      setGeneratingRequestDocLang(null);
+    }
+  };
+
   const handleSend = async () => {
     if (!activeTab) {
       return;
@@ -3653,20 +3754,26 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
                       key={`${activeTab.id}-${activeTab.activeSection}`}
                       tab={activeTab}
                       onTabChange={updateActiveTab}
+                      onGenerateDoc={handleGenerateRequestDoc}
+                      isGeneratingDoc={genRequestDocMutation.isPending}
+                      generatingDocLang={generatingRequestDocLang}
+                      docGenerationError={requestDocGenerationError}
                     />
                   )}
                 </CardContent>
               </Card>
 
-              <ResponsePanel
-                response={activeTab.response}
-                isSending={activeTab.isSending}
-                onSaveAsExample={openCreateExampleDialog}
-                canSaveAsExample={canCreateExamples && activeResponseCanBeCaptured}
-                isSavingExample={
-                  createExampleMutation.isPending || saveExampleResponseMutation.isPending
-                }
-              />
+              {activeTab.activeSection !== 'docs' ? (
+                <ResponsePanel
+                  response={activeTab.response}
+                  isSending={activeTab.isSending}
+                  onSaveAsExample={openCreateExampleDialog}
+                  canSaveAsExample={canCreateExamples && activeResponseCanBeCaptured}
+                  isSavingExample={
+                    createExampleMutation.isPending || saveExampleResponseMutation.isPending
+                  }
+                />
+              ) : null}
             </div>
           ) : (
             <div className="mx-auto flex min-h-full max-w-[960px] items-center justify-center">
@@ -5751,12 +5858,13 @@ function RequestSectionTabs({
           type="button"
           onClick={() => onSelectSection(item)}
           className={cn(
-            'rounded-full border px-3 py-2 text-sm font-medium transition-colors',
+            'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors',
             item === activeSection
               ? 'border-border-subtle bg-bg-surface text-text-main'
               : 'border-border-subtle bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main'
           )}
         >
+          {getSectionIcon(item)}
           {getSectionLabel(t, item)}
         </button>
       ))}
@@ -5796,13 +5904,55 @@ function RequestSectionTabs({
 function RequestSectionPanel({
   tab,
   onTabChange,
+  onGenerateDoc,
+  isGeneratingDoc,
+  generatingDocLang,
+  docGenerationError,
 }: {
   tab: RequestPageTab;
   onTabChange: (updater: (tab: RequestPageTab) => RequestPageTab) => void;
+  onGenerateDoc: (lang: ApiSpecLanguage) => Promise<void>;
+  isGeneratingDoc: boolean;
+  generatingDocLang: ApiSpecLanguage | null;
+  docGenerationError: string | null;
 }) {
   const t = useT('project');
 
   switch (tab.activeSection) {
+    case 'docs':
+      return (
+        <RequestDocsPanel
+          tab={tab}
+          isGenerating={isGeneratingDoc}
+          generatingLang={generatingDocLang}
+          generationError={docGenerationError}
+          onGenerateDoc={onGenerateDoc}
+          onDocSourceChange={value =>
+            onTabChange(current => ({
+              ...current,
+              docSource: value,
+            }))
+          }
+          onDocMarkdownChange={value =>
+            onTabChange(current => ({
+              ...current,
+              docMarkdown: value,
+            }))
+          }
+          onDocMarkdownZhChange={value =>
+            onTabChange(current => ({
+              ...current,
+              docMarkdownZh: value,
+            }))
+          }
+          onDocMarkdownEnChange={value =>
+            onTabChange(current => ({
+              ...current,
+              docMarkdownEn: value,
+            }))
+          }
+        />
+      );
     case 'params':
       return (
         <KeyValueEditor
@@ -5962,6 +6112,385 @@ function RequestSectionPanel({
     default:
       return null;
   }
+}
+
+function RequestDocsPanel({
+  tab,
+  isGenerating,
+  generatingLang,
+  generationError,
+  onGenerateDoc,
+  onDocSourceChange,
+  onDocMarkdownChange,
+  onDocMarkdownZhChange,
+  onDocMarkdownEnChange,
+}: {
+  tab: RequestPageTab;
+  isGenerating: boolean;
+  generatingLang: ApiSpecLanguage | null;
+  generationError: string | null;
+  onGenerateDoc: (lang: ApiSpecLanguage) => Promise<void>;
+  onDocSourceChange: (value: 'manual' | 'ai') => void;
+  onDocMarkdownChange: (value: string) => void;
+  onDocMarkdownZhChange: (value: string) => void;
+  onDocMarkdownEnChange: (value: string) => void;
+}) {
+  const t = useT('project');
+  const [selectedDocLanguage, setSelectedDocLanguage] = useState<RequestDocLanguage>(
+    tab.docMarkdown ? 'default' : tab.docMarkdownEn ? 'en' : tab.docMarkdownZh ? 'zh' : 'default'
+  );
+  const [docMode, setDocMode] = useState<RequestDocMode>('preview');
+
+  const selectedMarkdown =
+    selectedDocLanguage === 'en'
+      ? tab.docMarkdownEn
+      : selectedDocLanguage === 'zh'
+        ? tab.docMarkdownZh
+        : tab.docMarkdown;
+  const hasAnyMarkdown = Boolean(
+    tab.docMarkdown.trim() || tab.docMarkdownEn.trim() || tab.docMarkdownZh.trim()
+  );
+  const selectedLanguageLabel = t(
+    selectedDocLanguage === 'en'
+      ? 'collections.workbench.docs.englishMarkdownLabel'
+      : selectedDocLanguage === 'zh'
+        ? 'collections.workbench.docs.chineseMarkdownLabel'
+        : 'collections.workbench.docs.defaultMarkdownLabel'
+  );
+  const selectedMarkdownChangeHandler =
+    selectedDocLanguage === 'en'
+      ? onDocMarkdownEnChange
+      : selectedDocLanguage === 'zh'
+        ? onDocMarkdownZhChange
+        : onDocMarkdownChange;
+  const handleGenerateDoc = (lang: ApiSpecLanguage) => {
+    setSelectedDocLanguage(lang);
+    setDocMode('preview');
+    void onGenerateDoc(lang);
+  };
+  const handleCopyMarkdown = async () => {
+    if (!selectedMarkdown.trim()) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(selectedMarkdown);
+      toast.success(t('collections.workbench.docs.copySuccess'));
+    } catch {
+      toast.error(t('toasts.copyFailed'));
+    }
+  };
+
+  return (
+    <div className="min-h-[640px] rounded-xl border border-border-subtle bg-bg-canvas">
+      <div className="flex flex-col gap-4 border-b border-border-subtle px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDocMode('preview')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              docMode === 'preview'
+                ? 'bg-bg-soft text-text-main'
+                : 'text-text-muted hover:text-text-main'
+            )}
+          >
+            {t('collections.workbench.docs.previewMode')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDocMode('edit')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              docMode === 'edit'
+                ? 'bg-bg-soft text-text-main'
+                : 'text-text-muted hover:text-text-main'
+            )}
+          >
+            {t('collections.workbench.docs.editMode')}
+          </button>
+          <Select
+            value={selectedDocLanguage}
+            onValueChange={value => setSelectedDocLanguage(value as RequestDocLanguage)}
+          >
+            <SelectTrigger className="h-9 w-[172px] rounded-full border-border-subtle bg-transparent">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">
+                {t('collections.workbench.docs.defaultMarkdownLabel')}
+              </SelectItem>
+              <SelectItem value="en">
+                {t('collections.workbench.docs.englishMarkdownLabel')}
+              </SelectItem>
+              <SelectItem value="zh">
+                {t('collections.workbench.docs.chineseMarkdownLabel')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void handleCopyMarkdown()}
+            disabled={!selectedMarkdown.trim()}
+          >
+            <Copy className="h-4 w-4" />
+            {t('collections.workbench.docs.copyMarkdown')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleGenerateDoc('en')}
+            disabled={isGenerating}
+            loading={generatingLang === 'en'}
+          >
+            <Sparkles className="h-4 w-4" />
+            {t('collections.workbench.docs.generateEnglish')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleGenerateDoc('zh')}
+            disabled={isGenerating}
+            loading={generatingLang === 'zh'}
+          >
+            <Sparkles className="h-4 w-4" />
+            {t('collections.workbench.docs.generateChinese')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-4 px-5 py-5">
+        {isGenerating ? (
+          <div className="rounded-md border border-border-subtle bg-bg-soft px-3 py-2 text-sm text-text-muted">
+            {t('collections.workbench.docs.generating')}
+          </div>
+        ) : null}
+        {generationError ? (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-error-subtle px-3 py-2 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <div className="font-medium">{t('collections.workbench.docs.generateFailed')}</div>
+              <div className="mt-1 break-words text-xs leading-relaxed">{generationError}</div>
+            </div>
+          </div>
+        ) : null}
+
+        {!hasAnyMarkdown && docMode === 'preview' ? (
+          <div className="mx-auto flex min-h-[520px] max-w-2xl flex-col items-center justify-start px-4 pt-16 text-center">
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-border-subtle bg-bg-soft text-text-main shadow-sm">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div className="flex flex-col items-center gap-3 text-xl font-medium text-text-muted sm:flex-row">
+              <span>{t('collections.workbench.docs.emptyTitle')}</span>
+              <button
+                type="button"
+                onClick={() => handleGenerateDoc('en')}
+                disabled={isGenerating}
+                className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-canvas px-4 py-2 text-sm font-semibold text-text-main shadow-sm transition-colors hover:bg-bg-soft disabled:pointer-events-none disabled:opacity-50"
+              >
+                <Sparkles className="h-5 w-5" />
+                {t('collections.workbench.docs.writeWithAi')}
+              </button>
+            </div>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-text-muted">
+              {t('collections.workbench.docs.emptyDescription')}
+            </p>
+          </div>
+        ) : docMode === 'preview' ? (
+          <div className="mx-auto max-w-4xl px-2 py-8 md:px-6">
+            <RequestMarkdownRenderer
+              value={selectedMarkdown}
+              emptyLabel={t('collections.workbench.docs.emptyLanguage', {
+                language: selectedLanguageLabel,
+              })}
+            />
+          </div>
+        ) : (
+          <div className="mx-auto max-w-5xl space-y-4">
+            <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="space-y-2">
+                <Label htmlFor="request-doc-source">{t('common.docSource')}</Label>
+                <Select
+                  value={tab.docSource}
+                  onValueChange={value => onDocSourceChange(value as 'manual' | 'ai')}
+                >
+                  <SelectTrigger id="request-doc-source" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">{t('apiSpecsPage.docSourceManual')}</SelectItem>
+                    <SelectItem value="ai">{t('apiSpecsPage.docSourceAi')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="rounded-md border border-border-subtle bg-bg-soft px-3 py-2 text-sm text-text-muted">
+                {t('collections.workbench.docs.saveHint')}
+              </div>
+            </div>
+
+            <Label htmlFor="request-doc-markdown-editor">{selectedLanguageLabel}</Label>
+            <Textarea
+              id="request-doc-markdown-editor"
+              value={selectedMarkdown}
+              onChange={event => selectedMarkdownChangeHandler(event.target.value)}
+              placeholder={t('collections.workbench.docs.markdownPlaceholder')}
+              rows={18}
+              root
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RequestMarkdownRenderer({ value, emptyLabel }: { value: string; emptyLabel: string }) {
+  if (!value.trim()) {
+    return (
+      <div className="rounded-xl border border-dashed border-border-subtle bg-bg-soft p-8 text-center text-sm text-text-muted">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-[15px] leading-8 text-text-main">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ className, ...props }) => (
+            <h1
+              className={cn(
+                'mb-6 mt-0 border-b border-border-subtle pb-4 text-3xl font-semibold leading-tight tracking-[-0.03em] text-text-main',
+                className
+              )}
+              {...props}
+            />
+          ),
+          h2: ({ className, ...props }) => (
+            <h2
+              className={cn(
+                'mb-3 mt-10 text-2xl font-semibold leading-tight tracking-[-0.02em] text-text-main first:mt-0',
+                className
+              )}
+              {...props}
+            />
+          ),
+          h3: ({ className, ...props }) => (
+            <h3
+              className={cn(
+                'mb-2 mt-7 text-lg font-semibold leading-snug text-text-main',
+                className
+              )}
+              {...props}
+            />
+          ),
+          p: ({ className, ...props }) => (
+            <p className={cn('my-4 text-text-muted', className)} {...props} />
+          ),
+          a: ({ className, ...props }) => (
+            <a
+              className={cn(
+                'font-medium text-primary underline-offset-4 hover:text-primary-deep hover:underline',
+                className
+              )}
+              {...props}
+            />
+          ),
+          ul: ({ className, ...props }) => (
+            <ul
+              className={cn('my-4 list-disc space-y-2 pl-6 text-text-muted', className)}
+              {...props}
+            />
+          ),
+          ol: ({ className, ...props }) => (
+            <ol
+              className={cn('my-4 list-decimal space-y-2 pl-6 text-text-muted', className)}
+              {...props}
+            />
+          ),
+          li: ({ className, ...props }) => (
+            <li className={cn('pl-1 marker:text-text-muted', className)} {...props} />
+          ),
+          blockquote: ({ className, ...props }) => (
+            <blockquote
+              className={cn(
+                'my-6 rounded-r-xl border-l-4 border-primary bg-bg-soft px-5 py-3 text-text-muted',
+                className
+              )}
+              {...props}
+            />
+          ),
+          hr: ({ className, ...props }) => (
+            <hr className={cn('my-8 border-border-subtle', className)} {...props} />
+          ),
+          code: ({ className, children, ...props }) => {
+            const isInlineCode = !className;
+
+            if (isInlineCode) {
+              return (
+                <code
+                  className="rounded-md bg-bg-soft px-1.5 py-0.5 font-mono text-[0.925em] text-text-main"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            }
+
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children, ...props }) => (
+            <pre
+              className="my-5 overflow-x-auto rounded-xl border border-border-subtle bg-bg-soft p-5 text-sm leading-7 text-text-main shadow-sm"
+              {...props}
+            >
+              {children}
+            </pre>
+          ),
+          table: ({ className, ...props }) => (
+            <div className="my-6 overflow-x-auto rounded-xl border border-border-subtle shadow-sm">
+              <table
+                className={cn('min-w-full border-collapse text-sm text-text-main', className)}
+                {...props}
+              />
+            </div>
+          ),
+          th: ({ className, ...props }) => (
+            <th
+              className={cn(
+                'border-b border-border-subtle bg-bg-soft px-4 py-3 text-left font-semibold',
+                className
+              )}
+              {...props}
+            />
+          ),
+          td: ({ className, ...props }) => (
+            <td
+              className={cn(
+                'border-t border-border-subtle px-4 py-3 align-top text-text-muted',
+                className
+              )}
+              {...props}
+            />
+          ),
+        }}
+      >
+        {value}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function KeyValueEditor({

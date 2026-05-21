@@ -67,6 +67,32 @@ export function useUpdateRequest(projectId: number | string) {
   });
 }
 
+export function useGenRequestDoc(projectId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      lang,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      lang: 'en' | 'zh';
+    }) => requestService.genDoc(projectId, collectionId, requestId, { lang }),
+    onSuccess: (updatedRequest, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: requestKeys.collection(projectId, variables.collectionId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: requestKeys.detail(projectId, variables.collectionId, variables.requestId),
+      });
+      toast.success(t.project('toasts.documentationGenerated', { path: updatedRequest.url }));
+    },
+  });
+}
+
 export function useDeleteRequest(projectId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();

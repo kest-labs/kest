@@ -1,6 +1,7 @@
 import request from '@/http';
 import type {
   CreateRequestRequest,
+  GenRequestDocRequest,
   ProjectRequest,
   RequestListParams,
   RequestListResponse,
@@ -59,6 +60,20 @@ export const requestService = {
     request.put<ProjectRequest>(
       `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}`,
       normalizePayload(data)
+    ),
+
+  genDoc: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    data: GenRequestDocRequest
+  ) =>
+    request.post<ProjectRequest>(
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/gen-doc`,
+      undefined,
+      {
+        params: normalizePayload(data),
+      }
     ),
 
   delete: (

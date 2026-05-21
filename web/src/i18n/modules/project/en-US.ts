@@ -684,6 +684,7 @@ const messages: ProjectMessages = {
         default: 'Default',
       },
       sections: {
+        docs: 'Docs',
         params: 'Params',
         authorization: 'Authorization',
         headers: 'Headers',
@@ -691,6 +692,29 @@ const messages: ProjectMessages = {
         scripts: 'Scripts',
         settings: 'Settings',
         examples: 'Examples',
+      },
+      docs: {
+        previewMode: 'Preview',
+        editMode: 'Edit',
+        emptyTitle: 'Document this request...',
+        emptyDescription:
+          'Generate concise Markdown documentation from the saved method, URL, params, headers, auth, and body.',
+        writeWithAi: 'Write with AI',
+        emptyLanguage: 'No Markdown content for {language} yet.',
+        saveBeforeGenerate: 'Save this request inside a collection before generating docs.',
+        requestIdMissing: 'Unable to resolve the saved request ID.',
+        generating: 'Generating documentation...',
+        generateFailed: 'AI doc generation failed',
+        generateEnglish: 'Generate English',
+        generateChinese: 'Generate Chinese',
+        defaultMarkdownLabel: 'Default Markdown',
+        chineseMarkdownLabel: 'Chinese Markdown',
+        englishMarkdownLabel: 'English Markdown',
+        markdownPlaceholder: 'Write request documentation in Markdown.',
+        saveHint:
+          'Docs are saved with this request. Save the tab after manual edits to keep changes.',
+        copyMarkdown: 'Copy',
+        copySuccess: 'Documentation copied',
       },
       actions: {
         newCollection: 'New Collection',
