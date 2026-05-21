@@ -86,7 +86,7 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		"  -H 'Content-Type: application/json' \\",
 		`  -d '{"force":true}'`,
 		"```",
-	))
+	), "")
 	if err != nil {
 		t.Fatalf("expected markdown to parse, got %v", err)
 	}
@@ -200,7 +200,7 @@ func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *te
 		"curl -X GET 'http://localhost:8025/api/v1/projects/7/api-specs/export?format=markdown' \\",
 		"  -H 'Authorization: Bearer <token>'",
 		"```",
-	))
+	), "")
 	if err != nil {
 		t.Fatalf("expected markdown to parse, got %v", err)
 	}
@@ -272,7 +272,7 @@ func TestParseMarkdownDocumentSupportsSingleEndpointDocumentationFormat(t *testi
 		"  -H 'Content-Type: application/json' \\",
 		`  -d '{"username":"john_doe"}'`,
 		"```",
-	))
+	), "")
 	if err != nil {
 		t.Fatalf("expected single endpoint markdown to parse, got %v", err)
 	}
@@ -318,7 +318,7 @@ func TestParseMarkdownDocumentReturnsNoImportableEndpoints(t *testing.T) {
 		"## Base URL",
 		"",
 		"No endpoints here.",
-	))
+	), "")
 	if !errors.Is(err, ErrNoImportableEndpoints) {
 		t.Fatalf("expected ErrNoImportableEndpoints, got %v", err)
 	}
@@ -345,9 +345,111 @@ func TestParseMarkdownDocumentReturnsBaseURLErrorWhenURLCannotBeDerived(t *testi
 		"```bash",
 		"curl -X GET '/v1/projects/1'",
 		"```",
-	))
+	), "")
 	if !errors.Is(err, ErrMarkdownBaseURLNotFound) {
 		t.Fatalf("expected ErrMarkdownBaseURLNotFound, got %v", err)
+	}
+}
+
+func TestParseMarkdownDocumentSupportsAuthenticationDocShapeWithBasePathOverride(t *testing.T) {
+	doc, err := parseMarkdownDocument("01-authentication.md", markdown(
+		"# Authentication & Users API",
+		"",
+		"## Overview",
+		"",
+		"The Authentication & Users module handles user registration, authentication, and profile management.",
+		"",
+		"## Base Path",
+		"",
+		"```",
+		"/v1",
+		"```",
+		"",
+		"## 1. User Registration",
+		"",
+		"### POST /register",
+		"",
+		"Register a new user account.",
+		"",
+		"**Authentication**: Not required",
+		"",
+		"#### Request Headers",
+		"",
+		"```",
+		"Content-Type: application/json",
+		"```",
+		"",
+		"#### Request Body",
+		"",
+		"| Field | Type | Required | Validation | Description |",
+		"|-------|------|----------|------------|-------------|",
+		"| `username` | string | ✅ Yes | min: 3, max: 50 | Unique username |",
+		"| `password` | string | ✅ Yes | min: 6, max: 50 | User password |",
+		"",
+		"#### Example Request",
+		"",
+		"```json",
+		`{"username":"john_doe","password":"SecurePass123"}`,
+		"```",
+		"",
+		"## 8. List Users",
+		"",
+		"### GET /users",
+		"",
+		"List all users (Admin only).",
+		"",
+		"**Authentication**: Required (Admin)",
+		"",
+		"#### Query Parameters",
+		"",
+		"| Parameter | Type | Required | Default | Description |",
+		"|-----------|------|----------|---------|-------------|",
+		"| `page` | integer | ❌ No | 1 | Page number |",
+		"| `search` | string | ❌ No | - | Search by username or email |",
+	), "http://localhost:8025")
+	if err != nil {
+		t.Fatalf("expected authentication doc shape to parse, got %v", err)
+	}
+
+	if doc.BasePath != "/v1" {
+		t.Fatalf("expected Base Path to be parsed, got %q", doc.BasePath)
+	}
+	if doc.BaseURL != "http://localhost:8025/v1" {
+		t.Fatalf("expected base URL override to join with base path, got %q", doc.BaseURL)
+	}
+	if len(doc.Modules) != 2 {
+		t.Fatalf("expected two modules, got %d", len(doc.Modules))
+	}
+
+	registration := doc.Modules[0].Endpoints[0]
+	if registration.Method != "POST" || registration.Path != "/register" {
+		t.Fatalf("expected POST /register, got %s %s", registration.Method, registration.Path)
+	}
+	if registration.URL != "{{base_url}}/register" {
+		t.Fatalf("expected templated registration URL, got %q", registration.URL)
+	}
+	if registration.BodyType != "json" {
+		t.Fatalf("expected json request body, got %q", registration.BodyType)
+	}
+	if registration.Body != `{"username":"john_doe","password":"SecurePass123"}` {
+		t.Fatalf("expected example request body, got %q", registration.Body)
+	}
+	if len(registration.Headers) != 1 || registration.Headers[0].Key != "Content-Type" {
+		t.Fatalf("expected content-type header, got %#v", registration.Headers)
+	}
+
+	listUsers := doc.Modules[1].Endpoints[0]
+	if listUsers.Method != "GET" || listUsers.Path != "/users" {
+		t.Fatalf("expected GET /users, got %s %s", listUsers.Method, listUsers.Path)
+	}
+	if listUsers.URL != "{{base_url}}/users" {
+		t.Fatalf("expected templated users URL, got %q", listUsers.URL)
+	}
+	if len(listUsers.QueryParams) != 2 {
+		t.Fatalf("expected two query params, got %#v", listUsers.QueryParams)
+	}
+	if len(listUsers.Headers) != 1 || listUsers.Headers[0].Key != "Authorization" || listUsers.Headers[0].Enabled {
+		t.Fatalf("expected disabled auth placeholder header, got %#v", listUsers.Headers)
 	}
 }
 

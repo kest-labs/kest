@@ -36,9 +36,11 @@ type MarkdownImportModuleResult struct {
 }
 
 type markdownDocument struct {
-	Title   string
-	BaseURL string
-	Modules []markdownModule
+	Title        string
+	BaseURL      string
+	BasePath     string
+	Modules      []markdownModule
+	SourceFormat string
 }
 
 type markdownModule struct {
@@ -82,6 +84,7 @@ func (s *service) ImportMarkdown(
 	ctx context.Context,
 	workspaceID, parentID string,
 	file *multipart.FileHeader,
+	baseURLOverride string,
 ) (*MarkdownImportResult, error) {
 	f, err := file.Open()
 	if err != nil {
@@ -94,7 +97,7 @@ func (s *service) ImportMarkdown(
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	doc, err := parseMarkdownDocument(file.Filename, content)
+	doc, err := parseMarkdownDocument(file.Filename, content, baseURLOverride)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +183,7 @@ func (s *service) importMarkdownDocument(
 	return result, nil
 }
 
-func parseMarkdownDocument(filename string, content []byte) (*markdownDocument, error) {
+func parseMarkdownDocument(filename string, content []byte, baseURLOverride string) (*markdownDocument, error) {
 	text := normalizeMarkdown(string(content))
 	if text == "" {
 		return nil, ErrInvalidMarkdownDocument
@@ -192,9 +195,11 @@ func parseMarkdownDocument(filename string, content []byte) (*markdownDocument, 
 	}
 
 	doc := &markdownDocument{
-		Title:   title,
-		BaseURL: extractDocumentBaseURL(text),
+		Title:    title,
+		BaseURL:  extractDocumentBaseURL(text),
+		BasePath: extractDocumentBasePath(text),
 	}
+	applyBaseURLOverride(doc, baseURLOverride)
 
 	if looksLikeSingleModuleDocument(text) {
 		endpoints, err := parseEndpointSections(text, doc.BaseURL)
@@ -208,6 +213,7 @@ func parseMarkdownDocument(filename string, content []byte) (*markdownDocument, 
 			Name:      normalizeSingleModuleName(title),
 			Endpoints: endpoints,
 		})
+		doc.SourceFormat = "multi-endpoint-single-module"
 		return doc, nil
 	}
 
@@ -224,6 +230,9 @@ func parseMarkdownDocument(filename string, content []byte) (*markdownDocument, 
 			Name:      strings.TrimSpace(section.Title),
 			Endpoints: endpoints,
 		})
+	}
+	if len(doc.Modules) > 0 {
+		doc.SourceFormat = "multi-module"
 	}
 
 	if len(doc.Modules) == 0 {
@@ -248,12 +257,12 @@ func parseEndpointSections(content, baseURL string) ([]markdownEndpoint, error) 
 	endpoints := make([]markdownEndpoint, 0, len(sections))
 
 	for _, section := range sections {
-		matches := endpointHeadingPattern.FindStringSubmatch(strings.TrimSpace(section.Title))
-		if len(matches) != 3 {
+		method, path, ok := parseEndpointHeading(section.Title)
+		if !ok {
 			continue
 		}
 
-		endpoint, err := parseEndpointSection(matches[1], matches[2], section.Body, baseURL)
+		endpoint, err := parseEndpointSection(method, path, section.Body, baseURL)
 		if err != nil {
 			return nil, err
 		}
@@ -272,10 +281,13 @@ func parseEndpointSection(method, path, body, baseURL string) (markdownEndpoint,
 
 	summary := extractBoldSummary(body)
 	if summary == "" {
+		summary = extractSummaryFromBody(body)
+	}
+	if summary == "" {
 		summary = fmt.Sprintf("%s %s", endpoint.Method, endpoint.Path)
 	}
 	endpoint.Name = summary
-	endpoint.Description = summary
+	endpoint.Description = firstNonEmpty(firstParagraph(body), summary)
 
 	subsections := splitByHeadingLevel(body, 4)
 	sectionMap := make(map[string]string, len(subsections))
@@ -284,7 +296,13 @@ func parseEndpointSection(method, path, body, baseURL string) (markdownEndpoint,
 	}
 
 	pathDefaults := parseParameterDefaults(sectionMap["path parameters"])
+	if len(pathDefaults) == 0 {
+		pathDefaults = parseParameterDefaults(sectionMap["path params"])
+	}
 	example := parseCurlExample(sectionMap["example"])
+	if example.URL == "" {
+		example = parseCurlExample(resolveCurlSection(body, sectionMap))
+	}
 
 	finalURL, err := buildImportedEndpointURL(baseURL, example.URL, endpoint.Path)
 	if err != nil {
@@ -293,21 +311,36 @@ func parseEndpointSection(method, path, body, baseURL string) (markdownEndpoint,
 	endpoint.URL = finalURL
 
 	endpoint.PathParams = pathDefaults
-	for key, value := range extractPathParamsFromExample(endpoint.Path, example.URL) {
+	examplePathParams := extractPathParamsFromExample(endpoint.Path, example.URL)
+	if len(examplePathParams) > 0 && endpoint.PathParams == nil {
+		endpoint.PathParams = make(map[string]string, len(examplePathParams))
+	}
+	for key, value := range examplePathParams {
 		endpoint.PathParams[key] = value
 	}
 
 	endpoint.QueryParams = parseQueryParamsFromExample(example.URL)
-	endpoint.Headers = filterNonAuthHeaders(example.Headers)
-	if strings.Contains(body, "JWT Required") {
-		endpoint.Headers = append(endpoint.Headers, request.KeyValue{
+	if len(endpoint.QueryParams) == 0 {
+		endpoint.QueryParams = parseParameterTable(sectionMap["query parameters"])
+	}
+	endpoint.Headers = mergeHeaders(
+		parseHeaderKeyValues(sectionMap["request headers"]),
+		parseHeaderKeyValues(sectionMap["headers"]),
+		filterNonAuthHeaders(example.Headers),
+	)
+	if requiresAuth(body) {
+		endpoint.Headers = mergeHeaders(endpoint.Headers, []request.KeyValue{{
 			Key:     "Authorization",
 			Value:   "Bearer <token>",
 			Enabled: false,
-		})
+		}})
 	}
 
-	requestBodyLang, requestBody := firstCodeBlock(sectionMap["request body"])
+	requestBodyLang, requestBody := firstAvailableCodeBlock(
+		sectionMap["request body"],
+		sectionMap["example request"],
+		sectionMap["body"],
+	)
 	switch {
 	case requestBody != "":
 		endpoint.Body = requestBody
@@ -324,6 +357,30 @@ func parseEndpointSection(method, path, body, baseURL string) (markdownEndpoint,
 	}
 
 	return endpoint, nil
+}
+
+func parseEndpointHeading(title string) (string, string, bool) {
+	trimmed := strings.TrimSpace(title)
+	if matches := endpointHeadingPattern.FindStringSubmatch(trimmed); len(matches) == 3 {
+		return matches[1], matches[2], true
+	}
+
+	parts := strings.Fields(trimmed)
+	if len(parts) < 2 {
+		return "", "", false
+	}
+
+	method := strings.ToUpper(strings.TrimSpace(parts[0]))
+	if !isSupportedHTTPMethod(method) {
+		return "", "", false
+	}
+
+	path := strings.TrimSpace(parts[1])
+	if !strings.HasPrefix(path, "/") {
+		return "", "", false
+	}
+
+	return method, path, true
 }
 
 func normalizeMarkdown(content string) string {
@@ -367,6 +424,55 @@ func extractDocumentBaseURL(content string) string {
 		}
 	}
 	return ""
+}
+
+func extractDocumentBasePath(content string) string {
+	for _, section := range splitByHeadingLevel(content, 2) {
+		title := normalizeSectionTitle(section.Title)
+		if title != "base path" && title != "基础路径" {
+			continue
+		}
+
+		if _, code := firstCodeBlock(section.Body); code != "" {
+			if path := extractBasePathCandidate(code); path != "" {
+				return path
+			}
+		}
+
+		if path := extractBasePathCandidate(section.Body); path != "" {
+			return path
+		}
+	}
+
+	return ""
+}
+
+func extractBasePathCandidate(content string) string {
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(strings.Trim(line, "`"))
+		if strings.HasPrefix(trimmed, "/") {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func applyBaseURLOverride(doc *markdownDocument, baseURLOverride string) {
+	if doc == nil {
+		return
+	}
+
+	override := strings.TrimSpace(baseURLOverride)
+	if override == "" {
+		return
+	}
+
+	doc.BaseURL = override
+	if doc.BasePath != "" {
+		if resolved, err := joinBaseURLAndPath(override, doc.BasePath); err == nil {
+			doc.BaseURL = resolved
+		}
+	}
 }
 
 func looksLikeSingleModuleDocument(content string) bool {
@@ -729,6 +835,40 @@ func requiresJWTAuth(content string) bool {
 		strings.Contains(normalized, "protected endpoints")
 }
 
+func requiresAuth(content string) bool {
+	normalized := strings.ToLower(content)
+	if strings.Contains(normalized, "authentication") {
+		if strings.Contains(normalized, "not required") ||
+			strings.Contains(normalized, "public endpoint") {
+			return false
+		}
+		if strings.Contains(normalized, "required") {
+			return true
+		}
+	}
+
+	return requiresJWTAuth(content)
+}
+
+func extractSummaryFromBody(content string) string {
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case trimmed == "":
+			continue
+		case strings.HasPrefix(trimmed, "#"):
+			continue
+		case strings.HasPrefix(trimmed, "**Authentication**"):
+			continue
+		case strings.HasPrefix(trimmed, "|"):
+			continue
+		default:
+			return strings.TrimSuffix(trimmed, ".")
+		}
+	}
+	return ""
+}
+
 func parseParameterDefaults(section string) map[string]string {
 	rows := parseMarkdownTable(section)
 	if len(rows) <= 1 {
@@ -769,6 +909,42 @@ func parseMarkdownTable(content string) [][]string {
 		rows = append(rows, cells)
 	}
 	return rows
+}
+
+func parseParameterTable(section string) []request.KeyValue {
+	rows := parseMarkdownTable(section)
+	if len(rows) <= 1 {
+		return nil
+	}
+
+	params := make([]request.KeyValue, 0, len(rows)-1)
+	for _, row := range rows[1:] {
+		if len(row) < 1 {
+			continue
+		}
+
+		name := unwrapMarkdownLiteral(row[0])
+		if name == "" {
+			continue
+		}
+
+		value := "example"
+		if len(row) > 1 {
+			value = defaultValueForType(unwrapMarkdownLiteral(row[1]))
+		}
+
+		params = append(params, request.KeyValue{
+			Key:     name,
+			Value:   value,
+			Enabled: true,
+		})
+	}
+
+	if len(params) == 0 {
+		return nil
+	}
+
+	return params
 }
 
 func splitMarkdownTableRow(line string) []string {
@@ -905,6 +1081,23 @@ func buildImportedURLFromBase(baseURL, endpointPath string) (string, error) {
 	requestSegments = append(requestSegments, templateSegments...)
 
 	return buildBaseURLTemplate(baseSegments, requestSegments), nil
+}
+
+func joinBaseURLAndPath(baseURL, basePath string) (string, error) {
+	parsedBase, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || parsedBase.Scheme == "" || parsedBase.Host == "" {
+		return "", ErrInvalidMarkdownDocument
+	}
+
+	pathSegments := splitPathSegments(basePath)
+	baseSegments := splitPathSegments(parsedBase.Path)
+	joinedSegments := append([]string(nil), baseSegments...)
+	if len(joinedSegments) > 0 && len(pathSegments) > 0 && joinedSegments[len(joinedSegments)-1] == pathSegments[0] {
+		pathSegments = pathSegments[1:]
+	}
+	joinedSegments = append(joinedSegments, pathSegments...)
+	parsedBase.Path = joinPathSegments(joinedSegments)
+	return parsedBase.String(), nil
 }
 
 func buildImportedURLFromExample(exampleURL, endpointPath string) (string, error) {

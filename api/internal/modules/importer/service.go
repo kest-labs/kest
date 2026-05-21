@@ -60,7 +60,7 @@ type PostmanBody struct {
 
 type Service interface {
 	ImportPostman(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) error
-	ImportMarkdown(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) (*MarkdownImportResult, error)
+	ImportMarkdown(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader, baseURLOverride string) (*MarkdownImportResult, error)
 }
 
 type service struct {
