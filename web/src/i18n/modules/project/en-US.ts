@@ -432,7 +432,7 @@ const messages: ProjectMessages = {
     createDialogTitle: 'Create Environment',
     editDialogTitle: 'Edit Environment',
     createDialogDescription:
-      'Create a project-scoped environment with variables and headers. Add a base URL later when needed.',
+      'Create a project-scoped environment with base URL, variables, and headers.',
     editDialogDescription: 'Update the selected project-scoped environment.',
     tableMode: 'Table',
     jsonMode: 'JSON',

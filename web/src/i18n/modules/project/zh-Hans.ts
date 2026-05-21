@@ -398,7 +398,7 @@ const messages = {
     readOnlyDescription: '你当前的角色是 {role}。可以查看环境配置，但不能创建、编辑、复制或删除。',
     createDialogTitle: '创建环境',
     editDialogTitle: '编辑环境',
-    createDialogDescription: '创建包含 variables 和 headers 的项目级环境，后续需要时再添加 base URL。',
+    createDialogDescription: '创建包含 base URL、variables 和 headers 的项目级环境。',
     editDialogDescription: '更新所选项目级环境。',
     tableMode: '表格',
     jsonMode: 'JSON',

@@ -940,18 +940,16 @@ function EnvironmentFormDialog({
                 </div>
               </div>
 
-              {mode === 'edit' ? (
-                <div className="space-y-2">
-                  <Label htmlFor="environment-base-url">{t('common.baseUrl')}</Label>
-                  <Input
-                    id="environment-base-url"
-                    value={draft.baseUrl}
-                    onChange={(event) => updateDraft('baseUrl', event.target.value)}
-                    placeholder="https://api.example.com"
-                    root
-                  />
-                </div>
-              ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="environment-base-url">{t('common.baseUrl')}</Label>
+                <Input
+                  id="environment-base-url"
+                  value={draft.baseUrl}
+                  onChange={(event) => updateDraft('baseUrl', event.target.value)}
+                  placeholder="https://api.example.com"
+                  root
+                />
+              </div>
 
               <div className="grid gap-4 xl:grid-cols-2">
                 <EnvironmentFieldEditor
