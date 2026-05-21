@@ -78,6 +78,7 @@ var (
 	curlHeaderPattern      = regexp.MustCompile(`-H\s+(?:'([^']*)'|"([^"]*)")`)
 	curlDataPattern        = regexp.MustCompile(`-d\s+(?:'([^']*)'|"([^"]*)")`)
 	boldLinePattern        = regexp.MustCompile(`(?m)^\*\*(.+?)\*\*$`)
+	numberedSectionPattern = regexp.MustCompile(`^\d+\.\s+`)
 )
 
 func (s *service) ImportMarkdown(
@@ -217,7 +218,12 @@ func parseMarkdownDocument(filename string, content []byte, baseURLOverride stri
 		return doc, nil
 	}
 
-	for _, section := range splitByHeadingLevel(text, 2) {
+	sections := splitByHeadingLevel(text, 2)
+	numberedModules := make([]markdownModule, 0)
+	namedModules := make([]markdownModule, 0)
+	aggregatedEndpoints := make([]markdownEndpoint, 0)
+
+	for _, section := range sections {
 		endpoints, err := parseEndpointSections(section.Body, doc.BaseURL)
 		if err != nil {
 			return nil, err
@@ -226,11 +232,30 @@ func parseMarkdownDocument(filename string, content []byte, baseURLOverride stri
 			continue
 		}
 
-		doc.Modules = append(doc.Modules, markdownModule{
+		module := markdownModule{
 			Name:      strings.TrimSpace(section.Title),
 			Endpoints: endpoints,
-		})
+		}
+		if isNumberedEndpointSection(section.Title) {
+			numberedModules = append(numberedModules, module)
+			aggregatedEndpoints = append(aggregatedEndpoints, endpoints...)
+			continue
+		}
+
+		namedModules = append(namedModules, module)
 	}
+
+	if len(namedModules) == 0 && len(numberedModules) > 0 {
+		doc.Modules = append(doc.Modules, markdownModule{
+			Name:      normalizeSingleModuleName(title),
+			Endpoints: aggregatedEndpoints,
+		})
+		doc.SourceFormat = "numbered-endpoint-document"
+		return doc, nil
+	}
+
+	doc.Modules = append(doc.Modules, namedModules...)
+	doc.Modules = append(doc.Modules, numberedModules...)
 	if len(doc.Modules) > 0 {
 		doc.SourceFormat = "multi-module"
 	}
@@ -381,6 +406,10 @@ func parseEndpointHeading(title string) (string, string, bool) {
 	}
 
 	return method, path, true
+}
+
+func isNumberedEndpointSection(title string) bool {
+	return numberedSectionPattern.MatchString(strings.TrimSpace(title))
 }
 
 func normalizeMarkdown(content string) string {

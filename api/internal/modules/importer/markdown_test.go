@@ -417,8 +417,14 @@ func TestParseMarkdownDocumentSupportsAuthenticationDocShapeWithBasePathOverride
 	if doc.BaseURL != "http://localhost:8025/v1" {
 		t.Fatalf("expected base URL override to join with base path, got %q", doc.BaseURL)
 	}
-	if len(doc.Modules) != 2 {
-		t.Fatalf("expected two modules, got %d", len(doc.Modules))
+	if len(doc.Modules) != 1 {
+		t.Fatalf("expected a single aggregated module, got %d", len(doc.Modules))
+	}
+	if doc.Modules[0].Name != "Authentication & Users" {
+		t.Fatalf("expected module name to follow document title, got %q", doc.Modules[0].Name)
+	}
+	if len(doc.Modules[0].Endpoints) != 2 {
+		t.Fatalf("expected two endpoints in the aggregated module, got %d", len(doc.Modules[0].Endpoints))
 	}
 
 	registration := doc.Modules[0].Endpoints[0]
@@ -438,7 +444,7 @@ func TestParseMarkdownDocumentSupportsAuthenticationDocShapeWithBasePathOverride
 		t.Fatalf("expected content-type header, got %#v", registration.Headers)
 	}
 
-	listUsers := doc.Modules[1].Endpoints[0]
+	listUsers := doc.Modules[0].Endpoints[1]
 	if listUsers.Method != "GET" || listUsers.Path != "/users" {
 		t.Fatalf("expected GET /users, got %s %s", listUsers.Method, listUsers.Path)
 	}
@@ -450,6 +456,52 @@ func TestParseMarkdownDocumentSupportsAuthenticationDocShapeWithBasePathOverride
 	}
 	if len(listUsers.Headers) != 1 || listUsers.Headers[0].Key != "Authorization" || listUsers.Headers[0].Enabled {
 		t.Fatalf("expected disabled auth placeholder header, got %#v", listUsers.Headers)
+	}
+}
+
+func TestParseMarkdownDocumentKeepsNamedTopLevelSectionsAsSeparateModules(t *testing.T) {
+	doc, err := parseMarkdownDocument("members.md", markdown(
+		"# Members & Invitations API",
+		"",
+		"## Overview",
+		"",
+		"Project access is now managed through two related API groups.",
+		"",
+		"## Base URL",
+		"",
+		"`http://localhost:8025/api/v1`",
+		"",
+		"## Members",
+		"",
+		"### GET /projects/:id/members",
+		"",
+		"List all active members of a project.",
+		"",
+		"**Authentication**: Required",
+		"",
+		"## Invitations",
+		"",
+		"### POST /projects/:id/invitations",
+		"",
+		"Create a project invitation.",
+		"",
+		"**Authentication**: Required",
+		"",
+		"#### Request Body",
+		"",
+		"```json",
+		`{"role":"read"}`,
+		"```",
+	), "")
+	if err != nil {
+		t.Fatalf("expected named sections document to parse, got %v", err)
+	}
+
+	if len(doc.Modules) != 2 {
+		t.Fatalf("expected two named modules, got %d", len(doc.Modules))
+	}
+	if doc.Modules[0].Name != "Members" || doc.Modules[1].Name != "Invitations" {
+		t.Fatalf("expected named module sections to be preserved, got %#v", doc.Modules)
 	}
 }
 
