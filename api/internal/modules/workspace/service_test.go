@@ -29,6 +29,9 @@ func (r *testWorkspaceRepo) FindByOwnerID(ownerID string) ([]*WorkspacePO, error
 func (r *testWorkspaceRepo) ListByUserID(userID string, isSuperAdmin bool) ([]*WorkspacePO, error) {
 	return nil, nil
 }
+func (r *testWorkspaceRepo) GetStats(ctx context.Context, workspaceID string) (*WorkspaceStats, error) {
+	return &WorkspaceStats{}, nil
+}
 func (r *testWorkspaceRepo) AddMember(member *WorkspaceMemberPO) error { return nil }
 func (r *testWorkspaceRepo) RemoveMember(workspaceID, userID string) error {
 	return nil

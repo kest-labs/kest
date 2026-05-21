@@ -26,7 +26,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
-	"github.com/kest-labs/kest/api/internal/modules/project"
 	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
@@ -70,8 +69,6 @@ func InitApplication() (*app.Application, error) {
 	workspaceRepository := workspace.NewRepository(db)
 	workspaceService := workspace.NewService(workspaceRepository)
 	workspaceHandler := workspace.NewHandler(workspaceService)
-	projectRepository := project.NewRepository(db)
-	projectService := project.NewService(projectRepository, memberService, workspaceService)
 	projectinviteRepository := projectinvite.NewRepository(db)
 	projectinviteService := projectinvite.NewService(projectinviteRepository)
 	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)
@@ -97,7 +94,6 @@ func InitApplication() (*app.Application, error) {
 	apispecService := apispec.NewService(apispecRepository)
 	testcaseRepository := testcase.NewRepository(db)
 	apispecHandler := provideAPISpecHandler(apispecService, importerService, workspaceService, testcaseRepository)
-	projectHandler := provideProjectHandler(projectService, memberService, workspaceService, apispecHandler, historyHandler)
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
 	categoryHandler := category.NewHandler(categoryService, workspaceService)
@@ -117,7 +113,6 @@ func InitApplication() (*app.Application, error) {
 		Permission:    permissionHandler,
 		Audit:         auditHandler,
 		Workspace:     workspaceHandler,
-		Project:       projectHandler,
 		ProjectInvite: projectinviteHandler,
 		Collection:    collectionHandler,
 		Request:       requestHandler,

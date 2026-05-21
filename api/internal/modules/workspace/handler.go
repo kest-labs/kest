@@ -14,7 +14,9 @@ import (
 // Handler handles HTTP requests for workspace operations
 type Handler struct {
 	contracts.BaseModule
-	service Service
+	service       Service
+	specSyncer    SpecSyncer
+	historySyncer HistorySyncer
 }
 
 // Name returns the module name
@@ -64,12 +66,24 @@ func (h *Handler) CreateWorkspace(c *gin.Context) {
 // @Summary List workspaces
 // @Tags Workspace
 // @Produce json
-// @Success 200 {array} WorkspaceResponse
+// @Success 200 {object} map[string]interface{}
 // @Router /workspaces [get]
 func (h *Handler) ListWorkspaces(c *gin.Context) {
 	userID, ok := handler.GetUserID(c)
 	if !ok {
 		return
+	}
+
+	page := handler.QueryInt(c, "page", 1)
+	perPage := handler.QueryInt(c, "per_page", 20)
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
 	}
 
 	workspaces, err := h.service.ListWorkspaces(userID, false)
@@ -78,7 +92,25 @@ func (h *Handler) ListWorkspaces(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, FromWorkspaceList(workspaces))
+	total := len(workspaces)
+	start := (page - 1) * perPage
+	if start > total {
+		start = total
+	}
+	end := start + perPage
+	if end > total {
+		end = total
+	}
+
+	response.Success(c, gin.H{
+		"items": FromWorkspaceList(workspaces[start:end]),
+		"meta": gin.H{
+			"total":    total,
+			"page":     page,
+			"per_page": perPage,
+			"pages":    (total + perPage - 1) / perPage,
+		},
+	})
 }
 
 // GetWorkspace gets a workspace by ID
@@ -166,6 +198,32 @@ func (h *Handler) DeleteWorkspace(c *gin.Context) {
 	}
 
 	response.NoContent(c)
+}
+
+func (h *Handler) GetStats(c *gin.Context) {
+	id, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	hasPermission, err := h.service.HasPermission(id, userID, RoleRead, false)
+	if err != nil || !hasPermission {
+		response.NotFound(c, "Workspace not found", err)
+		return
+	}
+
+	stats, err := h.service.GetStats(c.Request.Context(), id)
+	if err != nil {
+		response.InternalServerError(c, "Failed to load workspace stats", err)
+		return
+	}
+
+	response.Success(c, stats)
 }
 
 // AddMember adds a member to a workspace

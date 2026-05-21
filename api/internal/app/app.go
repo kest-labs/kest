@@ -21,7 +21,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
-	"github.com/kest-labs/kest/api/internal/modules/project"
 	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
@@ -50,7 +49,6 @@ type Handlers struct {
 	Permission    *permission.Handler
 	Audit         *audit.Handler
 	Workspace     *workspace.Handler
-	Project       *project.Handler
 	ProjectInvite *projectinvite.Handler
 	Collection    *collection.Handler
 	Request       *request.Handler
@@ -85,9 +83,6 @@ func (h *Handlers) Modules() []contracts.Module {
 	}
 	if h.Workspace != nil {
 		modules = append(modules, h.Workspace)
-	}
-	if h.Project != nil {
-		modules = append(modules, h.Project)
 	}
 	if h.ProjectInvite != nil {
 		modules = append(modules, h.ProjectInvite)

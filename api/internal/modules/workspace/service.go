@@ -30,6 +30,7 @@ type Service interface {
 	DeleteWorkspace(id string, userID string, isSuperAdmin bool) error
 	GetWorkspace(id string, userID string, isSuperAdmin bool) (*Workspace, error)
 	ListWorkspaces(userID string, isSuperAdmin bool) ([]*Workspace, error)
+	GetStats(ctx context.Context, workspaceID string) (*WorkspaceStats, error)
 
 	// Member operations
 	AddMember(workspaceID string, req *AddMemberRequest, inviterID string, isSuperAdmin bool) error
@@ -73,14 +74,24 @@ func (s *service) CreateWorkspace(req *CreateWorkspaceRequest, ownerID string) (
 		return nil, errors.New("workspace slug already exists")
 	}
 
+	workspaceType := req.Type
+	if workspaceType == "" {
+		workspaceType = TypePersonal
+	}
+
 	// Set default visibility based on type
 	visibility := req.Visibility
 	if visibility == "" {
-		if req.Type == TypePersonal {
+		if workspaceType == TypePersonal {
 			visibility = VisibilityPrivate
 		} else {
 			visibility = VisibilityTeam
 		}
+	}
+
+	publicKey, err := generatePublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate public key: %w", err)
 	}
 
 	// Create workspace
@@ -88,9 +99,12 @@ func (s *service) CreateWorkspace(req *CreateWorkspaceRequest, ownerID string) (
 		Name:        req.Name,
 		Slug:        workspaceSlug,
 		Description: req.Description,
-		Type:        req.Type,
+		Type:        workspaceType,
 		OwnerID:     ownerID,
 		Visibility:  visibility,
+		Platform:    req.Platform,
+		PublicKey:   publicKey,
+		Status:      1,
 	}
 
 	if err := s.repo.Create(workspace); err != nil {
@@ -142,6 +156,12 @@ func (s *service) UpdateWorkspace(id string, req *UpdateWorkspaceRequest, userID
 	if req.Visibility != nil {
 		workspace.Visibility = *req.Visibility
 	}
+	if req.Platform != nil {
+		workspace.Platform = *req.Platform
+	}
+	if req.Status != nil {
+		workspace.Status = *req.Status
+	}
 
 	if err := s.repo.Update(workspace); err != nil {
 		return nil, err
@@ -192,6 +212,10 @@ func (s *service) ListWorkspaces(userID string, isSuperAdmin bool) ([]*Workspace
 	}
 
 	return toDomainList(workspaces), nil
+}
+
+func (s *service) GetStats(ctx context.Context, workspaceID string) (*WorkspaceStats, error) {
+	return s.repo.GetStats(ctx, workspaceID)
 }
 
 // AddMember adds a member to a workspace
@@ -394,6 +418,14 @@ func (s *service) CheckUserRole(workspaceID, userID string, isSuperAdmin bool) (
 // HasPermission checks if a user has at least the required role level
 func (s *service) HasPermission(workspaceID, userID string, requiredRole string, isSuperAdmin bool) (bool, error) {
 	return s.repo.HasPermission(workspaceID, userID, requiredRole, isSuperAdmin)
+}
+
+func generatePublicKey() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func generateCLITokenMaterial() (rawToken, tokenPrefix, tokenHash string, err error) {

@@ -11,10 +11,11 @@ import (
 // CreateWorkspaceRequest represents the request to create a workspace
 type CreateWorkspaceRequest struct {
 	Name        string `json:"name" binding:"required,max=100"`
-	Slug        string `json:"slug" binding:"required,max=50,alphanum"`
+	Slug        string `json:"slug" binding:"omitempty,max=50"`
 	Description string `json:"description" binding:"max=500"`
-	Type        string `json:"type" binding:"required,oneof=personal team public"`
+	Type        string `json:"type" binding:"omitempty,oneof=personal team public"`
 	Visibility  string `json:"visibility" binding:"oneof=private team public"`
+	Platform    string `json:"platform" binding:"omitempty,max=50"`
 }
 
 // UpdateWorkspaceRequest represents the request to update a workspace
@@ -22,6 +23,8 @@ type UpdateWorkspaceRequest struct {
 	Name        *string `json:"name" binding:"omitempty,max=100"`
 	Description *string `json:"description" binding:"omitempty,max=500"`
 	Visibility  *string `json:"visibility" binding:"omitempty,oneof=private team public"`
+	Platform    *string `json:"platform" binding:"omitempty,max=50"`
+	Status      *int    `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
 // AddMemberRequest represents the request to add a member
@@ -50,6 +53,10 @@ type WorkspaceResponse struct {
 	Type        string                 `json:"type"`
 	OwnerID     string                 `json:"owner_id"`
 	Visibility  string                 `json:"visibility"`
+	Platform    string                 `json:"platform"`
+	PublicKey   string                 `json:"public_key,omitempty"`
+	Role        string                 `json:"role,omitempty"`
+	Status      int                    `json:"status"`
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 	CreatedAt   string                 `json:"created_at"`
 	UpdatedAt   string                 `json:"updated_at"`
@@ -98,6 +105,10 @@ func FromWorkspace(w *Workspace) *WorkspaceResponse {
 		Type:        w.Type,
 		OwnerID:     w.OwnerID,
 		Visibility:  w.Visibility,
+		Platform:    w.Platform,
+		PublicKey:   w.PublicKey,
+		Role:        w.Role,
+		Status:      w.Status,
 		Settings:    w.Settings,
 		CreatedAt:   w.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   w.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
