@@ -497,6 +497,36 @@ const LEGACY_NUMERIC_ID_PATTERN = /^\d+$/;
 const isPersistedResourceId = (value: string) =>
   UUID_LIKE_ID_PATTERN.test(value) || LEGACY_NUMERIC_ID_PATTERN.test(value);
 
+const copyTextToClipboard = async (value: string) => {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      // Fall through to the textarea-based copy path for browser contexts without
+      // clipboard permissions.
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, value.length);
+
+  try {
+    if (!document.execCommand('copy')) {
+      throw new Error('execCommand copy failed');
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
+};
+
 const isPersistedCollectionId = (value: string) => {
   return isPersistedResourceId(value);
 };
@@ -6150,7 +6180,7 @@ function RequestDocsPanel({
     }
 
     try {
-      await navigator.clipboard.writeText(selectedMarkdown);
+      await copyTextToClipboard(selectedMarkdown);
       toast.success(t('collections.workbench.docs.copySuccess'));
     } catch {
       toast.error(t('toasts.copyFailed'));
