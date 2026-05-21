@@ -29,7 +29,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/utils';
 
 type NavTitleKey =
-  | 'nav.projects'
+  | 'nav.workspaces'
   | 'nav.profile';
 
 interface NavItem {
@@ -65,8 +65,8 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
   const mainNavItems: NavItem[] = [
     {
-      titleKey: 'nav.projects',
-      href: ROUTES.CONSOLE.PROJECTS,
+      titleKey: 'nav.workspaces',
+      href: ROUTES.CONSOLE.WORKSPACES,
       icon: FolderKanban,
     },
   ];

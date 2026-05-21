@@ -7,7 +7,7 @@ export const ROUTES = {
     ABOUT: '/about',
     CONTACT: '/contact',
     API_SPEC_SHARE: '/share/api-spec/:slug',
-    PROJECT_INVITE: '/invite/workspace/:slug',
+    WORKSPACE_INVITE: '/invite/workspace/:slug',
   },
 
   // 认证相关路由。
@@ -22,17 +22,17 @@ export const ROUTES = {
   CONSOLE: {
     HOME: '/console',
     ANALYTICS: '/console/analytics',
-    PROJECTS: '/workspace',
-    PROJECT_DETAIL: '/workspace/:workspaceId',
-    PROJECT_COLLECTIONS: '/workspace/:workspaceId/collections',
-    PROJECT_CATEGORIES: '/workspace/:workspaceId/categories',
-    PROJECT_ENVIRONMENTS: '/workspace/:workspaceId/environments',
-    PROJECT_MEMBERS: '/workspace/:workspaceId/members',
-    PROJECT_KEYS: '/workspace/:workspaceId/keys',
-    PROJECT_API_SPECS: '/workspace/:workspaceId/api-specs',
-    PROJECT_HISTORIES: '/workspace/:workspaceId/histories',
-    PROJECT_FLOWS: '/workspace/:workspaceId/flows',
-    PROJECT_TEST_CASES: '/workspace/:workspaceId/test-cases',
+    WORKSPACES: '/workspace',
+    WORKSPACE_DETAIL: '/workspace/:workspaceId',
+    WORKSPACE_COLLECTIONS: '/workspace/:workspaceId/collections',
+    WORKSPACE_CATEGORIES: '/workspace/:workspaceId/categories',
+    WORKSPACE_ENVIRONMENTS: '/workspace/:workspaceId/environments',
+    WORKSPACE_MEMBERS: '/workspace/:workspaceId/members',
+    WORKSPACE_KEYS: '/workspace/:workspaceId/keys',
+    WORKSPACE_API_SPECS: '/workspace/:workspaceId/api-specs',
+    WORKSPACE_HISTORIES: '/workspace/:workspaceId/histories',
+    WORKSPACE_FLOWS: '/workspace/:workspaceId/flows',
+    WORKSPACE_TEST_CASES: '/workspace/:workspaceId/test-cases',
     PROFILE: '/console/profile',
     SETTINGS: '/console/settings',
   },
@@ -75,64 +75,64 @@ export function getConsoleRoute(route: ConsoleRoutes): string {
   return ROUTES.CONSOLE[route];
 }
 
-// 项目详情动态路由 helper。
+// 工作区详情动态路由 helper。
 // 作用：为 `/workspace/:workspaceId` 生成稳定地址，作为 workspace stats 与详情页入口。
-export function buildProjectDetailRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_DETAIL, { workspaceId });
+export function buildWorkspaceDetailRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_DETAIL, { workspaceId });
 }
 
-// 项目 collections 动态路由 helper。
+// 工作区 collections 动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/collections` 生成稳定地址，供工作区一级导航复用。
-export function buildProjectCollectionsRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_COLLECTIONS, { workspaceId });
+export function buildWorkspaceCollectionsRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_COLLECTIONS, { workspaceId });
 }
 
-// 项目环境动态路由 helper。
+// 工作区环境动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/environments` 生成稳定地址，作为环境管理页入口。
-export function buildProjectEnvironmentsRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_ENVIRONMENTS, { workspaceId });
+export function buildWorkspaceEnvironmentsRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_ENVIRONMENTS, { workspaceId });
 }
 
-// 项目成员动态路由 helper。
+// 工作区成员动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/members` 生成稳定地址，作为成员管理页入口。
-export function buildProjectMembersRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_MEMBERS, { workspaceId });
+export function buildWorkspaceMembersRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_MEMBERS, { workspaceId });
 }
 
-// 项目 Keys 动态路由 helper。
+// 工作区 Keys 动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/keys` 生成稳定地址，作为 CLI/Web 连接密钥管理入口。
-export function buildProjectKeysRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_KEYS, { workspaceId });
+export function buildWorkspaceKeysRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_KEYS, { workspaceId });
 }
 
-// 项目分类动态路由 helper。
+// 工作区分类动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/categories` 生成稳定地址，作为分类管理页入口。
-export function buildProjectCategoriesRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_CATEGORIES, { workspaceId });
+export function buildWorkspaceCategoriesRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_CATEGORIES, { workspaceId });
 }
 
-// 项目 API 规格动态路由 helper。
+// 工作区 API 规格动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/api-specs` 生成稳定地址，避免业务组件手写模板字符串。
-export function buildProjectApiSpecsRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_API_SPECS, { workspaceId });
+export function buildWorkspaceApiSpecsRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_API_SPECS, { workspaceId });
 }
 
-// 项目 Histories 动态路由 helper。
+// 工作区 Histories 动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/histories` 生成稳定地址，供工作区一级导航复用。
-export function buildProjectHistoriesRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_HISTORIES, { workspaceId });
+export function buildWorkspaceHistoriesRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_HISTORIES, { workspaceId });
 }
 
-// 项目 Flows 动态路由 helper。
+// 工作区 Flows 动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/flows` 生成稳定地址，供工作区一级导航复用。
-export function buildProjectFlowsRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_FLOWS, { workspaceId });
+export function buildWorkspaceFlowsRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_FLOWS, { workspaceId });
 }
 
-// 项目 Test Cases 动态路由 helper。
+// 工作区 Test Cases 动态路由 helper。
 // 作用：为 `/workspace/:workspaceId/test-cases` 生成稳定地址，避免业务组件手写模板字符串。
-export function buildProjectTestCasesRoute(workspaceId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_TEST_CASES, { workspaceId });
+export function buildWorkspaceTestCasesRoute(workspaceId: string | number): string {
+  return buildRoute(ROUTES.CONSOLE.WORKSPACE_TEST_CASES, { workspaceId });
 }
 
 // API spec 分享页路由 helper。
@@ -141,8 +141,8 @@ export function buildApiSpecShareRoute(slug: string): string {
   return buildRoute(ROUTES.SITE.API_SPEC_SHARE, { slug });
 }
 
-// 项目邀请页路由 helper。
+// 工作区邀请页路由 helper。
 // 作用：为公开邀请页生成稳定地址，方便成员管理页复制可分享链接。
-export function buildProjectInviteRoute(slug: string): string {
-  return buildRoute(ROUTES.SITE.PROJECT_INVITE, { slug });
+export function buildWorkspaceInviteRoute(slug: string): string {
+  return buildRoute(ROUTES.SITE.WORKSPACE_INVITE, { slug });
 }

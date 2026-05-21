@@ -1,6 +1,6 @@
-import { TestCaseManagementPage } from '@/components/features/project/test-case-management-page';
+import { TestCaseManagementPage } from '@/components/features/workspace/test-case-management-page';
 
-interface ProjectTestCasesPageProps {
+interface WorkspaceTestCasesPageProps {
   params: Promise<{
     workspaceId: string;
   }>;
@@ -10,19 +10,19 @@ interface ProjectTestCasesPageProps {
   }>;
 }
 
-// 项目 Test Cases 管理页面入口。
+// 工作区 Test Cases 管理页面入口。
 // 作用：读取动态workspace ID，并挂载受保护的 Test Cases 管理界面。
-export default async function ProjectTestCasesPage({
+export default async function WorkspaceTestCasesPage({
   params,
   searchParams,
-}: ProjectTestCasesPageProps) {
+}: WorkspaceTestCasesPageProps) {
   const { workspaceId } = await params;
   const { fromSpec, source } = await searchParams;
   const selectedSpecId = fromSpec?.trim() ? fromSpec : null;
 
   return (
     <TestCaseManagementPage
-      projectId={workspaceId}
+      workspaceId={workspaceId}
       autoOpenFromSpecSpecId={selectedSpecId}
       flowSource={source === 'ai' ? 'ai' : null}
     />

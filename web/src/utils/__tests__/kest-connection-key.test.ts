@@ -14,7 +14,7 @@ describe('buildKestConnectionKey', () => {
       version: 1,
       platform_url: 'https://api.kest.dev/v1',
       platform_token: 'kest_pat_example',
-      platform_project_id: '12',
+      platform_workspace_id: '12',
       platform_auto_sync_history: true,
     });
 
@@ -23,7 +23,7 @@ describe('buildKestConnectionKey', () => {
       version: 1,
       platform_url: 'https://api.kest.dev/v1',
       platform_token: 'kest_pat_example',
-      platform_project_id: '12',
+      platform_workspace_id: '12',
       platform_auto_sync_history: true,
     });
   });

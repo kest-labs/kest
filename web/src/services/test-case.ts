@@ -5,7 +5,7 @@ import type {
   CreateTestCaseFromSpecRequest,
   CreateTestCaseRequest,
   DuplicateTestCaseRequest,
-  ProjectTestCase,
+  WorkspaceTestCase,
   RunTestCaseRequest,
   RunTestCaseResponse,
   TestCaseListParams,
@@ -23,14 +23,14 @@ const normalizePayload = <T extends object>(payload: T) =>
 
 export const testCaseService = {
   list: ({
-    projectId,
+    workspaceId,
     page = 1,
     pageSize = 10,
     apiSpecId,
     env,
     keyword,
   }: TestCaseListParams) =>
-    request.get<TestCaseListResponse>(`/workspaces/${projectId}/test-cases`, {
+    request.get<TestCaseListResponse>(`/workspaces/${workspaceId}/test-cases`, {
       params: normalizePayload({
         page,
         page_size: pageSize,
@@ -40,72 +40,72 @@ export const testCaseService = {
       }),
     }),
 
-  getById: (projectId: number | string, testCaseId: number | string) =>
-    request.get<ProjectTestCase>(`/workspaces/${projectId}/test-cases/${testCaseId}`),
+  getById: (workspaceId: number | string, testCaseId: number | string) =>
+    request.get<WorkspaceTestCase>(`/workspaces/${workspaceId}/test-cases/${testCaseId}`),
 
-  create: (projectId: number | string, data: CreateTestCaseRequest) =>
-    request.post<ProjectTestCase>(
-      `/workspaces/${projectId}/test-cases`,
+  create: (workspaceId: number | string, data: CreateTestCaseRequest) =>
+    request.post<WorkspaceTestCase>(
+      `/workspaces/${workspaceId}/test-cases`,
       normalizePayload(data)
     ),
 
   update: (
-    projectId: number | string,
+    workspaceId: number | string,
     testCaseId: number | string,
     data: UpdateTestCaseRequest
   ) =>
-    request.patch<ProjectTestCase>(
-      `/workspaces/${projectId}/test-cases/${testCaseId}`,
+    request.patch<WorkspaceTestCase>(
+      `/workspaces/${workspaceId}/test-cases/${testCaseId}`,
       normalizePayload(data)
     ),
 
-  delete: (projectId: number | string, testCaseId: number | string) =>
-    request.delete<void>(`/workspaces/${projectId}/test-cases/${testCaseId}`),
+  delete: (workspaceId: number | string, testCaseId: number | string) =>
+    request.delete<void>(`/workspaces/${workspaceId}/test-cases/${testCaseId}`),
 
   duplicate: (
-    projectId: number | string,
+    workspaceId: number | string,
     testCaseId: number | string,
     data: DuplicateTestCaseRequest
   ) =>
-    request.post<ProjectTestCase>(
-      `/workspaces/${projectId}/test-cases/${testCaseId}/duplicate`,
+    request.post<WorkspaceTestCase>(
+      `/workspaces/${workspaceId}/test-cases/${testCaseId}/duplicate`,
       data
     ),
 
-  fromSpec: (projectId: number | string, data: CreateTestCaseFromSpecRequest) =>
-    request.post<ProjectTestCase>(
-      `/workspaces/${projectId}/test-cases/from-spec`,
+  fromSpec: (workspaceId: number | string, data: CreateTestCaseFromSpecRequest) =>
+    request.post<WorkspaceTestCase>(
+      `/workspaces/${workspaceId}/test-cases/from-spec`,
       normalizePayload(data)
     ),
 
   batchFromSpecs: (
-    projectId: number | string,
+    workspaceId: number | string,
     data: BatchCreateTestCasesFromSpecsRequest
   ) =>
     request.post<BatchCreateTestCasesFromSpecsResponse>(
-      `/workspaces/${projectId}/test-cases/batch-from-specs`,
+      `/workspaces/${workspaceId}/test-cases/batch-from-specs`,
       normalizePayload(data)
     ),
 
   run: (
-    projectId: number | string,
+    workspaceId: number | string,
     testCaseId: number | string,
     data: RunTestCaseRequest
   ) =>
     request.post<RunTestCaseResponse>(
-      `/workspaces/${projectId}/test-cases/${testCaseId}/run`,
+      `/workspaces/${workspaceId}/test-cases/${testCaseId}/run`,
       normalizePayload(data)
     ),
 
   listRuns: ({
-    projectId,
+    workspaceId,
     testCaseId,
     page = 1,
     pageSize = 10,
     status,
   }: TestCaseRunListParams) =>
     request.get<TestCaseRunListResponse>(
-      `/workspaces/${projectId}/test-cases/${testCaseId}/runs`,
+      `/workspaces/${workspaceId}/test-cases/${testCaseId}/runs`,
       {
         params: normalizePayload({
           page,
@@ -116,12 +116,12 @@ export const testCaseService = {
     ),
 
   getRunById: (
-    projectId: number | string,
+    workspaceId: number | string,
     testCaseId: number | string,
     runId: number | string
   ) =>
     request.get<TestCaseRun>(
-      `/workspaces/${projectId}/test-cases/${testCaseId}/runs/${runId}`
+      `/workspaces/${workspaceId}/test-cases/${testCaseId}/runs/${runId}`
     ),
 };
 

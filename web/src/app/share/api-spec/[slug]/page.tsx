@@ -56,7 +56,7 @@ export async function generateMetadata({
   const { slug } = await params;
 
   try {
-    const t = await getT('project');
+    const t = await getT('workspace');
     const share = await fetchPublicShare(slug);
     return {
       title: `${share.method} ${share.path}`,
@@ -67,7 +67,7 @@ export async function generateMetadata({
         }),
     };
   } catch {
-    const t = await getT('project');
+    const t = await getT('workspace');
     return {
       title: t('share.sharedApiSpec'),
       description: t('share.sharedApiSpecDescription'),
@@ -123,7 +123,7 @@ function JsonPanel({
 export default async function ApiSpecSharePage({
   params,
 }: ApiSpecSharePageProps) {
-  const t = await getT('project');
+  const t = await getT('workspace');
   const { slug } = await params;
   const share = await fetchPublicShare(slug);
   const hasDocSections = Boolean(

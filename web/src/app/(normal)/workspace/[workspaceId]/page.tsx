@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
-import { buildProjectApiSpecsRoute } from '@/constants/routes';
+import { buildWorkspaceApiSpecsRoute } from '@/constants/routes';
 
-interface ProjectDetailRoutePageProps {
+interface WorkspaceDetailRoutePageProps {
   params: Promise<{
     workspaceId: string;
   }>;
@@ -9,7 +9,7 @@ interface ProjectDetailRoutePageProps {
 
 // workspace 默认入口。
 // 作用：把 `/workspace/:workspaceId` 直接收敛到 API Specs 工作区，避免再展示旧的 overview 内容区。
-export default async function ProjectDetailRoutePage({ params }: ProjectDetailRoutePageProps) {
+export default async function WorkspaceDetailRoutePage({ params }: WorkspaceDetailRoutePageProps) {
   const { workspaceId } = await params;
-  redirect(buildProjectApiSpecsRoute(workspaceId));
+  redirect(buildWorkspaceApiSpecsRoute(workspaceId));
 }

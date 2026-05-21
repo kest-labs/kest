@@ -32,7 +32,7 @@ export interface RequestExample {
 }
 
 export interface RequestExamplePathParams {
-  projectId: number | string;
+  workspaceId: number | string;
   collectionId: number | string;
   requestId: number | string;
 }

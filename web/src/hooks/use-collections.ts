@@ -8,7 +8,7 @@ import { collectionService } from '@/services/collection';
 import type {
   CollectionListParams,
   CreateCollectionRequest,
-  ProjectCollectionTreeNode,
+  WorkspaceCollectionTreeNode,
   UpdateCollectionRequest,
 } from '@/types/collection';
 
@@ -16,20 +16,20 @@ import type {
 // 作用：统一 collection 树、详情和写入后的缓存命名，供工作台读写共用。
 export const collectionKeys = {
   all: ['collections'] as const,
-  project: (projectId: number | string) => [...collectionKeys.all, 'project', projectId] as const,
-  list: (projectId: number | string) => [...collectionKeys.project(projectId), 'list'] as const,
-  tree: (projectId: number | string) => [...collectionKeys.project(projectId), 'tree'] as const,
-  workbenchTree: (projectId: number | string) =>
-    [...collectionKeys.project(projectId), 'workbench-tree'] as const,
-  detail: (projectId: number | string, collectionId: number | string) =>
-    [...collectionKeys.project(projectId), 'detail', collectionId] as const,
+  workspace: (workspaceId: number | string) => [...collectionKeys.all, 'workspace', workspaceId] as const,
+  list: (workspaceId: number | string) => [...collectionKeys.workspace(workspaceId), 'list'] as const,
+  tree: (workspaceId: number | string) => [...collectionKeys.workspace(workspaceId), 'tree'] as const,
+  workbenchTree: (workspaceId: number | string) =>
+    [...collectionKeys.workspace(workspaceId), 'workbench-tree'] as const,
+  detail: (workspaceId: number | string, collectionId: number | string) =>
+    [...collectionKeys.workspace(workspaceId), 'detail', collectionId] as const,
 };
 
 const removeCollectionNodeFromTree = (
-  nodes: ProjectCollectionTreeNode[],
+  nodes: WorkspaceCollectionTreeNode[],
   collectionId: number | string
-): ProjectCollectionTreeNode[] =>
-  nodes.reduce<ProjectCollectionTreeNode[]>((accumulator, node) => {
+): WorkspaceCollectionTreeNode[] =>
+  nodes.reduce<WorkspaceCollectionTreeNode[]>((accumulator, node) => {
     if (String(node.id) === String(collectionId)) {
       return accumulator;
     }
@@ -52,100 +52,100 @@ const removeCollectionNodeFromTree = (
 
 const isWorkbenchRequestsQueryForCollection = (
   queryKey: readonly unknown[],
-  projectId: number | string,
+  workspaceId: number | string,
   collectionId: number | string
 ) =>
   queryKey[0] === 'collections' &&
-  queryKey[1] === 'project' &&
-  queryKey[2] === projectId &&
+  queryKey[1] === 'workspace' &&
+  queryKey[2] === workspaceId &&
   queryKey[3] === 'workbench-requests' &&
   Array.isArray(queryKey[4]) &&
   queryKey[4].map((item) => String(item)).includes(String(collectionId));
 
-export function useProjectCollectionTree(projectId?: number | string) {
+export function useWorkspaceCollectionTree(workspaceId?: number | string) {
   return useQuery({
-    queryKey: collectionKeys.tree(projectId ?? 'unknown'),
-    queryFn: () => collectionService.tree(projectId as number | string),
-    enabled: Boolean(projectId),
+    queryKey: collectionKeys.tree(workspaceId ?? 'unknown'),
+    queryFn: () => collectionService.tree(workspaceId as number | string),
+    enabled: Boolean(workspaceId),
     staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   });
 }
 
-export function useProjectCollections(params?: CollectionListParams) {
+export function useWorkspaceCollections(params?: CollectionListParams) {
   return useQuery({
-    queryKey: collectionKeys.list(params?.projectId ?? 'unknown'),
+    queryKey: collectionKeys.list(params?.workspaceId ?? 'unknown'),
     queryFn: () => collectionService.list(params as CollectionListParams),
-    enabled: Boolean(params?.projectId),
+    enabled: Boolean(params?.workspaceId),
     staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   });
 }
 
-export function useCreateCollection(projectId: number | string) {
+export function useCreateCollection(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateCollectionRequest) => collectionService.create(projectId, data),
+    mutationFn: (data: CreateCollectionRequest) => collectionService.create(workspaceId, data),
     onSuccess: (collection) => {
-      queryClient.invalidateQueries({ queryKey: collectionKeys.project(projectId) });
-      queryClient.setQueryData(collectionKeys.detail(projectId, collection.id), collection);
-      toast.success(t.project('toasts.collectionCreated', { name: collection.name }));
+      queryClient.invalidateQueries({ queryKey: collectionKeys.workspace(workspaceId) });
+      queryClient.setQueryData(collectionKeys.detail(workspaceId, collection.id), collection);
+      toast.success(t.workspace('toasts.collectionCreated', { name: collection.name }));
     },
   });
 }
 
 // 删除 collection mutation。
-// 作用：调用后端删除接口，并清理当前项目下 collection 相关缓存。
-export function useDeleteCollection(projectId: number | string) {
+// 作用：调用后端删除接口，并清理当前工作区下 collection 相关缓存。
+export function useDeleteCollection(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: (collectionId: number | string) =>
-      collectionService.delete(projectId, collectionId),
+      collectionService.delete(workspaceId, collectionId),
     onSuccess: async (_, collectionId) => {
-      queryClient.setQueryData<ProjectCollectionTreeNode[] | undefined>(
-        collectionKeys.tree(projectId),
+      queryClient.setQueryData<WorkspaceCollectionTreeNode[] | undefined>(
+        collectionKeys.tree(workspaceId),
         (current) =>
           current
             ? removeCollectionNodeFromTree(current, collectionId)
             : current
       );
-      queryClient.setQueryData<ProjectCollectionTreeNode[] | undefined>(
-        collectionKeys.workbenchTree(projectId),
+      queryClient.setQueryData<WorkspaceCollectionTreeNode[] | undefined>(
+        collectionKeys.workbenchTree(workspaceId),
         (current) =>
           current
             ? removeCollectionNodeFromTree(current, collectionId)
             : current
       );
       queryClient.removeQueries({
-        queryKey: requestKeys.collection(projectId, collectionId),
+        queryKey: requestKeys.collection(workspaceId, collectionId),
       });
       queryClient.removeQueries({
         predicate: (query) =>
           isWorkbenchRequestsQueryForCollection(
             query.queryKey,
-            projectId,
+            workspaceId,
             collectionId
           ),
       });
 
-      queryClient.invalidateQueries({ queryKey: collectionKeys.list(projectId) });
-      queryClient.invalidateQueries({ queryKey: collectionKeys.tree(projectId) });
-      queryClient.invalidateQueries({ queryKey: collectionKeys.workbenchTree(projectId) });
+      queryClient.invalidateQueries({ queryKey: collectionKeys.list(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: collectionKeys.tree(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: collectionKeys.workbenchTree(workspaceId) });
       queryClient.removeQueries({
-        queryKey: collectionKeys.detail(projectId, collectionId),
+        queryKey: collectionKeys.detail(workspaceId, collectionId),
       });
-      toast.success(t.project('toasts.collectionDeleted'));
+      toast.success(t.workspace('toasts.collectionDeleted'));
     },
   });
 }
 
 // 更新 collection mutation。
-// 作用：提交名称等字段的更新，并刷新当前项目下的 collection 缓存。
-export function useUpdateCollection(projectId: number | string) {
+// 作用：提交名称等字段的更新，并刷新当前工作区下的 collection 缓存。
+export function useUpdateCollection(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -156,11 +156,11 @@ export function useUpdateCollection(projectId: number | string) {
     }: {
       collectionId: number | string;
       data: UpdateCollectionRequest;
-    }) => collectionService.update(projectId, collectionId, data),
+    }) => collectionService.update(workspaceId, collectionId, data),
     onSuccess: (collection) => {
-      queryClient.invalidateQueries({ queryKey: collectionKeys.project(projectId) });
-      queryClient.setQueryData(collectionKeys.detail(projectId, collection.id), collection);
-      toast.success(t.project('toasts.collectionUpdated', { name: collection.name }));
+      queryClient.invalidateQueries({ queryKey: collectionKeys.workspace(workspaceId) });
+      queryClient.setQueryData(collectionKeys.detail(workspaceId, collection.id), collection);
+      toast.success(t.workspace('toasts.collectionUpdated', { name: collection.name }));
     },
   });
 }

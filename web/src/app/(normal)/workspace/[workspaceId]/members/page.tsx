@@ -1,16 +1,16 @@
-import { ProjectMemberManagementPage } from '@/components/features/project/project-member-management-page';
+import { WorkspaceMemberManagementPage } from '@/components/features/workspace/workspace-member-management-page';
 
-interface ProjectMembersPageProps {
+interface WorkspaceMembersPageProps {
   params: Promise<{
     workspaceId: string;
   }>;
 }
 
-// 项目成员管理页面入口。
-// 作用：读取动态workspace ID，并挂载项目成员管理界面。
-export default async function ProjectMembersPage({
+// 工作区成员管理页面入口。
+// 作用：读取动态workspace ID，并挂载工作区成员管理界面。
+export default async function WorkspaceMembersPage({
   params,
-}: ProjectMembersPageProps) {
+}: WorkspaceMembersPageProps) {
   const { workspaceId } = await params;
-  return <ProjectMemberManagementPage projectId={workspaceId} />;
+  return <WorkspaceMemberManagementPage workspaceId={workspaceId} />;
 }

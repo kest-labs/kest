@@ -2,7 +2,7 @@ interface KestConnectionKeyPayload {
   version: number;
   platform_url: string;
   platform_token: string;
-  platform_project_id: string;
+  platform_workspace_id: string;
   platform_auto_sync_history: boolean;
 }
 

@@ -1,6 +1,6 @@
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { WorkspacePage } from '@/components/features/workspace/workspace-page';
 
-interface ProjectEnvironmentsPageProps {
+interface WorkspaceEnvironmentsPageProps {
   params: Promise<{
     workspaceId: string;
   }>;
@@ -10,19 +10,19 @@ interface ProjectEnvironmentsPageProps {
   }>;
 }
 
-// 项目环境管理页面入口。
+// 工作区环境管理页面入口。
 // 作用：统一挂载 environments 工作区，兼容旧 `?mode=manage` 链接但不再分叉到独立管理页。
-export default async function ProjectEnvironmentsPage({
+export default async function WorkspaceEnvironmentsPage({
   params,
   searchParams,
-}: ProjectEnvironmentsPageProps) {
+}: WorkspaceEnvironmentsPageProps) {
   const { workspaceId } = await params;
   const { item } = await searchParams;
   const selectedItemId = item?.trim() ? item : null;
 
   return (
-    <ProjectWorkspacePage
-      projectId={workspaceId}
+    <WorkspacePage
+      workspaceId={workspaceId}
       module="environments"
       selectedItemId={selectedItemId}
     />

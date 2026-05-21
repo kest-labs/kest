@@ -32,11 +32,11 @@ const messages: MarketingMessages = {
     supportingNote: 'Open-source core, collaborative workspaces, and enterprise-grade diagnostics.',
     mockup: {
       sidebarTitle: 'Workspace',
-      projectsLabel: 'Projects',
+      workspacesLabel: 'Workspaces',
       flowsLabel: 'Flows',
       environmentsLabel: 'Environments',
       teamspacesLabel: 'Team spaces',
-      activeProject: 'Payments Platform',
+      activeWorkspace: 'Payments Platform',
       flowOne: 'Auth chain',
       flowTwo: 'Checkout regression',
       environmentValue: 'Staging EU',
@@ -210,7 +210,7 @@ const messages: MarketingMessages = {
         cadence: 'per user / month',
         cta: 'Start free',
         features: {
-          one: 'Local projects and request collections',
+          one: 'Local workspaces and request collections',
           two: 'Basic .flow.md authoring',
           three: 'Seven-day execution history',
         },
@@ -222,7 +222,7 @@ const messages: MarketingMessages = {
         cadence: 'per user / month',
         cta: 'Choose Starter',
         features: {
-          one: 'Shared projects and environments',
+          one: 'Shared workspaces and environments',
           two: 'Reusable variables and examples',
           three: 'Thirty-day run history',
         },
@@ -236,7 +236,7 @@ const messages: MarketingMessages = {
         cta: 'Choose Business',
         features: {
           one: 'Priority AI failure diagnosis',
-          two: 'Advanced project roles',
+          two: 'Advanced workspace roles',
           three: 'Unlimited run history',
         },
       },
