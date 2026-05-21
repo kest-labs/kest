@@ -2,7 +2,7 @@ import { ProjectWorkspacePage } from '@/components/features/project/project-work
 
 interface ProjectHistoriesPageProps {
   params: Promise<{
-    projectId: string;
+    workspaceId: string;
   }>;
   searchParams: Promise<{
     item?: string;
@@ -16,14 +16,14 @@ export default async function ProjectHistoriesPage({
   params,
   searchParams,
 }: ProjectHistoriesPageProps) {
-  const { projectId } = await params;
+  const { workspaceId } = await params;
   const { item, entityType } = await searchParams;
   const selectedItemId = item?.trim() ? item : null;
   const initialHistoryEntityType = entityType?.trim() ? entityType : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={projectId}
+      projectId={workspaceId}
       module="histories"
       selectedItemId={selectedItemId}
       initialHistoryEntityType={initialHistoryEntityType}

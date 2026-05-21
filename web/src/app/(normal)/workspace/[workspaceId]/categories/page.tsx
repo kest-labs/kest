@@ -3,7 +3,7 @@ import { ProjectWorkspacePage } from '@/components/features/project/project-work
 
 interface ProjectCategoriesPageProps {
   params: Promise<{
-    projectId: string;
+    workspaceId: string;
   }>;
   searchParams: Promise<{
     item?: string;
@@ -17,18 +17,18 @@ export default async function ProjectCategoriesPage({
   params,
   searchParams,
 }: ProjectCategoriesPageProps) {
-  const { projectId } = await params;
+  const { workspaceId } = await params;
   const { item, mode } = await searchParams;
 
   if (mode === 'manage') {
-    return <CategoryManagementPage projectId={projectId} />;
+    return <CategoryManagementPage projectId={workspaceId} />;
   }
 
   const selectedItemId = item?.trim() ? item : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={projectId}
+      projectId={workspaceId}
       module="categories"
       selectedItemId={selectedItemId}
     />

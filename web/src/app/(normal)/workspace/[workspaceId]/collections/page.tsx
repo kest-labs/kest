@@ -2,7 +2,7 @@ import { ProjectWorkspacePage } from '@/components/features/project/project-work
 
 interface ProjectCollectionsPageProps {
   params: Promise<{
-    projectId: string;
+    workspaceId: string;
   }>;
 }
 
@@ -11,6 +11,6 @@ interface ProjectCollectionsPageProps {
 export default async function ProjectCollectionsPage({
   params,
 }: ProjectCollectionsPageProps) {
-  const { projectId } = await params;
-  return <ProjectWorkspacePage projectId={projectId} module="collections" />;
+  const { workspaceId } = await params;
+  return <ProjectWorkspacePage projectId={workspaceId} module="collections" />;
 }

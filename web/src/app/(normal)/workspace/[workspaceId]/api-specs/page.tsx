@@ -2,7 +2,7 @@ import { ProjectWorkspacePage } from '@/components/features/project/project-work
 
 interface ProjectApiSpecsPageProps {
   params: Promise<{
-    projectId: string;
+    workspaceId: string;
   }>;
   searchParams: Promise<{
     item?: string;
@@ -17,13 +17,13 @@ export default async function ProjectApiSpecsPage({
   params,
   searchParams,
 }: ProjectApiSpecsPageProps) {
-  const { projectId } = await params;
+  const { workspaceId } = await params;
   const { item, ai } = await searchParams;
   const selectedItemId = item?.trim() ? item : null;
 
   return (
     <ProjectWorkspacePage
-      projectId={projectId}
+      projectId={workspaceId}
       module="api-specs"
       selectedItemId={selectedItemId}
       autoOpenAICreate={ai === 'create'}
