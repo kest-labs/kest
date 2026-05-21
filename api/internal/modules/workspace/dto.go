@@ -14,7 +14,7 @@ type CreateWorkspaceRequest struct {
 	Slug        string `json:"slug" binding:"omitempty,max=50"`
 	Description string `json:"description" binding:"max=500"`
 	Type        string `json:"type" binding:"omitempty,oneof=personal team public"`
-	Visibility  string `json:"visibility" binding:"oneof=private team public"`
+	Visibility  string `json:"visibility" binding:"omitempty,oneof=private team public"`
 	Platform    string `json:"platform" binding:"omitempty,max=50"`
 }
 
