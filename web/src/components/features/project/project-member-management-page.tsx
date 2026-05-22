@@ -293,12 +293,13 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   const inviteUserSearchQuery = useUserSearch(deferredInviteCandidateQuery, 20);
   const updateMemberMutation = useUpdateProjectMember(projectId);
   const deleteMemberMutation = useDeleteProjectMember(projectId);
+  const workspaceId = projectQuery.data?.workspace_id ?? '';
   const invitationsQuery = useProjectInvitations(
-    projectId,
-    canManageProjectMembers(memberRoleQuery.data?.role)
+    workspaceId,
+    Boolean(workspaceId) && canManageProjectMembers(memberRoleQuery.data?.role)
   );
-  const createInvitationMutation = useCreateProjectInvitation(projectId);
-  const deleteInvitationMutation = useDeleteProjectInvitation(projectId);
+  const createInvitationMutation = useCreateProjectInvitation(workspaceId);
+  const deleteInvitationMutation = useDeleteProjectInvitation(workspaceId);
 
   const project = projectQuery.data;
   const currentRole = memberRoleQuery.data?.role;
@@ -395,6 +396,11 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   };
 
   const handleAddMember = async () => {
+    if (!workspaceId) {
+      setAddDialogError(t('membersPage.loadProjectFirst'));
+      return;
+    }
+
     if (!selectedCandidate) {
       setAddDialogError(t('membersPage.selectUserRequired'));
       return;
@@ -451,6 +457,11 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
   };
 
   const handleCreateInvitation = async () => {
+    if (!workspaceId) {
+      setInviteDialogError(t('membersPage.loadProjectFirst'));
+      return;
+    }
+
     const trimmedMaxUses = inviteMaxUses.trim();
     let parsedMaxUses: number | undefined;
 
@@ -1166,7 +1177,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
               onClick={() => {
                 void handleCreateInvitation();
               }}
-              disabled={createInvitationMutation.isPending || !canManageMembers}
+              disabled={createInvitationMutation.isPending || !canManageMembers || !workspaceId}
             >
               <Link2 className="h-4 w-4" />
               {t('membersPage.generateInviteLink')}
@@ -1306,7 +1317,7 @@ export function ProjectMemberManagementPage({ projectId }: { projectId: number |
               onClick={() => {
                 void handleAddMember();
               }}
-              disabled={createInvitationMutation.isPending || !canManageMembers}
+              disabled={createInvitationMutation.isPending || !canManageMembers || !workspaceId}
             >
               <UserPlus className="h-4 w-4" />
               {t('membersPage.addMember')}

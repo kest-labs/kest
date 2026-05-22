@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 var (
@@ -33,12 +33,20 @@ type Service interface {
 		createdBy string,
 		req *CreateProjectInvitationRequest,
 	) (*ProjectInvitationResponse, error)
+	CreateWorkspaceInvitation(
+		ctx context.Context,
+		workspaceID string,
+		createdBy string,
+		req *CreateProjectInvitationRequest,
+	) (*ProjectInvitationResponse, error)
 	ListInvitations(ctx context.Context, projectID string) ([]*ProjectInvitationResponse, error)
+	ListWorkspaceInvitations(ctx context.Context, workspaceID string) ([]*ProjectInvitationResponse, error)
 	ListReceivedInvitations(
 		ctx context.Context,
 		userID string,
 	) ([]*ReceivedProjectInvitationResponse, error)
 	RevokeInvitation(ctx context.Context, projectID, invitationID string) error
+	RevokeWorkspaceInvitation(ctx context.Context, workspaceID, invitationID string) error
 	GetInvitationDetail(
 		ctx context.Context,
 		slug string,
@@ -69,6 +77,39 @@ func (s *service) CreateInvitation(
 	createdBy string,
 	req *CreateProjectInvitationRequest,
 ) (*ProjectInvitationResponse, error) {
+	projectSummary, err := s.repo.GetProjectSummary(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	workspaceID := ""
+	if projectSummary != nil {
+		workspaceID = projectSummary.WorkspaceID
+	}
+	return s.createInvitation(ctx, projectID, workspaceID, createdBy, req)
+}
+
+func (s *service) CreateWorkspaceInvitation(
+	ctx context.Context,
+	workspaceID string,
+	createdBy string,
+	req *CreateProjectInvitationRequest,
+) (*ProjectInvitationResponse, error) {
+	projectID, err := s.repo.GetProjectIDForWorkspace(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.createInvitation(ctx, projectID, workspaceID, createdBy, req)
+}
+
+func (s *service) createInvitation(
+	ctx context.Context,
+	projectID string,
+	workspaceID string,
+	createdBy string,
+	req *CreateProjectInvitationRequest,
+) (*ProjectInvitationResponse, error) {
 	if req == nil {
 		req = &CreateProjectInvitationRequest{}
 	}
@@ -94,7 +135,13 @@ func (s *service) CreateInvitation(
 	}
 
 	if invitedUserID != "" {
-		isMember, err := s.repo.HasProjectMember(ctx, projectID, invitedUserID)
+		isMember := false
+		var err error
+		if workspaceID != "" {
+			isMember, err = s.repo.HasWorkspaceMember(ctx, workspaceID, invitedUserID)
+		} else {
+			isMember, err = s.repo.HasProjectMember(ctx, projectID, invitedUserID)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +152,12 @@ func (s *service) CreateInvitation(
 		// Direct invitations are one-to-one and always single-use. Replace any
 		// previously pending direct invite so the recipient sees a single action.
 		maxUses = 1
-		if err := s.repo.RevokeActiveInvitationsForUser(ctx, projectID, invitedUserID); err != nil {
+		if workspaceID != "" {
+			err = s.repo.RevokeActiveInvitationsForWorkspaceUser(ctx, workspaceID, invitedUserID)
+		} else {
+			err = s.repo.RevokeActiveInvitationsForUser(ctx, projectID, invitedUserID)
+		}
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -122,6 +174,7 @@ func (s *service) CreateInvitation(
 
 	invitation := &ProjectInvitation{
 		ProjectID:     projectID,
+		WorkspaceID:   workspaceID,
 		TokenPrefix:   tokenPrefix,
 		Slug:          rawToken,
 		Role:          role,
@@ -156,6 +209,23 @@ func (s *service) ListInvitations(
 	return result, nil
 }
 
+func (s *service) ListWorkspaceInvitations(
+	ctx context.Context,
+	workspaceID string,
+) ([]*ProjectInvitationResponse, error) {
+	invitations, err := s.repo.ListInvitationsByWorkspace(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	result := make([]*ProjectInvitationResponse, 0, len(invitations))
+	for _, invitation := range invitations {
+		result = append(result, toProjectInvitationResponse(invitation, now))
+	}
+	return result, nil
+}
+
 func (s *service) ListReceivedInvitations(
 	ctx context.Context,
 	userID string,
@@ -172,7 +242,7 @@ func (s *service) ListReceivedInvitations(
 			continue
 		}
 
-		projectSummary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+		projectSummary, err := s.summaryForInvitation(ctx, invitation)
 		if err != nil {
 			return nil, err
 		}
@@ -188,6 +258,22 @@ func (s *service) ListReceivedInvitations(
 
 func (s *service) RevokeInvitation(ctx context.Context, projectID, invitationID string) error {
 	invitation, err := s.repo.GetInvitationByProject(ctx, projectID, invitationID)
+	if err != nil {
+		return err
+	}
+	if invitation == nil {
+		return ErrProjectInvitationNotFound
+	}
+	if invitation.Status == InvitationStatusRevoked {
+		return nil
+	}
+
+	invitation.Status = InvitationStatusRevoked
+	return s.repo.UpdateInvitation(ctx, invitation)
+}
+
+func (s *service) RevokeWorkspaceInvitation(ctx context.Context, workspaceID, invitationID string) error {
+	invitation, err := s.repo.GetInvitationByWorkspace(ctx, workspaceID, invitationID)
 	if err != nil {
 		return err
 	}
@@ -219,7 +305,7 @@ func (s *service) GetInvitationDetail(
 		return nil, ErrProjectInvitationNotFound
 	}
 
-	projectSummary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+	projectSummary, err := s.summaryForInvitation(ctx, invitation)
 	if err != nil {
 		return nil, err
 	}
@@ -251,17 +337,27 @@ func (s *service) AcceptInvitation(
 		return nil, err
 	}
 
-	if err := s.repo.AcceptInvitation(ctx, invitation, userID, now); err != nil {
+	if invitation.WorkspaceID != "" {
+		if err := s.repo.AcceptWorkspaceInvitation(ctx, invitation, userID, now); err != nil {
+			return nil, err
+		}
+	} else if err := s.repo.AcceptInvitation(ctx, invitation, userID, now); err != nil {
 		return nil, err
 	}
 
+	redirectTo := "/project"
+	if invitation.ProjectID != "" {
+		redirectTo = fmt.Sprintf("/project/%s", invitation.ProjectID)
+	}
+
 	return &AcceptProjectInvitationResponse{
-		ProjectID: invitation.ProjectID,
+		ProjectID:   invitation.ProjectID,
+		WorkspaceID: invitation.WorkspaceID,
 		Member: AcceptedProjectInvitationMember{
 			UserID: userID,
 			Role:   invitation.Role,
 		},
-		RedirectTo: fmt.Sprintf("/project/%s", invitation.ProjectID),
+		RedirectTo: redirectTo,
 	}, nil
 }
 
@@ -314,6 +410,35 @@ func validateInvitationCanBeAccepted(invitation *ProjectInvitation, now time.Tim
 	}
 }
 
+func (s *service) summaryForInvitation(
+	ctx context.Context,
+	invitation *ProjectInvitation,
+) (*ProjectSummary, error) {
+	if invitation == nil {
+		return nil, nil
+	}
+
+	if strings.TrimSpace(invitation.WorkspaceID) != "" {
+		summary, err := s.repo.GetWorkspaceSummary(ctx, invitation.WorkspaceID)
+		if err != nil || summary == nil || strings.TrimSpace(invitation.ProjectID) == "" {
+			return summary, err
+		}
+
+		projectSummary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+		if err != nil {
+			return nil, err
+		}
+		if projectSummary != nil {
+			summary.ID = projectSummary.ID
+			summary.Name = projectSummary.Name
+			summary.Slug = projectSummary.Slug
+		}
+		return summary, nil
+	}
+
+	return s.repo.GetProjectSummary(ctx, invitation.ProjectID)
+}
+
 func invitationMatchesRecipient(invitation *ProjectInvitation, userID string) bool {
 	if invitation == nil || invitation.InvitedUserID == nil {
 		return true
@@ -337,7 +462,7 @@ func normalizeInvitationExpiry(expiresAt *time.Time, now time.Time) (*time.Time,
 
 func isInvitationRoleAllowed(role string) bool {
 	switch role {
-	case member.RoleAdmin, member.RoleWrite, member.RoleRead:
+	case workspace.RoleAdmin, workspace.RoleWrite, workspace.RoleRead:
 		return true
 	default:
 		return false

@@ -1169,6 +1169,7 @@ const messages = {
     selectUserRequired: '发送邀请前请先选择用户。',
     maxUsesInvalid: '最大使用次数必须是 0 或正整数。',
     expiresInvalid: '请选择有效的过期时间。',
+    loadProjectFirst: '请等待工作区信息加载完成后再发送邀请。',
   },
   projectsPage: {
     title: '项目工作区',

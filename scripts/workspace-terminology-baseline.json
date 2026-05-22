@@ -20,6 +20,23 @@
     "web/node_modules/"
   ],
   "files": {
+    "api/database/migrations/2026_05_22_000034_add_workspace_id_to_project_invitations.go": {
+      "total": 18,
+      "matches": {
+        "addWorkspaceIDToProjectInvitations": 4,
+        "ProjectInvitationPO": 1,
+        "project_invitations": 5,
+        "projects": 5,
+        "project_id": 3
+      }
+    },
+    "web/src/app/invite/workspace/[slug]/page.tsx": {
+      "total": 4,
+      "matches": {
+        "ProjectInvitationPage": 2,
+        "project": 2
+      }
+    },
     "api/cmd/tools/apidoc/parser/generator_test.go": {
       "total": 2,
       "matches": {
@@ -509,7 +526,7 @@
       }
     },
     "api/internal/modules/projectinvite/dto.go": {
-      "total": 55,
+      "total": 57,
       "matches": {
         "ProjectInvitationResponse": 5,
         "ProjectID": 8,
@@ -521,12 +538,12 @@
         "project_slug": 2,
         "toProjectInvitationResponse": 1,
         "ProjectInvitation": 3,
-        "buildProjectInvitationURL": 3,
-        "buildProjectInvitationURLForBase": 3,
+        "buildProjectInvitationURLForBase": 2,
         "toPublicProjectInvitationResponse": 1,
-        "project": 11,
+        "project": 16,
         "ProjectSummary": 2,
-        "toReceivedProjectInvitationResponse": 1
+        "toReceivedProjectInvitationResponse": 1,
+        "buildProjectInvitationURL": 1
       }
     },
     "api/internal/modules/projectinvite/handler.go": {
@@ -555,43 +572,46 @@
       }
     },
     "api/internal/modules/projectinvite/repository.go": {
-      "total": 63,
+      "total": 98,
       "matches": {
-        "project": 2,
-        "ProjectInvitation": 16,
+        "project": 4,
+        "ProjectInvitation": 23,
         "projectID": 15,
-        "ProjectSummary": 3,
+        "ProjectSummary": 6,
         "newProjectInvitationPO": 2,
-        "ProjectInvitationPO": 9,
-        "project_id": 5,
-        "ProjectPO": 1,
-        "ProjectMemberPO": 3,
-        "ProjectID": 3,
-        "projectMember": 2,
-        "looksLikeProjectMemberConflict": 2
+        "ProjectInvitationPO": 15,
+        "project_id": 6,
+        "ProjectPO": 3,
+        "projects": 2,
+        "ProjectMemberPO": 5,
+        "ProjectID": 7,
+        "projectMember": 4,
+        "looksLikeProjectMemberConflict": 4,
+        "existingProjectMember": 2
       }
     },
     "api/internal/modules/projectinvite/service.go": {
-      "total": 44,
+      "total": 69,
       "matches": {
-        "project": 9,
-        "projectID": 11,
-        "ProjectInvitationResponse": 5,
-        "ProjectInvitation": 3,
-        "ProjectID": 6,
-        "toProjectInvitationResponse": 2,
-        "projectSummary": 6,
+        "project": 10,
+        "projectID": 16,
+        "ProjectInvitationResponse": 11,
+        "projectSummary": 14,
+        "ProjectInvitation": 4,
+        "ProjectID": 8,
+        "toProjectInvitationResponse": 3,
         "toReceivedProjectInvitationResponse": 1,
-        "toPublicProjectInvitationResponse": 1
+        "toPublicProjectInvitationResponse": 1,
+        "ProjectSummary": 1
       }
     },
     "api/internal/modules/projectinvite/service_test.go": {
-      "total": 69,
+      "total": 82,
       "matches": {
-        "testProjectInviteRepo": 18,
-        "ProjectInvitation": 15,
+        "testProjectInviteRepo": 25,
+        "ProjectInvitation": 19,
         "projectSummary": 2,
-        "ProjectSummary": 4,
+        "ProjectSummary": 6,
         "projectSummaries": 4,
         "hasProjectMember": 2,
         "revokedDirectProjectID": 4,
@@ -602,11 +622,10 @@
       }
     },
     "api/internal/modules/projectinvite/url_test.go": {
-      "total": 9,
+      "total": 6,
       "matches": {
         "projects": 3,
-        "buildProjectInvitationURLForBase": 3,
-        "project": 3
+        "buildProjectInvitationURLForBase": 3
       }
     },
     "api/internal/modules/testcase/handler.go": {
@@ -1315,9 +1334,9 @@
       }
     },
     "web/src/components/features/project/project-dashboard-page.tsx": {
-      "total": 236,
+      "total": 238,
       "matches": {
-        "project": 64,
+        "project": 65,
         "ProjectFormDialog": 2,
         "ProjectFormMode": 2,
         "buildProjectApiSpecsRoute": 7,
@@ -1364,9 +1383,9 @@
         "isCreatingDemoProject": 8,
         "ProjectCard": 2,
         "ProjectDashboardDemoPanel": 2,
-        "project_id": 1,
-        "project_slug": 1,
+        "project_id": 2,
         "project_name": 1,
+        "project_slug": 1,
         "projectId": 1,
         "ProjectAvatar": 3,
         "ProjectMetric": 7,
@@ -1458,20 +1477,20 @@
       }
     },
     "web/src/components/features/project/project-invitation-page.tsx": {
-      "total": 20,
+      "total": 22,
       "matches": {
         "buildProjectApiSpecsRoute": 2,
         "buildProjectInviteRoute": 2,
         "useAcceptProjectInvitation": 2,
         "useProjectInvitationDetail": 2,
         "useRejectProjectInvitation": 2,
-        "project": 3,
+        "project": 4,
         "isProjectInvitationActive": 2,
         "ProjectInvitationPage": 1,
-        "project_id": 1,
-        "projectLabel": 1,
         "project_name": 1,
-        "project_slug": 1
+        "project_slug": 1,
+        "project_id": 2,
+        "projectLabel": 1
       }
     },
     "web/src/components/features/project/project-management-page.tsx": {
@@ -1536,9 +1555,10 @@
         "ProjectInvitationRole": 4,
         "ProjectInvitationStatus": 3,
         "ProjectMemberManagementPage": 1,
-        "projectId": 13,
-        "projectQuery": 4,
+        "projectId": 10,
+        "projectQuery": 5,
         "projectStatsQuery": 4,
+        "loadProjectFirst": 2,
         "projectMembers": 1,
         "projectMembersDescription": 1
       }
@@ -1718,9 +1738,9 @@
       }
     },
     "web/src/constants/routes.ts": {
-      "total": 73,
+      "total": 74,
       "matches": {
-        "project": 22,
+        "project": 23,
         "projectId": 40,
         "buildProjectDetailRoute": 1,
         "buildProjectCollectionsRoute": 1,
@@ -1832,22 +1852,21 @@
       }
     },
     "web/src/hooks/use-project-invitations.ts": {
-      "total": 68,
+      "total": 47,
       "matches": {
         "projectKeys": 3,
         "projects": 1,
         "projectInvitationService": 8,
-        "project": 14,
+        "project": 8,
         "projectInvitationKeys": 16,
-        "projectId": 16,
         "useProjectInvitations": 1,
         "useCreateProjectInvitation": 1,
         "useDeleteProjectInvitation": 1,
         "useProjectInvitationDetail": 1,
         "useMyProjectInvitations": 1,
         "useAcceptProjectInvitation": 1,
+        "project_id": 3,
         "projectStats": 1,
-        "project_id": 2,
         "useRejectProjectInvitation": 1
       }
     },
@@ -1973,7 +1992,7 @@
       }
     },
     "web/src/i18n/modules/project/en-US.ts": {
-      "total": 269,
+      "total": 270,
       "matches": {
         "ProjectMessages": 2,
         "project": 121,
@@ -1999,6 +2018,7 @@
         "projectLabel": 1,
         "projectMembers": 1,
         "projectMembersDescription": 1,
+        "loadProjectFirst": 1,
         "createProject": 2,
         "totalProjects": 1,
         "totalProjectsDescription": 1,
@@ -2040,7 +2060,7 @@
       }
     },
     "web/src/i18n/modules/project/zh-Hans.ts": {
-      "total": 81,
+      "total": 82,
       "matches": {
         "projects": 12,
         "project": 1,
@@ -2063,6 +2083,7 @@
         "projectLabel": 1,
         "projectMembers": 1,
         "projectMembersDescription": 1,
+        "loadProjectFirst": 1,
         "createProject": 2,
         "totalProjects": 1,
         "totalProjectsDescription": 1,
@@ -2186,13 +2207,11 @@
       }
     },
     "web/src/services/project-invitation.ts": {
-      "total": 20,
+      "total": 7,
       "matches": {
         "ProjectInvitation": 3,
-        "project": 5,
+        "project": 1,
         "projectInvitationService": 2,
-        "projectId": 6,
-        "projects": 3,
         "ProjectInvitationService": 1
       }
     },
@@ -2383,5 +2402,5 @@
       }
     }
   },
-  "generatedAt": "2026-05-22T09:26:46.409Z"
+  "generatedAt": "2026-05-22T11:30:39.023Z"
 }

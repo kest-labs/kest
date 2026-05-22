@@ -7,15 +7,17 @@ import (
 )
 
 type testProjectInviteRepo struct {
-	invitation             *ProjectInvitation
-	userInvitations        []*ProjectInvitation
-	projectSummary         *ProjectSummary
-	projectSummaries       map[string]*ProjectSummary
-	acceptedUserID         string
-	acceptedAt             *time.Time
-	hasProjectMember       bool
-	revokedDirectProjectID string
-	revokedDirectUserID    string
+	invitation               *ProjectInvitation
+	userInvitations          []*ProjectInvitation
+	projectSummary           *ProjectSummary
+	projectSummaries         map[string]*ProjectSummary
+	acceptedUserID           string
+	acceptedAt               *time.Time
+	hasProjectMember         bool
+	hasWorkspaceMember       bool
+	revokedDirectProjectID   string
+	revokedDirectUserID      string
+	revokedDirectWorkspaceID string
 }
 
 func (r *testProjectInviteRepo) CreateInvitation(
@@ -40,6 +42,16 @@ func (r *testProjectInviteRepo) ListInvitationsByProject(
 	return []*ProjectInvitation{r.invitation}, nil
 }
 
+func (r *testProjectInviteRepo) ListInvitationsByWorkspace(
+	_ context.Context,
+	_ string,
+) ([]*ProjectInvitation, error) {
+	if r.invitation == nil {
+		return nil, nil
+	}
+	return []*ProjectInvitation{r.invitation}, nil
+}
+
 func (r *testProjectInviteRepo) ListInvitationsByInvitedUser(
 	_ context.Context,
 	_ string,
@@ -48,6 +60,16 @@ func (r *testProjectInviteRepo) ListInvitationsByInvitedUser(
 }
 
 func (r *testProjectInviteRepo) GetInvitationByProject(
+	_ context.Context,
+	_, invitationID string,
+) (*ProjectInvitation, error) {
+	if r.invitation == nil || r.invitation.ID != invitationID {
+		return nil, nil
+	}
+	return r.invitation, nil
+}
+
+func (r *testProjectInviteRepo) GetInvitationByWorkspace(
 	_ context.Context,
 	_, invitationID string,
 ) (*ProjectInvitation, error) {
@@ -79,6 +101,14 @@ func (r *testProjectInviteRepo) GetProjectSummary(_ context.Context, projectID s
 	return r.projectSummary, nil
 }
 
+func (r *testProjectInviteRepo) GetWorkspaceSummary(_ context.Context, workspaceID string) (*ProjectSummary, error) {
+	return &ProjectSummary{WorkspaceID: workspaceID, WorkspaceName: "Workspace", WorkspaceSlug: "workspace"}, nil
+}
+
+func (r *testProjectInviteRepo) GetProjectIDForWorkspace(_ context.Context, _ string) (string, error) {
+	return "12", nil
+}
+
 func (r *testProjectInviteRepo) AcceptInvitation(
 	_ context.Context,
 	invitation *ProjectInvitation,
@@ -103,11 +133,42 @@ func (r *testProjectInviteRepo) RevokeActiveInvitationsForUser(
 	return nil
 }
 
+func (r *testProjectInviteRepo) RevokeActiveInvitationsForWorkspaceUser(
+	_ context.Context,
+	workspaceID, userID string,
+) error {
+	r.revokedDirectWorkspaceID = workspaceID
+	r.revokedDirectUserID = userID
+	return nil
+}
+
 func (r *testProjectInviteRepo) HasProjectMember(
 	_ context.Context,
 	_, _ string,
 ) (bool, error) {
 	return r.hasProjectMember, nil
+}
+
+func (r *testProjectInviteRepo) HasWorkspaceMember(
+	_ context.Context,
+	_, _ string,
+) (bool, error) {
+	return r.hasWorkspaceMember, nil
+}
+
+func (r *testProjectInviteRepo) AcceptWorkspaceInvitation(
+	_ context.Context,
+	invitation *ProjectInvitation,
+	userID string,
+	acceptedAt time.Time,
+) error {
+	if err := validateInvitationCanBeAccepted(invitation, acceptedAt); err != nil {
+		return err
+	}
+	r.acceptedUserID = userID
+	r.acceptedAt = &acceptedAt
+	invitation.UsedCount++
+	return nil
 }
 
 func TestCreateInvitationDefaults(t *testing.T) {

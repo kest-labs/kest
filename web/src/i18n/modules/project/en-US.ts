@@ -1255,6 +1255,7 @@ const messages: ProjectMessages = {
     selectUserRequired: 'Select a user before sending an invitation.',
     maxUsesInvalid: 'Max uses must be 0 or a positive integer.',
     expiresInvalid: 'Select a valid expiration date.',
+    loadProjectFirst: 'Wait for the workspace details to load before sending invitations.',
   },
   projectsPage: {
     title: 'Project Workspace',

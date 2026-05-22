@@ -7,6 +7,7 @@ export const ROUTES = {
     ABOUT: '/about',
     CONTACT: '/contact',
     API_SPEC_SHARE: '/share/api-spec/:slug',
+    WORKSPACE_INVITE: '/invite/workspace/:slug',
     PROJECT_INVITE: '/invite/project/:slug',
   },
 
@@ -141,8 +142,12 @@ export function buildApiSpecShareRoute(slug: string): string {
   return buildRoute(ROUTES.SITE.API_SPEC_SHARE, { slug });
 }
 
-// 项目邀请页路由 helper。
-// 作用：为公开邀请页生成稳定地址，方便成员管理页复制可分享链接。
+// Workspace invitation page route helper.
+export function buildWorkspaceInviteRoute(slug: string): string {
+  return buildRoute(ROUTES.SITE.WORKSPACE_INVITE, { slug });
+}
+
+// Legacy helper retained for callers that still use project route names.
 export function buildProjectInviteRoute(slug: string): string {
-  return buildRoute(ROUTES.SITE.PROJECT_INVITE, { slug });
+  return buildWorkspaceInviteRoute(slug);
 }

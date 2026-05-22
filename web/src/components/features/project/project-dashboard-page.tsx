@@ -419,7 +419,10 @@ function PendingInvitationsPanel({
     setActingOn({ action: 'accept', slug: invitation.slug });
     try {
       const result = await acceptInvitationMutation.mutateAsync(invitation.slug);
-      router.push(result.redirect_to || buildProjectApiSpecsRoute(result.project_id));
+      router.push(
+        result.redirect_to ||
+          (result.project_id ? buildProjectApiSpecsRoute(result.project_id) : '/project')
+      );
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     } finally {
@@ -467,6 +470,8 @@ function PendingInvitationsPanel({
           invitations.map(invitation => {
             const isAccepting = actingOn?.action === 'accept' && actingOn.slug === invitation.slug;
             const isRejecting = actingOn?.action === 'reject' && actingOn.slug === invitation.slug;
+            const invitationName = invitation.workspace_name || invitation.project_name || '';
+            const invitationSlug = invitation.workspace_slug || invitation.project_slug || '';
 
             return (
               <div
@@ -488,12 +493,12 @@ function PendingInvitationsPanel({
                         })}
                       </Badge>
                       <Badge variant="outline" className={COMPACT_BADGE_CLASS_NAME}>
-                        {invitation.project_slug}
+                        {invitationSlug}
                       </Badge>
                     </div>
                     <div>
                       <p className="text-sm font-medium tracking-normal">
-                        {invitation.project_name}
+                        {invitationName}
                       </p>
                       <p className="mt-1 text-xs text-text-muted">
                         {t('invitation.expiresLabel')}:{' '}

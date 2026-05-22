@@ -54,11 +54,16 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
   const loginHref = `${ROUTES.AUTH.LOGIN}?returnUrl=${encodeURIComponent(inviteRoute)}`;
   const registerHref = `${ROUTES.AUTH.REGISTER}?returnUrl=${encodeURIComponent(inviteRoute)}`;
   const canRespond = isAuthenticated && isProjectInvitationActive(invitation) && !wasRejected;
+  const invitationName = invitation?.workspace_name || invitation?.project_name || '';
+  const invitationSlug = invitation?.workspace_slug || invitation?.project_slug || '';
 
   const handleAcceptInvitation = async () => {
     try {
       const result = await acceptInvitationMutation.mutateAsync(undefined);
-      router.replace(result.redirect_to || buildProjectApiSpecsRoute(result.project_id));
+      router.replace(
+        result.redirect_to ||
+          (result.project_id ? buildProjectApiSpecsRoute(result.project_id) : '/project')
+      );
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -152,10 +157,10 @@ export function ProjectInvitationPage({ slug }: { slug: string }) {
                         {t('invitation.projectLabel')}
                       </p>
                       <h1 className="text-2xl font-medium tracking-normal">
-                        {invitation.project_name}
+                        {invitationName}
                       </h1>
                       <p className="font-mono text-sm text-muted-foreground">
-                        {invitation.project_slug}
+                        {invitationSlug}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">
