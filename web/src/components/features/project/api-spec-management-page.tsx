@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Bot,
@@ -413,9 +413,17 @@ const getMarkdownDraftPreviewEntries = (
     item,
   }));
 
-const getMarkdownDraftEditorForm = (
-  draft: ApiSpecAIDraftSpec
-): MarkdownDraftEditorForm => ({
+const getMarkdownDraftPreviewKey = (preview: ImportApiSpecMarkdownDraftResponse | null) =>
+  preview
+    ? [
+        preview.document_title,
+        preview.endpoint_count,
+        preview.draft_count,
+        preview.drafts.map(item => `${item.draft.method} ${item.draft.path}`).join('|'),
+      ].join(':')
+    : 'empty';
+
+const getMarkdownDraftEditorForm = (draft: ApiSpecAIDraftSpec): MarkdownDraftEditorForm => ({
   method: draft.method,
   path: draft.path,
   summary: draft.summary,
@@ -1078,7 +1086,21 @@ export function ImportSpecsDialog({
   );
 }
 
-export function ImportMarkdownDraftDialog({
+export function ImportMarkdownDraftDialog(props: {
+  open: boolean;
+  isSubmitting: boolean;
+  isImporting: boolean;
+  preview: ImportApiSpecMarkdownDraftResponse | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: { file: File; base_url_override?: string }) => Promise<void>;
+  onImportAll: (drafts: ApiSpecMarkdownDraftPreviewItem[]) => Promise<void>;
+}) {
+  return (
+    <ImportMarkdownDraftDialogContent key={getMarkdownDraftPreviewKey(props.preview)} {...props} />
+  );
+}
+
+function ImportMarkdownDraftDialogContent({
   open,
   isSubmitting,
   isImporting,
@@ -1098,14 +1120,20 @@ export function ImportMarkdownDraftDialog({
   const t = useT('project');
   const [draft, setDraft] = useState<MarkdownDraftImportDraft>(() => getMarkdownDraftImportDraft());
   const [error, setError] = useState('');
-  const [previewEntries, setPreviewEntries] = useState<MarkdownDraftPreviewEntry[]>([]);
-  const [selectedDraftKeys, setSelectedDraftKeys] = useState<string[]>([]);
+  const [previewEntries, setPreviewEntries] = useState<MarkdownDraftPreviewEntry[]>(() =>
+    preview ? getMarkdownDraftPreviewEntries(preview) : []
+  );
+  const [selectedDraftKeys, setSelectedDraftKeys] = useState<string[]>(() =>
+    preview ? getMarkdownDraftPreviewEntries(preview).map(entry => entry.key) : []
+  );
   const [showLowConfidenceOnly, setShowLowConfidenceOnly] = useState(false);
   const [editingDraftKey, setEditingDraftKey] = useState<string | null>(null);
   const visiblePreviewEntries = useMemo(
     () =>
       previewEntries.filter(entry =>
-        showLowConfidenceOnly ? entry.item.confidence < MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD : true
+        showLowConfidenceOnly
+          ? entry.item.confidence < MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD
+          : true
       ),
     [previewEntries, showLowConfidenceOnly]
   );
@@ -1119,22 +1147,6 @@ export function ImportMarkdownDraftDialog({
   const allVisibleSelected =
     visiblePreviewEntries.length > 0 &&
     visiblePreviewEntries.every(entry => selectedDraftKeys.includes(entry.key));
-
-  useEffect(() => {
-    if (!preview) {
-      setPreviewEntries([]);
-      setSelectedDraftKeys([]);
-      setShowLowConfidenceOnly(false);
-      setEditingDraftKey(null);
-      return;
-    }
-
-    const nextEntries = getMarkdownDraftPreviewEntries(preview);
-    setPreviewEntries(nextEntries);
-    setSelectedDraftKeys(nextEntries.map(entry => entry.key));
-    setShowLowConfidenceOnly(false);
-    setEditingDraftKey(null);
-  }, [preview]);
 
   const editingDraftEntry =
     editingDraftKey === null
@@ -1176,7 +1188,9 @@ export function ImportMarkdownDraftDialog({
 
   const handleToggleDraft = (draftKey: string, checked: boolean) => {
     setSelectedDraftKeys(current =>
-      checked ? Array.from(new Set([...current, draftKey])) : current.filter(key => key !== draftKey)
+      checked
+        ? Array.from(new Set([...current, draftKey]))
+        : current.filter(key => key !== draftKey)
     );
   };
 
@@ -1226,7 +1240,11 @@ export function ImportMarkdownDraftDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <form id="api-spec-markdown-draft-form" className="space-y-4 py-1" onSubmit={handleSubmit}>
+          <form
+            id="api-spec-markdown-draft-form"
+            className="space-y-4 py-1"
+            onSubmit={handleSubmit}
+          >
             <div className="space-y-2">
               <Label htmlFor="api-spec-markdown-file">Markdown file</Label>
               <Input
@@ -1282,9 +1300,7 @@ export function ImportMarkdownDraftDialog({
                     <label className="flex items-center gap-2 text-text-main">
                       <Checkbox
                         checked={allVisibleSelected}
-                        onCheckedChange={checked =>
-                          handleToggleVisibleDrafts(Boolean(checked))
-                        }
+                        onCheckedChange={checked => handleToggleVisibleDrafts(Boolean(checked))}
                       />
                       <span>Select visible drafts</span>
                     </label>
@@ -1297,7 +1313,8 @@ export function ImportMarkdownDraftDialog({
                       onCheckedChange={setShowLowConfidenceOnly}
                     />
                     <span>
-                      Low confidence only ({`< ${Math.round(MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD * 100)}%`})
+                      Low confidence only (
+                      {`< ${Math.round(MARKDOWN_DRAFT_LOW_CONFIDENCE_THRESHOLD * 100)}%`})
                     </span>
                   </label>
                 </div>
@@ -1344,6 +1361,7 @@ export function ImportMarkdownDraftDialog({
         </DialogFooter>
       </DialogContent>
       <MarkdownDraftEditDialog
+        key={editingDraftEntry?.key ?? 'empty'}
         open={Boolean(editingDraftEntry)}
         item={editingDraftEntry?.item ?? null}
         onOpenChange={open => {
@@ -1375,7 +1393,10 @@ function MarkdownDraftPreviewCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-sm font-medium text-text-main">
-            <Checkbox checked={selected} onCheckedChange={checked => onSelectedChange(Boolean(checked))} />
+            <Checkbox
+              checked={selected}
+              onCheckedChange={checked => onSelectedChange(Boolean(checked))}
+            />
             <span>Select</span>
           </label>
           <Badge variant="outline">{item.module_name}</Badge>
@@ -1425,25 +1446,18 @@ function MarkdownDraftEditDialog({
   const t = useT('project');
   const rawT = useTranslations('project');
   const [draft, setDraft] = useState<MarkdownDraftEditorForm>(() =>
-    getMarkdownDraftEditorForm({
-      method: 'GET',
-      path: '',
-      summary: '',
-      description: '',
-      version: '1.0.0',
-      is_public: true,
-    })
+    getMarkdownDraftEditorForm(
+      item?.draft ?? {
+        method: 'GET',
+        path: '',
+        summary: '',
+        description: '',
+        version: '1.0.0',
+        is_public: true,
+      }
+    )
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!item) {
-      return;
-    }
-
-    setDraft(getMarkdownDraftEditorForm(item.draft));
-    setErrors({});
-  }, [item]);
 
   const updateDraft = <K extends keyof MarkdownDraftEditorForm>(
     key: K,
@@ -2200,9 +2214,9 @@ export function ApiSpecManagementPage({
   const [version, setVersion] = useState('');
   const [tag, setTag] = useState('');
   const [selectedSpecId, setSelectedSpecId] = useState<string | number | null>(initialSpecId);
-  const [suppressedSelectedSpecId, setSuppressedSelectedSpecId] = useState<
-    number | string | null
-  >(null);
+  const [suppressedSelectedSpecId, setSuppressedSelectedSpecId] = useState<number | string | null>(
+    null
+  );
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [generatedTestLanguage, setGeneratedTestLanguage] = useState<ApiSpecLanguage>('en');
   const [formMode, setFormMode] = useState<SpecFormMode>('create');
@@ -2248,7 +2262,7 @@ export function ApiSpecManagementPage({
   const selectableSpecs =
     suppressedSelectedSpecId === null
       ? specs
-      : specs.filter((spec) => String(spec.id) !== String(suppressedSelectedSpecId));
+      : specs.filter(spec => String(spec.id) !== String(suppressedSelectedSpecId));
   const effectiveSelectedSpecId =
     selectedSpecId !== null &&
     suppressedSelectedSpecId !== null &&
@@ -2687,7 +2701,9 @@ export function ApiSpecManagementPage({
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-3xl font-medium tracking-normal">{t('apiSpecsPage.title')}</h1>
+                    <h1 className="text-3xl font-medium tracking-normal">
+                      {t('apiSpecsPage.title')}
+                    </h1>
                     <Braces className="h-6 w-6 text-text-main" />
                     <RoleBadge role={currentRole} />
                   </div>
@@ -3084,9 +3100,7 @@ export function ApiSpecManagementPage({
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <MethodBadge method={selectedSpec.method} />
-                            <h2 className="font-mono text-base font-medium">
-                              {selectedSpec.path}
-                            </h2>
+                            <h2 className="font-mono text-base font-medium">{selectedSpec.path}</h2>
                             <Badge variant="outline">v{selectedSpec.version}</Badge>
                             <Badge variant={selectedSpec.is_public ? 'default' : 'secondary'}>
                               {selectedSpec.is_public ? t('common.public') : t('common.private')}
