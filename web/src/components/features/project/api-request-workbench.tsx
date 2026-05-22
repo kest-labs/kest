@@ -96,7 +96,6 @@ import {
 import {
   useCreateRequestExample,
   useDeleteRequestExample,
-  useGenerateRequestExamples,
   useRequestExample,
   useRequestExamples,
   useSaveRequestExampleResponse,
@@ -359,7 +358,6 @@ const createLocalId = (prefix: string) =>
   `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
 
 const DEFAULT_REQUEST_TEMPLATE = '{{base_url}}/path';
-const DEFAULT_AI_EXAMPLE_COUNT = 6;
 const getCollectionColorTone = (index: number) =>
   COLLECTION_COLOR_TONES[index % COLLECTION_COLOR_TONES.length];
 
@@ -2124,7 +2122,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   const deleteRequestMutation = useDeleteRequest(workspaceId);
   const createHistoryMutation = useCreateProjectHistory(workspaceId);
   const createExampleMutation = useCreateRequestExample(workspaceId);
-  const generateExamplesMutation = useGenerateRequestExamples(workspaceId);
   const updateExampleMutation = useUpdateRequestExample(workspaceId);
   const deleteExampleMutation = useDeleteRequestExample(workspaceId);
   const saveExampleResponseMutation = useSaveRequestExampleResponse(workspaceId);
@@ -2706,37 +2703,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     }
 
     setIsExampleDialogOpen(true);
-  };
-
-  const handleGenerateExamples = async () => {
-    if (!activeTab || generateExamplesMutation.isPending) {
-      return;
-    }
-
-    const tabSnapshot = activeTab;
-
-    try {
-      const persistedRequest = await persistTabRequest(tabSnapshot, {
-        name: getPersistedTabName(tabSnapshot),
-        requireRunnableUrl: true,
-      });
-      const collectionId = String(persistedRequest.collection_id);
-      const requestId = persistedRequest.id;
-      syncPersistedRequestInWorkbench(tabSnapshot.id, persistedRequest);
-      await generateExamplesMutation.mutateAsync({
-        collectionId,
-        requestId,
-        data: {
-          count: DEFAULT_AI_EXAMPLE_COUNT,
-        },
-      });
-      setActiveTabId(`request-${requestId}`);
-      setExampleRunReport(null);
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(error.message);
-      }
-    }
   };
 
   const handleCreateExample = async (draft: ExampleFormDraft) => {
@@ -3994,12 +3960,10 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
                       isRefreshing={examplesQuery.isFetching}
                       savingResponseExampleId={savingResponseExampleId}
                       defaultingExampleId={defaultingExampleId}
-                      isGeneratingExamples={generateExamplesMutation.isPending}
                       isRunningExamples={isRunningExamples}
                       runningExampleId={runningExampleId}
                       runReport={exampleRunReport}
                       onCreateExample={openCreateExampleDialog}
-                      onGenerateExamples={() => void handleGenerateExamples()}
                       onRunAllExamples={() => void handleRunAllExamples()}
                       onRefresh={() => {
                         void examplesQuery.refetch();
@@ -5479,12 +5443,10 @@ function ExamplesPanel({
   isRefreshing,
   savingResponseExampleId,
   defaultingExampleId,
-  isGeneratingExamples,
   isRunningExamples,
   runningExampleId,
   runReport,
   onCreateExample,
-  onGenerateExamples,
   onRunAllExamples,
   onRefresh,
   onViewExample,
@@ -5503,12 +5465,10 @@ function ExamplesPanel({
   isRefreshing: boolean;
   savingResponseExampleId: number | string | null;
   defaultingExampleId: number | string | null;
-  isGeneratingExamples: boolean;
   isRunningExamples: boolean;
   runningExampleId: number | string | null;
   runReport: ExampleRunReport | null;
   onCreateExample: () => void;
-  onGenerateExamples: () => void;
   onRunAllExamples: () => void;
   onRefresh: () => void;
   onViewExample: (example: RequestExample) => void;
@@ -5537,19 +5497,6 @@ function ExamplesPanel({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onGenerateExamples}
-                disabled={!canCreateExamples || isGeneratingExamples || isRunningExamples}
-                loading={isGeneratingExamples}
-              >
-                <Sparkles className="h-4 w-4" />
-                {isGeneratingExamples
-                  ? t('collections.workbench.examples.generatingExamples')
-                  : t('collections.workbench.examples.aiGenerate')}
-              </Button>
               <Button
                 type="button"
                 variant="outline"

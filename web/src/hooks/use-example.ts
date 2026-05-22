@@ -6,7 +6,6 @@ import { useT } from '@/i18n/client';
 import { exampleService } from '@/services/example';
 import type {
   CreateExampleRequest,
-  GenerateAIExamplesRequest,
   RequestExamplePathParams,
   SaveExampleResponseRequest,
   UpdateExampleRequest,
@@ -19,10 +18,12 @@ export const exampleKeys = {
     projectId: number | string,
     collectionId: number | string,
     requestId: number | string
-  ) =>
-    [...exampleKeys.project(projectId), 'collection', collectionId, 'request', requestId] as const,
-  list: (projectId: number | string, collectionId: number | string, requestId: number | string) =>
-    [...exampleKeys.request(projectId, collectionId, requestId), 'list'] as const,
+  ) => [...exampleKeys.project(projectId), 'collection', collectionId, 'request', requestId] as const,
+  list: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string
+  ) => [...exampleKeys.request(projectId, collectionId, requestId), 'list'] as const,
   detail: (
     projectId: number | string,
     collectionId: number | string,
@@ -111,35 +112,6 @@ export function useCreateRequestExample(projectId: number | string) {
   });
 }
 
-export function useGenerateRequestExamples(projectId: number | string) {
-  const queryClient = useQueryClient();
-  const t = useT();
-
-  return useMutation({
-    mutationFn: ({
-      collectionId,
-      requestId,
-      data,
-    }: {
-      collectionId: number | string;
-      requestId: number | string;
-      data?: GenerateAIExamplesRequest;
-    }) => exampleService.generateAI(projectId, collectionId, requestId, data),
-    onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
-      });
-      result.items.forEach(example => {
-        queryClient.setQueryData(
-          exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
-          example
-        );
-      });
-      toast.success(t.project('toasts.examplesGenerated', { count: result.total }));
-    },
-  });
-}
-
 export function useUpdateRequestExample(projectId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
@@ -188,12 +160,7 @@ export function useDeleteRequestExample(projectId: number | string) {
         queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
       });
       queryClient.removeQueries({
-        queryKey: exampleKeys.detail(
-          projectId,
-          variables.collectionId,
-          variables.requestId,
-          variables.exampleId
-        ),
+        queryKey: exampleKeys.detail(projectId, variables.collectionId, variables.requestId, variables.exampleId),
       });
       toast.success(t.project('toasts.exampleDeleted'));
     },

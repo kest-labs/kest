@@ -2,7 +2,6 @@ package example
 
 import (
 	"errors"
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -137,60 +136,6 @@ func (h *Handler) List(c *gin.Context) {
 	}
 
 	response.Success(c, toResponseSlice(examples))
-}
-
-// GenerateAI handles POST /workspaces/:id/collections/:cid/requests/:rid/examples/ai-generate
-func (h *Handler) GenerateAI(c *gin.Context) {
-	workspaceID, collectionID, requestID, ok := h.authorizeRequest(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
-	var req GenerateAIExamplesRequest
-	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
-		response.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	targetRequest, err := h.requestService.GetByID(c.Request.Context(), requestID, collectionID, workspaceID)
-	if err != nil {
-		if errors.Is(err, request.ErrRequestNotFound) || errors.Is(err, request.ErrInvalidCollection) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalServerError(c, err.Error(), err)
-		return
-	}
-
-	existing, err := h.service.List(c.Request.Context(), requestID)
-	if err != nil {
-		response.InternalServerError(c, err.Error(), err)
-		return
-	}
-
-	drafts, err := generateAIExampleDrafts(c.Request.Context(), targetRequest, existing, req.Count)
-	if err != nil {
-		response.HandleError(c, "Failed to generate request examples", err)
-		return
-	}
-
-	created := make([]*Example, 0, len(drafts))
-	for index, draft := range drafts {
-		draft.RequestID = requestID
-		draft.SortOrder = len(existing) + index
-
-		example, err := h.service.Create(c.Request.Context(), draft)
-		if err != nil {
-			response.InternalServerError(c, err.Error(), err)
-			return
-		}
-		created = append(created, example)
-	}
-
-	response.Created(c, &GenerateAIExamplesResponse{
-		Total: len(created),
-		Items: toResponseSlice(created),
-	})
 }
 
 // SaveResponse handles POST /workspaces/:id/collections/:cid/requests/:rid/examples/:eid/response

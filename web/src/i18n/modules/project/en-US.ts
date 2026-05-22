@@ -198,7 +198,6 @@ const messages: ProjectMessages = {
     requestUpdated: 'Updated request "{name}"',
     requestDeleted: 'Request deleted',
     exampleCreated: 'Created example "{name}"',
-    examplesGenerated: 'Generated {count} AI example(s)',
     exampleUpdated: 'Updated example "{name}"',
     exampleDeleted: 'Example deleted',
     responseCaptured: 'Captured response for "{name}"',
@@ -954,8 +953,6 @@ const messages: ProjectMessages = {
         panelDescription:
           'Save named request and response snapshots so common scenarios can be replayed quickly.',
         newExample: 'New Example',
-        aiGenerate: 'AI Generate',
-        generatingExamples: 'Generating...',
         runAll: 'Run All',
         runningAll: 'Running...',
         running: 'Running',

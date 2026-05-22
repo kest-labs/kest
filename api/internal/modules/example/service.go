@@ -50,22 +50,18 @@ func (s *service) Create(ctx context.Context, req *CreateExampleRequest) (*Examp
 	}
 
 	example := &Example{
-		RequestID:       req.RequestID,
-		Name:            req.Name,
-		Description:     req.Description,
-		URL:             req.URL,
-		Method:          method,
-		Headers:         req.Headers,
-		QueryParams:     req.QueryParams,
-		Body:            req.Body,
-		BodyType:        bodyType,
-		Auth:            req.Auth,
-		ResponseStatus:  req.ResponseStatus,
-		ResponseHeaders: req.ResponseHeaders,
-		ResponseBody:    req.ResponseBody,
-		ResponseTime:    req.ResponseTime,
-		IsDefault:       req.IsDefault,
-		SortOrder:       req.SortOrder,
+		RequestID:   req.RequestID,
+		Name:        req.Name,
+		Description: req.Description,
+		URL:         req.URL,
+		Method:      method,
+		Headers:     req.Headers,
+		QueryParams: req.QueryParams,
+		Body:        req.Body,
+		BodyType:    bodyType,
+		Auth:        req.Auth,
+		IsDefault:   req.IsDefault,
+		SortOrder:   req.SortOrder,
 	}
 
 	if err := s.repo.Create(ctx, example); err != nil {
