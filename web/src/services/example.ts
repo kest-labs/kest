@@ -1,6 +1,8 @@
 import request from '@/http';
 import type {
   CreateExampleRequest,
+  GenerateAIExamplesRequest,
+  GenerateAIExamplesResponse,
   RequestExample,
   SaveExampleResponseRequest,
   UpdateExampleRequest,
@@ -12,11 +14,7 @@ const normalizePayload = <T extends object>(payload: T) =>
   ) as T;
 
 export const exampleService = {
-  list: (
-    projectId: number | string,
-    collectionId: number | string,
-    requestId: number | string
-  ) =>
+  list: (projectId: number | string, collectionId: number | string, requestId: number | string) =>
     request.get<RequestExample[]>(
       `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples`
     ),
@@ -39,6 +37,17 @@ export const exampleService = {
   ) =>
     request.post<RequestExample>(
       `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples`,
+      normalizePayload(data)
+    ),
+
+  generateAI: (
+    projectId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    data: GenerateAIExamplesRequest = {}
+  ) =>
+    request.post<GenerateAIExamplesResponse>(
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples/ai-generate`,
       normalizePayload(data)
     ),
 
