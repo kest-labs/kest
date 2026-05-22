@@ -13,6 +13,7 @@
     "start": "pnpm exec next start",
     "start:custom": "node ./scripts/next-runner.mjs start",
     "lint": "eslint .",
+    "terminology": "node ../scripts/check-workspace-terminology.mjs",
     "test": "vitest",
     "test:i18n": "vitest run src/test/i18n-key-parity.test.ts",
     "test:coverage": "vitest run --coverage",
