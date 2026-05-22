@@ -152,7 +152,13 @@ type RequestSection =
   | 'examples';
 type BulkMode = 'table' | 'bulk';
 type AuthorizationMode = 'none' | 'bearer' | 'basic' | 'api-key';
-type BodyMode = 'json' | 'raw' | 'form-data' | 'x-www-form-urlencoded' | 'binary' | 'graphql';
+type BodyMode =
+  | 'json'
+  | 'raw'
+  | 'form-data'
+  | 'x-www-form-urlencoded'
+  | 'binary'
+  | 'graphql';
 type BodyValueType = 'text' | 'file';
 type RequestDocLanguage = 'default' | ApiSpecLanguage;
 type RequestDocMode = 'preview' | 'edit';
@@ -205,36 +211,6 @@ interface ResponseDraft {
   headers: Record<string, string>;
   body: string;
   error: string | null;
-}
-
-type ExampleRunStatus = 'pass' | 'fail' | 'error';
-
-interface ExampleRunResult {
-  id: string;
-  exampleId: number | string;
-  exampleName: string;
-  method: string;
-  url: string;
-  status: ExampleRunStatus;
-  expectedStatus: number | null;
-  actualStatus: number | null;
-  durationMs: number | null;
-  sizeBytes: number | null;
-  responseBody: string;
-  error: string | null;
-  completedAt: string;
-}
-
-interface ExampleRunReport {
-  id: string;
-  startedAt: string;
-  completedAt: string;
-  total: number;
-  passed: number;
-  failed: number;
-  errored: number;
-  durationMs: number;
-  results: ExampleRunResult[];
 }
 
 interface RequestPageTab {
@@ -313,7 +289,10 @@ const PRIMARY_SECTION_ITEMS: RequestSection[] = [
   'body',
   'settings',
 ];
-const OVERFLOW_SECTION_ITEMS: RequestSection[] = ['scripts', 'examples'];
+const OVERFLOW_SECTION_ITEMS: RequestSection[] = [
+  'scripts',
+  'examples',
+];
 const BODY_MODE_OPTIONS: BodyMode[] = [
   'json',
   'raw',
@@ -323,14 +302,7 @@ const BODY_MODE_OPTIONS: BodyMode[] = [
   'graphql',
 ];
 const AUTHORIZATION_OPTIONS: AuthorizationMode[] = ['none', 'bearer', 'basic', 'api-key'];
-const COLLECTION_COLOR_TONES: CollectionColorTone[] = [
-  'lime',
-  'mint',
-  'cream',
-  'lilac',
-  'pink',
-  'coral',
-];
+const COLLECTION_COLOR_TONES: CollectionColorTone[] = ['lime', 'mint', 'cream', 'lilac', 'pink', 'coral'];
 const COLLECTION_COLOR_DOT_CLASS_NAMES: Record<CollectionColorTone, string> = {
   lime: 'bg-[var(--miro-surface-yellow)]',
   mint: 'bg-bg-surface',
@@ -348,10 +320,8 @@ const METHOD_BADGE_STYLES: Record<RequestMethod, string> = {
   GET: 'border-[var(--miro-brand-teal)]/30 bg-[var(--miro-teal-light)] text-[var(--miro-moss-dark)]',
   POST: 'border-[var(--miro-brand-blue)]/25 bg-[var(--miro-surface-featured)] text-[var(--miro-blue-pressed)]',
   PUT: 'border-[var(--miro-brand-yellow-deep)]/35 bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]',
-  PATCH:
-    'border-[var(--miro-brand-coral)]/35 bg-[var(--miro-orange-light)] text-[var(--miro-coral-dark)]',
-  DELETE:
-    'border-[var(--miro-brand-coral)]/40 bg-[var(--miro-brand-red)] text-[var(--miro-coral-dark)]',
+  PATCH: 'border-[var(--miro-brand-coral)]/35 bg-[var(--miro-orange-light)] text-[var(--miro-coral-dark)]',
+  DELETE: 'border-[var(--miro-brand-coral)]/40 bg-[var(--miro-brand-red)] text-[var(--miro-coral-dark)]',
 };
 
 const createLocalId = (prefix: string) =>
@@ -470,74 +440,6 @@ const getExampleResponseValue = (
         time: responseTime,
       })
     : t('collections.workbench.examples.notCaptured');
-
-const getExampleExpectedStatus = (example: RequestExample) =>
-  example.response_status > 0 ? example.response_status : null;
-
-const getExampleRunStatus = (example: RequestExample, response: RunRequestResponse) => {
-  const expectedStatus = getExampleExpectedStatus(example);
-  if (expectedStatus !== null) {
-    return response.status === expectedStatus ? 'pass' : 'fail';
-  }
-
-  return response.status >= 200 && response.status < 400 ? 'pass' : 'fail';
-};
-
-const getExampleRunStatusLabel = (t: ProjectTranslationFn, status: ExampleRunStatus) => {
-  switch (status) {
-    case 'pass':
-      return t('collections.workbench.examples.runPassed');
-    case 'fail':
-      return t('collections.workbench.examples.runFailed');
-    case 'error':
-    default:
-      return t('collections.workbench.examples.runErrored');
-  }
-};
-
-const getExampleRunStatusClassName = (status: ExampleRunStatus) => {
-  switch (status) {
-    case 'pass':
-      return 'border-[var(--miro-brand-teal)]/30 bg-[var(--miro-teal-light)] text-[var(--miro-moss-dark)]';
-    case 'fail':
-      return 'border-[var(--miro-brand-yellow-deep)]/35 bg-[var(--miro-surface-yellow)] text-[var(--miro-yellow-dark)]';
-    case 'error':
-    default:
-      return 'border-[var(--miro-brand-coral)]/40 bg-[var(--miro-brand-red)] text-[var(--miro-coral-dark)]';
-  }
-};
-
-const buildExampleRunReport = (
-  id: string,
-  startedAt: string,
-  results: ExampleRunResult[],
-  completedAt = new Date().toISOString()
-): ExampleRunReport => ({
-  id,
-  startedAt,
-  completedAt,
-  total: results.length,
-  passed: results.filter(result => result.status === 'pass').length,
-  failed: results.filter(result => result.status === 'fail').length,
-  errored: results.filter(result => result.status === 'error').length,
-  durationMs: Math.max(0, new Date(completedAt).getTime() - new Date(startedAt).getTime()),
-  results,
-});
-
-const buildRunnableRequestFromExample = (
-  request: ProjectRequest,
-  example: RequestExample
-): ProjectRequest => ({
-  ...request,
-  name: example.name || request.name,
-  method: example.method || request.method,
-  url: example.url || request.url,
-  headers: example.headers ?? [],
-  query_params: example.query_params ?? [],
-  body: example.body ?? '',
-  body_type: example.body_type || 'none',
-  auth: example.auth === undefined ? request.auth : example.auth,
-});
 
 const createKeyValueRow = (key = '', value = '', description = ''): KeyValueRow => ({
   id: createLocalId('kv'),
@@ -2103,13 +2005,9 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   );
   const [defaultingExampleId, setDefaultingExampleId] = useState<number | string | null>(null);
   const [deletingExampleId, setDeletingExampleId] = useState<number | string | null>(null);
-  const [isRunningExamples, setIsRunningExamples] = useState(false);
-  const [runningExampleId, setRunningExampleId] = useState<number | string | null>(null);
-  const [exampleRunReport, setExampleRunReport] = useState<ExampleRunReport | null>(null);
   const [requestDocGenerationError, setRequestDocGenerationError] = useState<string | null>(null);
-  const [generatingRequestDocLang, setGeneratingRequestDocLang] = useState<ApiSpecLanguage | null>(
-    null
-  );
+  const [generatingRequestDocLang, setGeneratingRequestDocLang] =
+    useState<ApiSpecLanguage | null>(null);
   const createCollectionMutation = useCreateCollection(workspaceId);
   const deleteCollectionMutation = useDeleteCollection(workspaceId);
   const updateCollectionMutation = useUpdateCollection(workspaceId);
@@ -2236,7 +2134,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   );
   const examplesQuery = useRequestExamples(
     persistedActiveCollectionId && persistedActiveRequestId
-      ? {
+        ? {
           projectId: workspaceId,
           collectionId: persistedActiveCollectionId,
           requestId: persistedActiveRequestId,
@@ -2261,7 +2159,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   const selectedExampleId = viewingExampleId ?? editingExampleId;
   const exampleDetailQuery = useRequestExample(
     persistedActiveCollectionId && persistedActiveRequestId && selectedExampleId
-      ? {
+        ? {
           projectId: workspaceId,
           collectionId: persistedActiveCollectionId,
           requestId: persistedActiveRequestId,
@@ -2447,8 +2345,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     setEditingExampleId(null);
     setDeleteExampleTarget(null);
     setDeletingExampleId(null);
-    setExampleRunReport(null);
-    setRunningExampleId(null);
     setRequestDocGenerationError(null);
   }, [persistedActiveCollectionId, persistedActiveRequestId]);
 
@@ -2796,125 +2692,6 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
       }
     } finally {
       setDefaultingExampleId(null);
-    }
-  };
-
-  const handleRunAllExamples = async () => {
-    if (!activeTab || isRunningExamples) {
-      return;
-    }
-
-    if (requestExamples.length === 0) {
-      toast.error(t('collections.workbench.examples.runAllEmpty'));
-      return;
-    }
-
-    const tabSnapshot = activeTab;
-    const reportId = createLocalId('example-run');
-    const startedAt = new Date().toISOString();
-    const results: ExampleRunResult[] = [];
-
-    setIsRunningExamples(true);
-    setRunningExampleId(null);
-    setExampleRunReport(buildExampleRunReport(reportId, startedAt, [], startedAt));
-
-    try {
-      if (tabSnapshot.settings.persistCookies) {
-        throw new Error(t('collections.workbench.persistCookiesUnavailable'));
-      }
-
-      const persistedRequest = await persistTabRequest(tabSnapshot, {
-        requireRunnableUrl: true,
-      });
-      syncPersistedRequestInWorkbench(tabSnapshot.id, persistedRequest);
-
-      for (const example of requestExamples) {
-        setRunningExampleId(example.id);
-
-        try {
-          const runnableRequest = buildRunnableRequestFromExample(persistedRequest, example);
-          const exampleTab = applyExampleToTab(tabSnapshot, example);
-          const executableUrl = buildExecutableRequestUrl(runnableRequest, selectedEnvironment, t);
-          const executableHeaders = headersToObject(
-            buildDirectRequestHeaders(
-              runnableRequest,
-              selectedEnvironment,
-              t('collections.base64Unavailable')
-            )
-          );
-          const runnerPayload = buildDirectRequestPayload(
-            runnableRequest,
-            exampleTab,
-            t,
-            selectedEnvironment
-          );
-          delete runnerPayload.historyBody;
-          const response = await localRunnerService.execute({
-            method: runnableRequest.method,
-            url: executableUrl,
-            headers: executableHeaders,
-            ...runnerPayload,
-            follow_redirects: tabSnapshot.settings.followRedirects,
-            strict_tls: tabSnapshot.settings.strictTls,
-          });
-
-          results.push({
-            id: createLocalId('example-result'),
-            exampleId: example.id,
-            exampleName: example.name,
-            method: runnableRequest.method,
-            url: executableUrl,
-            status: getExampleRunStatus(example, response),
-            expectedStatus: getExampleExpectedStatus(example),
-            actualStatus: response.status,
-            durationMs: response.time,
-            sizeBytes: response.size || byteLength(response.body),
-            responseBody: formatResponseBody(response.body),
-            error: null,
-            completedAt: new Date().toISOString(),
-          });
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : t('collections.workbench.unableToSend');
-
-          results.push({
-            id: createLocalId('example-result'),
-            exampleId: example.id,
-            exampleName: example.name,
-            method: example.method,
-            url: example.url,
-            status: 'error',
-            expectedStatus: getExampleExpectedStatus(example),
-            actualStatus: null,
-            durationMs: null,
-            sizeBytes: null,
-            responseBody: '',
-            error: message,
-            completedAt: new Date().toISOString(),
-          });
-        }
-
-        setExampleRunReport(buildExampleRunReport(reportId, startedAt, [...results]));
-      }
-
-      const finishedReport = buildExampleRunReport(reportId, startedAt, results);
-      setExampleRunReport(finishedReport);
-      toast.success(
-        t('collections.workbench.examples.runAllFinished', {
-          total: finishedReport.total,
-          passed: finishedReport.passed,
-          failed: finishedReport.failed,
-          errored: finishedReport.errored,
-        })
-      );
-    } catch (error) {
-      setExampleRunReport(null);
-      if (error instanceof Error) {
-        toast.error(error.message);
-      }
-    } finally {
-      setIsRunningExamples(false);
-      setRunningExampleId(null);
     }
   };
 
@@ -3960,11 +3737,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
                       isRefreshing={examplesQuery.isFetching}
                       savingResponseExampleId={savingResponseExampleId}
                       defaultingExampleId={defaultingExampleId}
-                      isRunningExamples={isRunningExamples}
-                      runningExampleId={runningExampleId}
-                      runReport={exampleRunReport}
                       onCreateExample={openCreateExampleDialog}
-                      onRunAllExamples={() => void handleRunAllExamples()}
                       onRefresh={() => {
                         void examplesQuery.refetch();
                       }}
@@ -4693,11 +4466,11 @@ function ImportCollectionDialog({
 
         <DialogBody>
           <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor={inputId}>{fileLabel}</Label>
-              <Input
-                id={inputId}
-                type="file"
+          <div className="space-y-2">
+            <Label htmlFor={inputId}>{fileLabel}</Label>
+            <Input
+              id={inputId}
+              type="file"
                 accept={accept}
                 className="h-auto cursor-pointer py-2"
                 onChange={event => onFileChange(event.target.files?.[0] ?? null)}
@@ -5443,11 +5216,7 @@ function ExamplesPanel({
   isRefreshing,
   savingResponseExampleId,
   defaultingExampleId,
-  isRunningExamples,
-  runningExampleId,
-  runReport,
   onCreateExample,
-  onRunAllExamples,
   onRefresh,
   onViewExample,
   onApplyExample,
@@ -5465,11 +5234,7 @@ function ExamplesPanel({
   isRefreshing: boolean;
   savingResponseExampleId: number | string | null;
   defaultingExampleId: number | string | null;
-  isRunningExamples: boolean;
-  runningExampleId: number | string | null;
-  runReport: ExampleRunReport | null;
   onCreateExample: () => void;
-  onRunAllExamples: () => void;
   onRefresh: () => void;
   onViewExample: (example: RequestExample) => void;
   onApplyExample: (example: RequestExample) => void;
@@ -5479,10 +5244,6 @@ function ExamplesPanel({
   onDeleteExample: (example: RequestExample) => void;
 }) {
   const t = useT('project');
-  const latestRunResultByExampleId = useMemo(
-    () => new Map((runReport?.results ?? []).map(result => [String(result.exampleId), result])),
-    [runReport]
-  );
 
   return (
     <div className="space-y-4">
@@ -5497,19 +5258,6 @@ function ExamplesPanel({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onRunAllExamples}
-                disabled={!requestPersisted || examples.length === 0 || isRunningExamples}
-                loading={isRunningExamples}
-              >
-                <SendHorizonal className="h-4 w-4" />
-                {isRunningExamples
-                  ? t('collections.workbench.examples.runningAll')
-                  : t('collections.workbench.examples.runAll')}
-              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -5533,106 +5281,6 @@ function ExamplesPanel({
           </div>
         </CardHeader>
         <CardContent className="space-y-4 px-5 py-5">
-          {runReport ? (
-            <div className="space-y-4 rounded-xl border border-border-subtle bg-bg-soft p-4">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-text-main">
-                    {t('collections.workbench.examples.runReportTitle')}
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-text-muted">
-                    {t('collections.workbench.examples.runReportDescription', {
-                      total: runReport.total,
-                      duration: runReport.durationMs,
-                    })}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <MetricBadge
-                    label={t('collections.workbench.examples.runPassed')}
-                    value={`${runReport.passed}`}
-                  />
-                  <MetricBadge
-                    label={t('collections.workbench.examples.runFailed')}
-                    value={`${runReport.failed}`}
-                  />
-                  <MetricBadge
-                    label={t('collections.workbench.examples.runErrored')}
-                    value={`${runReport.errored}`}
-                  />
-                </div>
-              </div>
-
-              {runReport.results.length > 0 ? (
-                <div className="space-y-2">
-                  {runReport.results.map(result => (
-                    <div
-                      key={result.id}
-                      className="rounded-lg border border-border-subtle bg-bg-canvas p-3"
-                    >
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className={getExampleRunStatusClassName(result.status)}
-                            >
-                              {getExampleRunStatusLabel(t, result.status)}
-                            </Badge>
-                            <p className="truncate text-sm font-medium text-text-main">
-                              {result.exampleName}
-                            </p>
-                          </div>
-                          <p className="mt-2 break-all text-xs text-text-muted">
-                            {result.method}{' '}
-                            {result.url || t('collections.workbench.examples.noUrl')}
-                          </p>
-                          {result.error ? (
-                            <p className="mt-2 text-xs leading-5 text-destructive">
-                              {result.error}
-                            </p>
-                          ) : result.responseBody ? (
-                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">
-                              {result.responseBody}
-                            </p>
-                          ) : null}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 lg:justify-end">
-                          <MetricBadge
-                            label={t('collections.workbench.examples.expectedStatus')}
-                            value={
-                              result.expectedStatus === null
-                                ? t('common.notSet')
-                                : `${result.expectedStatus}`
-                            }
-                          />
-                          <MetricBadge
-                            label={t('collections.workbench.examples.actualStatus')}
-                            value={
-                              result.actualStatus === null
-                                ? t('common.notSet')
-                                : `${result.actualStatus}`
-                            }
-                          />
-                          <MetricBadge
-                            label={t('common.duration')}
-                            value={
-                              result.durationMs === null
-                                ? t('common.notSet')
-                                : `${result.durationMs} ms`
-                            }
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
           {!canCreateExamples ? (
             <div className="rounded-xl border border-dashed border-border-subtle bg-bg-soft p-5">
               <p className="text-sm font-medium text-text-main">
@@ -5687,28 +5335,6 @@ function ExamplesPanel({
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium text-text-main">{example.name}</p>
-                        {runningExampleId !== null &&
-                        String(runningExampleId) === String(example.id) ? (
-                          <Badge
-                            variant="outline"
-                            className="border-border-subtle bg-bg-soft text-text-main"
-                          >
-                            {t('collections.workbench.examples.running')}
-                          </Badge>
-                        ) : null}
-                        {latestRunResultByExampleId.has(String(example.id)) ? (
-                          <Badge
-                            variant="outline"
-                            className={getExampleRunStatusClassName(
-                              latestRunResultByExampleId.get(String(example.id))?.status ?? 'error'
-                            )}
-                          >
-                            {getExampleRunStatusLabel(
-                              t,
-                              latestRunResultByExampleId.get(String(example.id))?.status ?? 'error'
-                            )}
-                          </Badge>
-                        ) : null}
                         {example.is_default ? (
                           <Badge
                             variant="outline"
@@ -5752,17 +5378,6 @@ function ExamplesPanel({
                             example.response_time
                           )}
                         />
-                        {latestRunResultByExampleId.has(String(example.id)) ? (
-                          <MetricBadge
-                            label={t('collections.workbench.examples.lastRun')}
-                            value={
-                              latestRunResultByExampleId.get(String(example.id))?.actualStatus ===
-                              null
-                                ? t('common.notSet')
-                                : `${latestRunResultByExampleId.get(String(example.id))?.actualStatus}`
-                            }
-                          />
-                        ) : null}
                       </div>
                     </div>
 
@@ -6018,9 +5633,7 @@ function SortableRequestTab({
           {...listeners}
         >
           <GripVertical className="h-3.5 w-3.5 shrink-0 text-text-muted/70" />
-          <span
-            className={cn('h-2 w-2 rounded-full', isActive ? 'bg-primary' : 'bg-text-muted/40')}
-          />
+          <span className={cn('h-2 w-2 rounded-full', isActive ? 'bg-primary' : 'bg-text-muted/40')} />
           <span className="truncate font-medium">{tab.title}</span>
         </button>
         <DropdownMenuTrigger asChild>
@@ -6052,8 +5665,13 @@ function SortableRequestTab({
         </button>
       </div>
       <DropdownMenuContent align="end" className="rounded-lg">
-        <DropdownMenuItem onClick={() => onCloseTab(tab.id)}>{t('common.close')}</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onCloseOtherTabs(tab.id)} disabled={openTabCount <= 1}>
+        <DropdownMenuItem onClick={() => onCloseTab(tab.id)}>
+          {t('common.close')}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onCloseOtherTabs(tab.id)}
+          disabled={openTabCount <= 1}
+        >
           {t('collections.workbench.actions.closeOthers')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onCloseAllTabs} disabled={openTabCount === 0}>
@@ -7278,7 +6896,10 @@ function BodyEditor({
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  updateStructuredRows([...structuredRows, createKeyValueRow('', '', '')])
+                  updateStructuredRows([
+                    ...structuredRows,
+                    createKeyValueRow('', '', ''),
+                  ])
                 }
               >
                 <Plus className="h-4 w-4" />
@@ -7287,7 +6908,12 @@ function BodyEditor({
             </div>
 
             <div className="overflow-x-auto">
-              <div className={cn('space-y-3', usesFileRows ? 'min-w-[920px]' : 'min-w-[760px]')}>
+              <div
+                className={cn(
+                  'space-y-3',
+                  usesFileRows ? 'min-w-[920px]' : 'min-w-[760px]'
+                )}
+              >
                 <div
                   className={cn(
                     'grid gap-3 px-3 text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted',
@@ -7297,9 +6923,7 @@ function BodyEditor({
                   )}
                 >
                   <span>{t('collections.workbench.editors.key')}</span>
-                  {usesFileRows ? (
-                    <span>{t('collections.workbench.body.valueTypeLabel')}</span>
-                  ) : null}
+                  {usesFileRows ? <span>{t('collections.workbench.body.valueTypeLabel')}</span> : null}
                   <span>{t('collections.workbench.editors.value')}</span>
                   <span>{t('common.description')}</span>
                   <span />
@@ -7391,8 +7015,7 @@ function BodyEditor({
                           </div>
                           <div className="text-xs text-text-muted">
                             {selectedFile
-                              ? selectedFile.type ||
-                                t('collections.workbench.body.binaryFallbackType')
+                              ? selectedFile.type || t('collections.workbench.body.binaryFallbackType')
                               : row.value.trim()
                                 ? t('collections.workbench.body.reselectFile')
                                 : t('collections.workbench.body.fileFieldHelp')}
@@ -7450,7 +7073,9 @@ function BodyEditor({
                   <input
                     type="file"
                     className="hidden"
-                    onChange={event => void handleBinaryFileSelect(event.target.files?.[0] ?? null)}
+                    onChange={event =>
+                      void handleBinaryFileSelect(event.target.files?.[0] ?? null)
+                    }
                   />
                 </label>
                 {binaryFile ? (
@@ -7537,7 +7162,9 @@ function BodyEditor({
                 <Textarea
                   id="request-graphql-variables"
                   value={graphqlValue.variables_text ?? ''}
-                  onChange={event => updateGraphqlValue({ variables_text: event.target.value })}
+                  onChange={event =>
+                    updateGraphqlValue({ variables_text: event.target.value })
+                  }
                   rows={14}
                   className="min-h-[280px] rounded-xl font-mono text-sm"
                   placeholder={DEFAULT_GRAPHQL_VARIABLES}
