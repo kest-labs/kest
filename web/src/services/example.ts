@@ -13,6 +13,8 @@ const normalizePayload = <T extends object>(payload: T) =>
     Object.entries(payload as Record<string, unknown>).filter(([, value]) => value !== undefined)
   ) as T;
 
+const AI_EXAMPLE_GENERATION_TIMEOUT_MS = 90000;
+
 export const exampleService = {
   list: (workspaceId: number | string, collectionId: number | string, requestId: number | string) =>
     request.get<RequestExample[]>(
@@ -48,7 +50,8 @@ export const exampleService = {
   ) =>
     request.post<GenerateAIExamplesResponse>(
       `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}/examples/ai-generate`,
-      normalizePayload(data)
+      normalizePayload(data),
+      { timeout: AI_EXAMPLE_GENERATION_TIMEOUT_MS }
     ),
 
   update: (

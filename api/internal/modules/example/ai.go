@@ -212,6 +212,7 @@ func getAIExamplesSystemPrompt() string {
 	return strings.Join([]string{
 		"You generate executable HTTP request examples for API boundary testing.",
 		"Return strict JSON only. Do not wrap the JSON in markdown fences.",
+		"Return one top-level object with an examples array; do not return a top-level array or multiple JSON objects.",
 		"Every example must include the complete request state needed for that scenario.",
 		"Every example must include a category: positive, negative, boundary, or security.",
 		"Every example must include assertions that can be evaluated after execution.",
@@ -283,15 +284,29 @@ func buildAIExamplesPrompt(
 }
 
 func parseAIExampleDrafts(raw string) ([]aiExampleDraft, error) {
-	clean := cleanAIJSON(raw)
-	var envelope aiExampleDraftEnvelope
-	if err := json.Unmarshal([]byte(clean), &envelope); err != nil {
+	clean, err := cleanAIJSON(raw)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse AI examples JSON: %w", err)
 	}
-	return envelope.Examples, nil
+
+	var envelope aiExampleDraftEnvelope
+	envelopeErr := json.Unmarshal([]byte(clean), &envelope)
+	if envelopeErr == nil && envelope.Examples != nil {
+		return envelope.Examples, nil
+	}
+
+	var direct []aiExampleDraft
+	if err := json.Unmarshal([]byte(clean), &direct); err == nil {
+		return direct, nil
+	}
+
+	if envelopeErr != nil {
+		return nil, fmt.Errorf("failed to parse AI examples JSON: %w", envelopeErr)
+	}
+	return nil, fmt.Errorf("failed to parse AI examples JSON: expected a JSON object with an examples array")
 }
 
-func cleanAIJSON(value string) string {
+func cleanAIJSON(value string) (string, error) {
 	trimmed := strings.TrimSpace(value)
 	if strings.HasPrefix(trimmed, "```") {
 		lineBreakIndex := strings.Index(trimmed, "\n")
@@ -303,12 +318,19 @@ func cleanAIJSON(value string) string {
 		}
 	}
 
-	start := strings.Index(trimmed, "{")
-	end := strings.LastIndex(trimmed, "}")
-	if start >= 0 && end > start {
-		return strings.TrimSpace(trimmed[start : end+1])
+	for index := 0; index < len(trimmed); index++ {
+		if trimmed[index] != '{' && trimmed[index] != '[' {
+			continue
+		}
+
+		decoder := json.NewDecoder(strings.NewReader(trimmed[index:]))
+		var payload json.RawMessage
+		if err := decoder.Decode(&payload); err == nil {
+			return strings.TrimSpace(string(payload)), nil
+		}
 	}
-	return trimmed
+
+	return "", fmt.Errorf("no JSON object or array found")
 }
 
 func normalizeAIExampleDraft(req *requestmodule.Request, draft aiExampleDraft, index int) *CreateExampleRequest {

@@ -50,3 +50,33 @@ func TestNormalizeExampleAssertionsInfersContentTypeHeaderPath(t *testing.T) {
 		t.Fatalf("expected Content-Type header path, got %q", got[1].Path)
 	}
 }
+
+func TestParseAIExampleDraftsAcceptsEnvelope(t *testing.T) {
+	got, err := parseAIExampleDrafts(`{"examples":[{"name":"Happy path","category":"positive","method":"GET","url":"{{base_url}}/health","assertions":[{"type":"status","operator":"equals","expect":200}],"response_status":200}]}`)
+	if err != nil {
+		t.Fatalf("expected envelope to parse: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Happy path" {
+		t.Fatalf("unexpected parsed examples: %#v", got)
+	}
+}
+
+func TestParseAIExampleDraftsAcceptsDirectArray(t *testing.T) {
+	got, err := parseAIExampleDrafts("```json\n[{\"name\":\"Missing token\",\"category\":\"negative\",\"method\":\"GET\",\"url\":\"{{base_url}}/health\",\"assertions\":[{\"type\":\"status\",\"operator\":\"equals\",\"expect\":401}],\"response_status\":401}]\n```")
+	if err != nil {
+		t.Fatalf("expected direct array to parse: %v", err)
+	}
+	if len(got) != 1 || got[0].Category != "negative" {
+		t.Fatalf("unexpected parsed examples: %#v", got)
+	}
+}
+
+func TestParseAIExampleDraftsIgnoresTrailingContent(t *testing.T) {
+	got, err := parseAIExampleDrafts(`{"examples":[{"name":"Boundary","category":"boundary","method":"GET","url":"{{base_url}}/health","assertions":[{"type":"status","operator":"equals","expect":400}],"response_status":400}]}, {"ignored": true}`)
+	if err != nil {
+		t.Fatalf("expected first JSON value to parse: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Boundary" {
+		t.Fatalf("unexpected parsed examples: %#v", got)
+	}
+}

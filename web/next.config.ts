@@ -6,22 +6,6 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
-const normalizeBasePath = (value: string) => {
-  if (!value) {
-    return '';
-  }
-
-  const withLeadingSlash = value.startsWith('/') ? value : `/${value}`;
-  return withLeadingSlash.replace(/\/+$/, '');
-};
-
-const defaultApiTarget =
-  process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:8025' : 'https://api.kest.dev';
-const apiTarget = (process.env.NEXT_PUBLIC_API_URL ?? defaultApiTarget).replace(/\/$/, '');
-const apiBasePath = normalizeBasePath(process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/v1');
-const apiProxyPath = normalizeBasePath(process.env.NEXT_PUBLIC_API_PROXY_PATH ?? '/api/proxy');
-const apiUseProxy = (process.env.NEXT_PUBLIC_API_USE_PROXY ?? 'true') === 'true';
-
 const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
@@ -48,19 +32,6 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   turbopack: {
     root: projectRoot,
-  },
-
-  async rewrites() {
-    if (!apiUseProxy || !apiTarget) {
-      return [];
-    }
-
-    return [
-      {
-        source: `${apiProxyPath}/:path*`,
-        destination: `${apiTarget}${apiBasePath}/:path*`,
-      },
-    ];
   },
 
   async redirects() {

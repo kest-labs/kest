@@ -365,13 +365,14 @@ type CollectionColorTone = 'lime' | 'mint' | 'cream' | 'lilac' | 'pink' | 'coral
 const METHOD_OPTIONS: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 const PRIMARY_SECTION_ITEMS: RequestSection[] = [
   'docs',
+  'examples',
   'params',
   'authorization',
   'headers',
   'body',
   'settings',
 ];
-const OVERFLOW_SECTION_ITEMS: RequestSection[] = ['scripts', 'examples'];
+const OVERFLOW_SECTION_ITEMS: RequestSection[] = ['scripts'];
 const BODY_MODE_OPTIONS: BodyMode[] = [
   'json',
   'raw',
@@ -4382,6 +4383,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
                       onToggleDraft={toggleExampleDraftSelection}
                       onClearDrafts={clearExampleDraftReview}
                       onRefresh={() => {
+                        setExampleRunReport(null);
                         void examplesQuery.refetch();
                       }}
                       onViewExample={openViewExampleDialog}
@@ -6068,11 +6070,8 @@ function ExamplesPanel({
         return t('collections.workbench.examples.runErrored');
     }
   };
-  const latestRunResultByExampleId = useMemo(
-    () => new Map((runReport?.results ?? []).map(result => [String(result.exampleId), result])),
-    [runReport]
-  );
   const selectedDraftCount = draftReview?.items.filter(item => item.selected).length ?? 0;
+  const shouldShowExamples = !runReport || runReport.results.length === 0;
 
   return (
     <div className="space-y-4">
@@ -6370,7 +6369,7 @@ function ExamplesPanel({
             </div>
           ) : null}
 
-          {isLoading ? (
+          {!shouldShowExamples ? null : isLoading ? (
             <div className="space-y-3">
               {[0, 1].map(item => (
                 <div key={item} className="rounded-xl border border-border-subtle p-4">
@@ -6411,18 +6410,6 @@ function ExamplesPanel({
                             className="border-border-subtle bg-bg-soft text-text-main"
                           >
                             {t('collections.workbench.examples.running')}
-                          </Badge>
-                        ) : null}
-                        {latestRunResultByExampleId.has(String(example.id)) ? (
-                          <Badge
-                            variant="outline"
-                            className={getExampleRunStatusClassName(
-                              latestRunResultByExampleId.get(String(example.id))?.status ?? 'error'
-                            )}
-                          >
-                            {getRunStatusLabel(
-                              latestRunResultByExampleId.get(String(example.id))?.status ?? 'error'
-                            )}
                           </Badge>
                         ) : null}
                         {example.is_default ? (
@@ -6480,17 +6467,6 @@ function ExamplesPanel({
                           label={t('collections.workbench.examples.assertions')}
                           value={`${example.assertions?.length ?? 0}`}
                         />
-                        {latestRunResultByExampleId.has(String(example.id)) ? (
-                          <MetricBadge
-                            label={t('collections.workbench.examples.lastRun')}
-                            value={
-                              latestRunResultByExampleId.get(String(example.id))?.actualStatus ===
-                              null
-                                ? t('common.notSet')
-                                : `${latestRunResultByExampleId.get(String(example.id))?.actualStatus}`
-                            }
-                          />
-                        ) : null}
                       </div>
                     </div>
 
