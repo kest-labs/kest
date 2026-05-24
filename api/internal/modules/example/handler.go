@@ -181,6 +181,7 @@ func (h *Handler) GenerateAI(c *gin.Context) {
 	if req.PreviewOnly {
 		response.Success(c, &GenerateAIExamplesResponse{
 			Total:       len(drafts),
+			Items:       []*ExampleResponse{},
 			Drafts:      toDraftResponseSlice(drafts),
 			PreviewOnly: true,
 		})

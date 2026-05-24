@@ -128,7 +128,7 @@ export function useGenerateRequestExamples(workspaceId: number | string) {
       queryClient.invalidateQueries({
         queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
       });
-      result.items.forEach(example => {
+      (result.items ?? []).forEach(example => {
         queryClient.setQueryData(
           exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
           example

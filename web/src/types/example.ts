@@ -9,11 +9,24 @@ export type RequestExampleBodyType =
   | 'graphql'
   | 'text';
 
+export type RequestExampleCategory = 'general' | 'positive' | 'negative' | 'boundary' | 'security';
+export type RequestExampleSource = 'manual' | 'ai';
+
+export interface RequestExampleAssertion {
+  type: string;
+  path?: string;
+  operator?: string;
+  expect?: unknown;
+  message?: string;
+}
+
 export interface RequestExample {
   id: number | string;
   request_id: number | string;
   name: string;
   description: string;
+  category?: RequestExampleCategory;
+  source?: RequestExampleSource;
   url: string;
   method: string;
   headers: RequestKeyValue[];
@@ -21,6 +34,7 @@ export interface RequestExample {
   body: string;
   body_type: RequestExampleBodyType;
   auth?: RequestAuthConfig | null;
+  assertions?: RequestExampleAssertion[];
   response_status: number;
   response_headers: Record<string, string>;
   response_body: string;
@@ -40,6 +54,8 @@ export interface RequestExamplePathParams {
 export interface CreateExampleRequest {
   name: string;
   description?: string;
+  category?: RequestExampleCategory;
+  source?: RequestExampleSource;
   url?: string;
   method?: string;
   headers?: RequestKeyValue[];
@@ -47,6 +63,7 @@ export interface CreateExampleRequest {
   body?: string;
   body_type?: RequestExampleBodyType;
   auth?: RequestAuthConfig | null;
+  assertions?: RequestExampleAssertion[];
   response_status?: number;
   response_headers?: Record<string, string>;
   response_body?: string;
@@ -66,9 +83,33 @@ export interface SaveExampleResponseRequest {
 
 export interface GenerateAIExamplesRequest {
   count?: number;
+  categories?: RequestExampleCategory[];
+  instructions?: string;
+  preview_only?: boolean;
+}
+
+export interface RequestExampleDraft {
+  name: string;
+  description: string;
+  category?: RequestExampleCategory;
+  source?: RequestExampleSource;
+  url: string;
+  method: string;
+  headers: RequestKeyValue[];
+  query_params: RequestKeyValue[];
+  body: string;
+  body_type: RequestExampleBodyType;
+  auth?: RequestAuthConfig | null;
+  assertions?: RequestExampleAssertion[];
+  response_status: number;
+  response_headers: Record<string, string>;
+  response_body: string;
+  sort_order: number;
 }
 
 export interface GenerateAIExamplesResponse {
   total: number;
   items: RequestExample[];
+  drafts?: RequestExampleDraft[];
+  preview_only?: boolean;
 }

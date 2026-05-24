@@ -120,6 +120,9 @@ import type { ScopedTranslations } from '@/i18n/shared';
 import type { ProjectCollection, ProjectCollectionTreeNode } from '@/types/collection';
 import type {
   CreateExampleRequest,
+  RequestExampleAssertion,
+  RequestExampleCategory,
+  RequestExampleDraft,
   RequestExample,
   SaveExampleResponseRequest,
   UpdateExampleRequest,
@@ -221,6 +224,16 @@ interface ResponseDraft {
 
 type ExampleRunStatus = 'pass' | 'fail' | 'error';
 
+interface ExampleRunAssertionResult {
+  type: string;
+  path?: string;
+  operator?: string;
+  expect?: unknown;
+  actual?: unknown;
+  passed: boolean;
+  message?: string;
+}
+
 interface ExampleRunResult {
   id: string;
   exampleId: number | string;
@@ -233,6 +246,7 @@ interface ExampleRunResult {
   durationMs: number | null;
   sizeBytes: number | null;
   responseBody: string;
+  assertions: ExampleRunAssertionResult[];
   error: string | null;
   completedAt: string;
 }
@@ -307,6 +321,38 @@ interface ExampleFormDraft {
   isDefault: boolean;
 }
 
+interface GenerateExamplesFormDraft {
+  count: number;
+  categories: RequestExampleCategory[];
+  instructions: string;
+}
+
+interface GenerateExamplesDialogText {
+  title: string;
+  description: string;
+  countLabel: string;
+  countHint: string;
+  categoriesLabel: string;
+  categoryRequired: string;
+  instructionsLabel: string;
+  instructionsPlaceholder: string;
+  cancel: string;
+  generatePreview: string;
+  categoryLabels: Record<RequestExampleCategory, string>;
+}
+
+interface ExampleDraftReviewItem {
+  clientId: string;
+  selected: boolean;
+  draft: RequestExampleDraft;
+}
+
+interface ExampleDraftReviewState {
+  collectionId: string;
+  requestId: string;
+  items: ExampleDraftReviewItem[];
+}
+
 interface ImportDialogTarget {
   kind: ImportDialogKind;
   parentCollectionId: string | null;
@@ -371,6 +417,14 @@ const createLocalId = (prefix: string) =>
 
 const DEFAULT_REQUEST_TEMPLATE = '{{base_url}}/path';
 const DEFAULT_AI_EXAMPLE_COUNT = 6;
+const MIN_AI_EXAMPLE_COUNT = 1;
+const MAX_AI_EXAMPLE_COUNT = 12;
+const AI_EXAMPLE_CATEGORY_OPTIONS: RequestExampleCategory[] = [
+  'positive',
+  'negative',
+  'boundary',
+  'security',
+];
 const getCollectionColorTone = (index: number) =>
   COLLECTION_COLOR_TONES[index % COLLECTION_COLOR_TONES.length];
 
@@ -484,17 +538,159 @@ const getExampleResponseValue = (
       })
     : t('collections.workbench.examples.notCaptured');
 
+const getExampleCategoryLabelKey = (category?: RequestExampleCategory | string | null) => {
+  switch (category) {
+    case 'positive':
+      return 'collections.workbench.examples.categories.positive';
+    case 'negative':
+      return 'collections.workbench.examples.categories.negative';
+    case 'boundary':
+      return 'collections.workbench.examples.categories.boundary';
+    case 'security':
+      return 'collections.workbench.examples.categories.security';
+    case 'general':
+    default:
+      return 'collections.workbench.examples.categories.general';
+  }
+};
+
 const getExampleExpectedStatus = (example: RequestExample) =>
   example.response_status > 0 ? example.response_status : null;
 
-const getExampleRunStatus = (example: RequestExample, response: RunRequestResponse) => {
-  const expectedStatus = getExampleExpectedStatus(example);
-  if (expectedStatus !== null) {
-    return response.status === expectedStatus ? 'pass' : 'fail';
+const valuesEqual = (actual: unknown, expected: unknown) => String(actual) === String(expected);
+
+const resolveHeaderValue = (headers: Record<string, string> | undefined, path?: string) => {
+  if (!headers || !path) {
+    return undefined;
+  }
+  const normalizedPath = path.toLowerCase();
+  const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === normalizedPath);
+  return entry?.[1];
+};
+
+const resolvePathValue = (value: unknown, path?: string): unknown => {
+  if (!path) {
+    return value;
+  }
+  return path.split('.').reduce<unknown>((current, segment) => {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      return Number.isInteger(index) ? current[index] : undefined;
+    }
+    if (typeof current === 'object') {
+      return (current as Record<string, unknown>)[segment];
+    }
+    return undefined;
+  }, value);
+};
+
+const parseJsonBody = (body: string) => {
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+const evaluateExampleAssertion = (
+  assertion: RequestExampleAssertion,
+  response: RunRequestResponse
+): ExampleRunAssertionResult => {
+  const operator = assertion.operator || 'equals';
+  const responseBody = formatResponseBody(response.body);
+  let actual: unknown;
+
+  switch (assertion.type) {
+    case 'status':
+      actual = response.status;
+      break;
+    case 'header':
+      actual = resolveHeaderValue(response.headers, assertion.path);
+      break;
+    case 'body_contains':
+      actual = responseBody;
+      break;
+    case 'json_path':
+      actual = resolvePathValue(parseJsonBody(responseBody), assertion.path);
+      break;
+    default:
+      return {
+        ...assertion,
+        operator,
+        actual: null,
+        passed: false,
+        message: assertion.message || `Unsupported assertion type: ${assertion.type || 'unknown'}`,
+      };
   }
 
-  return response.status >= 200 && response.status < 400 ? 'pass' : 'fail';
+  let passed = false;
+  switch (operator) {
+    case 'equals':
+      passed = valuesEqual(actual, assertion.expect);
+      break;
+    case 'not_equals':
+      passed = !valuesEqual(actual, assertion.expect);
+      break;
+    case 'exists':
+      passed = actual !== undefined && actual !== null && actual !== '';
+      break;
+    case 'contains':
+      passed = String(actual ?? '').includes(String(assertion.expect ?? ''));
+      break;
+    default:
+      return {
+        ...assertion,
+        operator,
+        actual,
+        passed: false,
+        message: assertion.message || `Unsupported assertion operator: ${operator}`,
+      };
+  }
+
+  return {
+    ...assertion,
+    operator,
+    actual,
+    passed,
+    message:
+      passed || assertion.message
+        ? assertion.message
+        : `Expected ${assertion.expect ?? 'value'}, got ${actual ?? 'empty'}`,
+  };
 };
+
+const evaluateExampleAssertions = (
+  example: RequestExample,
+  response: RunRequestResponse
+): ExampleRunAssertionResult[] => {
+  const assertions = example.assertions ?? [];
+  if (assertions.length > 0) {
+    return assertions.map(assertion => evaluateExampleAssertion(assertion, response));
+  }
+
+  const expectedStatus = getExampleExpectedStatus(example);
+  return [
+    {
+      type: 'status',
+      operator: 'equals',
+      expect: expectedStatus ?? '2xx/3xx',
+      actual: response.status,
+      passed:
+        expectedStatus !== null
+          ? response.status === expectedStatus
+          : response.status >= 200 && response.status < 400,
+    },
+  ];
+};
+
+const getExampleRunStatus = (
+  example: RequestExample,
+  response: RunRequestResponse,
+  assertions = evaluateExampleAssertions(example, response)
+): ExampleRunStatus => (assertions.every(assertion => assertion.passed) ? 'pass' : 'fail');
 
 const getExampleRunStatusClassName = (status: ExampleRunStatus) => {
   switch (status) {
@@ -1143,6 +1339,12 @@ const getExampleFormDraft = (requestLabel: string): ExampleFormDraft => ({
   isDefault: false,
 });
 
+const getGenerateExamplesFormDraft = (): GenerateExamplesFormDraft => ({
+  count: DEFAULT_AI_EXAMPLE_COUNT,
+  categories: ['positive', 'negative', 'boundary', 'security'],
+  instructions: '',
+});
+
 const toExampleFormDraft = (example: RequestExample): ExampleFormDraft => ({
   name: example.name,
   description: example.description ?? '',
@@ -1163,6 +1365,25 @@ const toCreateExamplePayload = (
   body_type: requestBodyTypeFromMode(tab.bodyMode, tab.bodyContent),
   auth: toRequestAuthConfig(tab.authorizationMode, tab.authorizationValue),
   is_default: draft.isDefault,
+});
+
+const toCreateExamplePayloadFromDraft = (draft: RequestExampleDraft): CreateExampleRequest => ({
+  name: draft.name.trim(),
+  description: draft.description?.trim() || undefined,
+  category: draft.category ?? 'general',
+  source: draft.source ?? 'ai',
+  url: draft.url || undefined,
+  method: draft.method,
+  headers: draft.headers ?? [],
+  query_params: draft.query_params ?? [],
+  body: draft.body ?? '',
+  body_type: draft.body_type ?? 'none',
+  auth: draft.auth ?? null,
+  assertions: draft.assertions ?? [],
+  response_status: draft.response_status ?? 0,
+  response_headers: draft.response_headers ?? {},
+  response_body: draft.response_body ?? '',
+  sort_order: draft.sort_order,
 });
 
 const toUpdateExamplePayload = (draft: ExampleFormDraft): UpdateExampleRequest => ({
@@ -1216,6 +1437,21 @@ const formatExampleResponseHeaders = (
     ? entries.map(([key, value]) => `${key}: ${value}`).join('\n')
     : emptyState;
 };
+
+const formatExampleAssertions = (
+  assertions: RequestExampleAssertion[] | undefined,
+  emptyState: string
+) =>
+  assertions && assertions.length > 0
+    ? assertions
+        .map(assertion => {
+          const target = assertion.path ? ` ${assertion.path}` : '';
+          const expected =
+            assertion.expect === undefined ? '' : ` ${JSON.stringify(assertion.expect)}`;
+          return `${assertion.type}${target} ${assertion.operator || 'equals'}${expected}`.trim();
+        })
+        .join('\n')
+    : emptyState;
 
 const formatExampleAuth = (t: ProjectTranslationFn, auth?: RequestAuthConfig | null) => {
   const emptyLabel = t('collections.workbench.examples.emptyValue');
@@ -2096,6 +2332,14 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
   const [importDialogTarget, setImportDialogTarget] = useState<ImportDialogTarget | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false);
+  const [isGenerateExamplesDialogOpen, setIsGenerateExamplesDialogOpen] = useState(false);
+  const [generateExamplesDraft, setGenerateExamplesDraft] = useState<GenerateExamplesFormDraft>(
+    () => getGenerateExamplesFormDraft()
+  );
+  const [exampleDraftReview, setExampleDraftReview] = useState<ExampleDraftReviewState | null>(
+    null
+  );
+  const [isAcceptingExampleDrafts, setIsAcceptingExampleDrafts] = useState(false);
   const [viewingExampleId, setViewingExampleId] = useState<number | string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<number | string | null>(null);
   const [deleteExampleTarget, setDeleteExampleTarget] = useState<RequestExample | null>(null);
@@ -2451,6 +2695,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     setDeletingExampleId(null);
     setExampleRunReport(null);
     setRunningExampleId(null);
+    setExampleDraftReview(null);
     setRequestDocGenerationError(null);
   }, [persistedActiveCollectionId, persistedActiveRequestId]);
 
@@ -2707,12 +2952,30 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     setIsExampleDialogOpen(true);
   };
 
-  const handleGenerateExamples = async () => {
+  const openGenerateExamplesDialog = () => {
+    if (!activeTab) {
+      return;
+    }
+
+    if (!activeTab.collectionId || !isPersistedCollectionId(activeTab.collectionId)) {
+      toast.error(t('collections.saveBeforeExamples'));
+      return;
+    }
+
+    setGenerateExamplesDraft(getGenerateExamplesFormDraft());
+    setIsGenerateExamplesDialogOpen(true);
+  };
+
+  const handleGenerateExamples = async (draft: GenerateExamplesFormDraft) => {
     if (!activeTab || generateExamplesMutation.isPending) {
       return;
     }
 
     const tabSnapshot = activeTab;
+    const count = Math.min(
+      MAX_AI_EXAMPLE_COUNT,
+      Math.max(MIN_AI_EXAMPLE_COUNT, Math.round(draft.count || DEFAULT_AI_EXAMPLE_COUNT))
+    );
 
     try {
       const persistedRequest = await persistTabRequest(tabSnapshot, {
@@ -2720,22 +2983,103 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
         requireRunnableUrl: true,
       });
       const collectionId = String(persistedRequest.collection_id);
-      const requestId = persistedRequest.id;
+      const requestId = String(persistedRequest.id);
       syncPersistedRequestInWorkbench(tabSnapshot.id, persistedRequest);
       const result = await generateExamplesMutation.mutateAsync({
         collectionId,
         requestId,
         data: {
-          count: DEFAULT_AI_EXAMPLE_COUNT,
+          count,
+          categories: draft.categories.length > 0 ? draft.categories : AI_EXAMPLE_CATEGORY_OPTIONS,
+          instructions: draft.instructions.trim() || undefined,
+          preview_only: true,
         },
       });
       setActiveTabId(`request-${requestId}`);
       setExampleRunReport(null);
-      toast.success(t('toasts.examplesGenerated', { count: result.total }));
+      setExampleDraftReview({
+        collectionId,
+        requestId,
+        items: (result.drafts ?? []).map(item => ({
+          clientId: createLocalId('ai-example-draft'),
+          selected: true,
+          draft: item,
+        })),
+      });
+      setIsGenerateExamplesDialogOpen(false);
+      toast.success(t('collections.workbench.examples.draftsGenerated', { count: result.total }));
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
       }
+    }
+  };
+
+  const toggleExampleDraftSelection = (clientId: string) => {
+    setExampleDraftReview(current =>
+      current
+        ? {
+            ...current,
+            items: current.items.map(item =>
+              item.clientId === clientId ? { ...item, selected: !item.selected } : item
+            ),
+          }
+        : current
+    );
+  };
+
+  const discardExampleDraft = (clientId: string) => {
+    setExampleDraftReview(current => {
+      if (!current) {
+        return current;
+      }
+      const items = current.items.filter(item => item.clientId !== clientId);
+      return items.length > 0 ? { ...current, items } : null;
+    });
+  };
+
+  const clearExampleDraftReview = () => {
+    setExampleDraftReview(null);
+  };
+
+  const acceptSelectedExampleDrafts = async () => {
+    if (!exampleDraftReview || isAcceptingExampleDrafts) {
+      return;
+    }
+
+    const selectedItems = exampleDraftReview.items.filter(item => item.selected);
+    if (selectedItems.length === 0) {
+      toast.error(t('collections.workbench.examples.noDraftsSelected'));
+      return;
+    }
+
+    try {
+      setIsAcceptingExampleDrafts(true);
+      for (const item of selectedItems) {
+        await createExampleMutation.mutateAsync({
+          collectionId: exampleDraftReview.collectionId,
+          requestId: exampleDraftReview.requestId,
+          data: toCreateExamplePayloadFromDraft(item.draft),
+        });
+      }
+      setExampleDraftReview(current => {
+        if (!current) {
+          return current;
+        }
+        const acceptedIds = new Set(selectedItems.map(item => item.clientId));
+        const remaining = current.items.filter(item => !acceptedIds.has(item.clientId));
+        return remaining.length > 0 ? { ...current, items: remaining } : null;
+      });
+      setActiveTabId(`request-${exampleDraftReview.requestId}`);
+      toast.success(
+        t('collections.workbench.examples.draftsAccepted', { count: selectedItems.length })
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    } finally {
+      setIsAcceptingExampleDrafts(false);
     }
   };
 
@@ -2891,6 +3235,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
             follow_redirects: tabSnapshot.settings.followRedirects,
             strict_tls: tabSnapshot.settings.strictTls,
           });
+          const assertionResults = evaluateExampleAssertions(example, response);
 
           results.push({
             id: createLocalId('example-result'),
@@ -2898,12 +3243,13 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
             exampleName: example.name,
             method: runnableRequest.method,
             url: executableUrl,
-            status: getExampleRunStatus(example, response),
+            status: getExampleRunStatus(example, response, assertionResults),
             expectedStatus: getExampleExpectedStatus(example),
             actualStatus: response.status,
             durationMs: response.time,
             sizeBytes: response.size || byteLength(response.body),
             responseBody: formatResponseBody(response.body),
+            assertions: assertionResults,
             error: null,
             completedAt: new Date().toISOString(),
           });
@@ -2923,6 +3269,7 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
             durationMs: null,
             sizeBytes: null,
             responseBody: '',
+            assertions: [],
             error: message,
             completedAt: new Date().toISOString(),
           });
@@ -3835,6 +4182,28 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
     ? (importDialogTarget?.parentCollectionId ?? null)
     : null;
   const importingKind = isAnyImportPending ? (importDialogTarget?.kind ?? null) : null;
+  const generateExamplesDialogText: GenerateExamplesDialogText = {
+    title: t('collections.workbench.examples.generateDialogTitle'),
+    description: t('collections.workbench.examples.generateDialogDescription'),
+    countLabel: t('collections.workbench.examples.generateCountLabel'),
+    countHint: t('collections.workbench.examples.generateCountHint', {
+      min: MIN_AI_EXAMPLE_COUNT,
+      max: MAX_AI_EXAMPLE_COUNT,
+    }),
+    categoriesLabel: t('collections.workbench.examples.generateCategoriesLabel'),
+    categoryRequired: t('collections.workbench.examples.generateCategoryRequired'),
+    instructionsLabel: t('collections.workbench.examples.generateInstructionsLabel'),
+    instructionsPlaceholder: t('collections.workbench.examples.generateInstructionsPlaceholder'),
+    cancel: t('common.cancel'),
+    generatePreview: t('collections.workbench.examples.generatePreview'),
+    categoryLabels: {
+      general: t(getExampleCategoryLabelKey('general')),
+      positive: t(getExampleCategoryLabelKey('positive')),
+      negative: t(getExampleCategoryLabelKey('negative')),
+      boundary: t(getExampleCategoryLabelKey('boundary')),
+      security: t(getExampleCategoryLabelKey('security')),
+    },
+  };
 
   return (
     <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-bg-soft">
@@ -3998,9 +4367,15 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
                       isRunningExamples={isRunningExamples}
                       runningExampleId={runningExampleId}
                       runReport={exampleRunReport}
+                      draftReview={exampleDraftReview}
+                      isAcceptingDrafts={isAcceptingExampleDrafts}
                       onCreateExample={openCreateExampleDialog}
-                      onGenerateExamples={() => void handleGenerateExamples()}
+                      onGenerateExamples={openGenerateExamplesDialog}
                       onRunAllExamples={() => void handleRunAllExamples()}
+                      onAcceptDrafts={() => void acceptSelectedExampleDrafts()}
+                      onDiscardDraft={discardExampleDraft}
+                      onToggleDraft={toggleExampleDraftSelection}
+                      onClearDrafts={clearExampleDraftReview}
                       onRefresh={() => {
                         void examplesQuery.refetch();
                       }}
@@ -4073,6 +4448,15 @@ export function ApiRequestWorkbench({ workspaceId }: { workspaceId: number | str
         isSubmitting={createExampleMutation.isPending || saveExampleResponseMutation.isPending}
         onOpenChange={setIsExampleDialogOpen}
         onSubmit={handleCreateExample}
+      />
+      <GenerateExamplesDialog
+        open={isGenerateExamplesDialogOpen}
+        draft={generateExamplesDraft}
+        text={generateExamplesDialogText}
+        isSubmitting={generateExamplesMutation.isPending}
+        onOpenChange={setIsGenerateExamplesDialogOpen}
+        onDraftChange={setGenerateExamplesDraft}
+        onSubmit={handleGenerateExamples}
       />
       <ExampleDetailDialog
         open={viewingExampleId !== null}
@@ -5099,6 +5483,123 @@ function ExampleFormDialog({
   );
 }
 
+function GenerateExamplesDialog({
+  open,
+  draft,
+  text,
+  isSubmitting,
+  onOpenChange,
+  onDraftChange,
+  onSubmit,
+}: {
+  open: boolean;
+  draft: GenerateExamplesFormDraft;
+  text: GenerateExamplesDialogText;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDraftChange: (draft: GenerateExamplesFormDraft) => void;
+  onSubmit: (draft: GenerateExamplesFormDraft) => Promise<void>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+
+  const updateDraft = (patch: Partial<GenerateExamplesFormDraft>) => {
+    onDraftChange({ ...draft, ...patch });
+  };
+
+  const toggleCategory = (category: RequestExampleCategory) => {
+    const hasCategory = draft.categories.includes(category);
+    const categories = hasCategory
+      ? draft.categories.filter(item => item !== category)
+      : [...draft.categories, category];
+    updateDraft({ categories });
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (draft.categories.length === 0) {
+      setError(text.categoryRequired);
+      return;
+    }
+    setError(null);
+    await onSubmit(draft);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="default">
+        <DialogHeader>
+          <DialogTitle>{text.title}</DialogTitle>
+          <DialogDescription>{text.description}</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form id="request-example-ai-generate-form" className="space-y-5" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="request-example-ai-count">{text.countLabel}</Label>
+              <Input
+                id="request-example-ai-count"
+                type="number"
+                min={MIN_AI_EXAMPLE_COUNT}
+                max={MAX_AI_EXAMPLE_COUNT}
+                value={draft.count}
+                onChange={event => updateDraft({ count: Number(event.target.value) })}
+                root
+              />
+              <p className="text-xs text-text-muted">{text.countHint}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{text.categoriesLabel}</Label>
+              <div className="flex flex-wrap gap-2">
+                {AI_EXAMPLE_CATEGORY_OPTIONS.map(category => {
+                  const selected = draft.categories.includes(category);
+                  return (
+                    <Button
+                      key={category}
+                      type="button"
+                      size="sm"
+                      variant={selected ? 'default' : 'outline'}
+                      onClick={() => toggleCategory(category)}
+                    >
+                      {text.categoryLabels[category]}
+                    </Button>
+                  );
+                })}
+              </div>
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="request-example-ai-instructions">{text.instructionsLabel}</Label>
+              <Textarea
+                id="request-example-ai-instructions"
+                value={draft.instructions}
+                onChange={event => updateDraft({ instructions: event.target.value })}
+                rows={5}
+                maxLength={1200}
+                placeholder={text.instructionsPlaceholder}
+              />
+            </div>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSubmitting}
+            onClick={() => onOpenChange(false)}
+          >
+            {text.cancel}
+          </Button>
+          <Button type="submit" form="request-example-ai-generate-form" loading={isSubmitting}>
+            <Sparkles className="h-4 w-4" />
+            {text.generatePreview}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function EditExampleDialog({
   open,
   example,
@@ -5339,6 +5840,14 @@ function ExampleDetailDialog({
                           {t('collections.workbench.badges.default')}
                         </Badge>
                       ) : null}
+                      <Badge variant="outline">
+                        {t(getExampleCategoryLabelKey(example.category))}
+                      </Badge>
+                      {example.source === 'ai' ? (
+                        <Badge variant="outline">
+                          {t('collections.workbench.examples.aiGenerated')}
+                        </Badge>
+                      ) : null}
                       <Badge variant="secondary">
                         {example.method} {example.url || t('collections.workbench.examples.noUrl')}
                       </Badge>
@@ -5383,6 +5892,10 @@ function ExampleDetailDialog({
                   <MetricBadge
                     label={t('collections.workbench.examples.authMetric')}
                     value={getAuthorizationModeLabel(t, example.auth?.type ?? 'none')}
+                  />
+                  <MetricBadge
+                    label={t('collections.workbench.examples.assertions')}
+                    value={`${example.assertions?.length ?? 0}`}
                   />
                   <MetricBadge
                     label={t('common.response')}
@@ -5434,6 +5947,14 @@ function ExampleDetailDialog({
               </div>
 
               <ExampleSnapshotBlock
+                title={t('collections.workbench.examples.assertionsTitle')}
+                value={formatExampleAssertions(
+                  example.assertions,
+                  t('collections.workbench.examples.noAssertionsSaved')
+                )}
+              />
+
+              <ExampleSnapshotBlock
                 title={t('collections.workbench.examples.requestBodyTitle')}
                 value={example.body || t('collections.workbench.response.emptyBody')}
                 tone={example.body?.trim() ? 'dark' : 'light'}
@@ -5483,9 +6004,15 @@ function ExamplesPanel({
   isRunningExamples,
   runningExampleId,
   runReport,
+  draftReview,
+  isAcceptingDrafts,
   onCreateExample,
   onGenerateExamples,
   onRunAllExamples,
+  onAcceptDrafts,
+  onDiscardDraft,
+  onToggleDraft,
+  onClearDrafts,
   onRefresh,
   onViewExample,
   onApplyExample,
@@ -5507,9 +6034,15 @@ function ExamplesPanel({
   isRunningExamples: boolean;
   runningExampleId: number | string | null;
   runReport: ExampleRunReport | null;
+  draftReview: ExampleDraftReviewState | null;
+  isAcceptingDrafts: boolean;
   onCreateExample: () => void;
   onGenerateExamples: () => void;
   onRunAllExamples: () => void;
+  onAcceptDrafts: () => void;
+  onDiscardDraft: (clientId: string) => void;
+  onToggleDraft: (clientId: string) => void;
+  onClearDrafts: () => void;
   onRefresh: () => void;
   onViewExample: (example: RequestExample) => void;
   onApplyExample: (example: RequestExample) => void;
@@ -5534,6 +6067,7 @@ function ExamplesPanel({
     () => new Map((runReport?.results ?? []).map(result => [String(result.exampleId), result])),
     [runReport]
   );
+  const selectedDraftCount = draftReview?.items.filter(item => item.selected).length ?? 0;
 
   return (
     <div className="space-y-4">
@@ -5661,6 +6195,12 @@ function ExamplesPanel({
                               {result.responseBody}
                             </p>
                           ) : null}
+                          {result.assertions.some(assertion => !assertion.passed) ? (
+                            <p className="mt-2 text-xs leading-5 text-destructive">
+                              {result.assertions.find(assertion => !assertion.passed)?.message ??
+                                t('collections.workbench.examples.assertionFailed')}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -5688,12 +6228,120 @@ function ExamplesPanel({
                                 : `${result.durationMs} ms`
                             }
                           />
+                          <MetricBadge
+                            label={t('collections.workbench.examples.assertions')}
+                            value={`${result.assertions.filter(assertion => assertion.passed).length}/${result.assertions.length}`}
+                          />
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : null}
+            </div>
+          ) : null}
+
+          {draftReview ? (
+            <div className="space-y-4 rounded-xl border border-border-subtle bg-bg-soft p-4">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-text-main">
+                    {t('collections.workbench.examples.draftReviewTitle')}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-text-muted">
+                    {t('collections.workbench.examples.draftReviewDescription', {
+                      total: draftReview.items.length,
+                      selected: selectedDraftCount,
+                    })}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={onClearDrafts}
+                    disabled={isAcceptingDrafts}
+                  >
+                    <X className="h-4 w-4" />
+                    {t('collections.workbench.examples.discardAllDrafts')}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={onAcceptDrafts}
+                    loading={isAcceptingDrafts}
+                    disabled={selectedDraftCount === 0}
+                  >
+                    <Save className="h-4 w-4" />
+                    {t('collections.workbench.examples.acceptSelectedDrafts', {
+                      count: selectedDraftCount,
+                    })}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {draftReview.items.map(item => (
+                  <div
+                    key={item.clientId}
+                    className="rounded-lg border border-border-subtle bg-bg-canvas p-3"
+                  >
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">
+                            {t(getExampleCategoryLabelKey(item.draft.category))}
+                          </Badge>
+                          <p className="truncate text-sm font-medium text-text-main">
+                            {item.draft.name}
+                          </p>
+                        </div>
+                        <p className="break-all text-xs text-text-muted">
+                          {item.draft.method}{' '}
+                          {item.draft.url || t('collections.workbench.examples.noUrl')}
+                        </p>
+                        {item.draft.description ? (
+                          <p className="text-sm leading-6 text-text-muted">
+                            {item.draft.description}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                          <MetricBadge
+                            label={t('collections.workbench.examples.expectedStatus')}
+                            value={`${item.draft.response_status || t('common.notSet')}`}
+                          />
+                          <MetricBadge
+                            label={t('collections.workbench.examples.assertions')}
+                            value={`${item.draft.assertions?.length ?? 0}`}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 lg:justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={item.selected ? 'default' : 'outline'}
+                          disabled={isAcceptingDrafts}
+                          onClick={() => onToggleDraft(item.clientId)}
+                        >
+                          {item.selected
+                            ? t('collections.workbench.examples.selectedDraft')
+                            : t('collections.workbench.examples.selectDraft')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isAcceptingDrafts}
+                          onClick={() => onDiscardDraft(item.clientId)}
+                        >
+                          {t('collections.workbench.examples.discardDraft')}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -5780,6 +6428,14 @@ function ExamplesPanel({
                             {t('collections.workbench.badges.default')}
                           </Badge>
                         ) : null}
+                        <Badge variant="outline">
+                          {t(getExampleCategoryLabelKey(example.category))}
+                        </Badge>
+                        {example.source === 'ai' ? (
+                          <Badge variant="outline">
+                            {t('collections.workbench.examples.aiGenerated')}
+                          </Badge>
+                        ) : null}
                         <Badge variant="secondary">
                           {example.method}{' '}
                           {example.url || t('collections.workbench.examples.noUrl')}
@@ -5814,6 +6470,10 @@ function ExamplesPanel({
                             example.response_status,
                             example.response_time
                           )}
+                        />
+                        <MetricBadge
+                          label={t('collections.workbench.examples.assertions')}
+                          value={`${example.assertions?.length ?? 0}`}
                         />
                         {latestRunResultByExampleId.has(String(example.id)) ? (
                           <MetricBadge
