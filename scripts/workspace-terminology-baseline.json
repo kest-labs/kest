@@ -576,16 +576,9 @@
       }
     },
     "api/internal/modules/testcase/handler.go": {
-      "total": 19,
+      "total": 8,
       "matches": {
-        "projects": 8,
-        "RequireProjectRole": 11
-      }
-    },
-    "api/internal/modules/testcase/repository.go": {
-      "total": 1,
-      "matches": {
-        "ProjectID": 1
+        "projects": 8
       }
     },
     "api/internal/modules/testcase/routes.go": {
@@ -975,5 +968,5 @@
       }
     }
   },
-  "generatedAt": "2026-05-24T20:28:40.355Z"
+  "generatedAt": "2026-05-24T20:31:48.737Z"
 }

@@ -29,12 +29,12 @@ type Repository interface {
 
 // ListFilter represents the filter for listing test cases
 type ListFilter struct {
-	ProjectID *string
-	APISpecID *string
-	Env       *string
-	Keyword   *string
-	Page      int
-	PageSize  int
+	WorkspaceID *string
+	APISpecID   *string
+	Env         *string
+	Keyword     *string
+	Page        int
+	PageSize    int
 }
 
 type repository struct {
@@ -69,6 +69,13 @@ func (r *repository) List(ctx context.Context, filter *ListFilter) ([]*TestCaseP
 	query := r.db.WithContext(ctx).Model(&TestCasePO{})
 
 	// Apply filters
+	if filter.WorkspaceID != nil && *filter.WorkspaceID != "" {
+		query = query.
+			Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+			Where("api_specs.workspace_id = ?", *filter.WorkspaceID).
+			Where("api_specs.deleted_at IS NULL")
+	}
+
 	if filter.APISpecID != nil {
 		query = query.Where("api_spec_id = ?", *filter.APISpecID)
 	}

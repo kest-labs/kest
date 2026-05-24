@@ -45,32 +45,34 @@ func (h *Handler) registerRoutes(r *router.Router, prefix string, resolveWorkspa
 	r.Group(prefix, func(tc *router.Router) {
 		tc.WithMiddleware("auth")
 		if resolveWorkspace {
-			tc.Use(middleware.ResolveWorkspaceBackingID(h.workspaceBackingResolver))
+			tc.Use(middleware.ResolveWorkspaceContext(h.workspaceBackingResolver))
+		} else {
+			tc.Use(middleware.ResolveLegacyWorkspaceContext(h.workspaceBackingResolver))
 		}
 
 		tc.GET("", h.List).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 		tc.POST("", h.Create).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/from-spec", h.FromSpec).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/batch-from-specs", h.BatchFromSpecs).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 
 		tc.GET("/:tcid", h.Get).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 		tc.PATCH("/:tcid", h.Update).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.DELETE("/:tcid", h.Delete).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/:tcid/duplicate", h.Duplicate).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/:tcid/run", h.RunTestCase).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.GET("/:tcid/runs", h.ListRuns).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 		tc.GET("/:tcid/runs/:rid", h.GetRun).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 	})
 }
 
@@ -85,6 +87,11 @@ func (h *Handler) ListTestCases(c *gin.Context) {
 	if apiSpecID := c.Query("api_spec_id"); apiSpecID != "" {
 		id := apiSpecID
 		filter.APISpecID = &id
+	}
+	if workspaceID, ok := c.Get("workspaceID"); ok {
+		if id, ok := workspaceID.(string); ok && id != "" {
+			filter.WorkspaceID = &id
+		}
 	}
 
 	if env := c.Query("env"); env != "" {
