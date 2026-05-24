@@ -6,11 +6,11 @@ export interface MarketingNavItem {
 
 export interface MarketingHeroMockupContent {
   sidebarTitle: string;
-  projectsLabel: string;
+  workspacesLabel: string;
   flowsLabel: string;
   environmentsLabel: string;
   teamspacesLabel: string;
-  activeProject: string;
+  activeWorkspace: string;
   flowOne: string;
   flowTwo: string;
   environmentValue: string;

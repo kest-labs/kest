@@ -1,18 +1,16 @@
-import { notFound } from 'next/navigation';
-import { ProjectInvitationPage } from '@/components/features/project/project-invitation-page';
+import { redirect } from 'next/navigation';
+import { buildWorkspaceInviteRoute } from '@/constants/routes';
 
-interface InviteProjectPageProps {
+interface LegacyWorkspaceInvitePageProps {
   params: Promise<{
     slug: string;
   }>;
 }
 
-export default async function InviteProjectPage({ params }: InviteProjectPageProps) {
+export default async function LegacyWorkspaceInvitePage({
+  params,
+}: LegacyWorkspaceInvitePageProps) {
   const { slug } = await params;
 
-  if (!slug) {
-    notFound();
-  }
-
-  return <ProjectInvitationPage slug={slug} />;
+  redirect(buildWorkspaceInviteRoute(slug));
 }

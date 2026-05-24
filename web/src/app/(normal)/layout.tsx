@@ -1,6 +1,6 @@
 
 import { AuthGuard } from '@/components/auth-guard';
-import { ProjectOnboardingShell } from '@/components/features/project/project-onboarding-shell';
+import { WorkspaceOnboardingShell } from '@/components/features/workspace/workspace-onboarding-shell';
 
 export default function NormalLayout({
   children,
@@ -10,7 +10,7 @@ export default function NormalLayout({
   return (
     <AuthGuard>
       {children}
-      <ProjectOnboardingShell />
+      <WorkspaceOnboardingShell />
     </AuthGuard>
   );
 }

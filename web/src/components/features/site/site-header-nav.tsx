@@ -15,7 +15,7 @@ import { ROUTES } from '@/constants/routes';
 import { useT } from '@/i18n/client';
 import { useAuthStore } from '@/store/auth-store';
 export function SiteHeaderNav() {
-  const t = useT('project');
+  const t = useT('workspace');
   const isAuthenticated = useAuthStore.use.isAuthenticated();
   const user = useAuthStore.use.user();
   const isSystemReady = useAuthStore.use.isSystemReady();
@@ -37,8 +37,8 @@ export function SiteHeaderNav() {
   if (isAuthenticated && user) {
     return (
       <div className="flex items-center gap-4">
-        <Link href={ROUTES.CONSOLE.PROJECTS}>
-          <Button variant="ghost" size="sm">{t('siteHeader.projects')}</Button>
+        <Link href={ROUTES.CONSOLE.WORKSPACES}>
+          <Button variant="ghost" size="sm">{t('siteHeader.workspaces')}</Button>
         </Link>
         <Link href={ROUTES.CONSOLE.PROFILE}>
           <Button size="sm" variant="outline">{displayName}</Button>

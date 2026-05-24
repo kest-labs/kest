@@ -68,7 +68,7 @@ export function RegisterForm() {
         password: form.password,
       });
 
-      // 注册成功后直接登录，和当前项目的控制台访问流程保持一致。
+      // 注册成功后直接登录，和当前工作区的控制台访问流程保持一致。
       await loginMutation.mutateAsync({
         username: form.username.trim(),
         password: form.password,

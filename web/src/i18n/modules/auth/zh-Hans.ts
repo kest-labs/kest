@@ -74,7 +74,7 @@ const messages = {
   trustNote: '开源核心，服务于注重工程效率的 API 团队',
   loginBadge: 'kest workspace access',
   insight1Title: '流程工作区',
-  insight1Description: '按项目组织请求链路、环境配置与共享上下文。',
+  insight1Description: '按工作区组织请求链路、环境配置与共享上下文。',
   insight2Title: '执行历史',
   insight2Description: '快速定位回归、耗时波动与状态变化。',
   insight3Title: 'AI 诊断',

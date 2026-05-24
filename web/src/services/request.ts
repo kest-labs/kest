@@ -2,7 +2,7 @@ import request from '@/http';
 import type {
   CreateRequestRequest,
   GenRequestDocRequest,
-  ProjectRequest,
+  WorkspaceRequest,
   RequestListParams,
   RequestListResponse,
   RunRequestRequest,
@@ -17,13 +17,13 @@ const normalizePayload = <T extends object>(payload: T) =>
 
 export const requestService = {
   list: ({
-    projectId,
+    workspaceId,
     collectionId,
     page,
     perPage,
   }: RequestListParams) =>
     request.get<RequestListResponse>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests`,
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests`,
       {
         params: normalizePayload({
           page,
@@ -33,43 +33,43 @@ export const requestService = {
     ),
 
   getById: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string
   ) =>
-    request.get<ProjectRequest>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}`
+    request.get<WorkspaceRequest>(
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}`
     ),
 
   create: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     data: CreateRequestRequest
   ) =>
-    request.post<ProjectRequest>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests`,
+    request.post<WorkspaceRequest>(
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests`,
       normalizePayload(data)
     ),
 
   update: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string,
     data: UpdateRequestRequest
   ) =>
-    request.put<ProjectRequest>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}`,
+    request.put<WorkspaceRequest>(
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}`,
       normalizePayload(data)
     ),
 
   genDoc: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string,
     data: GenRequestDocRequest
   ) =>
-    request.post<ProjectRequest>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/gen-doc`,
+    request.post<WorkspaceRequest>(
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}/gen-doc`,
       undefined,
       {
         params: normalizePayload(data),
@@ -77,22 +77,22 @@ export const requestService = {
     ),
 
   delete: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string
   ) =>
     request.delete<void>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}`
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}`
     ),
 
   run: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string,
     data: RunRequestRequest
   ) =>
     request.post<RunRequestResponse>(
-      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/run`,
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}/run`,
       normalizePayload(data)
     ),
 };
