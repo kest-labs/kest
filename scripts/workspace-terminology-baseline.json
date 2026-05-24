@@ -254,68 +254,21 @@
       }
     },
     "api/internal/modules/audit/handler.go": {
-      "total": 4,
+      "total": 1,
       "matches": {
-        "projects": 2,
-        "projectID": 2
-      }
-    },
-    "api/internal/modules/audit/model.go": {
-      "total": 7,
-      "matches": {
-        "ProjectID": 4,
-        "project": 2,
-        "project_id": 1
-      }
-    },
-    "api/internal/modules/audit/repository.go": {
-      "total": 5,
-      "matches": {
-        "projectID": 3,
-        "project": 1,
-        "project_id": 1
-      }
-    },
-    "api/internal/modules/flow/dto.go": {
-      "total": 4,
-      "matches": {
-        "ProjectID": 3,
-        "project_id": 1
+        "projects": 1
       }
     },
     "api/internal/modules/flow/handler.go": {
-      "total": 18,
+      "total": 8,
       "matches": {
-        "projectID": 3,
-        "projects": 15
-      }
-    },
-    "api/internal/modules/flow/model.go": {
-      "total": 2,
-      "matches": {
-        "ProjectID": 1,
-        "project_id": 1
-      }
-    },
-    "api/internal/modules/flow/repository.go": {
-      "total": 4,
-      "matches": {
-        "projectID": 3,
-        "project_id": 1
+        "projects": 8
       }
     },
     "api/internal/modules/flow/routes.go": {
-      "total": 16,
+      "total": 1,
       "matches": {
-        "projects": 1,
-        "RequireProjectRole": 15
-      }
-    },
-    "api/internal/modules/flow/service.go": {
-      "total": 7,
-      "matches": {
-        "projectID": 6,
-        "ProjectID": 1
+        "projects": 1
       }
     },
     "api/internal/modules/history/cli_sync.go": {
@@ -459,18 +412,18 @@
       }
     },
     "api/internal/modules/project/repository.go": {
-      "total": 95,
+      "total": 77,
       "matches": {
-        "project": 23,
+        "project": 17,
         "ProjectStats": 5,
         "Project": 13,
-        "projectID": 14,
+        "projectID": 4,
         "newProjectPO": 2,
         "ProjectPO": 7,
+        "project_id": 6,
         "projectDeleteStatements": 2,
         "projects": 8,
         "project_members": 8,
-        "project_id": 8,
         "projectDeleteStatement": 3,
         "project_invitations": 2
       }
@@ -496,13 +449,13 @@
       }
     },
     "api/internal/modules/project/service.go": {
-      "total": 54,
+      "total": 51,
       "matches": {
-        "project": 30,
+        "project": 26,
         "Project": 11,
         "projectID": 3,
         "ProjectStats": 2,
-        "projectWorkspace": 6,
+        "projectWorkspace": 7,
         "createProjectWorkspace": 2
       }
     },
@@ -1022,5 +975,5 @@
       }
     }
   },
-  "generatedAt": "2026-05-24T20:13:51.241Z"
+  "generatedAt": "2026-05-24T20:28:40.355Z"
 }

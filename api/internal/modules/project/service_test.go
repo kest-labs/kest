@@ -36,7 +36,9 @@ func (r *testProjectRepo) Update(ctx context.Context, project *Project) error {
 	r.updatedProject = &projectCopy
 	return nil
 }
-func (r *testProjectRepo) Delete(ctx context.Context, id string) error { return nil }
+func (r *testProjectRepo) Delete(ctx context.Context, id string, workspaceID string) error {
+	return nil
+}
 func (r *testProjectRepo) List(ctx context.Context, userID string, offset, limit int) ([]*Project, int64, error) {
 	return nil, 0, nil
 }

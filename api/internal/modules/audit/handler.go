@@ -14,6 +14,7 @@ import (
 
 type WorkspaceBackingResolver interface {
 	ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error)
+	ResolveWorkspaceIDByBackingID(ctx context.Context, backingID string) (string, error)
 }
 
 // Handler handles HTTP requests for audit logs
@@ -41,19 +42,20 @@ func (h *Handler) SetWorkspaceBackingResolver(resolver WorkspaceBackingResolver)
 func (h *Handler) RegisterRoutes(r *router.Router) {
 	r.Group("/workspaces/:id/audit-logs", func(auditRoutes *router.Router) {
 		auditRoutes.WithMiddleware("auth")
-		auditRoutes.Use(h.resolveWorkspaceBackingID())
+		auditRoutes.Use(h.resolveWorkspaceContext())
 
-		auditRoutes.GET("", h.ListByProject)
+		auditRoutes.GET("", h.ListByWorkspace)
 	})
 
 	r.Group("/projects/:id/audit-logs", func(auditRoutes *router.Router) {
 		auditRoutes.WithMiddleware("auth")
+		auditRoutes.Use(h.resolveLegacyWorkspaceContext())
 
-		auditRoutes.GET("", h.ListByProject)
+		auditRoutes.GET("", h.ListByWorkspace)
 	})
 }
 
-func (h *Handler) resolveWorkspaceBackingID() gin.HandlerFunc {
+func (h *Handler) resolveWorkspaceContext() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if h.workspaceBackingResolver == nil {
 			response.Error(c, http.StatusServiceUnavailable, "Workspace resolver is not configured")
@@ -76,20 +78,48 @@ func (h *Handler) resolveWorkspaceBackingID() gin.HandlerFunc {
 		}
 
 		c.Set("workspaceID", workspaceID)
-		for index := range c.Params {
-			if c.Params[index].Key == "id" {
-				c.Params[index].Value = backingID
-				break
-			}
-		}
+		c.Set("workspaceBackingID", backingID)
 
 		c.Next()
 	}
 }
 
-// ListByProject handles GET /v1/projects/:id/audit-logs
-func (h *Handler) ListByProject(c *gin.Context) {
-	projectID := c.Param("id")
+func (h *Handler) resolveLegacyWorkspaceContext() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.workspaceBackingResolver == nil {
+			response.Error(c, http.StatusServiceUnavailable, "Workspace resolver is not configured")
+			c.Abort()
+			return
+		}
+
+		backingID := c.Param("id")
+		if backingID == "" {
+			response.Error(c, http.StatusBadRequest, "Workspace backing ID missing in request")
+			c.Abort()
+			return
+		}
+
+		workspaceID, err := h.workspaceBackingResolver.ResolveWorkspaceIDByBackingID(c.Request.Context(), backingID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Workspace not found")
+			c.Abort()
+			return
+		}
+
+		c.Set("workspaceID", workspaceID)
+		c.Set("workspaceBackingID", backingID)
+		c.Next()
+	}
+}
+
+// ListByWorkspace handles GET /v1/workspaces/:id/audit-logs
+func (h *Handler) ListByWorkspace(c *gin.Context) {
+	workspaceID := c.Param("id")
+	if contextWorkspaceID, ok := c.Get("workspaceID"); ok {
+		if id, ok := contextWorkspaceID.(string); ok && id != "" {
+			workspaceID = id
+		}
+	}
 
 	page := 1
 	pageSize := 20
@@ -104,7 +134,7 @@ func (h *Handler) ListByProject(c *gin.Context) {
 		}
 	}
 
-	logs, total, err := h.repo.ListByProject(c.Request.Context(), projectID, page, pageSize)
+	logs, total, err := h.repo.ListByWorkspace(c.Request.Context(), workspaceID, page, pageSize)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

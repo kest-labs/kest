@@ -9,7 +9,7 @@ import (
 // Repository defines the interface for audit logging
 type Repository interface {
 	Create(ctx context.Context, log *AuditLogPO) error
-	ListByProject(ctx context.Context, projectID string, page, pageSize int) ([]AuditLogPO, int64, error)
+	ListByWorkspace(ctx context.Context, workspaceID string, page, pageSize int) ([]AuditLogPO, int64, error)
 	ListAll(ctx context.Context, page, pageSize int) ([]AuditLogPO, int64, error)
 }
 
@@ -27,13 +27,13 @@ func (r *repository) Create(ctx context.Context, log *AuditLogPO) error {
 	return r.db.WithContext(ctx).Create(log).Error
 }
 
-// ListByProject retrieves audit logs for a specific project
-func (r *repository) ListByProject(ctx context.Context, projectID string, page, pageSize int) ([]AuditLogPO, int64, error) {
+// ListByWorkspace retrieves audit logs for a specific workspace
+func (r *repository) ListByWorkspace(ctx context.Context, workspaceID string, page, pageSize int) ([]AuditLogPO, int64, error) {
 	var logs []AuditLogPO
 	var total int64
 	offset := (page - 1) * pageSize
 
-	q := r.db.WithContext(ctx).Model(&AuditLogPO{}).Where("project_id = ?", projectID)
+	q := r.db.WithContext(ctx).Model(&AuditLogPO{}).Where("workspace_id = ?", workspaceID)
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}

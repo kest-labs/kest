@@ -27,6 +27,7 @@ type Service interface {
 	GetByID(ctx context.Context, id string) (*Project, error)
 	GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error)
 	ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error)
+	ResolveWorkspaceIDByBackingID(ctx context.Context, backingID string) (string, error)
 	Update(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error)
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, userID string, page, perPage int) ([]*Project, int64, error)
@@ -97,7 +98,7 @@ func (s *service) Create(ctx context.Context, userID string, req *CreateProjectR
 		Role:   member.RoleOwner,
 	})
 	if err != nil {
-		_ = s.repo.Delete(ctx, project.ID)
+		_ = s.repo.Delete(ctx, project.ID, projectWorkspace.ID)
 		_ = s.workspaceService.DeleteWorkspace(projectWorkspace.ID, userID, false)
 		return nil, fmt.Errorf("failed to assign owner: %w", err)
 	}
@@ -128,11 +129,22 @@ func (s *service) GetByWorkspaceID(ctx context.Context, workspaceID string) (*Pr
 }
 
 func (s *service) ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error) {
-	project, err := s.GetByWorkspaceID(ctx, workspaceID)
+	backing, err := s.GetByWorkspaceID(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return project.ID, nil
+	return backing.ID, nil
+}
+
+func (s *service) ResolveWorkspaceIDByBackingID(ctx context.Context, backingID string) (string, error) {
+	backing, err := s.GetByID(ctx, backingID)
+	if err != nil {
+		return "", err
+	}
+	if backing.WorkspaceID == "" {
+		return "", ErrProjectNotFound
+	}
+	return backing.WorkspaceID, nil
 }
 
 func (s *service) Update(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error) {
@@ -163,15 +175,15 @@ func (s *service) Update(ctx context.Context, id string, req *UpdateProjectReque
 }
 
 func (s *service) Delete(ctx context.Context, id string) error {
-	project, err := s.repo.GetByID(ctx, id)
+	backing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if project == nil {
+	if backing == nil {
 		return ErrProjectNotFound
 	}
 
-	return s.repo.Delete(ctx, id)
+	return s.repo.Delete(ctx, id, backing.WorkspaceID)
 }
 
 func (s *service) List(ctx context.Context, userID string, page, perPage int) ([]*Project, int64, error) {
