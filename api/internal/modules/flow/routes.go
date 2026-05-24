@@ -8,8 +8,22 @@ import (
 
 // RegisterRoutes registers flow routes
 func RegisterRoutes(r *router.Router, handler *Handler, memberService member.Service) {
-	r.Group("/projects/:id/flows", func(flows *router.Router) {
+	registerFlowRoutes(r, "/workspaces/:id/flows", handler, memberService, true)
+	registerFlowRoutes(r, "/projects/:id/flows", handler, memberService, false)
+}
+
+func registerFlowRoutes(
+	r *router.Router,
+	prefix string,
+	handler *Handler,
+	memberService member.Service,
+	resolveWorkspace bool,
+) {
+	r.Group(prefix, func(flows *router.Router) {
 		flows.WithMiddleware("auth")
+		if resolveWorkspace {
+			flows.Use(middleware.ResolveWorkspaceBackingID(handler.workspaceBackingResolver))
+		}
 
 		flows.GET("", handler.ListFlows).
 			Middleware(middleware.RequireProjectRole(memberService, member.RoleRead))

@@ -25,7 +25,7 @@ const normalizeWorkspacePayload = <T extends object>(payload: T) =>
 // 作用：集中封装工作区相关 HTTP 请求，供 hooks 和页面复用。
 export const workspaceService = {
   list: ({ page = 1, perPage = 12 }: WorkspaceListParams = {}) =>
-    request.get<WorkspaceListResponse>('/workspaces', {
+    request.get<WorkspaceListResponse>('/workspaces/dashboard', {
       params: {
         page,
         per_page: perPage,
@@ -33,16 +33,16 @@ export const workspaceService = {
     }),
 
   getById: (id: number | string, config?: RequestConfig) =>
-    request.get<ApiWorkspace>(`/workspaces/${id}`, config),
+    request.get<ApiWorkspace>(`/workspaces/dashboard/${id}`, config),
 
   getStats: (id: number | string, config?: RequestConfig) =>
     request.get<WorkspaceStats>(`/workspaces/${id}/stats`, config),
 
   create: (data: CreateWorkspaceRequest) =>
-    request.post<ApiWorkspace>('/workspaces', normalizeWorkspacePayload(data)),
+    request.post<ApiWorkspace>('/workspaces/dashboard', normalizeWorkspacePayload(data)),
 
   update: (id: number | string, data: UpdateWorkspaceRequest) =>
-    request.patch<ApiWorkspace>(`/workspaces/${id}`, normalizeWorkspacePayload(data)),
+    request.patch<ApiWorkspace>(`/workspaces/dashboard/${id}`, normalizeWorkspacePayload(data)),
 
   generateCliToken: (id: number | string, data: GenerateWorkspaceCliTokenRequest = {}) =>
     request.post<GenerateWorkspaceCliTokenResponse>(
@@ -50,7 +50,8 @@ export const workspaceService = {
       normalizeWorkspacePayload(data)
     ),
 
-  delete: (id: number | string) => request.delete<DeleteWorkspaceResponse>(`/workspaces/${id}`),
+  delete: (id: number | string) =>
+    request.delete<DeleteWorkspaceResponse>(`/workspaces/dashboard/${id}`),
 };
 
 export type WorkspaceService = typeof workspaceService;

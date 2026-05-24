@@ -1,12 +1,21 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
-  encoding: 'utf8',
-}).trim();
+function resolveRepoRoot() {
+  try {
+    return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+    }).trim();
+  } catch {
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  }
+}
+
+const repoRoot = resolveRepoRoot();
 
 const baselinePath = path.join(repoRoot, 'scripts/workspace-terminology-baseline.json');
 const writeBaseline = process.argv.includes('--write-baseline');
@@ -51,10 +60,15 @@ const legacyTermPattern =
   /\b(?:project|projects|projectId|projectID|project_id|project_ids|Project|Projects|ProjectId|ProjectID|RequireProjectRole|Project[A-Z][A-Za-z0-9_]*|[a-z][A-Za-z0-9_]*Project[A-Za-z0-9_]*|project[A-Z0-9_][A-Za-z0-9_]*)\b/g;
 
 function listTrackedFiles() {
-  const output = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
+  let output = '';
+  try {
+    output = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+  } catch {
+    return listGovernedFilesFromDisk();
+  }
 
   return output
     .split('\0')
@@ -62,6 +76,44 @@ function listTrackedFiles() {
     .filter(file => governedPrefixes.some(prefix => file.startsWith(prefix)))
     .filter(file => !ignoredPrefixes.some(prefix => file.startsWith(prefix)))
     .filter(file => allowedExtensions.has(path.extname(file)));
+}
+
+function listGovernedFilesFromDisk() {
+  const files = [];
+
+  function walk(relativeDir) {
+    const absoluteDir = path.join(repoRoot, relativeDir);
+    if (!existsSync(absoluteDir)) {
+      return;
+    }
+
+    for (const entry of readdirSync(absoluteDir)) {
+      const relativePath = path.join(relativeDir, entry);
+      if (ignoredPrefixes.some(prefix => relativePath.startsWith(prefix))) {
+        continue;
+      }
+
+      const absolutePath = path.join(repoRoot, relativePath);
+      const stats = statSync(absolutePath);
+      if (stats.isDirectory()) {
+        if (entry === 'node_modules' || entry === '.next' || entry === 'dist' || entry === 'coverage') {
+          continue;
+        }
+        walk(relativePath);
+        continue;
+      }
+
+      if (stats.isFile() && allowedExtensions.has(path.extname(relativePath))) {
+        files.push(relativePath);
+      }
+    }
+  }
+
+  for (const prefix of governedPrefixes) {
+    walk(prefix.replace(/\/$/, ''));
+  }
+
+  return files.sort();
 }
 
 function scanFile(file) {

@@ -16,8 +16,9 @@ import (
 // Handler handles HTTP requests for test cases
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service                  Service
+	memberService            member.Service
+	workspaceBackingResolver middleware.WorkspaceBackingResolver
 }
 
 // Name returns the module name
@@ -30,10 +31,22 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 	return &Handler{service: service, memberService: memberService}
 }
 
+func (h *Handler) SetWorkspaceBackingResolver(resolver middleware.WorkspaceBackingResolver) {
+	h.workspaceBackingResolver = resolver
+}
+
 // RegisterRoutes registers test case routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/test-cases", func(tc *router.Router) {
+	h.registerRoutes(r, "/workspaces/:id/test-cases", true)
+	h.registerRoutes(r, "/projects/:id/test-cases", false)
+}
+
+func (h *Handler) registerRoutes(r *router.Router, prefix string, resolveWorkspace bool) {
+	r.Group(prefix, func(tc *router.Router) {
 		tc.WithMiddleware("auth")
+		if resolveWorkspace {
+			tc.Use(middleware.ResolveWorkspaceBackingID(h.workspaceBackingResolver))
+		}
 
 		tc.GET("", h.List).
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))

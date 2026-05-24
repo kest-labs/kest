@@ -412,21 +412,22 @@
       }
     },
     "api/internal/modules/project/dto.go": {
-      "total": 27,
+      "total": 32,
       "matches": {
         "project": 4,
         "ProjectResponse": 5,
         "ProjectListResponse": 8,
-        "projects": 4,
-        "Project": 5,
+        "projects": 7,
+        "Project": 7,
         "Projects": 1
       }
     },
     "api/internal/modules/project/handler.go": {
-      "total": 35,
+      "total": 52,
       "matches": {
-        "project": 13,
-        "projects": 10,
+        "project": 27,
+        "projects": 12,
+        "Project": 1,
         "projectID": 6,
         "ProjectID": 4,
         "project_id": 2
@@ -458,14 +459,14 @@
       }
     },
     "api/internal/modules/project/repository.go": {
-      "total": 92,
+      "total": 95,
       "matches": {
         "project": 23,
         "ProjectStats": 5,
-        "Project": 11,
+        "Project": 13,
         "projectID": 14,
         "newProjectPO": 2,
-        "ProjectPO": 6,
+        "ProjectPO": 7,
         "projectDeleteStatements": 2,
         "projects": 8,
         "project_members": 8,
@@ -495,10 +496,10 @@
       }
     },
     "api/internal/modules/project/service.go": {
-      "total": 49,
+      "total": 54,
       "matches": {
-        "project": 27,
-        "Project": 9,
+        "project": 30,
+        "Project": 11,
         "projectID": 3,
         "ProjectStats": 2,
         "projectWorkspace": 6,
@@ -506,11 +507,11 @@
       }
     },
     "api/internal/modules/project/service_test.go": {
-      "total": 50,
+      "total": 55,
       "matches": {
-        "project": 19,
-        "testProjectRepo": 9,
-        "Project": 9,
+        "project": 22,
+        "testProjectRepo": 10,
+        "Project": 10,
         "projectBySlug": 3,
         "updatedProject": 4,
         "projectCopy": 3,
@@ -584,9 +585,9 @@
       }
     },
     "api/internal/modules/projectinvite/service.go": {
-      "total": 69,
+      "total": 67,
       "matches": {
-        "project": 10,
+        "project": 8,
         "projectID": 16,
         "ProjectInvitationResponse": 11,
         "projectSummary": 14,
@@ -599,7 +600,7 @@
       }
     },
     "api/internal/modules/projectinvite/service_test.go": {
-      "total": 82,
+      "total": 80,
       "matches": {
         "testProjectInviteRepo": 25,
         "ProjectInvitation": 19,
@@ -610,7 +611,7 @@
         "revokedDirectProjectID": 4,
         "projectID": 4,
         "ProjectID": 10,
-        "project": 5,
+        "project": 3,
         "ProjectSlug": 1
       }
     },
@@ -685,9 +686,9 @@
       }
     },
     "api/routes/api.go": {
-      "total": 6,
+      "total": 8,
       "matches": {
-        "Project": 6
+        "Project": 8
       }
     },
     "api/test/enterprise_regression.md": {
@@ -1021,5 +1022,5 @@
       }
     }
   },
-  "generatedAt": "2026-05-24T19:58:37.266Z"
+  "generatedAt": "2026-05-24T20:09:06.880Z"
 }

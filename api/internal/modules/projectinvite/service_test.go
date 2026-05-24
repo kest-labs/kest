@@ -269,8 +269,8 @@ func TestAcceptInvitationReturnsRedirect(t *testing.T) {
 	if resp.Member.UserID != "42" || resp.Member.Role != memberRoleWrite {
 		t.Fatalf("unexpected member payload: %#v", resp.Member)
 	}
-	if resp.RedirectTo != "/project/18" {
-		t.Fatalf("expected redirect /project/18, got %q", resp.RedirectTo)
+	if resp.RedirectTo != "/workspace" {
+		t.Fatalf("expected redirect /workspace, got %q", resp.RedirectTo)
 	}
 	if repo.acceptedAt == nil {
 		t.Fatal("expected accept time to be recorded")

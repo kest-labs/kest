@@ -30,6 +30,18 @@ func RegisterAPI(r *router.Router, handlers *app.Handlers) {
 	if handlers.Project != nil && handlers.Workspace != nil {
 		handlers.Project.SetWorkspaceTokenValidator(handlers.Workspace.Service())
 	}
+	if handlers.Project != nil {
+		resolver := handlers.Project.Service()
+		if handlers.Flow != nil {
+			handlers.Flow.SetWorkspaceBackingResolver(resolver)
+		}
+		if handlers.TestCase != nil {
+			handlers.TestCase.SetWorkspaceBackingResolver(resolver)
+		}
+		if handlers.Audit != nil {
+			handlers.Audit.SetWorkspaceBackingResolver(resolver)
+		}
+	}
 
 	// 2. Register Module Routes
 	for _, m := range handlers.Modules() {

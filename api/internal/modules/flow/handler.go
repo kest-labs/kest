@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/handler"
@@ -21,8 +22,9 @@ import (
 // Handler handles HTTP requests for flows
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service                  Service
+	memberService            member.Service
+	workspaceBackingResolver middleware.WorkspaceBackingResolver
 }
 
 // Name returns the module name
@@ -36,6 +38,10 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 		service:       service,
 		memberService: memberService,
 	}
+}
+
+func (h *Handler) SetWorkspaceBackingResolver(resolver middleware.WorkspaceBackingResolver) {
+	h.workspaceBackingResolver = resolver
 }
 
 // RegisterRoutes registers flow routes

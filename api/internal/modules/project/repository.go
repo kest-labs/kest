@@ -22,6 +22,7 @@ type ProjectStats struct {
 type Repository interface {
 	Create(ctx context.Context, project *Project) error
 	GetByID(ctx context.Context, id string) (*Project, error)
+	GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error)
 	GetBySlug(ctx context.Context, slug string) (*Project, error)
 	Update(ctx context.Context, project *Project) error
 	Delete(ctx context.Context, id string) error
@@ -54,6 +55,17 @@ func (r *repository) Create(ctx context.Context, project *Project) error {
 func (r *repository) GetByID(ctx context.Context, id string) (*Project, error) {
 	var po ProjectPO
 	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&po).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return po.toDomain(), nil
+}
+
+func (r *repository) GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error) {
+	var po ProjectPO
+	if err := r.db.WithContext(ctx).Where("workspace_id = ?", workspaceID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

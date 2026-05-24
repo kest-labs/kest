@@ -18,6 +18,12 @@ func (r *testProjectRepo) GetByID(ctx context.Context, id string) (*Project, err
 	}
 	return r.project, nil
 }
+func (r *testProjectRepo) GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error) {
+	if r.project == nil || r.project.WorkspaceID != workspaceID {
+		return nil, nil
+	}
+	return r.project, nil
+}
 func (r *testProjectRepo) GetBySlug(ctx context.Context, slug string) (*Project, error) {
 	if r.projectBySlug == nil {
 		return nil, nil

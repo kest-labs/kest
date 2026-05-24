@@ -229,6 +229,31 @@ func (h *Handler) ListMembers(c *gin.Context) {
 	response.Success(c, FromMemberList(members))
 }
 
+func (h *Handler) GetMyRole(c *gin.Context) {
+	id, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	role, err := h.service.CheckUserRole(id, userID, false)
+	if err != nil {
+		response.NotFound(c, "Workspace member not found", err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"id":           "",
+		"workspace_id": id,
+		"user_id":      userID,
+		"role":         role,
+	})
+}
+
 // UpdateMemberRole updates a member's role
 // @Summary Update member role
 // @Tags Workspace

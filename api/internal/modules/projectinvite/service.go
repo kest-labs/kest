@@ -345,9 +345,14 @@ func (s *service) AcceptInvitation(
 		return nil, err
 	}
 
-	redirectTo := "/project"
-	if invitation.ProjectID != "" {
-		redirectTo = fmt.Sprintf("/project/%s", invitation.ProjectID)
+	redirectTo := "/workspace"
+	switch {
+	case invitation.WorkspaceID != "":
+		redirectTo = fmt.Sprintf("/workspace/%s", invitation.WorkspaceID)
+	case invitation.ProjectID != "":
+		if summary, err := s.repo.GetProjectSummary(ctx, invitation.ProjectID); err == nil && summary != nil && summary.WorkspaceID != "" {
+			redirectTo = fmt.Sprintf("/workspace/%s", summary.WorkspaceID)
+		}
 	}
 
 	return &AcceptProjectInvitationResponse{

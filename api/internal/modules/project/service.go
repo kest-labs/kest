@@ -25,6 +25,8 @@ var (
 type Service interface {
 	Create(ctx context.Context, userID string, req *CreateProjectRequest) (*Project, error)
 	GetByID(ctx context.Context, id string) (*Project, error)
+	GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error)
+	ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error)
 	Update(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error)
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, userID string, page, perPage int) ([]*Project, int64, error)
@@ -112,6 +114,25 @@ func (s *service) GetByID(ctx context.Context, id string) (*Project, error) {
 		return nil, ErrProjectNotFound
 	}
 	return project, nil
+}
+
+func (s *service) GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error) {
+	project, err := s.repo.GetByWorkspaceID(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil {
+		return nil, ErrProjectNotFound
+	}
+	return project, nil
+}
+
+func (s *service) ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error) {
+	project, err := s.GetByWorkspaceID(ctx, workspaceID)
+	if err != nil {
+		return "", err
+	}
+	return project.ID, nil
 }
 
 func (s *service) Update(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error) {
@@ -219,7 +240,7 @@ func generateSlug(name string) string {
 
 	// Add random suffix if empty
 	if slug == "" {
-		slug = fmt.Sprintf("project-%d", time.Now().UnixNano()%100000000)
+		slug = fmt.Sprintf("workspace-%d", time.Now().UnixNano()%100000000)
 	}
 
 	return slug
@@ -253,7 +274,7 @@ func buildWorkspaceSlugCandidate(baseSlug string, attempt int) string {
 		trimmedBase = strings.Trim(trimmedBase[:maxBaseLength], "-")
 	}
 	if trimmedBase == "" {
-		trimmedBase = "project"
+		trimmedBase = "workspace"
 	}
 
 	return trimmedBase + suffix

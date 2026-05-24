@@ -13,6 +13,17 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 	r.Group("", func(auth *router.Router) {
 		auth.WithMiddleware("auth")
 
+		// Workspace dashboard compatibility over the legacy backing model.
+		auth.POST("/workspaces/dashboard", h.CreateWorkspaceDashboard).Name("workspaces.dashboard.create")
+		auth.GET("/workspaces/dashboard", h.ListWorkspaceDashboard).Name("workspaces.dashboard.list")
+		auth.GET("/workspaces/dashboard/:id", h.GetWorkspaceDashboard).Name("workspaces.dashboard.show").WhereUUIDOrNumber("id")
+		auth.PATCH("/workspaces/dashboard/:id", h.UpdateWorkspaceDashboard).Name("workspaces.dashboard.update").WhereUUIDOrNumber("id")
+		auth.DELETE("/workspaces/dashboard/:id", h.DeleteWorkspaceDashboard).Name("workspaces.dashboard.delete").WhereUUIDOrNumber("id")
+
+		auth.GET("/workspaces/:id/stats", h.GetWorkspaceStats).
+			Name("workspaces.stats").
+			WhereUUIDOrNumber("id")
+
 		// Project CRUD
 		auth.POST("/projects", h.Create).Name("projects.create")
 		auth.GET("/projects", h.List).Name("projects.list")
@@ -41,6 +52,15 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 	})
 
 	r.Group("", func(cli *router.Router) {
+		cli.POST("/workspaces/:id/cli/spec-sync", h.SyncWorkspaceSpecsFromCLI).
+			Name("workspaces.cli.spec_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(h.workspaceTokenValidator, workspace.CLITokenScopeCollectionRead))
+		cli.POST("/workspaces/:id/cli/history-sync", h.SyncWorkspaceHistoryFromCLI).
+			Name("workspaces.cli.history_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(h.workspaceTokenValidator, workspace.CLITokenScopeCollectionRun))
+
 		cli.POST("/projects/:id/cli/spec-sync", h.SyncSpecsFromCLI).
 			Name("projects.cli.spec_sync").
 			WhereUUIDOrNumber("id").

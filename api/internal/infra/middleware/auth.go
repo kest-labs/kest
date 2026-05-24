@@ -15,6 +15,10 @@ type PermissionProvider interface {
 	CheckPermission(ctx context.Context, projectID string, userID string, requiredRole string) (bool, error)
 }
 
+type WorkspaceBackingResolver interface {
+	ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error)
+}
+
 // MockAuth extracts User ID from X-User-ID header for testing
 func MockAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -80,6 +84,40 @@ func RequireProjectRole(memberService PermissionProvider, requiredRole string) g
 			response.Error(c, http.StatusForbidden, "Permission denied")
 			c.Abort()
 			return
+		}
+
+		c.Next()
+	}
+}
+
+func ResolveWorkspaceBackingID(resolver WorkspaceBackingResolver) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if resolver == nil {
+			response.Error(c, http.StatusServiceUnavailable, "Workspace resolver is not configured")
+			c.Abort()
+			return
+		}
+
+		workspaceID := c.Param("id")
+		if workspaceID == "" {
+			response.Error(c, http.StatusBadRequest, "Workspace ID missing in request")
+			c.Abort()
+			return
+		}
+
+		backingID, err := resolver.ResolveBackingIDByWorkspaceID(c.Request.Context(), workspaceID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Workspace not found")
+			c.Abort()
+			return
+		}
+
+		c.Set("workspaceID", workspaceID)
+		for index := range c.Params {
+			if c.Params[index].Key == "id" {
+				c.Params[index].Value = backingID
+				break
+			}
 		}
 
 		c.Next()
