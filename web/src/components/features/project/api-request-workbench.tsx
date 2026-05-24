@@ -560,8 +560,13 @@ const getExampleExpectedStatus = (example: RequestExample) =>
 const valuesEqual = (actual: unknown, expected: unknown) => String(actual) === String(expected);
 
 const resolveHeaderValue = (headers: Record<string, string> | undefined, path?: string) => {
-  if (!headers || !path) {
+  if (!headers) {
     return undefined;
+  }
+  if (!path) {
+    return Object.entries(headers)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
   }
   const normalizedPath = path.toLowerCase();
   const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === normalizedPath);

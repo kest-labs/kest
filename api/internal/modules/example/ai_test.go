@@ -33,3 +33,20 @@ func TestNormalizeExampleAssertionsAddsStatusAssertion(t *testing.T) {
 		t.Fatalf("unexpected normalized custom assertion: %#v", got[1])
 	}
 }
+
+func TestNormalizeExampleAssertionsInfersContentTypeHeaderPath(t *testing.T) {
+	got := normalizeExampleAssertions([]Assertion{
+		{
+			Type:     "header",
+			Operator: "contains",
+			Expect:   "application/json",
+			Message:  "Response must return JSON content type.",
+		},
+	}, 200)
+	if len(got) != 2 {
+		t.Fatalf("expected generated status assertion plus header assertion, got %#v", got)
+	}
+	if got[1].Path != "Content-Type" {
+		t.Fatalf("expected Content-Type header path, got %q", got[1].Path)
+	}
+}

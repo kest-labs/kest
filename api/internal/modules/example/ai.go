@@ -279,7 +279,7 @@ func buildAIExamplesPrompt(
 	}
 
 	encoded, _ := json.MarshalIndent(payload, "", "  ")
-	return string(encoded) + "\n\nCreate examples only for requested_categories. Cover happy path, missing required inputs, invalid path/query/body values, empty values, length or numeric boundaries, and auth/header failures when relevant. Set response_status to the expected HTTP status for each scenario. Use assertion types status, header, body_contains, or json_path with operators equals, not_equals, exists, or contains. Include at least one status assertion for every example."
+	return string(encoded) + "\n\nCreate examples only for requested_categories. Cover happy path, missing required inputs, invalid path/query/body values, empty values, length or numeric boundaries, and auth/header failures when relevant. Set response_status to the expected HTTP status for each scenario. Use assertion types status, header, body_contains, or json_path with operators equals, not_equals, exists, or contains. For header assertions, set path to the header name such as Content-Type or Authorization. Include at least one status assertion for every example."
 }
 
 func parseAIExampleDrafts(raw string) ([]aiExampleDraft, error) {
@@ -393,6 +393,9 @@ func normalizeExampleAssertions(assertions []Assertion, responseStatus int) []As
 		if assertion.Operator == "" {
 			assertion.Operator = "equals"
 		}
+		if assertion.Type == "header" && assertion.Path == "" {
+			assertion.Path = inferHeaderAssertionPath(assertion)
+		}
 		if assertion.Type == "status" {
 			hasStatus = true
 		}
@@ -409,6 +412,29 @@ func normalizeExampleAssertions(assertions []Assertion, responseStatus int) []As
 		}, result...)
 	}
 	return result
+}
+
+func inferHeaderAssertionPath(assertion Assertion) string {
+	value := strings.ToLower(strings.TrimSpace(fmt.Sprint(assertion.Expect)))
+	message := strings.ToLower(assertion.Message)
+	context := value + " " + message
+
+	switch {
+	case strings.Contains(context, "content-type") ||
+		strings.Contains(context, "content type") ||
+		strings.Contains(context, "application/json") ||
+		strings.Contains(context, "json"):
+		return "Content-Type"
+	case strings.Contains(context, "authorization") ||
+		strings.Contains(context, "bearer"):
+		return "Authorization"
+	case strings.Contains(context, "location"):
+		return "Location"
+	case strings.Contains(context, "cache-control"):
+		return "Cache-Control"
+	default:
+		return ""
+	}
 }
 
 func requestKeyValuesForPrompt(rows []requestmodule.KeyValue) []KeyValue {
