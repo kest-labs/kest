@@ -63,6 +63,26 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/project',
+        destination: '/workspace',
+        permanent: false,
+      },
+      {
+        source: '/project/:path*',
+        destination: '/workspace/:path*',
+        permanent: false,
+      },
+      {
+        source: '/invite/project/:slug',
+        destination: '/invite/workspace/:slug',
+        permanent: false,
+      },
+    ];
+  },
+
   // Security headers only (no caching headers)
   async headers() {
     return [
