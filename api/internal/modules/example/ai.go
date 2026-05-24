@@ -54,6 +54,7 @@ type aiExampleDraftEnvelope struct {
 type aiExampleDraft struct {
 	Name            string            `json:"name"`
 	Description     string            `json:"description"`
+	Category        string            `json:"category"`
 	URL             string            `json:"url"`
 	Method          string            `json:"method"`
 	Headers         []KeyValue        `json:"headers"`
@@ -61,23 +62,32 @@ type aiExampleDraft struct {
 	Body            string            `json:"body"`
 	BodyType        string            `json:"body_type"`
 	Auth            *AuthConfig       `json:"auth"`
+	Assertions      []Assertion       `json:"assertions"`
 	ResponseStatus  int               `json:"response_status"`
 	ResponseHeaders map[string]string `json:"response_headers"`
 	ResponseBody    string            `json:"response_body"`
+}
+
+type aiExampleGenerationOptions struct {
+	Count        int
+	Categories   []string
+	Instructions string
 }
 
 func generateAIExampleDrafts(
 	ctx context.Context,
 	req *requestmodule.Request,
 	existing []*Example,
-	count int,
+	options aiExampleGenerationOptions,
 ) ([]*CreateExampleRequest, error) {
 	cfg := config.GlobalConfig
 	if cfg == nil || cfg.OpenAI.APIKey == "" {
 		return nil, fmt.Errorf("AI example generation is not configured (OPENAI_API_KEY missing)")
 	}
 
-	count = normalizeAIExampleCount(count)
+	count := normalizeAIExampleCount(options.Count)
+	categories := normalizeAIExampleCategories(options.Categories)
+	instructions := truncatePromptValue(strings.TrimSpace(options.Instructions), 1200)
 	client := &exampleLLMClient{
 		apiKey:  cfg.OpenAI.APIKey,
 		baseURL: cfg.OpenAI.BaseURL,
@@ -85,7 +95,11 @@ func generateAIExampleDrafts(
 		timeout: 90 * time.Second,
 	}
 
-	raw, err := client.complete(ctx, getAIExamplesSystemPrompt(), buildAIExamplesPrompt(req, existing, count))
+	raw, err := client.complete(
+		ctx,
+		getAIExamplesSystemPrompt(),
+		buildAIExamplesPrompt(req, existing, count, categories, instructions),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -174,19 +188,49 @@ func normalizeAIExampleCount(count int) int {
 	return count
 }
 
+func normalizeAIExampleCategories(categories []string) []string {
+	seen := map[string]struct{}{}
+	result := make([]string, 0, len(categories))
+	for _, category := range categories {
+		normalized := normalizeExampleCategory(strings.ToLower(strings.TrimSpace(category)))
+		if normalized == "general" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		result = append(result, normalized)
+	}
+	if len(result) == 0 {
+		return []string{"positive", "negative", "boundary", "security"}
+	}
+	return result
+}
+
 func getAIExamplesSystemPrompt() string {
 	return strings.Join([]string{
 		"You generate executable HTTP request examples for API boundary testing.",
 		"Return strict JSON only. Do not wrap the JSON in markdown fences.",
 		"Every example must include the complete request state needed for that scenario.",
+		"Every example must include a category: positive, negative, boundary, or security.",
+		"Every example must include assertions that can be evaluated after execution.",
 		"Use placeholders such as {{base_url}}, {{token}}, and realistic safe dummy values.",
 		"Never include real credentials, real personal data, or destructive payloads.",
 	}, " ")
 }
 
-func buildAIExamplesPrompt(req *requestmodule.Request, existing []*Example, count int) string {
+func buildAIExamplesPrompt(
+	req *requestmodule.Request,
+	existing []*Example,
+	count int,
+	categories []string,
+	instructions string,
+) string {
 	payload := map[string]any{
-		"target_count": count,
+		"target_count":         count,
+		"requested_categories": categories,
+		"extra_instructions":   instructions,
 		"request": map[string]any{
 			"name":         req.Name,
 			"description":  req.Description,
@@ -208,15 +252,24 @@ func buildAIExamplesPrompt(req *requestmodule.Request, existing []*Example, coun
 		"required_output_schema": map[string]any{
 			"examples": []map[string]any{
 				{
-					"name":             "Happy path",
-					"description":      "Valid request with representative inputs.",
-					"method":           req.Method,
-					"url":              req.URL,
-					"headers":          []KeyValue{},
-					"query_params":     []KeyValue{},
-					"body":             "",
-					"body_type":        "none",
-					"auth":             nil,
+					"name":         "Happy path",
+					"description":  "Valid request with representative inputs.",
+					"category":     "positive",
+					"method":       req.Method,
+					"url":          req.URL,
+					"headers":      []KeyValue{},
+					"query_params": []KeyValue{},
+					"body":         "",
+					"body_type":    "none",
+					"auth":         nil,
+					"assertions": []Assertion{
+						{
+							Type:     "status",
+							Operator: "equals",
+							Expect:   200,
+							Message:  "Response status should be 200.",
+						},
+					},
 					"response_status":  200,
 					"response_headers": map[string]string{},
 					"response_body":    "",
@@ -226,7 +279,7 @@ func buildAIExamplesPrompt(req *requestmodule.Request, existing []*Example, coun
 	}
 
 	encoded, _ := json.MarshalIndent(payload, "", "  ")
-	return string(encoded) + "\n\nCreate examples covering happy path, missing required inputs, invalid path/query/body values, empty values, length or numeric boundaries, and auth/header failures when relevant. Set response_status to the expected HTTP status for each scenario."
+	return string(encoded) + "\n\nCreate examples only for requested_categories. Cover happy path, missing required inputs, invalid path/query/body values, empty values, length or numeric boundaries, and auth/header failures when relevant. Set response_status to the expected HTTP status for each scenario. Use assertion types status, header, body_contains, or json_path with operators equals, not_equals, exists, or contains. Include at least one status assertion for every example."
 }
 
 func parseAIExampleDrafts(raw string) ([]aiExampleDraft, error) {
@@ -287,9 +340,14 @@ func normalizeAIExampleDraft(req *requestmodule.Request, draft aiExampleDraft, i
 		responseStatus = 200
 	}
 
+	category := normalizeExampleCategory(strings.ToLower(strings.TrimSpace(draft.Category)))
+	assertions := normalizeExampleAssertions(draft.Assertions, responseStatus)
+
 	return &CreateExampleRequest{
 		Name:            truncatePromptValue(name, 100),
 		Description:     truncatePromptValue(strings.TrimSpace(draft.Description), 500),
+		Category:        category,
+		Source:          "ai",
 		URL:             url,
 		Method:          method,
 		Headers:         normalizeExampleKeyValues(draft.Headers),
@@ -297,6 +355,7 @@ func normalizeAIExampleDraft(req *requestmodule.Request, draft aiExampleDraft, i
 		Body:            draft.Body,
 		BodyType:        bodyType,
 		Auth:            draft.Auth,
+		Assertions:      assertions,
 		ResponseStatus:  responseStatus,
 		ResponseHeaders: draft.ResponseHeaders,
 		ResponseBody:    draft.ResponseBody,
@@ -316,6 +375,38 @@ func normalizeExampleKeyValues(rows []KeyValue) []KeyValue {
 		}
 		row.Key = key
 		result = append(result, row)
+	}
+	return result
+}
+
+func normalizeExampleAssertions(assertions []Assertion, responseStatus int) []Assertion {
+	result := make([]Assertion, 0, len(assertions)+1)
+	hasStatus := false
+	for _, assertion := range assertions {
+		assertion.Type = strings.TrimSpace(assertion.Type)
+		assertion.Path = strings.TrimSpace(assertion.Path)
+		assertion.Operator = strings.TrimSpace(assertion.Operator)
+		assertion.Message = truncatePromptValue(strings.TrimSpace(assertion.Message), 240)
+		if assertion.Type == "" {
+			continue
+		}
+		if assertion.Operator == "" {
+			assertion.Operator = "equals"
+		}
+		if assertion.Type == "status" {
+			hasStatus = true
+		}
+		result = append(result, assertion)
+	}
+	if !hasStatus {
+		result = append([]Assertion{
+			{
+				Type:     "status",
+				Operator: "equals",
+				Expect:   responseStatus,
+				Message:  fmt.Sprintf("Response status should be %d.", responseStatus),
+			},
+		}, result...)
 	}
 	return result
 }
@@ -371,8 +462,10 @@ func examplesForPrompt(examples []*Example) []map[string]any {
 		result = append(result, map[string]any{
 			"name":            example.Name,
 			"description":     example.Description,
+			"category":        example.Category,
 			"method":          example.Method,
 			"url":             example.URL,
+			"assertions":      example.Assertions,
 			"response_status": example.ResponseStatus,
 		})
 	}

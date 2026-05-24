@@ -168,9 +168,22 @@ func (h *Handler) GenerateAI(c *gin.Context) {
 		return
 	}
 
-	drafts, err := generateAIExampleDrafts(c.Request.Context(), targetRequest, existing, req.Count)
+	drafts, err := generateAIExampleDrafts(c.Request.Context(), targetRequest, existing, aiExampleGenerationOptions{
+		Count:        req.Count,
+		Categories:   req.Categories,
+		Instructions: req.Instructions,
+	})
 	if err != nil {
 		response.HandleError(c, "Failed to generate request examples", err)
+		return
+	}
+
+	if req.PreviewOnly {
+		response.Success(c, &GenerateAIExamplesResponse{
+			Total:       len(drafts),
+			Drafts:      toDraftResponseSlice(drafts),
+			PreviewOnly: true,
+		})
 		return
 	}
 
@@ -188,8 +201,9 @@ func (h *Handler) GenerateAI(c *gin.Context) {
 	}
 
 	response.Created(c, &GenerateAIExamplesResponse{
-		Total: len(created),
-		Items: toResponseSlice(created),
+		Total:       len(created),
+		Items:       toResponseSlice(created),
+		PreviewOnly: false,
 	})
 }
 
