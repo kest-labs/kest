@@ -4,7 +4,7 @@ profiles:
     include:
       - ".kest/flow/**/*.flow.md"
     env: local
-    base_url: "http://127.0.0.1:5119"
+    base_url: "http://127.0.0.1:8025"
     strict: true
     fail_fast: false
     sync: false

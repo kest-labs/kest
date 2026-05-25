@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname "$SCRIPT_DIR")"
 OUTPUT="${KEST_API_OUTPUT:-$WORKSPACE_ROOT/kest-api}"
-BASE_URL="${KEST_BASE_URL:-http://127.0.0.1:5119}"
+BASE_URL="${KEST_BASE_URL:-http://127.0.0.1:8025}"
 
 if [[ "${KEST_PLATFORM_URL:-}" == "" || "${KEST_PLATFORM_TOKEN:-}" == "" || "${KEST_PLATFORM_WORKSPACE_ID:-}" == "" ]]; then
   echo "Missing Kest Web sync config."

@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname "$SCRIPT_DIR")"
-BASE_URL="${KEST_BASE_URL:-http://127.0.0.1:5119}"
+BASE_URL="${KEST_BASE_URL:-http://127.0.0.1:8025}"
 PROFILE="${KEST_PROFILE:-local}"
 
 if [[ "${KEST_SKIP_FLOWS:-}" == "1" ]]; then

@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname "$SCRIPT_DIR")"
 
-PORT="${PORT:-5119}"
+PORT="${PORT:-8025}"
 BASE_URL="${KEST_BASE_URL:-http://127.0.0.1:$PORT}"
 DB_NAME="${DB_NAME:-kest}"
 DB_USERNAME="${DB_USERNAME:-kest_user}"
