@@ -1,0 +1,127 @@
+name: Kest Flow CI
+
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'cli/**'
+      - '.kest/**'
+      - 'scripts/**'
+      - '.github/workflows/kest-flow-ci.yml'
+  push:
+    paths:
+      - 'api/**'
+      - 'cli/**'
+      - '.kest/**'
+      - 'scripts/**'
+      - '.github/workflows/kest-flow-ci.yml'
+
+jobs:
+  kest-flow:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_DB: kest
+          POSTGRES_USER: kest_user
+          POSTGRES_PASSWORD: kest_password_123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kest_user -d kest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PORT: 8025
+      GIN_MODE: release
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: kest
+      DB_USERNAME: kest_user
+      DB_PASSWORD: kest_password_123
+      JWT_SECRET: ci_jwt_secret_min_32_chars_change_me
+      KEST_BASE_URL: http://127.0.0.1:8025
+      KEST_PROFILE: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache-dependency-path: |
+            go.sum
+            api/go.sum
+            cli/go.sum
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check workspace terminology
+        run: node scripts/check-workspace-terminology.mjs
+
+      - name: Build Kest CLI
+        run: |
+          mkdir -p .bin
+          cd cli
+          go build -o ../.bin/kest .
+
+      - name: Build API
+        run: |
+          cd api
+          go mod download
+          CGO_ENABLED=0 go build -ldflags="-s -w" -o ../.bin/kest-api ./cmd/api
+
+      - name: Start API
+        run: |
+          ./.bin/kest-api > api.log 2>&1 &
+          echo $! > api.pid
+          for i in {1..60}; do
+            if curl --fail --silent "$KEST_BASE_URL/v1/health" >/dev/null; then
+              echo "API is ready."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat api.log
+          exit 1
+
+      - name: Run Kest flows
+        id: kest
+        continue-on-error: true
+        env:
+          KEST_CLI_BIN: ${{ github.workspace }}/.bin/kest
+        run: |
+          mkdir -p .kest/reports
+          scripts/run-kest-flows.sh
+
+      - name: Upload Kest reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kest-flow-reports
+          if-no-files-found: ignore
+          path: |
+            .kest/reports/flow-results.json
+            .kest/reports/flow-results.xml
+            api.log
+
+      - name: Notify Feishu
+        if: always()
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          KEST_RESULT: ${{ steps.kest.outcome }}
+        run: node scripts/notify-feishu-kest.mjs .kest/reports/flow-results.json
+
+      - name: Fail workflow when Kest failed
+        if: steps.kest.outcome != 'success'
+        run: exit 1
