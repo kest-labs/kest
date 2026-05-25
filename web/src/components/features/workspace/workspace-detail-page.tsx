@@ -546,7 +546,7 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
         id: workspaceId,
         data: {
           name: `${workspace.name} CLI sync`,
-          scopes: ['collection:read', 'collection:run'],
+          scopes: ['collection:read', 'collection:run', 'flow:run', 'flow:write'],
         },
       });
       setGeneratedCliToken(token);

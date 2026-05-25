@@ -1506,7 +1506,7 @@ function WorkspaceKeysWorkspaceSection({
         id: workspaceId,
         data: {
           name: `${workspace.name} CLI sync`,
-          scopes: ['collection:read', 'collection:run'],
+          scopes: ['collection:read', 'collection:run', 'flow:run', 'flow:write'],
         },
       });
       setGeneratedCliToken(token);
@@ -1582,7 +1582,9 @@ function WorkspaceKeysWorkspaceSection({
                     <span className="font-mono">{scopedWorkspaceId}</span>
                   </DetailField>
                   <DetailField label={t('keysPage.scopes')}>
-                    <span className="font-mono text-xs">collection:read, collection:run</span>
+                    <span className="font-mono text-xs">
+                      collection:read, collection:run, flow:run, flow:write
+                    </span>
                   </DetailField>
                   <DetailField label={t('keysPage.autoSyncHistory')}>
                     {t('keysPage.autoSyncHistoryEnabled')}

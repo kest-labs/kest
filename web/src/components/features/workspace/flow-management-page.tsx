@@ -2303,8 +2303,8 @@ export function WorkspaceFlowManagementPage({
     }
 
     return allFlows.filter(flow =>
-      [flow.name, flow.description]
-        .filter(Boolean)
+      [flow.name, flow.description, flow.source_path]
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
         .some(value => value.toLowerCase().includes(keyword))
     );
   }, [deferredSearch, flows]);
@@ -2488,6 +2488,9 @@ export function WorkspaceFlowManagementPage({
       selectedRun?.step_results?.find(item => item.step_id === selectedNode.data.backendStepId) ??
       null)
     : null;
+  const selectedFlow = selectedFlowQuery.data ?? null;
+  const selectedFlowReadOnly = selectedFlow?.source_read_only === true;
+  const canModifySelectedFlow = canEdit && !selectedFlowReadOnly;
 
   const clearValidationState = () => {
     setValidationState(createEmptyValidationState());
@@ -2591,6 +2594,10 @@ export function WorkspaceFlowManagementPage({
   };
 
   const handleDeleteFlow = async (flowId: string, flowName: string) => {
+    const targetFlow = flows?.find(flow => flow.id === flowId);
+    if (targetFlow?.source_read_only) {
+      return;
+    }
     if (!window.confirm(t('toasts.flowDeleteConfirm', { name: flowName }))) {
       return;
     }
@@ -2989,7 +2996,7 @@ export function WorkspaceFlowManagementPage({
   };
 
   const handleAddStep = () => {
-    if (!selectedFlowId) {
+    if (!selectedFlowId || selectedFlowReadOnly) {
       return;
     }
 
@@ -3033,7 +3040,7 @@ export function WorkspaceFlowManagementPage({
   };
 
   const saveCurrentFlow = async () => {
-    if (!selectedFlowId) {
+    if (!selectedFlowId || selectedFlowReadOnly) {
       return null;
     }
 
@@ -3211,7 +3218,7 @@ export function WorkspaceFlowManagementPage({
   };
 
   const handleRunServer = async () => {
-    if (!selectedFlowId) {
+    if (!selectedFlowId || selectedFlowReadOnly) {
       return;
     }
 
@@ -3252,7 +3259,7 @@ export function WorkspaceFlowManagementPage({
   };
 
   const handleRunLocal = async () => {
-    if (!selectedFlowId) {
+    if (!selectedFlowId || selectedFlowReadOnly) {
       return;
     }
 
@@ -3455,18 +3462,44 @@ export function WorkspaceFlowManagementPage({
                     className="min-w-0 flex-1 text-left"
                     onClick={() => navigateToFlow(flow.id)}
                   >
-                    <p className="truncate text-sm font-medium text-text-main">{flow.name}</p>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-text-main">
+                        {flow.name}
+                      </p>
+                      {flow.source_read_only ? (
+                        <Badge variant="outline">{t('flowPage.sourceGit')}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t('flowPage.sourceWeb')}</Badge>
+                      )}
+                    </div>
                     <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-muted">
                       {flow.description || t('common.noDescriptionProvided')}
                     </p>
+                    {flow.source_path ? (
+                      <p className="mt-1 truncate font-mono text-[11px] text-text-muted">
+                        {flow.source_path}
+                      </p>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
                       <Badge variant="outline">
                         {t('flowPage.stepCount', { count: flow.step_count ?? 0 })}
                       </Badge>
+                      {flow.latest_run_status ? (
+                        <Badge
+                          variant="outline"
+                          className={getStatusBadgeClassName(flow.latest_run_status)}
+                        >
+                          {(flow.latest_run_mode === 'cli'
+                            ? t('flowPage.latestCliRun')
+                            : t('flowPage.latestRun')) +
+                            ': ' +
+                            getStatusLabel(t, flow.latest_run_status)}
+                        </Badge>
+                      ) : null}
                       <span>{formatDate(flow.updated_at)}</span>
                     </div>
                   </button>
-                  {canEdit ? (
+                  {canEdit && !flow.source_read_only ? (
                     <Button
                       type="button"
                       variant="ghost"
@@ -3567,7 +3600,7 @@ export function WorkspaceFlowManagementPage({
           type="button"
           variant="outline"
           onClick={() => void saveCurrentFlow()}
-          disabled={!canEdit || !dirty}
+          disabled={!canModifySelectedFlow || !dirty}
           loading={saveFlowMutation.isPending}
         >
           <Save className="h-4 w-4" />
@@ -3576,7 +3609,7 @@ export function WorkspaceFlowManagementPage({
         <Button
           type="button"
           onClick={() => void handleRunLocal()}
-          disabled={!canEdit || !selectedFlowId}
+          disabled={!canModifySelectedFlow || !selectedFlowId}
           loading={isLocalRunPending}
         >
           <Play className="h-4 w-4" />
@@ -3586,7 +3619,7 @@ export function WorkspaceFlowManagementPage({
           type="button"
           variant="outline"
           onClick={() => void handleRunServer()}
-          disabled={!canEdit || !selectedFlowId}
+          disabled={!canModifySelectedFlow || !selectedFlowId}
           loading={runFlowMutation.isPending}
         >
           <Play className="h-4 w-4" />
@@ -3596,7 +3629,7 @@ export function WorkspaceFlowManagementPage({
           type="button"
           variant="outline"
           onClick={handleAddStep}
-          disabled={!canEdit || !selectedFlowId}
+          disabled={!canModifySelectedFlow || !selectedFlowId}
         >
           <Plus className="h-4 w-4" />
           {t('flowPage.addStep')}
@@ -3622,7 +3655,21 @@ export function WorkspaceFlowManagementPage({
         ) : (
           <Badge variant="outline">{t('flowPage.saved')}</Badge>
         )}
+        {selectedFlowReadOnly ? (
+          <Badge variant="outline" className="border-border-subtle bg-bg-surface text-text-main">
+            {t('flowPage.gitBackedReadOnly')}
+          </Badge>
+        ) : null}
       </div>
+
+      {selectedFlowReadOnly ? (
+        <div className="border-b border-border-subtle px-4 py-4 md:px-6">
+          <Alert>
+            <AlertTitle>{t('flowPage.gitBackedReadOnly')}</AlertTitle>
+            <AlertDescription>{t('flowPage.gitBackedDescription')}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
 
       {validationState.message ? (
         <div className="border-b border-border-subtle px-4 py-4 md:px-6">
@@ -3648,6 +3695,9 @@ export function WorkspaceFlowManagementPage({
                 onNodesDelete={handleNodesDelete}
                 onConnect={handleConnect}
                 onNodeDragStart={handleNodeDragStart}
+                nodesDraggable={canModifySelectedFlow}
+                nodesConnectable={canModifySelectedFlow}
+                elementsSelectable
                 onPaneClick={() => {
                   setSelectedNodeId(null);
                   setSelectedEdgeId(null);
@@ -3738,7 +3788,7 @@ export function WorkspaceFlowManagementPage({
                           type="button"
                           size="sm"
                           onClick={() => void handleRunLocal()}
-                          disabled={!canEdit || !selectedFlowId}
+                          disabled={!canModifySelectedFlow || !selectedFlowId}
                           loading={isLocalRunPending}
                         >
                           <Play className="h-4 w-4" />
@@ -3749,7 +3799,7 @@ export function WorkspaceFlowManagementPage({
                           size="sm"
                           variant="outline"
                           onClick={() => void handleRunServer()}
-                          disabled={!canEdit || !selectedFlowId}
+                          disabled={!canModifySelectedFlow || !selectedFlowId}
                           loading={runFlowMutation.isPending}
                         >
                           <Play className="h-4 w-4" />
@@ -3816,7 +3866,7 @@ export function WorkspaceFlowManagementPage({
                               variant="outline"
                               isIcon
                               onClick={handleDuplicateSelection}
-                              disabled={!canEdit || !canDuplicateSelection}
+                              disabled={!canModifySelectedFlow || !canDuplicateSelection}
                               aria-label={t('flowPage.duplicateSelection')}
                             >
                               <Copy className="h-4 w-4" />
@@ -3834,7 +3884,7 @@ export function WorkspaceFlowManagementPage({
                               variant="outline"
                               isIcon
                               onClick={handleDeleteSelection}
-                              disabled={!canEdit || !canDeleteSelection}
+                              disabled={!canModifySelectedFlow || !canDeleteSelection}
                               aria-label={t('common.delete')}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -3850,7 +3900,7 @@ export function WorkspaceFlowManagementPage({
                               variant="outline"
                               isIcon
                               onClick={handleUndo}
-                              disabled={!canEdit || !canUndo}
+                              disabled={!canModifySelectedFlow || !canUndo}
                               aria-label={t('flowPage.undo')}
                             >
                               <Redo2 className="h-4 w-4 rotate-180" />
@@ -3866,7 +3916,7 @@ export function WorkspaceFlowManagementPage({
                               variant="outline"
                               isIcon
                               onClick={handleRedo}
-                              disabled={!canEdit || !canRedo}
+                              disabled={!canModifySelectedFlow || !canRedo}
                               aria-label={t('flowPage.redo')}
                             >
                               <Redo2 className="h-4 w-4" />
@@ -3950,7 +4000,7 @@ export function WorkspaceFlowManagementPage({
                 edgeErrors={validationState.edgeErrors}
                 onNodeChange={handleNodeChange}
                 onEdgeMappingsChange={handleEdgeMappingsChange}
-                canEdit={canEdit}
+                canEdit={canModifySelectedFlow}
                 runs={runs}
                 selectedRun={selectedRun}
                 isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}
@@ -4109,7 +4159,7 @@ export function WorkspaceFlowManagementPage({
                 edgeErrors={validationState.edgeErrors}
                 onNodeChange={handleNodeChange}
                 onEdgeMappingsChange={handleEdgeMappingsChange}
-                canEdit={canEdit}
+                canEdit={canModifySelectedFlow}
                 runs={runs}
                 selectedRun={selectedRun}
                 isRunDetailsLoading={selectedRunQuery.isLoading || selectedRunQuery.isFetching}

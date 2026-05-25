@@ -1941,6 +1941,13 @@ const messages = {
     runLocal: '本地运行',
     runAll: '运行全部',
     runServer: '服务端运行',
+    sourceGit: 'Git',
+    sourceWeb: 'Web',
+    latestRun: '最近运行',
+    latestCliRun: '最近 CLI',
+    gitBackedReadOnly: 'Git 镜像只读',
+    gitBackedDescription:
+      '该流程从仓库中的 .flow.md 同步而来。请修改 Git 文件，并由 CLI 同步更新 Web 视图。',
     addStep: '添加步骤',
     fitView: '适应视图',
     zoomIn: '放大',

@@ -12,6 +12,13 @@ export interface WorkspaceFlow {
   description: string;
   created_by: string;
   step_count?: number;
+  source?: 'web' | 'cli' | string;
+  source_id?: string;
+  source_path?: string;
+  source_hash?: string;
+  source_read_only?: boolean;
+  latest_run_status?: FlowRunStatus;
+  latest_run_mode?: 'server' | 'local' | 'cli' | string;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +35,8 @@ export interface FlowStep {
   body: string;
   captures: string;
   asserts: string;
+  step_type?: 'http' | 'exec' | string;
+  source_id?: string;
   position_x: number;
   position_y: number;
   created_at: string;
@@ -111,7 +120,12 @@ export interface FlowRun {
   flow_id: string;
   status: FlowRunStatus;
   triggered_by: string;
-  execution_mode?: 'server' | 'local';
+  execution_mode?: 'server' | 'local' | 'cli' | string;
+  source?: string;
+  source_event_id?: string;
+  profile?: string;
+  environment?: string;
+  base_url?: string;
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;

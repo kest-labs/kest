@@ -2097,6 +2097,13 @@ const messages: WorkspaceMessages = {
     runLocal: 'Run Local',
     runAll: 'Run All',
     runServer: 'Run Server',
+    sourceGit: 'Git',
+    sourceWeb: 'Web',
+    latestRun: 'Latest',
+    latestCliRun: 'Latest CLI',
+    gitBackedReadOnly: 'Git-backed read-only',
+    gitBackedDescription:
+      'This flow is mirrored from the repository. Edit the .flow.md file and let CLI sync update the web view.',
     addStep: 'Add Step',
     fitView: 'Fit View',
     zoomIn: 'Zoom In',
