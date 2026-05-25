@@ -18,6 +18,7 @@ type connectionKeyPayload struct {
 	PlatformURL             string `json:"platform_url"`
 	PlatformToken           string `json:"platform_token"`
 	PlatformProjectID       string `json:"platform_project_id"`
+	PlatformWorkspaceID     string `json:"platform_workspace_id"`
 	PlatformAutoSyncHistory *bool  `json:"platform_auto_sync_history,omitempty"`
 }
 
@@ -110,6 +111,10 @@ func parseConnectionKey(rawKey string) (*connectionKeyPayload, error) {
 	payload.PlatformURL = strings.TrimRight(strings.TrimSpace(payload.PlatformURL), "/")
 	payload.PlatformToken = strings.TrimSpace(payload.PlatformToken)
 	payload.PlatformProjectID = strings.TrimSpace(payload.PlatformProjectID)
+	payload.PlatformWorkspaceID = strings.TrimSpace(payload.PlatformWorkspaceID)
+	if payload.PlatformProjectID == "" {
+		payload.PlatformProjectID = payload.PlatformWorkspaceID
+	}
 
 	switch {
 	case payload.PlatformURL == "":
@@ -117,7 +122,7 @@ func parseConnectionKey(rawKey string) (*connectionKeyPayload, error) {
 	case payload.PlatformToken == "":
 		return nil, fmt.Errorf("connection key is missing platform_token")
 	case payload.PlatformProjectID == "":
-		return nil, fmt.Errorf("connection key is missing platform_project_id")
+		return nil, fmt.Errorf("connection key is missing platform_workspace_id")
 	}
 
 	return &payload, nil

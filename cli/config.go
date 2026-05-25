@@ -47,6 +47,8 @@ var configSetCmd = &cobra.Command{
 			conf.PlatformToken = value
 		case "platform_project_id":
 			conf.PlatformProjectID = value
+		case "platform_workspace_id":
+			conf.PlatformProjectID = value
 		case "platform_auto_sync_history":
 			conf.PlatformAutoSyncHistory = strings.EqualFold(value, "true") || value == "1" || strings.EqualFold(value, "yes")
 		default:
@@ -77,7 +79,7 @@ var configListCmd = &cobra.Command{
 		fmt.Printf("  ai_base_url:  %s\n", conf.AIBaseURL)
 		fmt.Printf("  platform_url: %s\n", conf.PlatformURL)
 		fmt.Printf("  platform_token: %s\n", mask(conf.PlatformToken))
-		fmt.Printf("  platform_project_id: %s\n", conf.PlatformProjectID)
+		fmt.Printf("  platform_workspace_id: %s\n", conf.PlatformProjectID)
 		fmt.Printf("  platform_auto_sync_history: %t\n", conf.PlatformAutoSyncHistory)
 		fmt.Printf("  active_env:   %s\n", conf.ActiveEnv)
 

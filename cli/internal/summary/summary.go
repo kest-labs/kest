@@ -10,6 +10,7 @@ import (
 )
 
 type TestResult struct {
+	StepID          string
 	Name            string
 	Method          string
 	URL             string
