@@ -65,6 +65,7 @@ const (
 	CLITokenScopeEnvironmentRead = "environment:read"
 	CLITokenScopeTestCaseRun     = "test_case:run"
 	CLITokenScopeFlowRun         = "flow:run"
+	CLITokenScopeFlowWrite       = "flow:write"
 )
 
 var supportedCLITokenScopes = map[string]struct{}{
@@ -73,6 +74,7 @@ var supportedCLITokenScopes = map[string]struct{}{
 	CLITokenScopeEnvironmentRead: {},
 	CLITokenScopeTestCaseRun:     {},
 	CLITokenScopeFlowRun:         {},
+	CLITokenScopeFlowWrite:       {},
 }
 
 // WorkspaceCLITokenPO persists workspace-scoped CLI tokens. TokenHash is the

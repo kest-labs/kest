@@ -13,6 +13,7 @@ type Repository interface {
 	// Flow CRUD
 	CreateFlow(ctx context.Context, flow *FlowPO) error
 	GetFlowByID(ctx context.Context, id string) (*FlowPO, error)
+	GetFlowBySource(ctx context.Context, workspaceID string, source string, sourceID string, sourcePath string) (*FlowPO, error)
 	ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error)
 	UpdateFlow(ctx context.Context, flow *FlowPO) error
 	DeleteFlow(ctx context.Context, id string) error
@@ -36,6 +37,7 @@ type Repository interface {
 	// Run
 	CreateRun(ctx context.Context, run *FlowRunPO) error
 	GetRunByID(ctx context.Context, id string) (*FlowRunPO, error)
+	GetRunBySourceEvent(ctx context.Context, source string, sourceEventID string) (*FlowRunPO, error)
 	ListRunsByFlow(ctx context.Context, flowID string) ([]*FlowRunPO, error)
 	UpdateRun(ctx context.Context, run *FlowRunPO) error
 
@@ -68,6 +70,20 @@ func (r *repository) CreateFlow(ctx context.Context, flow *FlowPO) error {
 func (r *repository) GetFlowByID(ctx context.Context, id string) (*FlowPO, error) {
 	var flow FlowPO
 	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&flow).Error; err != nil {
+		return nil, err
+	}
+	return &flow, nil
+}
+
+func (r *repository) GetFlowBySource(ctx context.Context, workspaceID string, source string, sourceID string, sourcePath string) (*FlowPO, error) {
+	var flow FlowPO
+	query := r.db.WithContext(ctx).Where("workspace_id = ? AND source = ?", workspaceID, source)
+	if sourceID != "" {
+		query = query.Where("source_id = ?", sourceID)
+	} else {
+		query = query.Where("source_path = ?", sourcePath)
+	}
+	if err := query.First(&flow).Error; err != nil {
 		return nil, err
 	}
 	return &flow, nil
@@ -168,6 +184,16 @@ func (r *repository) CreateRun(ctx context.Context, run *FlowRunPO) error {
 func (r *repository) GetRunByID(ctx context.Context, id string) (*FlowRunPO, error) {
 	var run FlowRunPO
 	if err := dbutil.ByID(r.db.WithContext(ctx), id).First(&run).Error; err != nil {
+		return nil, err
+	}
+	return &run, nil
+}
+
+func (r *repository) GetRunBySourceEvent(ctx context.Context, source string, sourceEventID string) (*FlowRunPO, error) {
+	var run FlowRunPO
+	if err := r.db.WithContext(ctx).
+		Where("source = ? AND source_event_id = ?", source, sourceEventID).
+		First(&run).Error; err != nil {
 		return nil, err
 	}
 	return &run, nil

@@ -25,6 +25,7 @@ type Handler struct {
 	service                  Service
 	memberService            member.Service
 	workspaceBackingResolver middleware.WorkspaceBackingResolver
+	workspaceTokenValidator  middleware.WorkspaceCLITokenValidator
 }
 
 // Name returns the module name
@@ -42,6 +43,10 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 
 func (h *Handler) SetWorkspaceBackingResolver(resolver middleware.WorkspaceBackingResolver) {
 	h.workspaceBackingResolver = resolver
+}
+
+func (h *Handler) SetWorkspaceTokenValidator(validator middleware.WorkspaceCLITokenValidator) {
+	h.workspaceTokenValidator = validator
 }
 
 // RegisterRoutes registers flow routes
@@ -423,4 +428,65 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		"items": runs,
 		"total": len(runs),
 	})
+}
+
+func (h *Handler) SyncFlowsFromCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req CLIFlowSyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	createdBy, ok := getCLITokenCreatedBy(c)
+	if !ok {
+		response.Unauthorized(c)
+		return
+	}
+
+	result, err := h.service.SyncFlowsFromCLI(c.Request.Context(), workspaceID, createdBy, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func (h *Handler) SyncFlowRunFromCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req CLIFlowRunSyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	createdBy, ok := getCLITokenCreatedBy(c)
+	if !ok {
+		response.Unauthorized(c)
+		return
+	}
+
+	result, err := h.service.SyncFlowRunFromCLI(c.Request.Context(), workspaceID, createdBy, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func getCLITokenCreatedBy(c *gin.Context) (string, bool) {
+	value, exists := c.Get("cliTokenCreatedBy")
+	if !exists {
+		return "", false
+	}
+	createdBy, ok := value.(string)
+	return createdBy, ok && createdBy != ""
 }

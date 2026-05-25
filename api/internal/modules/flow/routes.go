@@ -4,12 +4,27 @@ import (
 	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 // RegisterRoutes registers flow routes
 func RegisterRoutes(r *router.Router, handler *Handler, memberService member.Service) {
 	registerFlowRoutes(r, "/workspaces/:id/flows", handler, memberService, true)
 	registerFlowRoutes(r, "/projects/:id/flows", handler, memberService, false)
+	registerCLIFlowRoutes(r, handler)
+}
+
+func registerCLIFlowRoutes(r *router.Router, handler *Handler) {
+	r.Group("/workspaces/:id/cli", func(cli *router.Router) {
+		cli.POST("/flows/sync", handler.SyncFlowsFromCLI).
+			Name("workspaces.cli.flows_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(handler.workspaceTokenValidator, workspace.CLITokenScopeFlowWrite))
+		cli.POST("/flow-runs/sync", handler.SyncFlowRunFromCLI).
+			Name("workspaces.cli.flow_runs_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(handler.workspaceTokenValidator, workspace.CLITokenScopeFlowRun))
+	})
 }
 
 func registerFlowRoutes(

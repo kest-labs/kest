@@ -8,14 +8,19 @@ import (
 
 // FlowPO represents a test flow (scenario) in the database
 type FlowPO struct {
-	ID          string         `gorm:"primaryKey" json:"id"`
-	WorkspaceID string         `gorm:"column:workspace_id;not null;index:idx_flows_project" json:"workspace_id"`
-	Name        string         `gorm:"size:255;not null" json:"name"`
-	Description string         `gorm:"type:text" json:"description"`
-	CreatedBy   string         `gorm:"not null" json:"created_by"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	ID             string         `gorm:"primaryKey" json:"id"`
+	WorkspaceID    string         `gorm:"column:workspace_id;not null;index:idx_flows_project" json:"workspace_id"`
+	Name           string         `gorm:"size:255;not null" json:"name"`
+	Description    string         `gorm:"type:text" json:"description"`
+	CreatedBy      string         `gorm:"not null" json:"created_by"`
+	Source         string         `gorm:"size:32;not null;default:'web';index:idx_flows_source" json:"source"`
+	SourceID       string         `gorm:"size:255;not null;default:'';index:idx_flows_source" json:"source_id"`
+	SourcePath     string         `gorm:"size:500;not null;default:'';index" json:"source_path"`
+	SourceHash     string         `gorm:"size:64;not null;default:''" json:"source_hash"`
+	SourceReadOnly bool           `gorm:"not null;default:false" json:"source_read_only"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // TableName returns the table name for FlowPO
@@ -36,6 +41,8 @@ type FlowStepPO struct {
 	Body      string         `gorm:"type:text" json:"body"`
 	Captures  string         `gorm:"type:text" json:"captures"`
 	Asserts   string         `gorm:"type:text" json:"asserts"`
+	StepType  string         `gorm:"size:20;not null;default:'http'" json:"step_type"`
+	SourceID  string         `gorm:"size:255;not null;default:'';index" json:"source_id"`
 	PositionX float64        `gorm:"default:0" json:"position_x"`
 	PositionY float64        `gorm:"default:0" json:"position_y"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -67,15 +74,21 @@ func (FlowEdgePO) TableName() string {
 
 // FlowRunPO represents a single execution of a flow
 type FlowRunPO struct {
-	ID          string         `gorm:"primaryKey" json:"id"`
-	FlowID      string         `gorm:"not null;index:idx_flow_runs_flow" json:"flow_id"`
-	Status      string         `gorm:"size:20;not null;default:'pending'" json:"status"`
-	TriggeredBy string         `gorm:"not null" json:"triggered_by"`
-	StartedAt   *time.Time     `json:"started_at"`
-	FinishedAt  *time.Time     `json:"finished_at"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	ID            string         `gorm:"primaryKey" json:"id"`
+	FlowID        string         `gorm:"not null;index:idx_flow_runs_flow" json:"flow_id"`
+	Status        string         `gorm:"size:20;not null;default:'pending'" json:"status"`
+	TriggeredBy   string         `gorm:"not null" json:"triggered_by"`
+	ExecutionMode string         `gorm:"size:20;not null;default:'server'" json:"execution_mode"`
+	Source        string         `gorm:"size:32;not null;default:'web';index" json:"source"`
+	SourceEventID string         `gorm:"size:191;not null;default:'';index" json:"source_event_id"`
+	Profile       string         `gorm:"size:50;not null;default:''" json:"profile"`
+	Environment   string         `gorm:"size:100;not null;default:''" json:"environment"`
+	BaseURL       string         `gorm:"size:500;not null;default:''" json:"base_url"`
+	StartedAt     *time.Time     `json:"started_at"`
+	FinishedAt    *time.Time     `json:"finished_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // TableName returns the table name for FlowRunPO

@@ -105,7 +105,7 @@ func InitApplication() (*app.Application, error) {
 	environmentService := environment.NewService(environmentRepository)
 	environmentHandler := environment.NewHandler(environmentService, workspaceService)
 	flowRepository := flow.NewRepository(db)
-	flowService := flow.NewService(flowRepository)
+	flowService := flow.NewService(flowRepository, historyService)
 	flowHandler := flow.NewHandler(flowService, memberService)
 	executor := testrunner.NewExecutor()
 	testcaseService := testcase.NewService(testcaseRepository, apispecRepository, environmentRepository, executor)

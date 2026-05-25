@@ -30,6 +30,9 @@ func RegisterAPI(r *router.Router, handlers *app.Handlers) {
 	if handlers.Project != nil && handlers.Workspace != nil {
 		handlers.Project.SetWorkspaceTokenValidator(handlers.Workspace.Service())
 	}
+	if handlers.Flow != nil && handlers.Workspace != nil {
+		handlers.Flow.SetWorkspaceTokenValidator(handlers.Workspace.Service())
+	}
 	if handlers.Project != nil {
 		resolver := handlers.Project.Service()
 		if handlers.Flow != nil {
