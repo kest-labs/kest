@@ -67,6 +67,7 @@ type FlowRunSyncRequest struct {
 type FlowRunSync struct {
 	SourceFlowID string    `json:"source_flow_id,omitempty"`
 	SourcePath   string    `json:"source_path"`
+	RunnerType   string    `json:"runner_type,omitempty"`
 	Profile      string    `json:"profile,omitempty"`
 	Environment  string    `json:"environment,omitempty"`
 	BaseURL      string    `json:"base_url,omitempty"`
@@ -107,6 +108,23 @@ type FlowSyncResponse struct {
 	Errors  []string `json:"errors,omitempty"`
 }
 
+type RunnableFlow struct {
+	ID          string    `json:"id"`
+	SourceID    string    `json:"source_id"`
+	SourcePath  string    `json:"source_path"`
+	SourceHash  string    `json:"source_hash"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Definition  string    `json:"definition"`
+	Revision    int       `json:"revision"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type runnableFlowListResponse struct {
+	Items []RunnableFlow `json:"items"`
+	Total int            `json:"total"`
+}
+
 func PushFlowDefinitions(conf *config.Config, workspaceID string, req FlowDefinitionSyncRequest) (FlowSyncResponse, error) {
 	if len(req.Flows) == 0 {
 		return FlowSyncResponse{}, nil
@@ -116,6 +134,29 @@ func PushFlowDefinitions(conf *config.Config, workspaceID string, req FlowDefini
 
 func PushFlowRun(conf *config.Config, workspaceID string, req FlowRunSyncRequest) (FlowSyncResponse, error) {
 	return postFlowSync(conf, buildWorkspaceCLIEndpoint(conf.PlatformURL, workspaceID, "flow-runs/sync"), req)
+}
+
+func ListRunnableFlows(conf *config.Config, workspaceID string) ([]RunnableFlow, error) {
+	if conf == nil {
+		return nil, fmt.Errorf("platform config is required")
+	}
+	req, err := http.NewRequest(http.MethodGet, buildWorkspaceCLIEndpoint(conf.PlatformURL, workspaceID, "flows/runnable"), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+conf.PlatformToken)
+
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("list runnable flows failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+	return ParseRunnableFlowsResponse(respBody)
 }
 
 func postFlowSync(conf *config.Config, endpoint string, payload interface{}) (FlowSyncResponse, error) {
@@ -163,6 +204,23 @@ func ParseFlowSyncResponse(body []byte) (FlowSyncResponse, error) {
 		return FlowSyncResponse{}, err
 	}
 	return resp, nil
+}
+
+func ParseRunnableFlowsResponse(body []byte) ([]RunnableFlow, error) {
+	var wrapped historySyncEnvelope
+	if err := json.Unmarshal(body, &wrapped); err == nil && len(wrapped.Data) > 0 {
+		var resp runnableFlowListResponse
+		if err := json.Unmarshal(wrapped.Data, &resp); err != nil {
+			return nil, err
+		}
+		return resp.Items, nil
+	}
+
+	var resp runnableFlowListResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
 }
 
 func buildWorkspaceCLIEndpoint(apiURL, workspaceID, suffix string) string {

@@ -56,6 +56,10 @@ func (r *runnerRepoStub) GetFlowBySource(context.Context, string, string, string
 func (r *runnerRepoStub) ListFlowsByWorkspace(context.Context, string) ([]*FlowPO, error) {
 	panic("unexpected ListFlowsByWorkspace call")
 }
+
+func (r *runnerRepoStub) ListRunnableFlowsByWorkspace(context.Context, string) ([]*FlowPO, error) {
+	panic("unexpected ListRunnableFlowsByWorkspace call")
+}
 func (r *runnerRepoStub) UpdateFlow(context.Context, *FlowPO) error {
 	panic("unexpected UpdateFlow call")
 }

@@ -20,7 +20,7 @@ type FlowPO struct {
 	SourceReadOnly bool           `gorm:"not null;default:false" json:"source_read_only"`
 	Definition     string         `gorm:"type:text" json:"definition"`
 	Revision       int            `gorm:"not null;default:1" json:"revision"`
-	Enabled        bool           `gorm:"not null;default:true;index" json:"enabled"`
+	Enabled        bool           `gorm:"not null;index" json:"enabled"`
 	Metadata       string         `gorm:"type:text" json:"metadata"`
 	ParseStatus    string         `gorm:"size:20;not null;default:'unparsed';index" json:"parse_status"`
 	ParseError     string         `gorm:"type:text" json:"parse_error"`
@@ -88,6 +88,7 @@ type FlowRunPO struct {
 	ExecutionMode string         `gorm:"size:20;not null;default:'server'" json:"execution_mode"`
 	Source        string         `gorm:"size:32;not null;default:'web';index" json:"source"`
 	SourceEventID string         `gorm:"size:191;not null;default:'';index" json:"source_event_id"`
+	RunnerType    string         `gorm:"size:32;not null;default:'';index" json:"runner_type"`
 	Profile       string         `gorm:"size:50;not null;default:''" json:"profile"`
 	Environment   string         `gorm:"size:100;not null;default:''" json:"environment"`
 	BaseURL       string         `gorm:"size:500;not null;default:''" json:"base_url"`

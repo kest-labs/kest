@@ -29,6 +29,10 @@ func registerWorkspaceFlowMarkdownRoutes(r *router.Router, handler *Handler, mem
 
 func registerCLIFlowRoutes(r *router.Router, handler *Handler) {
 	r.Group("/workspaces/:id/cli", func(cli *router.Router) {
+		cli.GET("/flows/runnable", handler.ListRunnableFlowsForCLI).
+			Name("workspaces.cli.flows_runnable").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(handler.workspaceTokenValidator, workspace.CLITokenScopeFlowRun))
 		cli.POST("/flows/sync", handler.SyncFlowsFromCLI).
 			Name("workspaces.cli.flows_sync").
 			WhereUUIDOrNumber("id").

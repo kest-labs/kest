@@ -223,6 +223,7 @@ type RunResponse struct {
 	ExecutionMode string               `json:"execution_mode"`
 	Source        string               `json:"source"`
 	SourceEventID string               `json:"source_event_id"`
+	RunnerType    string               `json:"runner_type"`
 	Profile       string               `json:"profile"`
 	Environment   string               `json:"environment"`
 	BaseURL       string               `json:"base_url"`
@@ -252,6 +253,7 @@ func ToRunResponse(po *FlowRunPO) *RunResponse {
 		ExecutionMode: po.ExecutionMode,
 		Source:        po.Source,
 		SourceEventID: po.SourceEventID,
+		RunnerType:    po.RunnerType,
 		Profile:       po.Profile,
 		Environment:   po.Environment,
 		BaseURL:       po.BaseURL,
@@ -390,6 +392,7 @@ type CLIFlowRunSyncRequest struct {
 type CLIFlowRunSyncItem struct {
 	SourceFlowID string    `json:"source_flow_id"`
 	SourcePath   string    `json:"source_path" binding:"required"`
+	RunnerType   string    `json:"runner_type"`
 	Profile      string    `json:"profile"`
 	Environment  string    `json:"environment"`
 	BaseURL      string    `json:"base_url"`
@@ -428,4 +431,16 @@ type CLIFlowSyncResponseBody struct {
 	Updated int      `json:"updated"`
 	Skipped int      `json:"skipped"`
 	Errors  []string `json:"errors,omitempty"`
+}
+
+type CLIRunnableFlowResponse struct {
+	ID          string    `json:"id"`
+	SourceID    string    `json:"source_id"`
+	SourcePath  string    `json:"source_path"`
+	SourceHash  string    `json:"source_hash"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Definition  string    `json:"definition"`
+	Revision    int       `json:"revision"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

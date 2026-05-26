@@ -500,6 +500,24 @@ func (h *Handler) SyncFlowsFromCLI(c *gin.Context) {
 	response.Success(c, result)
 }
 
+func (h *Handler) ListRunnableFlowsForCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	flows, err := h.service.ListRunnableFlowsForCLI(c.Request.Context(), workspaceID)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"items": flows,
+		"total": len(flows),
+	})
+}
+
 func (h *Handler) SyncFlowRunFromCLI(c *gin.Context) {
 	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {

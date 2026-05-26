@@ -8,6 +8,7 @@ import (
 
 type runExecutionResult struct {
 	SourcePath string
+	SourceID   string
 	FlowID     string
 	FlowName   string
 	FlowDoc    *FlowDoc

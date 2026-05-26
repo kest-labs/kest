@@ -89,6 +89,7 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 		Run: CLIFlowRunSyncItem{
 			SourceFlowID: "auth-flow",
 			SourcePath:   ".kest/flow/auth.flow.md",
+			RunnerType:   "server_ci",
 			Profile:      "ci",
 			Status:       "passed",
 			TotalSteps:   1,
@@ -115,6 +116,7 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, runs, 1)
 	require.Equal(t, "cli", runs[0].ExecutionMode)
+	require.Equal(t, "server_ci", runs[0].RunnerType)
 	require.Equal(t, "ci", runs[0].Profile)
 	require.Equal(t, 1, runs[0].TotalSteps)
 	require.Equal(t, 1, runs[0].PassedSteps)
@@ -185,7 +187,34 @@ func TestUpdateFlowMarkdownStoresFailedParseAndClearsGraph(t *testing.T) {
 	require.Empty(t, updated.Edges)
 }
 
+func TestListRunnableFlowsForCLIReturnsEnabledParsedDefinitions(t *testing.T) {
+	db := newFlowSyncTestDB(t)
+	createFlowSyncTestTables(t, db)
+
+	svc := NewService(NewRepository(db))
+	enabled, err := svc.ImportFlowMarkdown(context.Background(), "workspace-1", "user-1", &ImportFlowMarkdownRequest{
+		Definition: "```flow\n@flow id=enabled\n@name Enabled\n```\n```step\nGET /ok\n```",
+	})
+	require.NoError(t, err)
+	_, err = svc.ImportFlowMarkdown(context.Background(), "workspace-1", "user-1", &ImportFlowMarkdownRequest{
+		Definition: "```flow\n@flow id=disabled\n@name Disabled\n```\n```step\nGET /skip\n```",
+		Enabled:    ptrBool(false),
+	})
+	require.NoError(t, err)
+
+	flows, err := svc.ListRunnableFlowsForCLI(context.Background(), "workspace-1")
+	require.NoError(t, err)
+	require.Len(t, flows, 1)
+	require.Equal(t, enabled.ID, flows[0].ID)
+	require.Equal(t, "enabled", flows[0].SourceID)
+	require.Contains(t, flows[0].Definition, "GET /ok")
+}
+
 func ptrString(value string) *string {
+	return &value
+}
+
+func ptrBool(value bool) *bool {
 	return &value
 }
 
@@ -305,6 +334,7 @@ func createFlowSyncTestTables(t *testing.T, db interface {
 			profile TEXT NOT NULL DEFAULT '',
 			environment TEXT NOT NULL DEFAULT '',
 			base_url TEXT NOT NULL DEFAULT '',
+			runner_type TEXT NOT NULL DEFAULT '',
 			total_steps INTEGER NOT NULL DEFAULT 0,
 			passed_steps INTEGER NOT NULL DEFAULT 0,
 			failed_steps INTEGER NOT NULL DEFAULT 0,

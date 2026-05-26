@@ -38,6 +38,7 @@ type Service interface {
 	ExecuteFlow(ctx context.Context, runID string, baseURL string, events chan<- StepEvent) error
 	GetRun(ctx context.Context, runID string) (*RunResponse, error)
 	ListRuns(ctx context.Context, flowID string) ([]*RunResponse, error)
+	ListRunnableFlowsForCLI(ctx context.Context, workspaceID string) ([]CLIRunnableFlowResponse, error)
 	SyncFlowsFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowSyncRequest) (*CLIFlowSyncResponseBody, error)
 	SyncFlowRunFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowRunSyncRequest) (*CLIFlowSyncResponseBody, error)
 }
@@ -794,6 +795,28 @@ func (s *service) ListRuns(ctx context.Context, flowID string) ([]*RunResponse, 
 	return responses, nil
 }
 
+func (s *service) ListRunnableFlowsForCLI(ctx context.Context, workspaceID string) ([]CLIRunnableFlowResponse, error) {
+	flows, err := s.repo.ListRunnableFlowsByWorkspace(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]CLIRunnableFlowResponse, 0, len(flows))
+	for _, flow := range flows {
+		responses = append(responses, CLIRunnableFlowResponse{
+			ID:          flow.ID,
+			SourceID:    flow.SourceID,
+			SourcePath:  flow.SourcePath,
+			SourceHash:  flow.SourceHash,
+			Name:        flow.Name,
+			Description: flow.Description,
+			Definition:  flow.Definition,
+			Revision:    flow.Revision,
+			UpdatedAt:   flow.UpdatedAt,
+		})
+	}
+	return responses, nil
+}
+
 func (s *service) SyncFlowsFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowSyncRequest) (*CLIFlowSyncResponseBody, error) {
 	result := &CLIFlowSyncResponseBody{}
 	source := normalizeSource(req.Source)
@@ -965,6 +988,7 @@ func (s *service) SyncFlowRunFromCLI(ctx context.Context, workspaceID string, cr
 		ExecutionMode: "cli",
 		Source:        source,
 		SourceEventID: req.SourceEventID,
+		RunnerType:    normalizeRunnerType(req.Run.RunnerType),
 		Profile:       strings.TrimSpace(req.Run.Profile),
 		Environment:   strings.TrimSpace(req.Run.Environment),
 		BaseURL:       strings.TrimSpace(req.Run.BaseURL),
@@ -1069,6 +1093,17 @@ func normalizeRunStatus(status string) string {
 		return strings.ToLower(strings.TrimSpace(status))
 	default:
 		return RunStatusFailed
+	}
+}
+
+func normalizeRunnerType(runnerType string) string {
+	switch strings.ToLower(strings.TrimSpace(runnerType)) {
+	case "server_ci":
+		return "server_ci"
+	case "test_machine":
+		return "test_machine"
+	default:
+		return "test_machine"
 	}
 }
 

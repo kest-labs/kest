@@ -36,7 +36,7 @@ func validateFlowSyncConfig(conf *config.Config) (string, error) {
 func syncFlowDefinitions(conf *config.Config, workspaceID string, results []runExecutionResult, profileName string, root string) error {
 	flows := make([]platformsync.FlowDefinitionSync, 0, len(results))
 	for _, result := range results {
-		if result.FlowDoc == nil {
+		if result.FlowDoc == nil || result.SourceID != "" {
 			continue
 		}
 		flow, err := buildFlowDefinitionSync(result, root)
@@ -66,7 +66,7 @@ func syncFlowDefinitions(conf *config.Config, workspaceID string, results []runE
 	return nil
 }
 
-func syncFlowRuns(conf *config.Config, workspaceID string, results []runExecutionResult, profileName string, envName string, baseURL string, root string) error {
+func syncFlowRuns(conf *config.Config, workspaceID string, results []runExecutionResult, profileName string, envName string, baseURL string, root string, runnerType string) error {
 	store, err := storage.NewStore()
 	if err != nil {
 		return fmt.Errorf("failed to open storage for flow sync: %w", err)
@@ -82,7 +82,7 @@ func syncFlowRuns(conf *config.Config, workspaceID string, results []runExecutio
 		if result.FlowDoc == nil || result.Summary == nil {
 			continue
 		}
-		req := buildFlowRunSyncRequest(result, profileName, envName, baseURL, root, clientID)
+		req := buildFlowRunSyncRequest(result, profileName, envName, baseURL, root, clientID, runnerType)
 		resp, err := platformsync.PushFlowRun(conf, workspaceID, req)
 		if err != nil {
 			return err
@@ -95,12 +95,20 @@ func syncFlowRuns(conf *config.Config, workspaceID string, results []runExecutio
 func buildFlowDefinitionSync(result runExecutionResult, root string) (platformsync.FlowDefinitionSync, error) {
 	doc := result.FlowDoc
 	sourcePath := displaySourcePath(result.SourcePath, root)
+	if result.SourceID != "" {
+		sourcePath = result.SourcePath
+	} else if result.SourcePath != "" && !filepath.IsAbs(result.SourcePath) {
+		sourcePath = result.SourcePath
+	}
 	sourceHash, err := fileSHA1(result.SourcePath)
 	if err != nil {
 		return platformsync.FlowDefinitionSync{}, err
 	}
 
-	sourceID := strings.TrimSpace(doc.Meta.ID)
+	sourceID := strings.TrimSpace(result.SourceID)
+	if sourceID == "" {
+		sourceID = strings.TrimSpace(doc.Meta.ID)
+	}
 	if sourceID == "" {
 		sourceID = "path:" + sourcePath
 	}
@@ -185,11 +193,18 @@ func buildFlowStepSync(step FlowStep, phase string, sortOrder int) platformsync.
 	}
 }
 
-func buildFlowRunSyncRequest(result runExecutionResult, profileName string, envName string, baseURL string, root string, clientID string) platformsync.FlowRunSyncRequest {
+func buildFlowRunSyncRequest(result runExecutionResult, profileName string, envName string, baseURL string, root string, clientID string, runnerType string) platformsync.FlowRunSyncRequest {
 	sourcePath := displaySourcePath(result.SourcePath, root)
-	sourceFlowID := ""
+	if result.SourceID != "" {
+		sourcePath = result.SourcePath
+	} else if result.SourcePath != "" && !filepath.IsAbs(result.SourcePath) {
+		sourcePath = result.SourcePath
+	}
+	sourceFlowID := strings.TrimSpace(result.SourceID)
 	if result.FlowDoc != nil {
-		sourceFlowID = strings.TrimSpace(result.FlowDoc.Meta.ID)
+		if sourceFlowID == "" {
+			sourceFlowID = strings.TrimSpace(result.FlowDoc.Meta.ID)
+		}
 	}
 	if sourceFlowID == "" {
 		sourceFlowID = "path:" + sourcePath
@@ -219,6 +234,7 @@ func buildFlowRunSyncRequest(result runExecutionResult, profileName string, envN
 	run := platformsync.FlowRunSync{
 		SourceFlowID: sourceFlowID,
 		SourcePath:   sourcePath,
+		RunnerType:   normalizeCLIRunnerType(runnerType),
 		Profile:      profileName,
 		Environment:  envName,
 		BaseURL:      baseURL,
@@ -257,6 +273,33 @@ func buildFlowRunSyncRequest(result runExecutionResult, profileName string, envN
 		Metadata:      metadata,
 		Run:           run,
 		Results:       results,
+	}
+}
+
+func runnableFlowSourceID(flow platformsync.RunnableFlow) string {
+	if strings.TrimSpace(flow.SourceID) != "" {
+		return strings.TrimSpace(flow.SourceID)
+	}
+	if strings.TrimSpace(flow.ID) != "" {
+		return strings.TrimSpace(flow.ID)
+	}
+	if strings.TrimSpace(flow.SourcePath) != "" {
+		return "path:" + strings.TrimSpace(flow.SourcePath)
+	}
+	return ""
+}
+
+func normalizeCLIRunnerType(runnerType string) string {
+	switch strings.ToLower(strings.TrimSpace(runnerType)) {
+	case "server_ci":
+		return "server_ci"
+	case "test_machine":
+		return "test_machine"
+	default:
+		if strings.EqualFold(strings.TrimSpace(os.Getenv("CI")), "true") || strings.TrimSpace(os.Getenv("GITHUB_ACTIONS")) == "true" {
+			return "server_ci"
+		}
+		return "test_machine"
 	}
 }
 

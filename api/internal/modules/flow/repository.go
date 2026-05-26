@@ -15,6 +15,7 @@ type Repository interface {
 	GetFlowByID(ctx context.Context, id string) (*FlowPO, error)
 	GetFlowBySource(ctx context.Context, workspaceID string, source string, sourceID string, sourcePath string) (*FlowPO, error)
 	ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error)
+	ListRunnableFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error)
 	UpdateFlow(ctx context.Context, flow *FlowPO) error
 	DeleteFlow(ctx context.Context, id string) error
 
@@ -94,6 +95,15 @@ func (r *repository) ListFlowsByWorkspace(ctx context.Context, workspaceID strin
 	err := r.db.WithContext(ctx).
 		Where("workspace_id = ?", workspaceID).
 		Order("created_at DESC").
+		Find(&flows).Error
+	return flows, err
+}
+
+func (r *repository) ListRunnableFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error) {
+	var flows []*FlowPO
+	err := r.db.WithContext(ctx).
+		Where("workspace_id = ? AND enabled = ? AND parse_status = ? AND definition <> ?", workspaceID, true, FlowParseStatusParsed, "").
+		Order("updated_at DESC").
 		Find(&flows).Error
 	return flows, err
 }

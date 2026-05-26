@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/report"
@@ -25,22 +26,24 @@ import (
 )
 
 var (
-	runParallel    bool
-	runJobs        int
-	runVerbose     bool
-	runDebugVars   bool
-	runVars        []string
-	execTimeout    int
-	runFailFast    bool
-	runStrict      bool
-	runEnv         string
-	runBaseURL     string
-	runProfile     string
-	runSync        bool
-	runReportJSON  string
-	runReportJUnit string
-	runHTML        bool
-	runOpen        bool
+	runParallel      bool
+	runJobs          int
+	runVerbose       bool
+	runDebugVars     bool
+	runVars          []string
+	execTimeout      int
+	runFailFast      bool
+	runStrict        bool
+	runEnv           string
+	runBaseURL       string
+	runProfile       string
+	runSync          bool
+	runReportJSON    string
+	runReportJUnit   string
+	runHTML          bool
+	runOpen          bool
+	runWorkspaceFlow string
+	runRunnerType    string
 )
 
 var runCmd = &cobra.Command{
@@ -66,6 +69,9 @@ Kest Flow (.flow.md) allows you to use standard Markdown to document and test yo
 
   # Generate and open the HTML report in your browser
   kest run login.flow.md --open
+
+  # Run every enabled flow stored in the Kest web workspace
+  kest run --workspace-flow all --sync
 
   # Run a legacy .kest scenario
   kest run auth.kest`,
@@ -93,6 +99,8 @@ func init() {
 	runCmd.Flags().StringVar(&runReportJUnit, "report-junit", "", "Write aggregate flow results to a JUnit XML file")
 	runCmd.Flags().BoolVar(&runHTML, "html", false, "Generate an HTML report after the run")
 	runCmd.Flags().BoolVar(&runOpen, "open", false, "Generate and open an HTML report after the run")
+	runCmd.Flags().StringVar(&runWorkspaceFlow, "workspace-flow", "", "Run enabled flow markdown from the Kest web workspace (all, flow id, source id, or source path)")
+	runCmd.Flags().StringVar(&runRunnerType, "runner-type", "", "Runner type for synced web flow results: test_machine or server_ci")
 	rootCmd.AddCommand(runCmd)
 }
 
@@ -107,11 +115,6 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 	}
 	applyRunProfile(cmd, profile)
 
-	targets, err := resolveRunTargets(args, profile, root)
-	if err != nil {
-		return err
-	}
-
 	conf := loadConfigWarn()
 	effectiveEnv := conf.ActiveEnv
 	effectiveBaseURL := strings.TrimSpace(runBaseURL)
@@ -122,9 +125,27 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		effectiveBaseURL = conf.GetActiveEnv().BaseURL
 	}
 	workspaceID := ""
-	if runSync {
+	if runSync || strings.TrimSpace(runWorkspaceFlow) != "" {
 		var err error
 		workspaceID, err = validateFlowSyncConfig(conf)
+		if err != nil {
+			return err
+		}
+	}
+
+	targets := args
+	webFlowByPath := map[string]platformsync.RunnableFlow{}
+	cleanupWebFlows := func() {}
+	if strings.TrimSpace(runWorkspaceFlow) != "" {
+		var err error
+		targets, webFlowByPath, cleanupWebFlows, err = prepareWorkspaceFlowTargets(conf, workspaceID, runWorkspaceFlow)
+		if err != nil {
+			return err
+		}
+		defer cleanupWebFlows()
+	} else {
+		var err error
+		targets, err = resolveRunTargets(args, profile, root)
 		if err != nil {
 			return err
 		}
@@ -142,6 +163,12 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 				StartedAt:  time.Now().UTC(),
 				FinishedAt: time.Now().UTC(),
 			}
+		}
+		if webFlow, ok := webFlowByPath[target]; ok {
+			result.SourceID = runnableFlowSourceID(webFlow)
+			result.SourcePath = webFlow.SourcePath
+			result.FlowID = webFlow.SourceID
+			result.FlowName = webFlow.Name
 		}
 		results = append(results, *result)
 		if err != nil {
@@ -175,7 +202,7 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		if err := syncFlowDefinitions(conf, workspaceID, results, profileName, root); err != nil {
 			return err
 		}
-		if err := syncFlowRuns(conf, workspaceID, results, profileName, effectiveEnv, effectiveBaseURL, root); err != nil {
+		if err := syncFlowRuns(conf, workspaceID, results, profileName, effectiveEnv, effectiveBaseURL, root, normalizeCLIRunnerType(runRunnerType)); err != nil {
 			return err
 		}
 	}
@@ -184,6 +211,81 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("flow suite failed: %s", strings.Join(runErrs, "; "))
 	}
 	return nil
+}
+
+func prepareWorkspaceFlowTargets(conf *config.Config, workspaceID string, selector string) ([]string, map[string]platformsync.RunnableFlow, func(), error) {
+	flows, err := platformsync.ListRunnableFlows(conf, workspaceID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	selected := selectRunnableFlows(flows, selector)
+	if len(selected) == 0 {
+		return nil, nil, nil, fmt.Errorf("no enabled Kest web flows matched %q", selector)
+	}
+
+	dir, err := os.MkdirTemp("", "kest-web-flows-*")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cleanup := func() {
+		_ = os.RemoveAll(dir)
+	}
+
+	targets := make([]string, 0, len(selected))
+	webFlowByPath := make(map[string]platformsync.RunnableFlow, len(selected))
+	for index, flow := range selected {
+		name := sanitizeFlowFileName(flow.SourcePath)
+		if name == "" {
+			name = sanitizeFlowFileName(flow.Name)
+		}
+		if name == "" {
+			name = fmt.Sprintf("flow-%d.flow.md", index+1)
+		}
+		if !strings.HasSuffix(name, ".flow.md") {
+			name += ".flow.md"
+		}
+		path := filepath.Join(dir, fmt.Sprintf("%03d-%s", index+1, name))
+		if err := os.WriteFile(path, []byte(flow.Definition), 0600); err != nil {
+			cleanup()
+			return nil, nil, nil, err
+		}
+		targets = append(targets, path)
+		webFlowByPath[path] = flow
+	}
+	return targets, webFlowByPath, cleanup, nil
+}
+
+func selectRunnableFlows(flows []platformsync.RunnableFlow, selector string) []platformsync.RunnableFlow {
+	selector = strings.TrimSpace(selector)
+	if selector == "" || strings.EqualFold(selector, "all") {
+		return flows
+	}
+	var selected []platformsync.RunnableFlow
+	for _, flow := range flows {
+		if flow.ID == selector || flow.SourceID == selector || flow.SourcePath == selector || flow.Name == selector {
+			selected = append(selected, flow)
+		}
+	}
+	return selected
+}
+
+func sanitizeFlowFileName(value string) string {
+	value = strings.TrimSpace(filepath.Base(value))
+	if value == "." || value == string(filepath.Separator) {
+		return ""
+	}
+	var b strings.Builder
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '.', r == '-', r == '_':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	return strings.Trim(b.String(), "-")
 }
 
 func applyRunProfile(cmd *cobra.Command, profile flowRunProfile) {
