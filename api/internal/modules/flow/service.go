@@ -15,9 +15,11 @@ import (
 type Service interface {
 	// Flow CRUD
 	CreateFlow(ctx context.Context, workspaceID string, userID string, req *CreateFlowRequest) (*FlowResponse, error)
+	ImportFlowMarkdown(ctx context.Context, workspaceID string, userID string, req *ImportFlowMarkdownRequest) (*FlowDetailResponse, error)
 	GetFlow(ctx context.Context, id string) (*FlowDetailResponse, error)
 	ListFlows(ctx context.Context, workspaceID string) ([]*FlowResponse, error)
 	UpdateFlow(ctx context.Context, id string, req *UpdateFlowRequest) (*FlowResponse, error)
+	UpdateFlowMarkdown(ctx context.Context, id string, req *UpdateFlowMarkdownRequest) (*FlowDetailResponse, error)
 	DeleteFlow(ctx context.Context, id string) error
 	SaveFlow(ctx context.Context, id string, req *SaveFlowRequest) (*FlowDetailResponse, error)
 
@@ -76,6 +78,73 @@ func (s *service) CreateFlow(ctx context.Context, workspaceID string, userID str
 		return nil, err
 	}
 	return ToFlowResponse(flow), nil
+}
+
+func (s *service) ImportFlowMarkdown(ctx context.Context, workspaceID string, userID string, req *ImportFlowMarkdownRequest) (*FlowDetailResponse, error) {
+	definition := strings.TrimSpace(req.Definition)
+	if definition == "" {
+		return nil, newFlowError(422, "flow markdown definition is required")
+	}
+
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+
+	parsed := parseFlowMarkdownDefinition(definition)
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		name = parsed.Name
+	}
+	if name == "" {
+		name = fallbackFlowName(req.SourcePath)
+	}
+	if name == "" {
+		name = "Untitled flow"
+	}
+
+	sourcePath := strings.TrimSpace(req.SourcePath)
+	sourceID := parsed.SourceID
+	if sourceID == "" && sourcePath != "" {
+		sourceID = "path:" + sourcePath
+	}
+	if sourceID == "" {
+		sourceID = "web:" + shortDefinitionHash(definition)
+	}
+
+	var flowID string
+	if err := s.repo.WithTransaction(ctx, func(txRepo Repository) error {
+		flow := &FlowPO{
+			WorkspaceID:    workspaceID,
+			Name:           name,
+			Description:    strings.TrimSpace(req.Description),
+			CreatedBy:      userID,
+			Source:         "web",
+			SourceID:       sourceID,
+			SourcePath:     sourcePath,
+			SourceHash:     definitionHash(definition),
+			SourceReadOnly: false,
+			Definition:     definition,
+			Revision:       1,
+			Enabled:        enabled,
+			Metadata:       parsed.Metadata,
+			ParseStatus:    parsed.ParseStatus,
+			ParseError:     parsed.ParseError,
+			ParsedAt:       parsed.ParsedAt,
+		}
+		if err := txRepo.CreateFlow(ctx, flow); err != nil {
+			return err
+		}
+		flowID = flow.ID
+		if parsed.ParseStatus != FlowParseStatusParsed {
+			return nil
+		}
+		return replaceFlowGraph(ctx, txRepo, flow.ID, parsed.Steps, parsed.Edges)
+	}); err != nil {
+		return nil, err
+	}
+
+	return s.GetFlow(ctx, flowID)
 }
 
 func (s *service) GetFlow(ctx context.Context, id string) (*FlowDetailResponse, error) {
@@ -154,11 +223,89 @@ func (s *service) UpdateFlow(ctx context.Context, id string, req *UpdateFlowRequ
 	if req.Description != nil {
 		flow.Description = strings.TrimSpace(*req.Description)
 	}
+	if req.Enabled != nil {
+		flow.Enabled = *req.Enabled
+	}
 
 	if err := s.repo.UpdateFlow(ctx, flow); err != nil {
 		return nil, err
 	}
 	return ToFlowResponse(flow), nil
+}
+
+func (s *service) UpdateFlowMarkdown(ctx context.Context, id string, req *UpdateFlowMarkdownRequest) (*FlowDetailResponse, error) {
+	definition := strings.TrimSpace(req.Definition)
+	if definition == "" {
+		return nil, newFlowError(422, "flow markdown definition is required")
+	}
+
+	parsed := parseFlowMarkdownDefinition(definition)
+	if err := s.repo.WithTransaction(ctx, func(txRepo Repository) error {
+		flow, err := txRepo.GetFlowByID(ctx, id)
+		if err != nil {
+			return newFlowError(404, "flow not found")
+		}
+		if flow.SourceReadOnly {
+			return newFlowError(409, "git-backed flow is read-only in web")
+		}
+
+		if req.Name != nil {
+			name := strings.TrimSpace(*req.Name)
+			if name == "" {
+				name = parsed.Name
+			}
+			if name == "" {
+				return newFlowError(422, "flow name is required")
+			}
+			flow.Name = name
+		} else if strings.TrimSpace(flow.Name) == "" && parsed.Name != "" {
+			flow.Name = parsed.Name
+		}
+		if req.Description != nil {
+			flow.Description = strings.TrimSpace(*req.Description)
+		}
+		if req.SourcePath != nil {
+			flow.SourcePath = strings.TrimSpace(*req.SourcePath)
+		}
+		if req.Enabled != nil {
+			flow.Enabled = *req.Enabled
+		}
+		if flow.SourceID == "" && parsed.SourceID != "" {
+			flow.SourceID = parsed.SourceID
+		}
+		if flow.SourceID == "" && flow.SourcePath != "" {
+			flow.SourceID = "path:" + flow.SourcePath
+		}
+		flow.Source = "web"
+		flow.SourceHash = definitionHash(definition)
+		flow.Definition = definition
+		flow.Revision++
+		if flow.Revision < 1 {
+			flow.Revision = 1
+		}
+		flow.Metadata = parsed.Metadata
+		flow.ParseStatus = parsed.ParseStatus
+		flow.ParseError = parsed.ParseError
+		flow.ParsedAt = parsed.ParsedAt
+
+		if err := txRepo.UpdateFlow(ctx, flow); err != nil {
+			return err
+		}
+		if err := txRepo.DeleteEdgesByFlow(ctx, id); err != nil {
+			return err
+		}
+		if err := txRepo.DeleteStepsByFlow(ctx, id); err != nil {
+			return err
+		}
+		if parsed.ParseStatus != FlowParseStatusParsed {
+			return nil
+		}
+		return replaceFlowGraph(ctx, txRepo, id, parsed.Steps, parsed.Edges)
+	}); err != nil {
+		return nil, err
+	}
+
+	return s.GetFlow(ctx, id)
 }
 
 func (s *service) DeleteFlow(ctx context.Context, id string) error {

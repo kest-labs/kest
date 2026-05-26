@@ -9,9 +9,22 @@ import (
 
 // RegisterRoutes registers flow routes
 func RegisterRoutes(r *router.Router, handler *Handler, memberService member.Service) {
+	registerWorkspaceFlowMarkdownRoutes(r, handler, memberService)
 	registerFlowRoutes(r, "/workspaces/:id/flows", handler, memberService, true)
 	registerFlowRoutes(r, "/projects/:id/flows", handler, memberService, false)
 	registerCLIFlowRoutes(r, handler)
+}
+
+func registerWorkspaceFlowMarkdownRoutes(r *router.Router, handler *Handler, memberService member.Service) {
+	r.Group("/workspaces/:id/flows", func(flows *router.Router) {
+		flows.WithMiddleware("auth")
+		flows.Use(middleware.ResolveWorkspaceContext(handler.workspaceBackingResolver))
+
+		flows.POST("/import-markdown", handler.ImportFlowMarkdown).
+			Middleware(middleware.RequireResolvedWorkspaceRole(memberService, member.RoleWrite))
+		flows.PUT("/:fid/markdown", handler.UpdateFlowMarkdown).
+			Middleware(middleware.RequireResolvedWorkspaceRole(memberService, member.RoleWrite))
+	})
 }
 
 func registerCLIFlowRoutes(r *router.Router, handler *Handler) {

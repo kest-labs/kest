@@ -131,6 +131,60 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 	require.Equal(t, "flow passed", detail.LogExcerpt)
 }
 
+func TestImportFlowMarkdownStoresDefinitionAndGraph(t *testing.T) {
+	db := newFlowSyncTestDB(t)
+	createFlowSyncTestTables(t, db)
+
+	svc := NewService(NewRepository(db))
+	definition := "```flow\n@flow id=auth-flow\n@name Auth Flow\n@tags auth, smoke\n```\n\n" +
+		"```step\n@id login\n@name Login\nPOST /login\n[Headers]\nContent-Type: application/json\n\n{\"email\":\"a@example.com\"}\n[Asserts]\nstatus == 200\n```\n\n" +
+		"```step\n@id profile\n@name Profile\nGET /profile\n```\n\n" +
+		"```edge\n@from login\n@to profile\n@on success\n```"
+
+	flow, err := svc.ImportFlowMarkdown(context.Background(), "workspace-1", "user-1", &ImportFlowMarkdownRequest{
+		SourcePath: "flows/auth.flow.md",
+		Definition: definition,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "Auth Flow", flow.Name)
+	require.Equal(t, "auth-flow", flow.SourceID)
+	require.Equal(t, "flows/auth.flow.md", flow.SourcePath)
+	require.Equal(t, definition, flow.Definition)
+	require.Equal(t, 1, flow.Revision)
+	require.True(t, flow.Enabled)
+	require.Equal(t, FlowParseStatusParsed, flow.ParseStatus)
+	require.NotNil(t, flow.ParsedAt)
+	require.Len(t, flow.Steps, 2)
+	require.Len(t, flow.Edges, 1)
+	require.Equal(t, "login", flow.Steps[0].ClientKey)
+	require.Equal(t, "POST", flow.Steps[0].Method)
+	require.Contains(t, flow.Steps[0].Headers, "Content-Type")
+	require.Contains(t, flow.Steps[0].Asserts, "status == 200")
+}
+
+func TestUpdateFlowMarkdownStoresFailedParseAndClearsGraph(t *testing.T) {
+	db := newFlowSyncTestDB(t)
+	createFlowSyncTestTables(t, db)
+
+	svc := NewService(NewRepository(db))
+	flow, err := svc.ImportFlowMarkdown(context.Background(), "workspace-1", "user-1", &ImportFlowMarkdownRequest{
+		Name:       "Auth",
+		Definition: "```step\n@id login\nGET /login\n```",
+	})
+	require.NoError(t, err)
+	require.Len(t, flow.Steps, 1)
+
+	updated, err := svc.UpdateFlowMarkdown(context.Background(), flow.ID, &UpdateFlowMarkdownRequest{
+		Definition: "```flow\nPOST /legacy\n```",
+	})
+	require.NoError(t, err)
+	require.Equal(t, FlowParseStatusFailed, updated.ParseStatus)
+	require.Contains(t, updated.ParseError, "at least one step")
+	require.Equal(t, 2, updated.Revision)
+	require.Empty(t, updated.Steps)
+	require.Empty(t, updated.Edges)
+}
+
 func ptrString(value string) *string {
 	return &value
 }

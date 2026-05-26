@@ -14,6 +14,7 @@ type CreateFlowRequest struct {
 type UpdateFlowRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
+	Enabled     *bool   `json:"enabled"`
 }
 
 // FlowResponse represents the API response for a flow
@@ -47,6 +48,24 @@ type FlowDetailResponse struct {
 	FlowResponse
 	Steps []StepResponse `json:"steps"`
 	Edges []EdgeResponse `json:"edges"`
+}
+
+// ImportFlowMarkdownRequest creates or updates a web-managed Markdown flow.
+type ImportFlowMarkdownRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	SourcePath  string `json:"source_path"`
+	Definition  string `json:"definition" binding:"required"`
+	Enabled     *bool  `json:"enabled"`
+}
+
+// UpdateFlowMarkdownRequest updates the stored Markdown definition for a flow.
+type UpdateFlowMarkdownRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	SourcePath  *string `json:"source_path"`
+	Definition  string  `json:"definition" binding:"required"`
+	Enabled     *bool   `json:"enabled"`
 }
 
 // ToFlowResponse converts FlowPO to FlowResponse

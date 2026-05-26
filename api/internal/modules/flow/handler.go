@@ -159,6 +159,28 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 	response.Created(c, flow)
 }
 
+// ImportFlowMarkdown handles POST /workspaces/:id/flows/import-markdown
+func (h *Handler) ImportFlowMarkdown(c *gin.Context) {
+	workspaceID, ok := h.workspaceID(c)
+	if !ok {
+		return
+	}
+
+	var req ImportFlowMarkdownRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	flow, err := h.service.ImportFlowMarkdown(c.Request.Context(), workspaceID, h.userID(c), &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Created(c, flow)
+}
+
 // GetFlow handles GET /workspaces/:id/flows/:fid
 func (h *Handler) GetFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
@@ -189,6 +211,28 @@ func (h *Handler) UpdateFlow(c *gin.Context) {
 	}
 
 	flow, err := h.service.UpdateFlow(c.Request.Context(), fid, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, flow)
+}
+
+// UpdateFlowMarkdown handles PUT /workspaces/:id/flows/:fid/markdown
+func (h *Handler) UpdateFlowMarkdown(c *gin.Context) {
+	fid, ok := h.flowID(c)
+	if !ok {
+		return
+	}
+
+	var req UpdateFlowMarkdownRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	flow, err := h.service.UpdateFlowMarkdown(c.Request.Context(), fid, &req)
 	if err != nil {
 		respondFlowError(c, err)
 		return
