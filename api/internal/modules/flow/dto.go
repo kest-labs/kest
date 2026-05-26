@@ -243,6 +243,15 @@ type RunResponse struct {
 	StepResults   []StepResultResponse `json:"step_results,omitempty"`
 }
 
+type FlowRunListFilter struct {
+	RunnerType string
+	Status     string
+	Source     string
+	Profile    string
+	From       *time.Time
+	To         *time.Time
+}
+
 // ToRunResponse converts FlowRunPO to RunResponse
 func ToRunResponse(po *FlowRunPO) *RunResponse {
 	return &RunResponse{

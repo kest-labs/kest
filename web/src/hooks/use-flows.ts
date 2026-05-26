@@ -4,7 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useT } from '@/i18n/client';
 import { flowService } from '@/services/flow';
-import type { CreateFlowRequest, SaveFlowRequest, UpdateFlowRequest } from '@/types/flow';
+import type {
+  CreateFlowRequest,
+  FlowRunListFilters,
+  ImportFlowMarkdownRequest,
+  SaveFlowRequest,
+  UpdateFlowMarkdownRequest,
+  UpdateFlowRequest,
+} from '@/types/flow';
 
 export const flowKeys = {
   all: ['flows'] as const,
@@ -12,8 +19,8 @@ export const flowKeys = {
   list: (workspaceId: number | string) => [...flowKeys.workspace(workspaceId), 'list'] as const,
   detail: (workspaceId: number | string, flowId: number | string) =>
     [...flowKeys.workspace(workspaceId), 'detail', flowId] as const,
-  runs: (workspaceId: number | string, flowId: number | string) =>
-    [...flowKeys.workspace(workspaceId), 'runs', flowId] as const,
+  runs: (workspaceId: number | string, flowId: number | string, filters?: FlowRunListFilters) =>
+    [...flowKeys.workspace(workspaceId), 'runs', flowId, filters ?? {}] as const,
   run: (workspaceId: number | string, flowId: number | string, runId: number | string) =>
     [...flowKeys.runs(workspaceId, flowId), 'detail', runId] as const,
 };
@@ -34,10 +41,14 @@ export function useFlow(workspaceId?: number | string, flowId?: number | string)
   });
 }
 
-export function useFlowRuns(workspaceId?: number | string, flowId?: number | string) {
+export function useFlowRuns(
+  workspaceId?: number | string,
+  flowId?: number | string,
+  filters?: FlowRunListFilters
+) {
   return useQuery({
-    queryKey: flowKeys.runs(workspaceId ?? 'unknown', flowId ?? 'unknown'),
-    queryFn: () => flowService.listRuns(workspaceId as number | string, flowId as number | string),
+    queryKey: flowKeys.runs(workspaceId ?? 'unknown', flowId ?? 'unknown', filters),
+    queryFn: () => flowService.listRuns(workspaceId as number | string, flowId as number | string, filters),
     enabled: workspaceId !== undefined && workspaceId !== null && flowId !== undefined && flowId !== null,
   });
 }
@@ -70,6 +81,20 @@ export function useCreateFlow(workspaceId: number | string) {
     onSuccess: (flow) => {
       queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
       toast.success(t.workspace('toasts.flowCreated', { name: flow.name }));
+    },
+  });
+}
+
+export function useImportFlowMarkdown(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (data: ImportFlowMarkdownRequest) => flowService.importMarkdown(workspaceId, data),
+    onSuccess: (flow) => {
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.setQueryData(flowKeys.detail(workspaceId, flow.id), flow);
+      toast.success(t.workspace('toasts.flowSaved', { name: flow.name }));
     },
   });
 }
@@ -111,6 +136,21 @@ export function useSaveFlow(workspaceId: number | string) {
   return useMutation({
     mutationFn: ({ flowId, data }: { flowId: number | string; data: SaveFlowRequest }) =>
       flowService.save(workspaceId, flowId, data),
+    onSuccess: (flow) => {
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.setQueryData(flowKeys.detail(workspaceId, flow.id), flow);
+      toast.success(t.workspace('toasts.flowSaved', { name: flow.name }));
+    },
+  });
+}
+
+export function useUpdateFlowMarkdown(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: ({ flowId, data }: { flowId: number | string; data: UpdateFlowMarkdownRequest }) =>
+      flowService.updateMarkdown(workspaceId, flowId, data),
     onSuccess: (flow) => {
       queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
       queryClient.setQueryData(flowKeys.detail(workspaceId, flow.id), flow);

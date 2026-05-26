@@ -39,7 +39,7 @@ type Repository interface {
 	CreateRun(ctx context.Context, run *FlowRunPO) error
 	GetRunByID(ctx context.Context, id string) (*FlowRunPO, error)
 	GetRunBySourceEvent(ctx context.Context, source string, sourceEventID string) (*FlowRunPO, error)
-	ListRunsByFlow(ctx context.Context, flowID string) ([]*FlowRunPO, error)
+	ListRunsByFlow(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*FlowRunPO, error)
 	UpdateRun(ctx context.Context, run *FlowRunPO) error
 
 	// Step Results
@@ -209,12 +209,28 @@ func (r *repository) GetRunBySourceEvent(ctx context.Context, source string, sou
 	return &run, nil
 }
 
-func (r *repository) ListRunsByFlow(ctx context.Context, flowID string) ([]*FlowRunPO, error) {
+func (r *repository) ListRunsByFlow(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*FlowRunPO, error) {
 	var runs []*FlowRunPO
-	err := r.db.WithContext(ctx).
-		Where("flow_id = ?", flowID).
-		Order("created_at DESC").
-		Find(&runs).Error
+	query := r.db.WithContext(ctx).Where("flow_id = ?", flowID)
+	if filter.RunnerType != "" {
+		query = query.Where("runner_type = ?", filter.RunnerType)
+	}
+	if filter.Status != "" {
+		query = query.Where("status = ?", filter.Status)
+	}
+	if filter.Source != "" {
+		query = query.Where("source = ?", filter.Source)
+	}
+	if filter.Profile != "" {
+		query = query.Where("profile = ?", filter.Profile)
+	}
+	if filter.From != nil {
+		query = query.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		query = query.Where("created_at <= ?", *filter.To)
+	}
+	err := query.Order("created_at DESC").Find(&runs).Error
 	return runs, err
 }
 

@@ -17,6 +17,13 @@ export interface WorkspaceFlow {
   source_path?: string;
   source_hash?: string;
   source_read_only?: boolean;
+  definition?: string;
+  revision?: number;
+  enabled?: boolean;
+  metadata?: string;
+  parse_status?: 'unparsed' | 'parsed' | 'failed' | string;
+  parse_error?: string;
+  parsed_at?: string | null;
   latest_run_status?: FlowRunStatus;
   latest_run_mode?: 'server' | 'local' | 'cli' | string;
   created_at: string;
@@ -72,6 +79,23 @@ export interface CreateFlowRequest {
 export interface UpdateFlowRequest {
   name?: string;
   description?: string;
+  enabled?: boolean;
+}
+
+export interface ImportFlowMarkdownRequest {
+  name?: string;
+  description?: string;
+  source_path?: string;
+  definition: string;
+  enabled?: boolean;
+}
+
+export interface UpdateFlowMarkdownRequest {
+  name?: string;
+  description?: string;
+  source_path?: string;
+  definition: string;
+  enabled?: boolean;
 }
 
 export interface SaveFlowStepRequest {
@@ -123,6 +147,7 @@ export interface FlowRun {
   execution_mode?: 'server' | 'local' | 'cli' | string;
   source?: string;
   source_event_id?: string;
+  runner_type?: 'test_machine' | 'server_ci' | string;
   profile?: string;
   environment?: string;
   base_url?: string;
@@ -145,6 +170,15 @@ export interface FlowRun {
 export interface FlowRunListResponse {
   items: FlowRun[];
   total: number;
+}
+
+export interface FlowRunListFilters {
+  runner_type?: 'test_machine' | 'server_ci' | string;
+  status?: FlowRunStatus;
+  source?: string;
+  profile?: string;
+  from?: string;
+  to?: string;
 }
 
 export interface FlowStreamStepEvent {

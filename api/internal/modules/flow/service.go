@@ -37,7 +37,7 @@ type Service interface {
 	RunFlow(ctx context.Context, flowID string, userID string) (*RunResponse, error)
 	ExecuteFlow(ctx context.Context, runID string, baseURL string, events chan<- StepEvent) error
 	GetRun(ctx context.Context, runID string) (*RunResponse, error)
-	ListRuns(ctx context.Context, flowID string) ([]*RunResponse, error)
+	ListRuns(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*RunResponse, error)
 	ListRunnableFlowsForCLI(ctx context.Context, workspaceID string) ([]CLIRunnableFlowResponse, error)
 	SyncFlowsFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowSyncRequest) (*CLIFlowSyncResponseBody, error)
 	SyncFlowRunFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowRunSyncRequest) (*CLIFlowSyncResponseBody, error)
@@ -196,7 +196,7 @@ func (s *service) ListFlows(ctx context.Context, workspaceID string) ([]*FlowRes
 		// Get step count
 		steps, _ := s.repo.ListStepsByFlow(ctx, flow.ID)
 		resp.StepCount = len(steps)
-		if runs, err := s.repo.ListRunsByFlow(ctx, flow.ID); err == nil && len(runs) > 0 {
+		if runs, err := s.repo.ListRunsByFlow(ctx, flow.ID, FlowRunListFilter{}); err == nil && len(runs) > 0 {
 			resp.LatestRunStatus = runs[0].Status
 			resp.LatestRunMode = runs[0].ExecutionMode
 		}
@@ -782,8 +782,12 @@ func (s *service) GetRun(ctx context.Context, runID string) (*RunResponse, error
 	return resp, nil
 }
 
-func (s *service) ListRuns(ctx context.Context, flowID string) ([]*RunResponse, error) {
-	runs, err := s.repo.ListRunsByFlow(ctx, flowID)
+func (s *service) ListRuns(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*RunResponse, error) {
+	filter.RunnerType = normalizeOptionalRunnerType(filter.RunnerType)
+	filter.Status = normalizeOptionalRunStatus(filter.Status)
+	filter.Source = strings.TrimSpace(filter.Source)
+	filter.Profile = strings.TrimSpace(filter.Profile)
+	runs, err := s.repo.ListRunsByFlow(ctx, flowID, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -1104,6 +1108,26 @@ func normalizeRunnerType(runnerType string) string {
 		return "test_machine"
 	default:
 		return "test_machine"
+	}
+}
+
+func normalizeOptionalRunnerType(runnerType string) string {
+	switch strings.ToLower(strings.TrimSpace(runnerType)) {
+	case "server_ci":
+		return "server_ci"
+	case "test_machine":
+		return "test_machine"
+	default:
+		return ""
+	}
+}
+
+func normalizeOptionalRunStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case RunStatusPending, RunStatusRunning, RunStatusPassed, RunStatusFailed, RunStatusCanceled:
+		return strings.ToLower(strings.TrimSpace(status))
+	default:
+		return ""
 	}
 }
 

@@ -114,7 +114,7 @@ func (r *runnerRepoStub) GetRunByID(context.Context, string) (*FlowRunPO, error)
 func (r *runnerRepoStub) GetRunBySourceEvent(context.Context, string, string) (*FlowRunPO, error) {
 	panic("unexpected GetRunBySourceEvent call")
 }
-func (r *runnerRepoStub) ListRunsByFlow(context.Context, string) ([]*FlowRunPO, error) {
+func (r *runnerRepoStub) ListRunsByFlow(context.Context, string, FlowRunListFilter) ([]*FlowRunPO, error) {
 	panic("unexpected ListRunsByFlow call")
 }
 func (r *runnerRepoStub) UpdateRun(_ context.Context, run *FlowRunPO) error {

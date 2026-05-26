@@ -112,7 +112,7 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 	flows, err := svc.ListFlows(context.Background(), "workspace-1")
 	require.NoError(t, err)
 	require.Len(t, flows, 1)
-	runs, err := svc.ListRuns(context.Background(), flows[0].ID)
+	runs, err := svc.ListRuns(context.Background(), flows[0].ID, FlowRunListFilter{})
 	require.NoError(t, err)
 	require.Len(t, runs, 1)
 	require.Equal(t, "cli", runs[0].ExecutionMode)
@@ -131,6 +131,13 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 	require.Len(t, detail.StepResults, 1)
 	require.Equal(t, "passed", detail.StepResults[0].Status)
 	require.Equal(t, "flow passed", detail.LogExcerpt)
+
+	ciRuns, err := svc.ListRuns(context.Background(), flows[0].ID, FlowRunListFilter{RunnerType: "server_ci", Status: "passed"})
+	require.NoError(t, err)
+	require.Len(t, ciRuns, 1)
+	testMachineRuns, err := svc.ListRuns(context.Background(), flows[0].ID, FlowRunListFilter{RunnerType: "test_machine"})
+	require.NoError(t, err)
+	require.Empty(t, testMachineRuns)
 }
 
 func TestImportFlowMarkdownStoresDefinitionAndGraph(t *testing.T) {

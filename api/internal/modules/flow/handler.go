@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -462,7 +463,13 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		return
 	}
 
-	runs, err := h.service.ListRuns(c.Request.Context(), fid)
+	filter, err := flowRunListFilterFromQuery(c)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	runs, err := h.service.ListRuns(c.Request.Context(), fid, filter)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -472,6 +479,31 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		"items": runs,
 		"total": len(runs),
 	})
+}
+
+func flowRunListFilterFromQuery(c *gin.Context) (FlowRunListFilter, error) {
+	filter := FlowRunListFilter{
+		RunnerType: strings.TrimSpace(c.Query("runner_type")),
+		Status:     strings.TrimSpace(c.Query("status")),
+		Source:     strings.TrimSpace(c.Query("source")),
+		Profile:    strings.TrimSpace(c.Query("profile")),
+	}
+
+	if value := strings.TrimSpace(c.Query("from")); value != "" {
+		parsed, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return filter, fmt.Errorf("invalid from query parameter")
+		}
+		filter.From = &parsed
+	}
+	if value := strings.TrimSpace(c.Query("to")); value != "" {
+		parsed, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return filter, fmt.Errorf("invalid to query parameter")
+		}
+		filter.To = &parsed
+	}
+	return filter, nil
 }
 
 func (h *Handler) SyncFlowsFromCLI(c *gin.Context) {
