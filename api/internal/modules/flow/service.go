@@ -39,6 +39,7 @@ type Service interface {
 	GetRun(ctx context.Context, runID string) (*RunResponse, error)
 	ListRuns(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*RunResponse, error)
 	ListRunnableFlowsForCLI(ctx context.Context, workspaceID string) ([]CLIRunnableFlowResponse, error)
+	HandleCIWebhook(ctx context.Context, workspaceID string, req *CIWebhookRequest) (*CIWebhookResponse, error)
 	SyncFlowsFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowSyncRequest) (*CLIFlowSyncResponseBody, error)
 	SyncFlowRunFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowRunSyncRequest) (*CLIFlowSyncResponseBody, error)
 }
@@ -821,6 +822,47 @@ func (s *service) ListRunnableFlowsForCLI(ctx context.Context, workspaceID strin
 	return responses, nil
 }
 
+func (s *service) HandleCIWebhook(ctx context.Context, workspaceID string, req *CIWebhookRequest) (*CIWebhookResponse, error) {
+	if req == nil {
+		req = &CIWebhookRequest{}
+	}
+	flows, err := s.repo.ListRunnableFlowsByWorkspace(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	profile := strings.TrimSpace(req.Profile)
+	if profile == "" {
+		profile = "ci"
+	}
+	command := fmt.Sprintf("kest run --workspace-flow all --runner-type server_ci --profile %s --sync", shellQuote(profile))
+	baseURL := strings.TrimSpace(req.BaseURL)
+	if baseURL != "" {
+		command += " --base-url " + shellQuote(baseURL)
+	}
+
+	metadata := map[string]interface{}{
+		"provider":   strings.TrimSpace(req.Provider),
+		"ref":        strings.TrimSpace(req.Ref),
+		"commit_sha": strings.TrimSpace(req.CommitSHA),
+	}
+	for key, value := range req.Metadata {
+		metadata[key] = value
+	}
+
+	return &CIWebhookResponse{
+		Accepted:          true,
+		WorkspaceID:       workspaceID,
+		EventID:           strings.TrimSpace(req.EventID),
+		RunnerType:        "server_ci",
+		Profile:           profile,
+		BaseURL:           baseURL,
+		RunnableFlowCount: len(flows),
+		Command:           command,
+		Metadata:          metadata,
+	}, nil
+}
+
 func (s *service) SyncFlowsFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIFlowSyncRequest) (*CLIFlowSyncResponseBody, error) {
 	result := &CLIFlowSyncResponseBody{}
 	source := normalizeSource(req.Source)
@@ -1145,6 +1187,13 @@ func fallbackString(value string, fallback string) string {
 		return strings.TrimSpace(value)
 	}
 	return strings.TrimSpace(fallback)
+}
+
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }
 
 func timePtr(value time.Time) *time.Time {

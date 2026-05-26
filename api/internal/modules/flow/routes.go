@@ -33,6 +33,10 @@ func registerCLIFlowRoutes(r *router.Router, handler *Handler) {
 			Name("workspaces.cli.flows_runnable").
 			WhereUUIDOrNumber("id").
 			Middleware(middleware.RequireWorkspaceCLIToken(handler.workspaceTokenValidator, workspace.CLITokenScopeFlowRun))
+		cli.POST("/ci/webhook", handler.HandleCIWebhook).
+			Name("workspaces.cli.ci_webhook").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(handler.workspaceTokenValidator, workspace.CLITokenScopeFlowRun))
 		cli.POST("/flows/sync", handler.SyncFlowsFromCLI).
 			Name("workspaces.cli.flows_sync").
 			WhereUUIDOrNumber("id").

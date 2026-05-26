@@ -217,6 +217,34 @@ func TestListRunnableFlowsForCLIReturnsEnabledParsedDefinitions(t *testing.T) {
 	require.Contains(t, flows[0].Definition, "GET /ok")
 }
 
+func TestHandleCIWebhookReturnsServerRunCommand(t *testing.T) {
+	db := newFlowSyncTestDB(t)
+	createFlowSyncTestTables(t, db)
+
+	svc := NewService(NewRepository(db))
+	_, err := svc.ImportFlowMarkdown(context.Background(), "workspace-1", "user-1", &ImportFlowMarkdownRequest{
+		Definition: "```flow\n@flow id=enabled\n@name Enabled\n```\n```step\nGET /ok\n```",
+	})
+	require.NoError(t, err)
+
+	result, err := svc.HandleCIWebhook(context.Background(), "workspace-1", &CIWebhookRequest{
+		EventID:   "build-123",
+		Provider:  "github",
+		Ref:       "refs/heads/main",
+		CommitSHA: "abc123",
+		BaseURL:   "https://staging.example.com",
+	})
+	require.NoError(t, err)
+	require.True(t, result.Accepted)
+	require.Equal(t, "server_ci", result.RunnerType)
+	require.Equal(t, "ci", result.Profile)
+	require.Equal(t, 1, result.RunnableFlowCount)
+	require.Contains(t, result.Command, "kest run --workspace-flow all")
+	require.Contains(t, result.Command, "--runner-type server_ci")
+	require.Contains(t, result.Command, "--base-url 'https://staging.example.com'")
+	require.Equal(t, "github", result.Metadata["provider"])
+}
+
 func ptrString(value string) *string {
 	return &value
 }

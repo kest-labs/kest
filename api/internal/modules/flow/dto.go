@@ -453,3 +453,25 @@ type CLIRunnableFlowResponse struct {
 	Revision    int       `json:"revision"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
+
+type CIWebhookRequest struct {
+	EventID   string                 `json:"event_id"`
+	Provider  string                 `json:"provider"`
+	Ref       string                 `json:"ref"`
+	CommitSHA string                 `json:"commit_sha"`
+	Profile   string                 `json:"profile"`
+	BaseURL   string                 `json:"base_url"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+type CIWebhookResponse struct {
+	Accepted          bool                   `json:"accepted"`
+	WorkspaceID       string                 `json:"workspace_id"`
+	EventID           string                 `json:"event_id"`
+	RunnerType        string                 `json:"runner_type"`
+	Profile           string                 `json:"profile"`
+	BaseURL           string                 `json:"base_url,omitempty"`
+	RunnableFlowCount int                    `json:"runnable_flow_count"`
+	Command           string                 `json:"command"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}

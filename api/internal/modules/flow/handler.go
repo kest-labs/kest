@@ -550,6 +550,26 @@ func (h *Handler) ListRunnableFlowsForCLI(c *gin.Context) {
 	})
 }
 
+func (h *Handler) HandleCIWebhook(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req CIWebhookRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	result, err := h.service.HandleCIWebhook(c.Request.Context(), workspaceID, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Accepted(c, result)
+}
+
 func (h *Handler) SyncFlowRunFromCLI(c *gin.Context) {
 	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {
