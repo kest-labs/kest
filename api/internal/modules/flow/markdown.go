@@ -96,6 +96,9 @@ func parseFlowMarkdownDefinition(definition string) parsedFlowMarkdown {
 	for index, step := range steps {
 		parsed.Steps = append(parsed.Steps, markdownStepToSaveStep(step, index))
 	}
+	if len(edges) == 0 {
+		edges = buildSequentialMarkdownEdges(parsed.Steps)
+	}
 	parsed.Edges = edges
 	if err := validateSaveGraph(parsed.Steps, parsed.Edges); err != nil {
 		parsed.ParseStatus = FlowParseStatusFailed
@@ -346,6 +349,21 @@ func parseMarkdownEdge(block markdownBlock) SaveEdgeRequest {
 		}
 	}
 	return edge
+}
+
+func buildSequentialMarkdownEdges(steps []SaveStepRequest) []SaveEdgeRequest {
+	if len(steps) < 2 {
+		return nil
+	}
+
+	edges := make([]SaveEdgeRequest, 0, len(steps)-1)
+	for index := 1; index < len(steps); index++ {
+		edges = append(edges, SaveEdgeRequest{
+			SourceClientKey: steps[index-1].ClientKey,
+			TargetClientKey: steps[index].ClientKey,
+		})
+	}
+	return edges
 }
 
 func markdownStepToSaveStep(step markdownStep, index int) SaveStepRequest {

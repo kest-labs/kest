@@ -171,6 +171,30 @@ func TestImportFlowMarkdownStoresDefinitionAndGraph(t *testing.T) {
 	require.Contains(t, flow.Steps[0].Asserts, "status == 200")
 }
 
+func TestImportFlowMarkdownBuildsSequentialEdgesWhenMissing(t *testing.T) {
+	db := newFlowSyncTestDB(t)
+	createFlowSyncTestTables(t, db)
+
+	svc := NewService(NewRepository(db))
+	definition := "```flow\n@flow id=smoke\n@name Smoke\n```\n\n" +
+		"```step\n@id health\n@name Health\nGET /health\n```\n\n" +
+		"```step\n@id features\n@name Features\nGET /system-features\n```\n\n" +
+		"```step\n@id setup\n@name Setup\nGET /setup-status\n```"
+
+	flow, err := svc.ImportFlowMarkdown(context.Background(), "workspace-1", "user-1", &ImportFlowMarkdownRequest{
+		SourcePath: "flows/smoke.flow.md",
+		Definition: definition,
+	})
+	require.NoError(t, err)
+	require.Equal(t, FlowParseStatusParsed, flow.ParseStatus)
+	require.Len(t, flow.Steps, 3)
+	require.Len(t, flow.Edges, 2)
+	require.Equal(t, flow.Steps[0].ID, flow.Edges[0].SourceStepID)
+	require.Equal(t, flow.Steps[1].ID, flow.Edges[0].TargetStepID)
+	require.Equal(t, flow.Steps[1].ID, flow.Edges[1].SourceStepID)
+	require.Equal(t, flow.Steps[2].ID, flow.Edges[1].TargetStepID)
+}
+
 func TestUpdateFlowMarkdownStoresFailedParseAndClearsGraph(t *testing.T) {
 	db := newFlowSyncTestDB(t)
 	createFlowSyncTestTables(t, db)
