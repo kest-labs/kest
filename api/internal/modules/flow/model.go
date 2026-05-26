@@ -18,6 +18,13 @@ type FlowPO struct {
 	SourcePath     string         `gorm:"size:500;not null;default:'';index" json:"source_path"`
 	SourceHash     string         `gorm:"size:64;not null;default:''" json:"source_hash"`
 	SourceReadOnly bool           `gorm:"not null;default:false" json:"source_read_only"`
+	Definition     string         `gorm:"type:text" json:"definition"`
+	Revision       int            `gorm:"not null;default:1" json:"revision"`
+	Enabled        bool           `gorm:"not null;default:true;index" json:"enabled"`
+	Metadata       string         `gorm:"type:text" json:"metadata"`
+	ParseStatus    string         `gorm:"size:20;not null;default:'unparsed';index" json:"parse_status"`
+	ParseError     string         `gorm:"type:text" json:"parse_error"`
+	ParsedAt       *time.Time     `json:"parsed_at"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
@@ -134,4 +141,11 @@ const (
 	RunStatusPassed   = "passed"
 	RunStatusFailed   = "failed"
 	RunStatusCanceled = "canceled"
+)
+
+// Flow definition parse status constants.
+const (
+	FlowParseStatusUnparsed = "unparsed"
+	FlowParseStatusParsed   = "parsed"
+	FlowParseStatusFailed   = "failed"
 )

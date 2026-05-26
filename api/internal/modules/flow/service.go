@@ -67,6 +67,10 @@ func (s *service) CreateFlow(ctx context.Context, workspaceID string, userID str
 		Name:        name,
 		Description: strings.TrimSpace(req.Description),
 		CreatedBy:   userID,
+		Source:      "web",
+		Revision:    1,
+		Enabled:     true,
+		ParseStatus: FlowParseStatusUnparsed,
 	}
 	if err := s.repo.CreateFlow(ctx, flow); err != nil {
 		return nil, err
@@ -670,6 +674,9 @@ func (s *service) SyncFlowsFromCLI(ctx context.Context, workspaceID string, crea
 					SourcePath:     strings.TrimSpace(item.SourcePath),
 					SourceHash:     strings.TrimSpace(item.SourceHash),
 					SourceReadOnly: item.ReadOnly,
+					Revision:       1,
+					Enabled:        true,
+					ParseStatus:    FlowParseStatusParsed,
 				}
 				if err := txRepo.CreateFlow(ctx, flow); err != nil {
 					return err
@@ -792,6 +799,9 @@ func (s *service) SyncFlowRunFromCLI(ctx context.Context, workspaceID string, cr
 			SourceID:       strings.TrimSpace(req.Run.SourceFlowID),
 			SourcePath:     strings.TrimSpace(req.Run.SourcePath),
 			SourceReadOnly: true,
+			Revision:       1,
+			Enabled:        true,
+			ParseStatus:    FlowParseStatusUnparsed,
 		}
 		if flow.SourceID == "" {
 			flow.SourceID = "path:" + flow.SourcePath

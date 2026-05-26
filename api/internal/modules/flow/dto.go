@@ -18,21 +18,28 @@ type UpdateFlowRequest struct {
 
 // FlowResponse represents the API response for a flow
 type FlowResponse struct {
-	ID              string    `json:"id"`
-	WorkspaceID     string    `json:"workspace_id"`
-	Name            string    `json:"name"`
-	Description     string    `json:"description"`
-	CreatedBy       string    `json:"created_by"`
-	StepCount       int       `json:"step_count,omitempty"`
-	Source          string    `json:"source"`
-	SourceID        string    `json:"source_id"`
-	SourcePath      string    `json:"source_path"`
-	SourceHash      string    `json:"source_hash"`
-	SourceReadOnly  bool      `json:"source_read_only"`
-	LatestRunStatus string    `json:"latest_run_status,omitempty"`
-	LatestRunMode   string    `json:"latest_run_mode,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string     `json:"id"`
+	WorkspaceID     string     `json:"workspace_id"`
+	Name            string     `json:"name"`
+	Description     string     `json:"description"`
+	CreatedBy       string     `json:"created_by"`
+	StepCount       int        `json:"step_count,omitempty"`
+	Source          string     `json:"source"`
+	SourceID        string     `json:"source_id"`
+	SourcePath      string     `json:"source_path"`
+	SourceHash      string     `json:"source_hash"`
+	SourceReadOnly  bool       `json:"source_read_only"`
+	Definition      string     `json:"definition,omitempty"`
+	Revision        int        `json:"revision"`
+	Enabled         bool       `json:"enabled"`
+	Metadata        string     `json:"metadata,omitempty"`
+	ParseStatus     string     `json:"parse_status"`
+	ParseError      string     `json:"parse_error,omitempty"`
+	ParsedAt        *time.Time `json:"parsed_at,omitempty"`
+	LatestRunStatus string     `json:"latest_run_status,omitempty"`
+	LatestRunMode   string     `json:"latest_run_mode,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 // FlowDetailResponse includes steps and edges
@@ -55,6 +62,13 @@ func ToFlowResponse(po *FlowPO) *FlowResponse {
 		SourcePath:     po.SourcePath,
 		SourceHash:     po.SourceHash,
 		SourceReadOnly: po.SourceReadOnly,
+		Definition:     po.Definition,
+		Revision:       po.Revision,
+		Enabled:        po.Enabled,
+		Metadata:       po.Metadata,
+		ParseStatus:    po.ParseStatus,
+		ParseError:     po.ParseError,
+		ParsedAt:       po.ParsedAt,
 		CreatedAt:      po.CreatedAt,
 		UpdatedAt:      po.UpdatedAt,
 	}

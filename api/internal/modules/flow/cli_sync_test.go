@@ -43,11 +43,17 @@ func TestSyncFlowsFromCLICreatesReadOnlyFlow(t *testing.T) {
 	require.Len(t, flows, 1)
 	require.Equal(t, "cli", flows[0].Source)
 	require.True(t, flows[0].SourceReadOnly)
+	require.Equal(t, 1, flows[0].Revision)
+	require.True(t, flows[0].Enabled)
+	require.Equal(t, FlowParseStatusParsed, flows[0].ParseStatus)
 	require.Equal(t, 2, flows[0].StepCount)
 
 	detail, err := svc.GetFlow(context.Background(), flows[0].ID)
 	require.NoError(t, err)
 	require.True(t, detail.SourceReadOnly)
+	require.Equal(t, 1, detail.Revision)
+	require.True(t, detail.Enabled)
+	require.Equal(t, FlowParseStatusParsed, detail.ParseStatus)
 	require.Len(t, detail.Steps, 2)
 
 	_, err = svc.UpdateFlow(context.Background(), flows[0].ID, &UpdateFlowRequest{Name: ptrString("Changed")})
@@ -193,6 +199,13 @@ func createFlowSyncTestTables(t *testing.T, db interface {
 			source_path TEXT NOT NULL DEFAULT '',
 			source_hash TEXT NOT NULL DEFAULT '',
 			source_read_only NUMERIC NOT NULL DEFAULT false,
+			definition TEXT,
+			revision INTEGER NOT NULL DEFAULT 1,
+			enabled NUMERIC NOT NULL DEFAULT true,
+			metadata TEXT,
+			parse_status TEXT NOT NULL DEFAULT 'unparsed',
+			parse_error TEXT,
+			parsed_at DATETIME,
 			created_at DATETIME,
 			updated_at DATETIME,
 			deleted_at DATETIME
