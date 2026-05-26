@@ -16,18 +16,35 @@ type addFlowDefinitionFields struct {
 }
 
 func (m *addFlowDefinitionFields) Up(db *gorm.DB) error {
-	if err := db.AutoMigrate(&flow.FlowPO{}); err != nil {
-		return err
+	if !db.Migrator().HasTable("api_flows") {
+		return db.AutoMigrate(&flow.FlowPO{})
 	}
 
-	updates := map[string]interface{}{
-		"revision":     1,
-		"enabled":      true,
-		"parse_status": flow.FlowParseStatusUnparsed,
+	columns := []struct {
+		name       string
+		definition string
+	}{
+		{name: "definition", definition: "TEXT"},
+		{name: "revision", definition: "INTEGER NOT NULL DEFAULT 1"},
+		{name: "enabled", definition: "BOOLEAN NOT NULL DEFAULT true"},
+		{name: "metadata", definition: "TEXT"},
+		{name: "parse_status", definition: "VARCHAR(20) NOT NULL DEFAULT 'unparsed'"},
+		{name: "parse_error", definition: "TEXT"},
+		{name: "parsed_at", definition: "TIMESTAMP NULL"},
 	}
-	return db.Table("api_flows").
-		Where("revision = 0 OR parse_status = ''").
-		Updates(updates).Error
+	for _, column := range columns {
+		if err := addColumnIfMissing(db, "api_flows", column.name, column.definition); err != nil {
+			return err
+		}
+	}
+
+	if err := db.Exec("UPDATE api_flows SET revision = 1 WHERE revision IS NULL OR revision = 0").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("UPDATE api_flows SET enabled = true WHERE enabled IS NULL").Error; err != nil {
+		return err
+	}
+	return db.Exec("UPDATE api_flows SET parse_status = ? WHERE parse_status IS NULL OR parse_status = ''", flow.FlowParseStatusUnparsed).Error
 }
 
 func (m *addFlowDefinitionFields) Down(db *gorm.DB) error {
