@@ -2,7 +2,11 @@ version: 1
 profiles:
   local:
     include:
-      - ".kest/flow/**/*.flow.md"
+      - "**/*.flow.md"
+    exclude:
+      - "**/.git/**/*.flow.md"
+      - "**/node_modules/**/*.flow.md"
+      - "**/vendor/**/*.flow.md"
     env: local
     base_url: "http://127.0.0.1:8025"
     strict: true
@@ -10,12 +14,16 @@ profiles:
     sync: false
   ci:
     include:
-      - ".kest/flow/**/*.flow.md"
+      - "**/*.flow.md"
+    exclude:
+      - "**/.git/**/*.flow.md"
+      - "**/node_modules/**/*.flow.md"
+      - "**/vendor/**/*.flow.md"
     env: staging
     base_url: "http://127.0.0.1:8025"
     strict: true
     fail_fast: false
-    sync: false
+    sync: true
     reports:
       json: ".kest/reports/flow-results.json"
       junit: ".kest/reports/flow-results.xml"

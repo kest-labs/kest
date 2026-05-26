@@ -1804,9 +1804,53 @@ function RunHistoryPanel({
                   : t('flowPage.runHistory.notStarted')}
               </ResultField>
               <ResultField label={t('flowPage.runHistory.completedStepsLabel')}>
-                {completedCount} / {selectedRun.step_results?.length ?? 0}
+                {completedCount} / {selectedRun.total_steps || selectedRun.step_results?.length || 0}
               </ResultField>
             </div>
+
+            {selectedRun.execution_mode === 'cli' ? (
+              <div className="grid gap-3 md:grid-cols-3">
+                <ResultField label={t('flowPage.runHistory.profileLabel')}>
+                  {selectedRun.profile || '-'}
+                </ResultField>
+                <ResultField label={t('flowPage.runHistory.durationLabel')}>
+                  {selectedRun.duration_ms ?? 0} ms
+                </ResultField>
+                <ResultField label={t('flowPage.runHistory.failedStepsLabel')}>
+                  {selectedRun.failed_steps ?? 0}
+                </ResultField>
+              </div>
+            ) : null}
+
+            {selectedRun.error_message ? (
+              <Alert>
+                <AlertTitle>{t('flowPage.runHistory.failureDetail')}</AlertTitle>
+                <AlertDescription>{selectedRun.error_message}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {selectedRun.log_content || selectedRun.log_excerpt ? (
+              <div className="space-y-2">
+                <div>
+                  <p className="text-sm font-medium text-text-main">
+                    {t('flowPage.runHistory.sessionLogTitle')}
+                  </p>
+                  <p className="mt-1 text-xs text-text-muted">
+                    {selectedRun.log_truncated
+                      ? t('flowPage.runHistory.sessionLogDescriptionTruncated')
+                      : t('flowPage.runHistory.sessionLogDescription')}
+                  </p>
+                </div>
+                <pre className="max-h-[280px] overflow-auto rounded-md border border-border-subtle bg-bg-soft p-4 text-xs leading-6 text-text-muted">
+                  {selectedRun.log_content || selectedRun.log_excerpt}
+                </pre>
+                {selectedRun.log_path ? (
+                  <p className="truncate font-mono text-[11px] text-text-muted">
+                    {selectedRun.log_path}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             {isRunDetailsLoading && !selectedRun.step_results?.length ? (
               <Alert>

@@ -228,6 +228,14 @@ func buildFlowRunSyncRequest(result runExecutionResult, profileName string, envN
 		FinishedAt:   finishedAt.UTC(),
 		Error:        errorString(result.Err),
 	}
+	if result.LogPath != "" {
+		run.LogPath = result.LogPath
+		if content, excerpt, truncated := loadFlowRunLog(result.LogPath); content != "" {
+			run.LogContent = content
+			run.LogExcerpt = excerpt
+			run.LogTruncated = truncated
+		}
+	}
 	if result.Summary != nil {
 		run.TotalSteps = result.Summary.TotalTests
 		run.PassedSteps = result.Summary.PassedTests
@@ -250,6 +258,16 @@ func buildFlowRunSyncRequest(result runExecutionResult, profileName string, envN
 		Run:           run,
 		Results:       results,
 	}
+}
+
+func loadFlowRunLog(logPath string) (string, string, bool) {
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		return "", "", false
+	}
+	sanitized := platformsync.SanitizeLog(string(content))
+	excerpt, truncated := platformsync.SanitizeLogExcerpt(string(content))
+	return sanitized, excerpt, truncated
 }
 
 func buildFlowRunResultSync(result summary.TestResult) platformsync.FlowRunResultSync {

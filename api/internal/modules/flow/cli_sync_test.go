@@ -85,6 +85,13 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 			SourcePath:   ".kest/flow/auth.flow.md",
 			Profile:      "ci",
 			Status:       "passed",
+			TotalSteps:   1,
+			PassedSteps:  1,
+			DurationMs:   50,
+			LogPath:      ".kest/logs/kest.log",
+			LogContent:   "flow passed\nfull log",
+			LogExcerpt:   "flow passed",
+			LogTruncated: true,
 			StartedAt:    now,
 			FinishedAt:   now.Add(50 * time.Millisecond),
 		},
@@ -103,11 +110,19 @@ func TestSyncFlowRunFromCLICreatesRunAndResults(t *testing.T) {
 	require.Len(t, runs, 1)
 	require.Equal(t, "cli", runs[0].ExecutionMode)
 	require.Equal(t, "ci", runs[0].Profile)
+	require.Equal(t, 1, runs[0].TotalSteps)
+	require.Equal(t, 1, runs[0].PassedSteps)
+	require.Equal(t, int64(50), runs[0].DurationMs)
+	require.Equal(t, ".kest/logs/kest.log", runs[0].LogPath)
+	require.Equal(t, "flow passed\nfull log", runs[0].LogContent)
+	require.Equal(t, "flow passed", runs[0].LogExcerpt)
+	require.True(t, runs[0].LogTruncated)
 
 	detail, err := svc.GetRun(context.Background(), runs[0].ID)
 	require.NoError(t, err)
 	require.Len(t, detail.StepResults, 1)
 	require.Equal(t, "passed", detail.StepResults[0].Status)
+	require.Equal(t, "flow passed", detail.LogExcerpt)
 }
 
 func ptrString(value string) *string {
@@ -223,6 +238,15 @@ func createFlowSyncTestTables(t *testing.T, db interface {
 			profile TEXT NOT NULL DEFAULT '',
 			environment TEXT NOT NULL DEFAULT '',
 			base_url TEXT NOT NULL DEFAULT '',
+			total_steps INTEGER NOT NULL DEFAULT 0,
+			passed_steps INTEGER NOT NULL DEFAULT 0,
+			failed_steps INTEGER NOT NULL DEFAULT 0,
+			duration_ms INTEGER NOT NULL DEFAULT 0,
+			error_message TEXT,
+			log_content TEXT,
+			log_path TEXT NOT NULL DEFAULT '',
+			log_excerpt TEXT,
+			log_truncated NUMERIC NOT NULL DEFAULT false,
 			started_at DATETIME,
 			finished_at DATETIME,
 			created_at DATETIME,

@@ -24,6 +24,11 @@ func (m *addFlowSourceSyncFields) Up(db *gorm.DB) error {
 }
 
 func (m *addFlowSourceSyncFields) Down(db *gorm.DB) error {
+	for _, column := range []string{"log_truncated", "log_excerpt", "log_path", "log_content", "error_message", "duration_ms", "failed_steps", "passed_steps", "total_steps"} {
+		if err := dropColumnIfExists(db, "api_flow_runs", column); err != nil {
+			return err
+		}
+	}
 	for _, column := range []string{"base_url", "environment", "profile", "source_event_id", "source", "execution_mode"} {
 		if err := dropColumnIfExists(db, "api_flow_runs", column); err != nil {
 			return err

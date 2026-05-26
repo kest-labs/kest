@@ -79,6 +79,10 @@ type FlowRunSync struct {
 	FailedSteps  int       `json:"failed_steps"`
 	DurationMs   int64     `json:"duration_ms"`
 	Error        string    `json:"error,omitempty"`
+	LogContent   string    `json:"log_content,omitempty"`
+	LogPath      string    `json:"log_path,omitempty"`
+	LogExcerpt   string    `json:"log_excerpt,omitempty"`
+	LogTruncated bool      `json:"log_truncated,omitempty"`
 }
 
 type FlowRunResultSync struct {

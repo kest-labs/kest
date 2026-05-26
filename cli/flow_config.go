@@ -78,12 +78,19 @@ func defaultFlowRunConfig() flowRunConfig {
 	failFast := false
 	localSync := false
 	ciSync := true
+	allFlowFiles := []string{"**/*.flow.md"}
+	defaultExclude := []string{
+		"**/.git/**/*.flow.md",
+		"**/node_modules/**/*.flow.md",
+		"**/vendor/**/*.flow.md",
+	}
 
 	return flowRunConfig{
 		Version: 1,
 		Profiles: map[string]flowRunProfile{
 			"local": {
-				Include:  []string{".kest/flow/**/*.flow.md"},
+				Include:  allFlowFiles,
+				Exclude:  defaultExclude,
 				Env:      "local",
 				BaseURL:  "http://127.0.0.1:5119",
 				Strict:   &strict,
@@ -91,7 +98,8 @@ func defaultFlowRunConfig() flowRunConfig {
 				Sync:     &localSync,
 			},
 			"ci": {
-				Include:  []string{".kest/flow/**/*.flow.md"},
+				Include:  allFlowFiles,
+				Exclude:  defaultExclude,
 				Env:      "staging",
 				Strict:   &strict,
 				FailFast: &failFast,
@@ -282,6 +290,7 @@ func resolveRecursiveGlob(pattern string) ([]string, error) {
 	}
 	suffix := strings.TrimPrefix(pattern[strings.Index(pattern, "**")+2:], string(filepath.Separator))
 	suffix = strings.TrimPrefix(suffix, "/")
+	suffix = filepath.ToSlash(suffix)
 
 	var out []string
 	if err := filepath.WalkDir(base, func(current string, entry os.DirEntry, walkErr error) error {
@@ -289,15 +298,32 @@ func resolveRecursiveGlob(pattern string) ([]string, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			if entry.Name() == "node_modules" || entry.Name() == ".git" {
+			if entry.Name() == "node_modules" || entry.Name() == ".git" || entry.Name() == "vendor" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 		if suffix != "" {
-			matched, err := filepath.Match(suffix, filepath.Base(current))
+			rel, err := filepath.Rel(base, current)
 			if err != nil {
 				return err
+			}
+			rel = filepath.ToSlash(rel)
+			matched, err := filepath.Match(suffix, rel)
+			if err != nil {
+				return err
+			}
+			if !matched && !strings.Contains(suffix, "/") {
+				matched, err = filepath.Match(suffix, filepath.Base(current))
+				if err != nil {
+					return err
+				}
+			}
+			if !matched && strings.HasPrefix(suffix, "*/") {
+				matched, err = filepath.Match(strings.TrimPrefix(suffix, "*/"), filepath.Base(current))
+				if err != nil {
+					return err
+				}
 			}
 			if !matched {
 				return nil
@@ -331,7 +357,7 @@ func expandRunPath(path string) ([]string, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			if entry.Name() == "node_modules" || entry.Name() == ".git" {
+			if entry.Name() == "node_modules" || entry.Name() == ".git" || entry.Name() == "vendor" {
 				return filepath.SkipDir
 			}
 			return nil

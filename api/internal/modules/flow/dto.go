@@ -193,6 +193,15 @@ type RunResponse struct {
 	Profile       string               `json:"profile"`
 	Environment   string               `json:"environment"`
 	BaseURL       string               `json:"base_url"`
+	TotalSteps    int                  `json:"total_steps"`
+	PassedSteps   int                  `json:"passed_steps"`
+	FailedSteps   int                  `json:"failed_steps"`
+	DurationMs    int64                `json:"duration_ms"`
+	ErrorMessage  string               `json:"error_message"`
+	LogContent    string               `json:"log_content"`
+	LogPath       string               `json:"log_path"`
+	LogExcerpt    string               `json:"log_excerpt"`
+	LogTruncated  bool                 `json:"log_truncated"`
 	StartedAt     *time.Time           `json:"started_at"`
 	FinishedAt    *time.Time           `json:"finished_at"`
 	CreatedAt     time.Time            `json:"created_at"`
@@ -213,6 +222,15 @@ func ToRunResponse(po *FlowRunPO) *RunResponse {
 		Profile:       po.Profile,
 		Environment:   po.Environment,
 		BaseURL:       po.BaseURL,
+		TotalSteps:    po.TotalSteps,
+		PassedSteps:   po.PassedSteps,
+		FailedSteps:   po.FailedSteps,
+		DurationMs:    po.DurationMs,
+		ErrorMessage:  po.ErrorMessage,
+		LogContent:    po.LogContent,
+		LogPath:       po.LogPath,
+		LogExcerpt:    po.LogExcerpt,
+		LogTruncated:  po.LogTruncated,
 		StartedAt:     po.StartedAt,
 		FinishedAt:    po.FinishedAt,
 		CreatedAt:     po.CreatedAt,
@@ -351,6 +369,10 @@ type CLIFlowRunSyncItem struct {
 	FailedSteps  int       `json:"failed_steps"`
 	DurationMs   int64     `json:"duration_ms"`
 	Error        string    `json:"error"`
+	LogContent   string    `json:"log_content"`
+	LogPath      string    `json:"log_path"`
+	LogExcerpt   string    `json:"log_excerpt"`
+	LogTruncated bool      `json:"log_truncated"`
 }
 
 type CLIFlowRunResultSyncItem struct {

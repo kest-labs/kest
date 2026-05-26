@@ -126,6 +126,15 @@ export interface FlowRun {
   profile?: string;
   environment?: string;
   base_url?: string;
+  total_steps?: number;
+  passed_steps?: number;
+  failed_steps?: number;
+  duration_ms?: number;
+  error_message?: string;
+  log_content?: string;
+  log_path?: string;
+  log_excerpt?: string;
+  log_truncated?: boolean;
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;

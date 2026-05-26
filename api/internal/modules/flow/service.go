@@ -811,6 +811,15 @@ func (s *service) SyncFlowRunFromCLI(ctx context.Context, workspaceID string, cr
 		Profile:       strings.TrimSpace(req.Run.Profile),
 		Environment:   strings.TrimSpace(req.Run.Environment),
 		BaseURL:       strings.TrimSpace(req.Run.BaseURL),
+		TotalSteps:    req.Run.TotalSteps,
+		PassedSteps:   req.Run.PassedSteps,
+		FailedSteps:   req.Run.FailedSteps,
+		DurationMs:    req.Run.DurationMs,
+		ErrorMessage:  strings.TrimSpace(req.Run.Error),
+		LogContent:    req.Run.LogContent,
+		LogPath:       strings.TrimSpace(req.Run.LogPath),
+		LogExcerpt:    req.Run.LogExcerpt,
+		LogTruncated:  req.Run.LogTruncated,
 		StartedAt:     timePtr(req.Run.StartedAt),
 		FinishedAt:    timePtr(req.Run.FinishedAt),
 	}
@@ -876,8 +885,14 @@ func (s *service) recordCLIFlowRunHistory(ctx context.Context, workspaceID strin
 		Action:        action,
 		Message:       fmt.Sprintf("CLI flow %s %s", req.Run.SourcePath, normalizeRunStatus(req.Run.Status)),
 		Data: map[string]interface{}{
-			"run":     req.Run,
-			"run_id":  runID,
+			"run":    req.Run,
+			"run_id": runID,
+			"log": map[string]interface{}{
+				"content":   req.Run.LogContent,
+				"path":      strings.TrimSpace(req.Run.LogPath),
+				"excerpt":   req.Run.LogExcerpt,
+				"truncated": req.Run.LogTruncated,
+			},
 			"results": req.Results,
 		},
 	})

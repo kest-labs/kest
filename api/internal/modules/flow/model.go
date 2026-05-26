@@ -84,6 +84,15 @@ type FlowRunPO struct {
 	Profile       string         `gorm:"size:50;not null;default:''" json:"profile"`
 	Environment   string         `gorm:"size:100;not null;default:''" json:"environment"`
 	BaseURL       string         `gorm:"size:500;not null;default:''" json:"base_url"`
+	TotalSteps    int            `gorm:"not null;default:0" json:"total_steps"`
+	PassedSteps   int            `gorm:"not null;default:0" json:"passed_steps"`
+	FailedSteps   int            `gorm:"not null;default:0" json:"failed_steps"`
+	DurationMs    int64          `gorm:"not null;default:0" json:"duration_ms"`
+	ErrorMessage  string         `gorm:"type:text" json:"error_message"`
+	LogContent    string         `gorm:"type:text" json:"log_content"`
+	LogPath       string         `gorm:"size:500;not null;default:''" json:"log_path"`
+	LogExcerpt    string         `gorm:"type:text" json:"log_excerpt"`
+	LogTruncated  bool           `gorm:"not null;default:false" json:"log_truncated"`
 	StartedAt     *time.Time     `json:"started_at"`
 	FinishedAt    *time.Time     `json:"finished_at"`
 	CreatedAt     time.Time      `json:"created_at"`

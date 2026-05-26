@@ -64,6 +64,31 @@ func TestResolveRunTargetsIgnoresMissingIncludeDirectories(t *testing.T) {
 	}
 }
 
+func TestDefaultCIProfileIncludesAllFlowMarkdownFiles(t *testing.T) {
+	root := t.TempDir()
+	paths := []string{
+		filepath.Join(root, ".kest", "flow", "auth", "login.flow.md"),
+		filepath.Join(root, "api", "examples", "user_registration.flow.md"),
+	}
+	for _, path := range paths {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
+		}
+		if err := os.WriteFile(path, []byte("# flow"), 0644); err != nil {
+			t.Fatalf("write flow %s: %v", path, err)
+		}
+	}
+
+	cfg := defaultFlowRunConfig()
+	targets, err := resolveRunTargets(nil, cfg.Profiles["ci"], root)
+	if err != nil {
+		t.Fatalf("resolveRunTargets returned error: %v", err)
+	}
+	if len(targets) != 2 {
+		t.Fatalf("expected two flow targets, got %#v", targets)
+	}
+}
+
 func TestSelectFlowRunProfileUsesEnv(t *testing.T) {
 	t.Setenv("KEST_PROFILE", "ci")
 
