@@ -43,6 +43,7 @@ import {
   Search,
   Share2,
   Trash2,
+  Upload,
   Workflow,
 } from 'lucide-react';
 import {
@@ -1299,13 +1300,39 @@ function FlowMarkdownDialog({
   const [name, setName] = useState(initialName ?? '');
   const [description, setDescription] = useState(initialDescription ?? '');
   const [sourcePath, setSourcePath] = useState(initialSourcePath ?? '');
-  const [definition, setDefinition] = useState(initialDefinition ?? '');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [enabled, setEnabled] = useState(initialEnabled ?? true);
   const [error, setError] = useState('');
+  const fileInputId =
+    mode === 'create' ? 'flow-markdown-import-file' : 'flow-markdown-replace-file';
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setError('');
+    if (file && !sourcePath.trim()) {
+      setSourcePath(`flows/${file.name}`);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmedDefinition = definition.trim();
+    if (mode === 'create' && !selectedFile) {
+      setError(t('flowPage.markdownFileRequired'));
+      return;
+    }
+
+    let nextDefinition = initialDefinition ?? '';
+    if (selectedFile) {
+      try {
+        nextDefinition = await selectedFile.text();
+      } catch {
+        setError(t('flowPage.markdownFileReadFailed'));
+        return;
+      }
+    }
+
+    const trimmedDefinition = nextDefinition.trim();
     if (!trimmedDefinition) {
       setError(t('flowPage.markdownRequired'));
       return;
@@ -1314,7 +1341,7 @@ function FlowMarkdownDialog({
     await onSubmit({
       name: name.trim() || undefined,
       description: description.trim() || undefined,
-      source_path: sourcePath.trim() || undefined,
+      source_path: sourcePath.trim() || selectedFile?.name || undefined,
       definition: trimmedDefinition,
       enabled,
     });
@@ -1322,8 +1349,8 @@ function FlowMarkdownDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl">
-        <form onSubmit={handleSubmit}>
+      <DialogContent size={mode === 'create' ? 'lg' : 'xl'}>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
               {mode === 'create'
@@ -1333,66 +1360,83 @@ function FlowMarkdownDialog({
             <DialogDescription>{t('flowPage.markdownDialogDescription')}</DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="flow-markdown-name">{t('common.name')}</Label>
-                <Input
-                  id="flow-markdown-name"
-                  value={name}
-                  onChange={event => setName(event.target.value)}
-                  placeholder={t('flowPage.namePlaceholder')}
-                  root
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="flow-markdown-path">{t('flowPage.markdownSourcePath')}</Label>
-                <Input
-                  id="flow-markdown-path"
-                  value={sourcePath}
-                  onChange={event => setSourcePath(event.target.value)}
-                  placeholder="flows/auth.flow.md"
-                  root
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="flow-markdown-description">{t('common.description')}</Label>
-              <Textarea
-                id="flow-markdown-description"
-                value={description}
-                onChange={event => setDescription(event.target.value)}
-                placeholder={t('flowPage.descriptionPlaceholder')}
-                rows={3}
-                root
+            {mode === 'edit' ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="flow-markdown-name">{t('common.name')}</Label>
+                    <Input
+                      id="flow-markdown-name"
+                      value={name}
+                      onChange={event => setName(event.target.value)}
+                      placeholder={t('flowPage.namePlaceholder')}
+                      root
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="flow-markdown-path">{t('flowPage.markdownSourcePath')}</Label>
+                    <Input
+                      id="flow-markdown-path"
+                      value={sourcePath}
+                      onChange={event => setSourcePath(event.target.value)}
+                      placeholder="flows/auth.flow.md"
+                      root
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="flow-markdown-description">{t('common.description')}</Label>
+                  <Textarea
+                    id="flow-markdown-description"
+                    value={description}
+                    onChange={event => setDescription(event.target.value)}
+                    placeholder={t('flowPage.descriptionPlaceholder')}
+                    rows={3}
+                    root
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border-subtle bg-bg-soft px-3 py-2">
+                  <Label htmlFor="flow-markdown-enabled">{t('flowPage.enabledLabel')}</Label>
+                  <Switch
+                    id="flow-markdown-enabled"
+                    checked={enabled}
+                    onCheckedChange={setEnabled}
+                  />
+                </div>
+              </>
+            ) : null}
+            <div className={cn('space-y-2', mode === 'create' && 'py-1')}>
+              <Label htmlFor={fileInputId}>{t('flowPage.markdownFile')}</Label>
+              <Input
+                id={fileInputId}
+                type="file"
+                accept=".flow.md,.md,.markdown,text/markdown,text/plain"
+                className="h-auto cursor-pointer py-2"
+                onChange={handleFileChange}
               />
-            </div>
-            <div className="flex items-center justify-between rounded-md border border-border-subtle bg-bg-soft px-3 py-2">
-              <Label htmlFor="flow-markdown-enabled">{t('flowPage.enabledLabel')}</Label>
-              <Switch id="flow-markdown-enabled" checked={enabled} onCheckedChange={setEnabled} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="flow-markdown-definition">{t('flowPage.markdownDefinition')}</Label>
-              <Textarea
-                id="flow-markdown-definition"
-                value={definition}
-                onChange={event => {
-                  setDefinition(event.target.value);
-                  setError('');
-                }}
-                placeholder={'```flow\n@flow id=auth-flow\n@name Auth Flow\n```\n\n```step\n@id login\nGET /health\n```'}
-                rows={18}
-                className="font-mono text-xs"
-                root
-              />
+              <p className="text-sm text-text-muted">
+                {selectedFile
+                  ? t('flowPage.markdownFileSelected', { name: selectedFile.name })
+                  : t('flowPage.markdownFileEmpty')}
+              </p>
               {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
+              {mode === 'edit' ? (
+                <p className="text-xs leading-5 text-text-muted">
+                  {t('flowPage.markdownFileReplaceHelp')}
+                </p>
+              ) : null}
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" loading={isSubmitting}>
-              <Save className="h-4 w-4" />
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              disabled={mode === 'create' && !selectedFile}
+            >
+              {mode === 'create' ? <Upload className="h-4 w-4" /> : <Save className="h-4 w-4" />}
               {mode === 'create' ? t('flowPage.importAction') : t('flowPage.saveAction')}
             </Button>
           </DialogFooter>

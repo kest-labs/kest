@@ -2104,6 +2104,12 @@ const messages: WorkspaceMessages = {
     markdownDialogDescription:
       'Save the Markdown definition in Kest Web and regenerate the visual flow graph.',
     markdownSourcePath: 'Source path',
+    markdownFile: '.flow.md file',
+    markdownFileSelected: 'Selected file: {name}',
+    markdownFileEmpty: 'Choose a .flow.md file to import.',
+    markdownFileRequired: 'Choose a .flow.md file before importing.',
+    markdownFileReadFailed: 'Unable to read the selected .flow.md file.',
+    markdownFileReplaceHelp: 'Choose a file only when you want to replace the saved definition.',
     markdownDefinition: '.flow.md content',
     markdownRequired: '.flow.md content is required.',
     importAction: 'Import',
