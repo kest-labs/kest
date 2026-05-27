@@ -73,7 +73,7 @@ func loadConfigWarn() *config.Config {
 	conf, err := config.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to load config: %v\n", err)
-		return &config.Config{}
+		conf = &config.Config{}
 	}
 	if env := strings.TrimSpace(os.Getenv("KEST_PLATFORM_URL")); env != "" {
 		conf.PlatformURL = env
