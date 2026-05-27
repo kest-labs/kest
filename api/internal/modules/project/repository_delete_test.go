@@ -73,7 +73,7 @@ func TestRepositoryDeleteCascadesProjectData(t *testing.T) {
 	}
 
 	repo := NewRepository(db)
-	if err := repo.Delete(context.Background(), projectID); err != nil {
+	if err := repo.Delete(context.Background(), projectID, ""); err != nil {
 		t.Fatalf("Delete returned error: %v", err)
 	}
 
@@ -140,7 +140,7 @@ func TestRepositoryDeleteSkipsMissingOptionalTables(t *testing.T) {
 	}
 
 	repo := NewRepository(db)
-	if err := repo.Delete(context.Background(), "project-1"); err != nil {
+	if err := repo.Delete(context.Background(), "project-1", ""); err != nil {
 		t.Fatalf("Delete returned error: %v", err)
 	}
 

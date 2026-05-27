@@ -53,18 +53,21 @@ func AuditLog() gin.HandlerFunc {
 		// Determine resource from path (simple heuristic)
 		// e.g., /api/v1/projects -> projects
 		path := c.Request.URL.Path
+		workspaceID, _ := c.Get("workspaceID")
+		workspaceIDStr, _ := workspaceID.(string)
 
 		// Create log entry
 		log := &audit.AuditLogPO{
-			UserID:    userID,
-			Action:    method, // POST, PATCH, DELETE
-			Resource:  path,   // Full path as resource identifier
-			Method:    method,
-			Path:      path,
-			IP:        c.ClientIP(),
-			UserAgent: c.Request.UserAgent(),
-			Status:    c.Writer.Status(),
-			Duration:  time.Since(start).Milliseconds(),
+			UserID:      userID,
+			WorkspaceID: workspaceIDStr,
+			Action:      method,
+			Resource:    path,
+			Method:      method,
+			Path:        path,
+			IP:          c.ClientIP(),
+			UserAgent:   c.Request.UserAgent(),
+			Status:      c.Writer.Status(),
+			Duration:    time.Since(start).Milliseconds(),
 		}
 
 		// Asynchronously save log to avoid blocking response

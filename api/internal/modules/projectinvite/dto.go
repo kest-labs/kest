@@ -15,7 +15,8 @@ type CreateProjectInvitationRequest struct {
 
 type ProjectInvitationResponse struct {
 	ID            string                 `json:"id"`
-	ProjectID     string                 `json:"project_id"`
+	ProjectID     string                 `json:"project_id,omitempty"`
+	WorkspaceID   string                 `json:"workspace_id,omitempty"`
 	TokenPrefix   string                 `json:"token_prefix"`
 	Slug          string                 `json:"slug"`
 	Role          string                 `json:"role"`
@@ -33,9 +34,12 @@ type ProjectInvitationResponse struct {
 }
 
 type PublicProjectInvitationResponse struct {
-	ProjectID     string     `json:"project_id"`
-	ProjectName   string     `json:"project_name"`
-	ProjectSlug   string     `json:"project_slug"`
+	ProjectID     string     `json:"project_id,omitempty"`
+	ProjectName   string     `json:"project_name,omitempty"`
+	ProjectSlug   string     `json:"project_slug,omitempty"`
+	WorkspaceID   string     `json:"workspace_id,omitempty"`
+	WorkspaceName string     `json:"workspace_name,omitempty"`
+	WorkspaceSlug string     `json:"workspace_slug,omitempty"`
 	Role          string     `json:"role"`
 	Status        string     `json:"status"`
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
@@ -49,9 +53,10 @@ type AcceptedProjectInvitationMember struct {
 }
 
 type AcceptProjectInvitationResponse struct {
-	ProjectID  string                          `json:"project_id"`
-	Member     AcceptedProjectInvitationMember `json:"member"`
-	RedirectTo string                          `json:"redirect_to"`
+	ProjectID   string                          `json:"project_id,omitempty"`
+	WorkspaceID string                          `json:"workspace_id,omitempty"`
+	Member      AcceptedProjectInvitationMember `json:"member"`
+	RedirectTo  string                          `json:"redirect_to"`
 }
 
 type RejectProjectInvitationResponse struct {
@@ -59,17 +64,20 @@ type RejectProjectInvitationResponse struct {
 }
 
 type ReceivedProjectInvitationResponse struct {
-	ID          string     `json:"id"`
-	ProjectID   string     `json:"project_id"`
-	ProjectName string     `json:"project_name"`
-	ProjectSlug string     `json:"project_slug"`
-	Slug        string     `json:"slug"`
-	Role        string     `json:"role"`
-	Status      string     `json:"status"`
-	InviteURL   string     `json:"invite_url"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID            string     `json:"id"`
+	ProjectID     string     `json:"project_id,omitempty"`
+	ProjectName   string     `json:"project_name,omitempty"`
+	ProjectSlug   string     `json:"project_slug,omitempty"`
+	WorkspaceID   string     `json:"workspace_id,omitempty"`
+	WorkspaceName string     `json:"workspace_name,omitempty"`
+	WorkspaceSlug string     `json:"workspace_slug,omitempty"`
+	Slug          string     `json:"slug"`
+	Role          string     `json:"role"`
+	Status        string     `json:"status"`
+	InviteURL     string     `json:"invite_url"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 func toProjectInvitationResponse(invitation *ProjectInvitation, now time.Time) *ProjectInvitationResponse {
@@ -80,11 +88,12 @@ func toProjectInvitationResponse(invitation *ProjectInvitation, now time.Time) *
 	return &ProjectInvitationResponse{
 		ID:            invitation.ID,
 		ProjectID:     invitation.ProjectID,
+		WorkspaceID:   invitation.WorkspaceID,
 		TokenPrefix:   invitation.TokenPrefix,
 		Slug:          invitation.Slug,
 		Role:          invitation.Role,
 		Status:        resolveInvitationStatus(invitation, now),
-		InviteURL:     buildProjectInvitationURL(invitation.Slug),
+		InviteURL:     buildWorkspaceInvitationURL(invitation.Slug),
 		InvitedUser:   invitation.InvitedUser,
 		MaxUses:       invitation.MaxUses,
 		UsedCount:     invitation.UsedCount,
@@ -119,6 +128,9 @@ func toPublicProjectInvitationResponse(
 		ProjectID:     project.ID,
 		ProjectName:   project.Name,
 		ProjectSlug:   project.Slug,
+		WorkspaceID:   project.WorkspaceID,
+		WorkspaceName: project.WorkspaceName,
+		WorkspaceSlug: project.WorkspaceSlug,
 		Role:          invitation.Role,
 		Status:        resolveInvitationStatus(invitation, now),
 		ExpiresAt:     invitation.ExpiresAt,
@@ -137,26 +149,37 @@ func toReceivedProjectInvitationResponse(
 	}
 
 	return &ReceivedProjectInvitationResponse{
-		ID:          invitation.ID,
-		ProjectID:   project.ID,
-		ProjectName: project.Name,
-		ProjectSlug: project.Slug,
-		Slug:        invitation.Slug,
-		Role:        invitation.Role,
-		Status:      resolveInvitationStatus(invitation, now),
-		InviteURL:   buildProjectInvitationURL(invitation.Slug),
-		ExpiresAt:   invitation.ExpiresAt,
-		CreatedAt:   invitation.CreatedAt,
-		UpdatedAt:   invitation.UpdatedAt,
+		ID:            invitation.ID,
+		ProjectID:     project.ID,
+		ProjectName:   project.Name,
+		ProjectSlug:   project.Slug,
+		WorkspaceID:   project.WorkspaceID,
+		WorkspaceName: project.WorkspaceName,
+		WorkspaceSlug: project.WorkspaceSlug,
+		Slug:          invitation.Slug,
+		Role:          invitation.Role,
+		Status:        resolveInvitationStatus(invitation, now),
+		InviteURL:     buildWorkspaceInvitationURL(invitation.Slug),
+		ExpiresAt:     invitation.ExpiresAt,
+		CreatedAt:     invitation.CreatedAt,
+		UpdatedAt:     invitation.UpdatedAt,
 	}
 }
 
 func buildProjectInvitationURL(slug string) string {
-	return buildProjectInvitationURLForBase(slug, "")
+	return buildWorkspaceInvitationURL(slug)
 }
 
 func buildProjectInvitationURLForBase(slug, baseURL string) string {
-	path := fmt.Sprintf("/invite/project/%s", url.PathEscape(slug))
+	return buildWorkspaceInvitationURLForBase(slug, baseURL)
+}
+
+func buildWorkspaceInvitationURL(slug string) string {
+	return buildWorkspaceInvitationURLForBase(slug, "")
+}
+
+func buildWorkspaceInvitationURLForBase(slug, baseURL string) string {
+	path := fmt.Sprintf("/invite/workspace/%s", url.PathEscape(slug))
 	base := resolveConfiguredInvitationBaseURL()
 	if base != "" {
 		return base + path

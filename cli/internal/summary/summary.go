@@ -12,8 +12,8 @@ import (
 )
 
 type TestResult struct {
-	Name            string
 	StepID          string
+	Name            string
 	Method          string
 	URL             string
 	RequestHeaders  map[string]string

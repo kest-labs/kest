@@ -40,14 +40,13 @@ func LoadConfig() (*Config, error) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 
-	// Global config
-	home, _ := os.UserHomeDir()
-	v.AddConfigPath(filepath.Join(home, ".kest"))
-
 	// Project detection
 	projectRoot, _ := findProjectRoot()
 	if projectRoot != "" {
-		v.AddConfigPath(filepath.Join(projectRoot, ".kest"))
+		v.SetConfigFile(filepath.Join(projectRoot, ".kest", "config.yaml"))
+	} else {
+		home, _ := os.UserHomeDir()
+		v.SetConfigFile(filepath.Join(home, ".kest", "config.yaml"))
 	}
 
 	if err := v.ReadInConfig(); err != nil {

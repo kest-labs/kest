@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	idpkg "github.com/kest-labs/kest/api/pkg/id"
 )
 
@@ -24,6 +25,9 @@ var (
 type Service interface {
 	Create(ctx context.Context, userID string, req *CreateProjectRequest) (*Project, error)
 	GetByID(ctx context.Context, id string) (*Project, error)
+	GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error)
+	ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error)
+	ResolveWorkspaceIDByBackingID(ctx context.Context, backingID string) (string, error)
 	Update(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error)
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, userID string, page, perPage int) ([]*Project, int64, error)
@@ -32,15 +36,17 @@ type Service interface {
 
 // service implements Service interface
 type service struct {
-	repo          Repository
-	memberService member.Service
+	repo             Repository
+	memberService    member.Service
+	workspaceService workspace.Service
 }
 
 // NewService creates a new project service
-func NewService(repo Repository, memberService member.Service) Service {
+func NewService(repo Repository, memberService member.Service, workspaceService workspace.Service) Service {
 	return &service{
-		repo:          repo,
-		memberService: memberService,
+		repo:             repo,
+		memberService:    memberService,
+		workspaceService: workspaceService,
 	}
 }
 
@@ -66,16 +72,23 @@ func (s *service) Create(ctx context.Context, userID string, req *CreateProjectR
 		return nil, fmt.Errorf("failed to generate public key: %w", err)
 	}
 
+	projectWorkspace, err := s.createProjectWorkspace(req.Name, slug, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create project workspace: %w", err)
+	}
+
 	// Create project
 	project := &Project{
-		Name:      req.Name,
-		Slug:      slug,
-		Platform:  req.Platform,
-		PublicKey: publicKey,
-		Status:    1, // Active by default
+		WorkspaceID: projectWorkspace.ID,
+		Name:        req.Name,
+		Slug:        slug,
+		Platform:    req.Platform,
+		PublicKey:   publicKey,
+		Status:      1, // Active by default
 	}
 
 	if err := s.repo.Create(ctx, project); err != nil {
+		_ = s.workspaceService.DeleteWorkspace(projectWorkspace.ID, userID, false)
 		return nil, err
 	}
 
@@ -85,7 +98,8 @@ func (s *service) Create(ctx context.Context, userID string, req *CreateProjectR
 		Role:   member.RoleOwner,
 	})
 	if err != nil {
-		// Rollback project creation? For now, we just log or return error
+		_ = s.repo.Delete(ctx, project.ID, projectWorkspace.ID)
+		_ = s.workspaceService.DeleteWorkspace(projectWorkspace.ID, userID, false)
 		return nil, fmt.Errorf("failed to assign owner: %w", err)
 	}
 
@@ -101,6 +115,36 @@ func (s *service) GetByID(ctx context.Context, id string) (*Project, error) {
 		return nil, ErrProjectNotFound
 	}
 	return project, nil
+}
+
+func (s *service) GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error) {
+	project, err := s.repo.GetByWorkspaceID(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil {
+		return nil, ErrProjectNotFound
+	}
+	return project, nil
+}
+
+func (s *service) ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error) {
+	backing, err := s.GetByWorkspaceID(ctx, workspaceID)
+	if err != nil {
+		return "", err
+	}
+	return backing.ID, nil
+}
+
+func (s *service) ResolveWorkspaceIDByBackingID(ctx context.Context, backingID string) (string, error) {
+	backing, err := s.GetByID(ctx, backingID)
+	if err != nil {
+		return "", err
+	}
+	if backing.WorkspaceID == "" {
+		return "", ErrProjectNotFound
+	}
+	return backing.WorkspaceID, nil
 }
 
 func (s *service) Update(ctx context.Context, id string, req *UpdateProjectRequest) (*Project, error) {
@@ -131,15 +175,15 @@ func (s *service) Update(ctx context.Context, id string, req *UpdateProjectReque
 }
 
 func (s *service) Delete(ctx context.Context, id string) error {
-	project, err := s.repo.GetByID(ctx, id)
+	backing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if project == nil {
+	if backing == nil {
 		return ErrProjectNotFound
 	}
 
-	return s.repo.Delete(ctx, id)
+	return s.repo.Delete(ctx, id, backing.WorkspaceID)
 }
 
 func (s *service) List(ctx context.Context, userID string, page, perPage int) ([]*Project, int64, error) {
@@ -159,6 +203,27 @@ func (s *service) List(ctx context.Context, userID string, page, perPage int) ([
 
 func (s *service) GetStats(ctx context.Context, projectID string) (*ProjectStats, error) {
 	return s.repo.GetStats(ctx, projectID)
+}
+
+func (s *service) createProjectWorkspace(name string, baseSlug string, ownerID string) (*workspace.Workspace, error) {
+	for attempt := 0; attempt < 5; attempt++ {
+		workspaceSlug := buildWorkspaceSlugCandidate(baseSlug, attempt)
+		projectWorkspace, err := s.workspaceService.CreateWorkspace(&workspace.CreateWorkspaceRequest{
+			Name:       name,
+			Slug:       workspaceSlug,
+			Type:       workspace.TypePersonal,
+			Visibility: workspace.VisibilityPrivate,
+		}, ownerID)
+		if err == nil {
+			return projectWorkspace, nil
+		}
+
+		if !isWorkspaceSlugConflict(err) {
+			return nil, err
+		}
+	}
+
+	return nil, errors.New("workspace slug already exists")
 }
 
 // generateSlug creates a URL-safe slug from a name
@@ -187,7 +252,7 @@ func generateSlug(name string) string {
 
 	// Add random suffix if empty
 	if slug == "" {
-		slug = fmt.Sprintf("project-%d", time.Now().UnixNano()%100000000)
+		slug = fmt.Sprintf("workspace-%d", time.Now().UnixNano()%100000000)
 	}
 
 	return slug
@@ -200,4 +265,29 @@ func generatePublicKey() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func isWorkspaceSlugConflict(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "workspace slug already exists")
+}
+
+func buildWorkspaceSlugCandidate(baseSlug string, attempt int) string {
+	if attempt == 0 {
+		return baseSlug
+	}
+
+	suffix := fmt.Sprintf("-%d", attempt+1)
+	trimmedBase := strings.Trim(baseSlug, "-")
+	maxBaseLength := 50 - len(suffix)
+	if maxBaseLength < 1 {
+		maxBaseLength = 1
+	}
+	if len(trimmedBase) > maxBaseLength {
+		trimmedBase = strings.Trim(trimmedBase[:maxBaseLength], "-")
+	}
+	if trimmedBase == "" {
+		trimmedBase = "workspace"
+	}
+
+	return trimmedBase + suffix
 }

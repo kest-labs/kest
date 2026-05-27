@@ -177,7 +177,11 @@ web/TEST_*.md
 # ===========================================
 # Storage and runtime data
 # ===========================================
-.kest/
+.kest/*
+!.kest/.gitignore
+!.kest/flow/
+!.kest/flow/**
+!.kest/flow.config.yaml
 storage/
 api/storage/
 web/storage/

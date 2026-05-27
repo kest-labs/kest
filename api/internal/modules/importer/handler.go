@@ -69,6 +69,7 @@ func (h *Handler) ImportMarkdown(c *gin.Context) {
 	}
 
 	parentID := strings.TrimSpace(c.Query("parent_id"))
+	baseURLOverride := strings.TrimSpace(c.Query("base_url_override"))
 
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -76,7 +77,13 @@ func (h *Handler) ImportMarkdown(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ImportMarkdown(c.Request.Context(), workspaceID, parentID, file)
+	result, err := h.service.ImportMarkdown(
+		c.Request.Context(),
+		workspaceID,
+		parentID,
+		file,
+		baseURLOverride,
+	)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMarkdownDocument) ||
 			errors.Is(err, ErrMarkdownBaseURLNotFound) ||

@@ -1,9 +1,9 @@
 // Nav translations - Simplified Chinese
 // 中文导航文案。
-// 作用：补充 `Projects` 导航项的中文显示，保持多语言导航一致。
+// 作用：补充 `Workspaces` 导航项的中文显示，保持多语言导航一致。
 const messages = {
   home: '首页',
-  projects: '项目',
+  workspaces: '工作区',
   users: '用户',
   profile: '个人资料',
   analytics: '数据分析',

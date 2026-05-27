@@ -1,5 +1,5 @@
 // Categories 模块类型定义。
-// 作用：统一约束项目分类的层级结构、查询参数和增删改排序请求。
+// 作用：统一约束工作区分类的层级结构、查询参数和增删改排序请求。
 
 export interface CategoryPagination {
   page: number;
@@ -11,10 +11,10 @@ export interface CategoryPagination {
 }
 
 // 分类核心实体。
-// 作用：统一描述项目分类的树形节点和详情结构。
-export interface ProjectCategory {
+// 作用：统一描述工作区分类的树形节点和详情结构。
+export interface WorkspaceCategory {
   id: number | string;
-  project_id: number | string;
+  workspace_id?: number | string;
   name: string;
   description?: string;
   color?: string;
@@ -23,15 +23,15 @@ export interface ProjectCategory {
   parent_name?: string | null;
   sort_order: number;
   test_cases_count?: number;
-  children?: ProjectCategory[];
+  children?: WorkspaceCategory[];
   created_at: string;
   updated_at: string;
 }
 
 // 分类列表查询参数。
-// 作用：约束项目级分类查询时的分页、搜索和树形返回选项。
+// 作用：约束工作区级分类查询时的分页、搜索和树形返回选项。
 export interface CategoryListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   page?: number;
   perPage?: number;
   search?: string;
@@ -41,8 +41,8 @@ export interface CategoryListParams {
 
 // 分类列表响应。
 // 作用：兼容文档中的分页结构和当前后端返回的基础 items/total 结构。
-export interface ProjectCategoryListResponse {
-  items: ProjectCategory[];
+export interface WorkspaceCategoryListResponse {
+  items: WorkspaceCategory[];
   total: number;
   pagination?: CategoryPagination;
 }

@@ -5,7 +5,7 @@
 
 /**
  * Lightweight validation utility functions
- * Note: For complex form validation, use Zod schemas as defined in the project.
+ * Note: For complex form validation, use Zod schemas as defined in the workspace.
  */
 
 /**

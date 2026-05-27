@@ -60,7 +60,8 @@ type PostmanBody struct {
 
 type Service interface {
 	ImportPostman(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) error
-	ImportMarkdown(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) (*MarkdownImportResult, error)
+	ImportMarkdown(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader, baseURLOverride string) (*MarkdownImportResult, error)
+	ParseMarkdownFile(file *multipart.FileHeader, baseURLOverride string) (*MarkdownParseResult, error)
 }
 
 type service struct {
@@ -93,6 +94,30 @@ func (s *service) ImportPostman(ctx context.Context, workspaceID, parentID strin
 	}
 
 	return s.importPostmanCollection(ctx, workspaceID, parentID, &pmCol)
+}
+
+func (s *service) ParseMarkdownFile(file *multipart.FileHeader, baseURLOverride string) (*MarkdownParseResult, error) {
+	f, err := file.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	content, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	return s.parseMarkdownContent(file.Filename, content, baseURLOverride)
+}
+
+func (s *service) parseMarkdownContent(filename string, content []byte, baseURLOverride string) (*MarkdownParseResult, error) {
+	doc, err := parseMarkdownDocument(filename, content, baseURLOverride)
+	if err != nil {
+		return nil, err
+	}
+
+	return toMarkdownParseResult(doc), nil
 }
 
 func (s *service) importPostmanCollection(

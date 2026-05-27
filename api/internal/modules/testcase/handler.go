@@ -7,17 +7,18 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/workspace"
-	"github.com/kest-labs/kest/api/pkg/handler"
+	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 // Handler handles HTTP requests for test cases
 type Handler struct {
 	contracts.BaseModule
-	service          Service
-	workspaceService workspace.Service
+	service                  Service
+	memberService            member.Service
+	workspaceBackingResolver middleware.WorkspaceBackingResolver
 }
 
 // Name returns the module name
@@ -26,46 +27,71 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new test case handler
-func NewHandler(service Service, workspaceService workspace.Service) *Handler {
-	return &Handler{service: service, workspaceService: workspaceService}
+func NewHandler(service Service, memberService member.Service) *Handler {
+	return &Handler{service: service, memberService: memberService}
+}
+
+func (h *Handler) SetWorkspaceBackingResolver(resolver middleware.WorkspaceBackingResolver) {
+	h.workspaceBackingResolver = resolver
 }
 
 // RegisterRoutes registers test case routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/workspaces/:id/test-cases", func(tc *router.Router) {
+	h.registerRoutes(r, "/workspaces/:id/test-cases", true)
+	h.registerRoutes(r, "/projects/:id/test-cases", false)
+}
+
+func (h *Handler) registerRoutes(r *router.Router, prefix string, resolveWorkspace bool) {
+	r.Group(prefix, func(tc *router.Router) {
 		tc.WithMiddleware("auth")
+		if resolveWorkspace {
+			tc.Use(middleware.ResolveWorkspaceContext(h.workspaceBackingResolver))
+		} else {
+			tc.Use(middleware.ResolveLegacyWorkspaceContext(h.workspaceBackingResolver))
+		}
 
-		tc.GET("", h.List).WhereUUIDOrNumber("id")
-		tc.POST("", h.Create).WhereUUIDOrNumber("id")
-		tc.POST("/from-spec", h.FromSpec).WhereUUIDOrNumber("id")
+		tc.GET("", h.List).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
+		tc.POST("", h.Create).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.POST("/from-spec", h.FromSpec).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.POST("/batch-from-specs", h.BatchFromSpecs).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 
-		tc.GET("/:tcid", h.Get).WhereUUIDOrNumber("id", "tcid")
-		tc.PATCH("/:tcid", h.Update).WhereUUIDOrNumber("id", "tcid")
-		tc.DELETE("/:tcid", h.Delete).WhereUUIDOrNumber("id", "tcid")
-		tc.POST("/:tcid/duplicate", h.Duplicate).WhereUUIDOrNumber("id", "tcid")
-		tc.POST("/:tcid/run", h.RunTestCase).WhereUUIDOrNumber("id", "tcid")
-		tc.GET("/:tcid/runs", h.ListRuns).WhereUUIDOrNumber("id", "tcid")
-		tc.GET("/:tcid/runs/:rid", h.GetRun).WhereUUIDOrNumber("id", "tcid", "rid")
+		tc.GET("/:tcid", h.Get).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
+		tc.PATCH("/:tcid", h.Update).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.DELETE("/:tcid", h.Delete).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.POST("/:tcid/duplicate", h.Duplicate).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.POST("/:tcid/run", h.RunTestCase).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.GET("/:tcid/runs", h.ListRuns).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
+		tc.GET("/:tcid/runs/:rid", h.GetRun).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 	})
 }
 
 // ListTestCases handles GET /api/v1/test-cases
 func (h *Handler) ListTestCases(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
-	if !ok {
-		return
-	}
-
 	// Parse filters
 	filter := &ListFilter{
 		Page:     1,
 		PageSize: 20,
 	}
-	filter.WorkspaceID = &workspaceID
 
 	if apiSpecID := c.Query("api_spec_id"); apiSpecID != "" {
 		id := apiSpecID
 		filter.APISpecID = &id
+	}
+	if workspaceID, ok := c.Get("workspaceID"); ok {
+		if id, ok := workspaceID.(string); ok && id != "" {
+			filter.WorkspaceID = &id
+		}
 	}
 
 	if env := c.Query("env"); env != "" {
@@ -102,18 +128,13 @@ func (h *Handler) ListTestCases(c *gin.Context) {
 
 // CreateTestCase handles POST /api/v1/test-cases
 func (h *Handler) CreateTestCase(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
 	var req CreateTestCaseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	testCase, err := h.service.CreateTestCase(c.Request.Context(), workspaceID, &req)
+	testCase, err := h.service.CreateTestCase(c.Request.Context(), &req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -124,18 +145,13 @@ func (h *Handler) CreateTestCase(c *gin.Context) {
 
 // GetTestCase handles GET /api/v1/projects/:id/test-cases/:tcid
 func (h *Handler) GetTestCase(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
-	if !ok {
-		return
-	}
-
 	id := c.Param("tcid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid test case ID")
 		return
 	}
 
-	testCase, err := h.service.GetTestCase(c.Request.Context(), workspaceID, id)
+	testCase, err := h.service.GetTestCase(c.Request.Context(), id)
 	if err != nil {
 		if err.Error() == "test case not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -150,11 +166,6 @@ func (h *Handler) GetTestCase(c *gin.Context) {
 
 // UpdateTestCase handles PATCH /api/v1/projects/:id/test-cases/:tcid
 func (h *Handler) UpdateTestCase(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
 	id := c.Param("tcid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid test case ID")
@@ -167,7 +178,7 @@ func (h *Handler) UpdateTestCase(c *gin.Context) {
 		return
 	}
 
-	testCase, err := h.service.UpdateTestCase(c.Request.Context(), workspaceID, id, &req)
+	testCase, err := h.service.UpdateTestCase(c.Request.Context(), id, &req)
 	if err != nil {
 		if err.Error() == "test case not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -182,18 +193,13 @@ func (h *Handler) UpdateTestCase(c *gin.Context) {
 
 // DeleteTestCase handles DELETE /api/v1/projects/:id/test-cases/:tcid
 func (h *Handler) DeleteTestCase(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
 	id := c.Param("tcid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid test case ID")
 		return
 	}
 
-	if err := h.service.DeleteTestCase(c.Request.Context(), workspaceID, id); err != nil {
+	if err := h.service.DeleteTestCase(c.Request.Context(), id); err != nil {
 		if err.Error() == "test case not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
 			return
@@ -207,11 +213,6 @@ func (h *Handler) DeleteTestCase(c *gin.Context) {
 
 // DuplicateTestCase handles POST /api/v1/projects/:id/test-cases/:tcid/duplicate
 func (h *Handler) DuplicateTestCase(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
 	id := c.Param("tcid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid test case ID")
@@ -224,7 +225,7 @@ func (h *Handler) DuplicateTestCase(c *gin.Context) {
 		return
 	}
 
-	testCase, err := h.service.DuplicateTestCase(c.Request.Context(), workspaceID, id, &req)
+	testCase, err := h.service.DuplicateTestCase(c.Request.Context(), id, &req)
 	if err != nil {
 		if err.Error() == "source test case not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -239,11 +240,6 @@ func (h *Handler) DuplicateTestCase(c *gin.Context) {
 
 // RunTestCase handles POST /api/v1/projects/:id/test-cases/:tcid/run
 func (h *Handler) RunTestCase(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
 	id := c.Param("tcid")
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "Invalid test case ID")
@@ -255,7 +251,7 @@ func (h *Handler) RunTestCase(c *gin.Context) {
 		// Its okay if body is empty
 	}
 
-	result, err := h.service.RunTestCase(c.Request.Context(), workspaceID, id, &req)
+	result, err := h.service.RunTestCase(c.Request.Context(), id, &req)
 	if err != nil {
 		if err.Error() == "test case not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -270,18 +266,13 @@ func (h *Handler) RunTestCase(c *gin.Context) {
 
 // CreateFromSpec handles POST /api/v1/test-cases/from-spec
 func (h *Handler) CreateFromSpec(c *gin.Context) {
-	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
-	if !ok {
-		return
-	}
-
 	var req FromSpecRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	testCase, err := h.service.CreateTestCaseFromSpec(c.Request.Context(), workspaceID, &req)
+	testCase, err := h.service.CreateTestCaseFromSpec(c.Request.Context(), &req)
 	if err != nil {
 		if err.Error() == "api spec not found" {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -294,13 +285,24 @@ func (h *Handler) CreateFromSpec(c *gin.Context) {
 	response.Created(c, testCase)
 }
 
-// ListRuns handles GET /projects/:id/test-cases/:tcid/runs
-func (h *Handler) ListRuns(c *gin.Context) {
-	_, ok := h.authorizeWorkspace(c, workspace.RoleRead)
-	if !ok {
+func (h *Handler) BatchCreateFromSpecs(c *gin.Context) {
+	var req BatchFromSpecsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	result, err := h.service.CreateTestCasesFromSpecs(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// ListRuns handles GET /projects/:id/test-cases/:tcid/runs
+func (h *Handler) ListRuns(c *gin.Context) {
 	tcid := c.Param("tcid")
 	if tcid == "" {
 		response.BadRequest(c, "Invalid test case ID")
@@ -334,11 +336,6 @@ func (h *Handler) ListRuns(c *gin.Context) {
 
 // GetRun handles GET /projects/:id/test-cases/:tcid/runs/:rid
 func (h *Handler) GetRun(c *gin.Context) {
-	_, ok := h.authorizeWorkspace(c, workspace.RoleRead)
-	if !ok {
-		return
-	}
-
 	rid := c.Param("rid")
 	if rid == "" {
 		response.BadRequest(c, "Invalid run ID")
@@ -387,22 +384,6 @@ func (h *Handler) FromSpec(c *gin.Context) {
 	h.CreateFromSpec(c)
 }
 
-func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
-	workspaceID, ok := handler.ParseID(c, "id")
-	if !ok {
-		return "", false
-	}
-
-	userID, ok := handler.GetUserID(c)
-	if !ok {
-		return "", false
-	}
-
-	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
-	if err != nil || !allowed {
-		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
-		return "", false
-	}
-
-	return workspaceID, true
+func (h *Handler) BatchFromSpecs(c *gin.Context) {
+	h.BatchCreateFromSpecs(c)
 }

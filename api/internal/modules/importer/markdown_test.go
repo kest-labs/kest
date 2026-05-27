@@ -86,7 +86,7 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 		"  -H 'Content-Type: application/json' \\",
 		`  -d '{"force":true}'`,
 		"```",
-	))
+	), "")
 	if err != nil {
 		t.Fatalf("expected markdown to parse, got %v", err)
 	}
@@ -164,6 +164,66 @@ func TestImportMarkdownAggregateDocumentCreatesModuleCollectionsAndRequests(t *t
 	}
 }
 
+func TestImportMarkdownSingleModuleCreatesOnlyOneCollection(t *testing.T) {
+	collectionService := &stubCollectionService{}
+	requestService := &stubRequestService{}
+	service := NewService(collectionService, requestService).(*service)
+	parentID := "9"
+
+	result, err := service.importMarkdownDocument(context.Background(), "7", parentID, &markdownDocument{
+		Title: "Members & Invitations API",
+		Modules: []markdownModule{
+			{
+				Name: "Members & Invitations",
+				Endpoints: []markdownEndpoint{
+					{
+						Name:   "List all active members",
+						Method: "GET",
+						URL:    "{{base_url}}/members",
+					},
+					{
+						Name:   "Create invitation",
+						Method: "POST",
+						URL:    "{{base_url}}/invitations",
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected import to succeed, got %v", err)
+	}
+
+	if result.RootFolderName != "Members & Invitations" {
+		t.Fatalf("expected result name to match the created collection, got %q", result.RootFolderName)
+	}
+	if result.CollectionsCreated != 1 {
+		t.Fatalf("expected one collection, got %d", result.CollectionsCreated)
+	}
+	if result.RequestsCreated != 2 {
+		t.Fatalf("expected two requests, got %d", result.RequestsCreated)
+	}
+	if len(collectionService.created) != 1 {
+		t.Fatalf("expected only one collection to be created, got %d", len(collectionService.created))
+	}
+
+	createdCollection := collectionService.created[0]
+	if createdCollection.IsFolder {
+		t.Fatal("expected single-module import to create a request collection, not a folder")
+	}
+	if createdCollection.ParentID == nil || *createdCollection.ParentID != parentID {
+		t.Fatalf("expected collection parent_id %s, got %#v", parentID, createdCollection.ParentID)
+	}
+	if len(requestService.created) != 2 {
+		t.Fatalf("expected two requests to be created, got %d", len(requestService.created))
+	}
+	for _, createdRequest := range requestService.created {
+		if createdRequest.CollectionID != result.RootFolderID {
+			t.Fatalf("expected request to belong to collection %s, got %s", result.RootFolderID, createdRequest.CollectionID)
+		}
+	}
+}
+
 func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *testing.T) {
 	doc, err := parseMarkdownDocument("apispec.md", markdown(
 		"# Apispec API",
@@ -200,7 +260,7 @@ func TestImportMarkdownSingleModuleDerivesURLAndQueryParamsFromCurlExample(t *te
 		"curl -X GET 'http://localhost:8025/api/v1/projects/7/api-specs/export?format=markdown' \\",
 		"  -H 'Authorization: Bearer <token>'",
 		"```",
-	))
+	), "")
 	if err != nil {
 		t.Fatalf("expected markdown to parse, got %v", err)
 	}
@@ -272,7 +332,7 @@ func TestParseMarkdownDocumentSupportsSingleEndpointDocumentationFormat(t *testi
 		"  -H 'Content-Type: application/json' \\",
 		`  -d '{"username":"john_doe"}'`,
 		"```",
-	))
+	), "")
 	if err != nil {
 		t.Fatalf("expected single endpoint markdown to parse, got %v", err)
 	}
@@ -318,7 +378,7 @@ func TestParseMarkdownDocumentReturnsNoImportableEndpoints(t *testing.T) {
 		"## Base URL",
 		"",
 		"No endpoints here.",
-	))
+	), "")
 	if !errors.Is(err, ErrNoImportableEndpoints) {
 		t.Fatalf("expected ErrNoImportableEndpoints, got %v", err)
 	}
@@ -345,9 +405,163 @@ func TestParseMarkdownDocumentReturnsBaseURLErrorWhenURLCannotBeDerived(t *testi
 		"```bash",
 		"curl -X GET '/v1/projects/1'",
 		"```",
-	))
+	), "")
 	if !errors.Is(err, ErrMarkdownBaseURLNotFound) {
 		t.Fatalf("expected ErrMarkdownBaseURLNotFound, got %v", err)
+	}
+}
+
+func TestParseMarkdownDocumentSupportsAuthenticationDocShapeWithBasePathOverride(t *testing.T) {
+	doc, err := parseMarkdownDocument("01-authentication.md", markdown(
+		"# Authentication & Users API",
+		"",
+		"## Overview",
+		"",
+		"The Authentication & Users module handles user registration, authentication, and profile management.",
+		"",
+		"## Base Path",
+		"",
+		"```",
+		"/v1",
+		"```",
+		"",
+		"## 1. User Registration",
+		"",
+		"### POST /register",
+		"",
+		"Register a new user account.",
+		"",
+		"**Authentication**: Not required",
+		"",
+		"#### Request Headers",
+		"",
+		"```",
+		"Content-Type: application/json",
+		"```",
+		"",
+		"#### Request Body",
+		"",
+		"| Field | Type | Required | Validation | Description |",
+		"|-------|------|----------|------------|-------------|",
+		"| `username` | string | ✅ Yes | min: 3, max: 50 | Unique username |",
+		"| `password` | string | ✅ Yes | min: 6, max: 50 | User password |",
+		"",
+		"#### Example Request",
+		"",
+		"```json",
+		`{"username":"john_doe","password":"SecurePass123"}`,
+		"```",
+		"",
+		"## 8. List Users",
+		"",
+		"### GET /users",
+		"",
+		"List all users (Admin only).",
+		"",
+		"**Authentication**: Required (Admin)",
+		"",
+		"#### Query Parameters",
+		"",
+		"| Parameter | Type | Required | Default | Description |",
+		"|-----------|------|----------|---------|-------------|",
+		"| `page` | integer | ❌ No | 1 | Page number |",
+		"| `search` | string | ❌ No | - | Search by username or email |",
+	), "http://localhost:8025")
+	if err != nil {
+		t.Fatalf("expected authentication doc shape to parse, got %v", err)
+	}
+
+	if doc.BasePath != "/v1" {
+		t.Fatalf("expected Base Path to be parsed, got %q", doc.BasePath)
+	}
+	if doc.BaseURL != "http://localhost:8025/v1" {
+		t.Fatalf("expected base URL override to join with base path, got %q", doc.BaseURL)
+	}
+	if len(doc.Modules) != 1 {
+		t.Fatalf("expected a single aggregated module, got %d", len(doc.Modules))
+	}
+	if doc.Modules[0].Name != "Authentication & Users" {
+		t.Fatalf("expected module name to follow document title, got %q", doc.Modules[0].Name)
+	}
+	if len(doc.Modules[0].Endpoints) != 2 {
+		t.Fatalf("expected two endpoints in the aggregated module, got %d", len(doc.Modules[0].Endpoints))
+	}
+
+	registration := doc.Modules[0].Endpoints[0]
+	if registration.Method != "POST" || registration.Path != "/register" {
+		t.Fatalf("expected POST /register, got %s %s", registration.Method, registration.Path)
+	}
+	if registration.URL != "{{base_url}}/register" {
+		t.Fatalf("expected templated registration URL, got %q", registration.URL)
+	}
+	if registration.BodyType != "json" {
+		t.Fatalf("expected json request body, got %q", registration.BodyType)
+	}
+	if registration.Body != `{"username":"john_doe","password":"SecurePass123"}` {
+		t.Fatalf("expected example request body, got %q", registration.Body)
+	}
+	if len(registration.Headers) != 1 || registration.Headers[0].Key != "Content-Type" {
+		t.Fatalf("expected content-type header, got %#v", registration.Headers)
+	}
+
+	listUsers := doc.Modules[0].Endpoints[1]
+	if listUsers.Method != "GET" || listUsers.Path != "/users" {
+		t.Fatalf("expected GET /users, got %s %s", listUsers.Method, listUsers.Path)
+	}
+	if listUsers.URL != "{{base_url}}/users" {
+		t.Fatalf("expected templated users URL, got %q", listUsers.URL)
+	}
+	if len(listUsers.QueryParams) != 2 {
+		t.Fatalf("expected two query params, got %#v", listUsers.QueryParams)
+	}
+	if len(listUsers.Headers) != 1 || listUsers.Headers[0].Key != "Authorization" || listUsers.Headers[0].Enabled {
+		t.Fatalf("expected disabled auth placeholder header, got %#v", listUsers.Headers)
+	}
+}
+
+func TestParseMarkdownDocumentKeepsNamedTopLevelSectionsAsSeparateModules(t *testing.T) {
+	doc, err := parseMarkdownDocument("members.md", markdown(
+		"# Members & Invitations API",
+		"",
+		"## Overview",
+		"",
+		"Project access is now managed through two related API groups.",
+		"",
+		"## Base URL",
+		"",
+		"`http://localhost:8025/api/v1`",
+		"",
+		"## Members",
+		"",
+		"### GET /projects/:id/members",
+		"",
+		"List all active members of a project.",
+		"",
+		"**Authentication**: Required",
+		"",
+		"## Invitations",
+		"",
+		"### POST /projects/:id/invitations",
+		"",
+		"Create a project invitation.",
+		"",
+		"**Authentication**: Required",
+		"",
+		"#### Request Body",
+		"",
+		"```json",
+		`{"role":"read"}`,
+		"```",
+	), "")
+	if err != nil {
+		t.Fatalf("expected named sections document to parse, got %v", err)
+	}
+
+	if len(doc.Modules) != 2 {
+		t.Fatalf("expected two named modules, got %d", len(doc.Modules))
+	}
+	if doc.Modules[0].Name != "Members" || doc.Modules[1].Name != "Invitations" {
+		t.Fatalf("expected named module sections to be preserved, got %#v", doc.Modules)
 	}
 }
 
@@ -375,6 +589,45 @@ func TestImportMarkdownPropagatesInvalidParentError(t *testing.T) {
 	_, err := service.importMarkdownDocument(context.Background(), "1", "3", doc)
 	if !errors.Is(err, collection.ErrInvalidParent) {
 		t.Fatalf("expected collection.ErrInvalidParent, got %v", err)
+	}
+}
+
+func TestImportMarkdownCleansUpCreatedResourcesWhenRequestCreateFails(t *testing.T) {
+	requestCreateErr := errors.New("request create failed")
+	collectionService := &stubCollectionService{}
+	requestService := &stubRequestService{createErr: requestCreateErr, failOnCreate: 2}
+	service := NewService(collectionService, requestService).(*service)
+
+	doc := &markdownDocument{
+		Title: "Categories API",
+		Modules: []markdownModule{
+			{
+				Name: "Categories",
+				Endpoints: []markdownEndpoint{
+					{
+						Name:   "List categories",
+						Method: "GET",
+						URL:    "{{base_url}}/categories",
+					},
+					{
+						Name:   "Create category",
+						Method: "POST",
+						URL:    "{{base_url}}/categories",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := service.importMarkdownDocument(context.Background(), "1", "", doc)
+	if !errors.Is(err, requestCreateErr) {
+		t.Fatalf("expected request create error, got %v", err)
+	}
+	if len(requestService.deleted) != 1 || requestService.deleted[0] != "1" {
+		t.Fatalf("expected created request to be cleaned up, got %#v", requestService.deleted)
+	}
+	if len(collectionService.deleted) != 1 || collectionService.deleted[0] != "1" {
+		t.Fatalf("expected root collection cleanup, got %#v", collectionService.deleted)
 	}
 }
 

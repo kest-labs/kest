@@ -41,7 +41,7 @@ export interface RequestAuthConfig {
   oauth2?: RequestOAuth2Auth;
 }
 
-export interface ProjectRequest {
+export interface WorkspaceRequest {
   id: number | string;
   collection_id: number | string;
   name: string;
@@ -54,6 +54,13 @@ export interface ProjectRequest {
   body: string;
   body_type: string;
   auth?: RequestAuthConfig | null;
+  doc_markdown?: string;
+  doc_markdown_zh?: string;
+  doc_markdown_en?: string;
+  doc_source?: 'manual' | 'ai';
+  doc_updated_at?: string | null;
+  doc_updated_at_zh?: string | null;
+  doc_updated_at_en?: string | null;
   pre_request?: string;
   test?: string;
   sort_order: number;
@@ -69,14 +76,14 @@ export interface RequestListMeta {
 }
 
 export interface RequestListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   collectionId: number | string;
   page?: number;
   perPage?: number;
 }
 
 export interface RequestListResponse {
-  items: ProjectRequest[];
+  items: WorkspaceRequest[];
   meta: RequestListMeta;
 }
 
@@ -92,6 +99,10 @@ export interface CreateRequestRequest {
   body?: string;
   body_type?: string;
   auth?: RequestAuthConfig | null;
+  doc_markdown?: string;
+  doc_markdown_zh?: string;
+  doc_markdown_en?: string;
+  doc_source?: 'manual' | 'ai';
   pre_request?: string;
   test?: string;
   sort_order?: number;
@@ -108,9 +119,17 @@ export interface UpdateRequestRequest {
   body?: string;
   body_type?: string;
   auth?: RequestAuthConfig | null;
+  doc_markdown?: string;
+  doc_markdown_zh?: string;
+  doc_markdown_en?: string;
+  doc_source?: 'manual' | 'ai';
   pre_request?: string;
   test?: string;
   sort_order?: number;
+}
+
+export interface GenRequestDocRequest {
+  lang?: 'en' | 'zh';
 }
 
 export interface RunRequestRequest {

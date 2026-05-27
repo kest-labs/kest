@@ -7,26 +7,40 @@ import (
 	"gorm.io/gorm"
 )
 
+type DocSource string
+
+const (
+	DocSourceManual DocSource = "manual"
+	DocSourceAI     DocSource = "ai"
+)
+
 // RequestPO is the persistent object for HTTP requests stored in collections
 type RequestPO struct {
-	ID           string `gorm:"primaryKey"`
-	CollectionID string `gorm:"not null;index"`
-	Name         string `gorm:"size:100;not null"`
-	Description  string `gorm:"size:500"`
-	Method       string `gorm:"size:10;not null;default:'GET'"` // GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
-	URL          string `gorm:"size:2000;not null"`             // URL with placeholders like {{base_url}}/users
-	Headers      string `gorm:"type:text"`                      // JSON array of headers
-	QueryParams  string `gorm:"type:text"`                      // JSON array of query params
-	PathParams   string `gorm:"type:text"`                      // JSON object of path params
-	Body         string `gorm:"type:text"`                      // Request body (raw/json/form-data)
-	BodyType     string `gorm:"size:20;default:'none'"`         // none, json, form-data, x-www-form-urlencoded, binary, graphql
-	Auth         string `gorm:"type:text"`                      // JSON object for auth config
-	PreRequest   string `gorm:"type:text"`                      // Pre-request script
-	Test         string `gorm:"type:text"`                      // Test script
-	SortOrder    int    `gorm:"default:0"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
+	ID             string `gorm:"primaryKey"`
+	CollectionID   string `gorm:"not null;index"`
+	Name           string `gorm:"size:100;not null"`
+	Description    string `gorm:"size:500"`
+	Method         string `gorm:"size:10;not null;default:'GET'"` // GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+	URL            string `gorm:"size:2000;not null"`             // URL with placeholders like {{base_url}}/users
+	Headers        string `gorm:"type:text"`                      // JSON array of headers
+	QueryParams    string `gorm:"type:text"`                      // JSON array of query params
+	PathParams     string `gorm:"type:text"`                      // JSON object of path params
+	Body           string `gorm:"type:text"`                      // Request body (raw/json/form-data)
+	BodyType       string `gorm:"size:20;default:'none'"`         // none, json, form-data, x-www-form-urlencoded, binary, graphql
+	Auth           string `gorm:"type:text"`                      // JSON object for auth config
+	DocMarkdown    string `gorm:"type:text"`                      // Default request doc content (Markdown)
+	DocMarkdownZh  string `gorm:"type:text"`                      // Chinese request doc content (Markdown)
+	DocMarkdownEn  string `gorm:"type:text"`                      // English request doc content (Markdown)
+	DocSource      string `gorm:"size:20;default:'manual'"`       // manual | ai
+	DocUpdatedAt   *time.Time
+	DocUpdatedAtZh *time.Time
+	DocUpdatedAtEn *time.Time
+	PreRequest     string `gorm:"type:text"` // Pre-request script
+	Test           string `gorm:"type:text"` // Test script
+	SortOrder      int    `gorm:"default:0"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      gorm.DeletedAt `gorm:"index"`
 }
 
 // TableName specifies the database table name
@@ -36,23 +50,30 @@ func (RequestPO) TableName() string {
 
 // Request is the domain entity
 type Request struct {
-	ID           string            `json:"id"`
-	CollectionID string            `json:"collection_id"`
-	Name         string            `json:"name"`
-	Description  string            `json:"description"`
-	Method       string            `json:"method"`
-	URL          string            `json:"url"`
-	Headers      []KeyValue        `json:"headers"`
-	QueryParams  []KeyValue        `json:"query_params"`
-	PathParams   map[string]string `json:"path_params"`
-	Body         string            `json:"body"`
-	BodyType     string            `json:"body_type"`
-	Auth         *AuthConfig       `json:"auth,omitempty"`
-	PreRequest   string            `json:"pre_request,omitempty"`
-	Test         string            `json:"test,omitempty"`
-	SortOrder    int               `json:"sort_order"`
-	CreatedAt    time.Time         `json:"created_at"`
-	UpdatedAt    time.Time         `json:"updated_at"`
+	ID             string            `json:"id"`
+	CollectionID   string            `json:"collection_id"`
+	Name           string            `json:"name"`
+	Description    string            `json:"description"`
+	Method         string            `json:"method"`
+	URL            string            `json:"url"`
+	Headers        []KeyValue        `json:"headers"`
+	QueryParams    []KeyValue        `json:"query_params"`
+	PathParams     map[string]string `json:"path_params"`
+	Body           string            `json:"body"`
+	BodyType       string            `json:"body_type"`
+	Auth           *AuthConfig       `json:"auth,omitempty"`
+	DocMarkdown    string            `json:"doc_markdown,omitempty"`
+	DocMarkdownZh  string            `json:"doc_markdown_zh,omitempty"`
+	DocMarkdownEn  string            `json:"doc_markdown_en,omitempty"`
+	DocSource      string            `json:"doc_source,omitempty"`
+	DocUpdatedAt   *time.Time        `json:"doc_updated_at,omitempty"`
+	DocUpdatedAtZh *time.Time        `json:"doc_updated_at_zh,omitempty"`
+	DocUpdatedAtEn *time.Time        `json:"doc_updated_at_en,omitempty"`
+	PreRequest     string            `json:"pre_request,omitempty"`
+	Test           string            `json:"test,omitempty"`
+	SortOrder      int               `json:"sort_order"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
 }
 
 // KeyValue represents a key-value pair with optional enabled flag
@@ -165,23 +186,30 @@ func (po *RequestPO) toDomain() *Request {
 	}
 
 	return &Request{
-		ID:           po.ID,
-		CollectionID: po.CollectionID,
-		Name:         po.Name,
-		Description:  po.Description,
-		Method:       po.Method,
-		URL:          po.URL,
-		Headers:      headers,
-		QueryParams:  queryParams,
-		PathParams:   pathParams,
-		Body:         po.Body,
-		BodyType:     bodyType,
-		Auth:         auth,
-		PreRequest:   po.PreRequest,
-		Test:         po.Test,
-		SortOrder:    po.SortOrder,
-		CreatedAt:    po.CreatedAt,
-		UpdatedAt:    po.UpdatedAt,
+		ID:             po.ID,
+		CollectionID:   po.CollectionID,
+		Name:           po.Name,
+		Description:    po.Description,
+		Method:         po.Method,
+		URL:            po.URL,
+		Headers:        headers,
+		QueryParams:    queryParams,
+		PathParams:     pathParams,
+		Body:           po.Body,
+		BodyType:       bodyType,
+		Auth:           auth,
+		DocMarkdown:    po.DocMarkdown,
+		DocMarkdownZh:  po.DocMarkdownZh,
+		DocMarkdownEn:  po.DocMarkdownEn,
+		DocSource:      po.DocSource,
+		DocUpdatedAt:   po.DocUpdatedAt,
+		DocUpdatedAtZh: po.DocUpdatedAtZh,
+		DocUpdatedAtEn: po.DocUpdatedAtEn,
+		PreRequest:     po.PreRequest,
+		Test:           po.Test,
+		SortOrder:      po.SortOrder,
+		CreatedAt:      po.CreatedAt,
+		UpdatedAt:      po.UpdatedAt,
 	}
 }
 
@@ -197,21 +225,28 @@ func newRequestPO(r *Request) *RequestPO {
 	auth, _ := json.Marshal(r.Auth)
 
 	return &RequestPO{
-		ID:           r.ID,
-		CollectionID: r.CollectionID,
-		Name:         r.Name,
-		Description:  r.Description,
-		Method:       r.Method,
-		URL:          r.URL,
-		Headers:      string(headers),
-		QueryParams:  string(queryParams),
-		PathParams:   string(pathParams),
-		Body:         r.Body,
-		BodyType:     r.BodyType,
-		Auth:         string(auth),
-		PreRequest:   r.PreRequest,
-		Test:         r.Test,
-		SortOrder:    r.SortOrder,
+		ID:             r.ID,
+		CollectionID:   r.CollectionID,
+		Name:           r.Name,
+		Description:    r.Description,
+		Method:         r.Method,
+		URL:            r.URL,
+		Headers:        string(headers),
+		QueryParams:    string(queryParams),
+		PathParams:     string(pathParams),
+		Body:           r.Body,
+		BodyType:       r.BodyType,
+		Auth:           string(auth),
+		DocMarkdown:    r.DocMarkdown,
+		DocMarkdownZh:  r.DocMarkdownZh,
+		DocMarkdownEn:  r.DocMarkdownEn,
+		DocSource:      r.DocSource,
+		DocUpdatedAt:   r.DocUpdatedAt,
+		DocUpdatedAtZh: r.DocUpdatedAtZh,
+		DocUpdatedAtEn: r.DocUpdatedAtEn,
+		PreRequest:     r.PreRequest,
+		Test:           r.Test,
+		SortOrder:      r.SortOrder,
 	}
 }
 

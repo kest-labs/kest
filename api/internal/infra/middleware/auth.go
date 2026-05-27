@@ -15,6 +15,11 @@ type PermissionProvider interface {
 	CheckPermission(ctx context.Context, projectID string, userID string, requiredRole string) (bool, error)
 }
 
+type WorkspaceBackingResolver interface {
+	ResolveBackingIDByWorkspaceID(ctx context.Context, workspaceID string) (string, error)
+	ResolveWorkspaceIDByBackingID(ctx context.Context, backingID string) (string, error)
+}
+
 // MockAuth extracts User ID from X-User-ID header for testing
 func MockAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -82,6 +87,142 @@ func RequireProjectRole(memberService PermissionProvider, requiredRole string) g
 			return
 		}
 
+		c.Next()
+	}
+}
+
+func RequireResolvedWorkspaceRole(memberService PermissionProvider, requiredRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		val, exists := c.Get("userID")
+		if !exists {
+			response.Error(c, http.StatusUnauthorized, "Authentication required")
+			c.Abort()
+			return
+		}
+		userID, err := idpkg.Normalize(val)
+		if err != nil {
+			response.Error(c, http.StatusUnauthorized, "Invalid user ID")
+			c.Abort()
+			return
+		}
+
+		backingIDValue, _ := c.Get("workspaceBackingID")
+		backingID, _ := backingIDValue.(string)
+		if backingID == "" {
+			backingID = c.Param("id")
+		}
+		if backingID == "" {
+			backingID = c.Param("pid")
+		}
+		if backingID == "" {
+			response.Error(c, http.StatusBadRequest, "Workspace backing ID missing in request")
+			c.Abort()
+			return
+		}
+
+		allowed, err := memberService.CheckPermission(c.Request.Context(), backingID, userID, requiredRole)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, "Permission check failed")
+			c.Abort()
+			return
+		}
+		if !allowed {
+			response.Error(c, http.StatusForbidden, "Permission denied")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func ResolveWorkspaceBackingID(resolver WorkspaceBackingResolver) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if resolver == nil {
+			response.Error(c, http.StatusServiceUnavailable, "Workspace resolver is not configured")
+			c.Abort()
+			return
+		}
+
+		workspaceID := c.Param("id")
+		if workspaceID == "" {
+			response.Error(c, http.StatusBadRequest, "Workspace ID missing in request")
+			c.Abort()
+			return
+		}
+
+		backingID, err := resolver.ResolveBackingIDByWorkspaceID(c.Request.Context(), workspaceID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Workspace not found")
+			c.Abort()
+			return
+		}
+
+		c.Set("workspaceID", workspaceID)
+		c.Set("workspaceBackingID", backingID)
+		for index := range c.Params {
+			if c.Params[index].Key == "id" {
+				c.Params[index].Value = backingID
+				break
+			}
+		}
+
+		c.Next()
+	}
+}
+
+func ResolveWorkspaceContext(resolver WorkspaceBackingResolver) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if resolver == nil {
+			response.Error(c, http.StatusServiceUnavailable, "Workspace resolver is not configured")
+			c.Abort()
+			return
+		}
+
+		workspaceID := c.Param("id")
+		if workspaceID == "" {
+			response.Error(c, http.StatusBadRequest, "Workspace ID missing in request")
+			c.Abort()
+			return
+		}
+
+		backingID, err := resolver.ResolveBackingIDByWorkspaceID(c.Request.Context(), workspaceID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Workspace not found")
+			c.Abort()
+			return
+		}
+
+		c.Set("workspaceID", workspaceID)
+		c.Set("workspaceBackingID", backingID)
+		c.Next()
+	}
+}
+
+func ResolveLegacyWorkspaceContext(resolver WorkspaceBackingResolver) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if resolver == nil {
+			response.Error(c, http.StatusServiceUnavailable, "Workspace resolver is not configured")
+			c.Abort()
+			return
+		}
+
+		backingID := c.Param("id")
+		if backingID == "" {
+			response.Error(c, http.StatusBadRequest, "Workspace backing ID missing in request")
+			c.Abort()
+			return
+		}
+
+		workspaceID, err := resolver.ResolveWorkspaceIDByBackingID(c.Request.Context(), backingID)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, "Workspace not found")
+			c.Abort()
+			return
+		}
+
+		c.Set("workspaceID", workspaceID)
+		c.Set("workspaceBackingID", backingID)
 		c.Next()
 	}
 }

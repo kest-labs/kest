@@ -14,24 +14,49 @@ type UpdateProjectRequest struct {
 	Status   *int   `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
+type CreateWorkspaceDashboardRequest struct {
+	Name     string `json:"name" binding:"required,min=1,max=100"`
+	Slug     string `json:"slug" binding:"omitempty,min=1,max=50"`
+	Platform string `json:"platform" binding:"omitempty,oneof=go javascript python java ruby php csharp"`
+}
+
+type UpdateWorkspaceDashboardRequest struct {
+	Name     string `json:"name" binding:"omitempty,min=1,max=100"`
+	Platform string `json:"platform" binding:"omitempty,oneof=go javascript python java ruby php csharp"`
+	Status   *int   `json:"status" binding:"omitempty,oneof=0 1"`
+}
+
 // ProjectResponse is the response for project endpoints
 type ProjectResponse struct {
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Platform    string `json:"platform"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type WorkspaceDashboardResponse struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Slug      string `json:"slug"`
 	Platform  string `json:"platform"`
+	Role      string `json:"role,omitempty"`
 	Status    int    `json:"status"`
 	CreatedAt string `json:"created_at"`
 }
 
 // ProjectListResponse is the response for listing projects
 type ProjectListResponse struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	Platform string `json:"platform"`
-	Role     string `json:"role"`
-	Status   int    `json:"status"`
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Platform    string `json:"platform"`
+	Role        string `json:"role"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // toResponse converts Project to ProjectResponse
@@ -40,12 +65,13 @@ func toResponse(p *Project) *ProjectResponse {
 		return nil
 	}
 	return &ProjectResponse{
-		ID:        p.ID,
-		Name:      p.Name,
-		Slug:      p.Slug,
-		Platform:  p.Platform,
-		Status:    p.Status,
-		CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:          p.ID,
+		WorkspaceID: p.WorkspaceID,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Platform:    p.Platform,
+		Status:      p.Status,
+		CreatedAt:   p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 
@@ -55,13 +81,42 @@ func toListResponse(p *Project) *ProjectListResponse {
 		return nil
 	}
 	return &ProjectListResponse{
-		ID:       p.ID,
-		Name:     p.Name,
-		Slug:     p.Slug,
-		Platform: p.Platform,
-		Role:     p.Role,
-		Status:   p.Status,
+		ID:          p.ID,
+		WorkspaceID: p.WorkspaceID,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Platform:    p.Platform,
+		Role:        p.Role,
+		Status:      p.Status,
+		CreatedAt:   p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
+}
+
+func toWorkspaceDashboardResponse(p *Project) *WorkspaceDashboardResponse {
+	if p == nil {
+		return nil
+	}
+	id := p.WorkspaceID
+	if id == "" {
+		id = p.ID
+	}
+	return &WorkspaceDashboardResponse{
+		ID:        id,
+		Name:      p.Name,
+		Slug:      p.Slug,
+		Platform:  p.Platform,
+		Role:      p.Role,
+		Status:    p.Status,
+		CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func toWorkspaceDashboardResponseSlice(projects []*Project) []*WorkspaceDashboardResponse {
+	result := make([]*WorkspaceDashboardResponse, len(projects))
+	for i, p := range projects {
+		result[i] = toWorkspaceDashboardResponse(p)
+	}
+	return result
 }
 
 // toListResponseSlice converts a slice of Projects to ProjectListResponse slice

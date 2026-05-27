@@ -76,7 +76,7 @@ const messages: AuthMessages = {
   trustNote: 'Open-source at the core, built for execution-heavy API teams.',
   loginBadge: 'kest workspace access',
   insight1Title: 'Flow workspaces',
-  insight1Description: 'Group request chains, environments, and shared context by project.',
+  insight1Description: 'Group request chains, environments, and shared context by workspace.',
   insight2Title: 'Execution history',
   insight2Description: 'Spot regressions, latency shifts, and state changes without replaying the chain.',
   insight3Title: 'AI diagnosis',

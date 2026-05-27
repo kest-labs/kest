@@ -5,13 +5,27 @@ export interface FlowVariableMappingRule {
   target: string;
 }
 
-export interface ProjectFlow {
+export interface WorkspaceFlow {
   id: string;
-  project_id: string;
+  workspace_id: string;
   name: string;
   description: string;
   created_by: string;
   step_count?: number;
+  source?: 'web' | 'cli' | string;
+  source_id?: string;
+  source_path?: string;
+  source_hash?: string;
+  source_read_only?: boolean;
+  definition?: string;
+  revision?: number;
+  enabled?: boolean;
+  metadata?: string;
+  parse_status?: 'unparsed' | 'parsed' | 'failed' | string;
+  parse_error?: string;
+  parsed_at?: string | null;
+  latest_run_status?: FlowRunStatus;
+  latest_run_mode?: 'server' | 'local' | 'cli' | string;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +42,8 @@ export interface FlowStep {
   body: string;
   captures: string;
   asserts: string;
+  step_type?: 'http' | 'exec' | string;
+  source_id?: string;
   position_x: number;
   position_y: number;
   created_at: string;
@@ -45,13 +61,13 @@ export interface FlowEdge {
   updated_at: string;
 }
 
-export interface FlowDetail extends ProjectFlow {
+export interface FlowDetail extends WorkspaceFlow {
   steps: FlowStep[];
   edges: FlowEdge[];
 }
 
 export interface FlowListResponse {
-  items: ProjectFlow[];
+  items: WorkspaceFlow[];
   total: number;
 }
 
@@ -63,6 +79,23 @@ export interface CreateFlowRequest {
 export interface UpdateFlowRequest {
   name?: string;
   description?: string;
+  enabled?: boolean;
+}
+
+export interface ImportFlowMarkdownRequest {
+  name?: string;
+  description?: string;
+  source_path?: string;
+  definition: string;
+  enabled?: boolean;
+}
+
+export interface UpdateFlowMarkdownRequest {
+  name?: string;
+  description?: string;
+  source_path?: string;
+  definition: string;
+  enabled?: boolean;
 }
 
 export interface SaveFlowStepRequest {
@@ -111,7 +144,22 @@ export interface FlowRun {
   flow_id: string;
   status: FlowRunStatus;
   triggered_by: string;
-  execution_mode?: 'server' | 'local';
+  execution_mode?: 'server' | 'local' | 'cli' | string;
+  source?: string;
+  source_event_id?: string;
+  runner_type?: 'test_machine' | 'server_ci' | string;
+  profile?: string;
+  environment?: string;
+  base_url?: string;
+  total_steps?: number;
+  passed_steps?: number;
+  failed_steps?: number;
+  duration_ms?: number;
+  error_message?: string;
+  log_content?: string;
+  log_path?: string;
+  log_excerpt?: string;
+  log_truncated?: boolean;
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;
@@ -122,6 +170,15 @@ export interface FlowRun {
 export interface FlowRunListResponse {
   items: FlowRun[];
   total: number;
+}
+
+export interface FlowRunListFilters {
+  runner_type?: 'test_machine' | 'server_ci' | string;
+  status?: FlowRunStatus;
+  source?: string;
+  profile?: string;
+  from?: string;
+  to?: string;
 }
 
 export interface FlowStreamStepEvent {

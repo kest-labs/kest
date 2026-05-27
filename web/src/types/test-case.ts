@@ -18,7 +18,7 @@ export interface ExtractVariable {
   path: string;
 }
 
-export interface ProjectTestCase {
+export interface WorkspaceTestCase {
   id: number | string;
   api_spec_id: number | string;
   method?: string;
@@ -47,7 +47,7 @@ export interface TestCaseListMeta {
 }
 
 export interface TestCaseListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   page?: number;
   pageSize?: number;
   apiSpecId?: number | string;
@@ -56,7 +56,7 @@ export interface TestCaseListParams {
 }
 
 export interface TestCaseListResponse {
-  items: ProjectTestCase[];
+  items: WorkspaceTestCase[];
   meta: TestCaseListMeta;
 }
 
@@ -99,6 +99,29 @@ export interface CreateTestCaseFromSpecRequest {
   env?: string;
   use_example?: boolean;
   example_id?: number | string;
+}
+
+export interface BatchCreateTestCasesFromSpecsRequest {
+  spec_ids: Array<number | string>;
+  name_prefix?: string;
+  env?: string;
+  use_example?: boolean;
+}
+
+export interface BatchCreateTestCasesFromSpecsResultItem {
+  spec_id: number | string;
+  status: 'created' | 'skipped' | 'failed';
+  test_case?: WorkspaceTestCase;
+  message?: string;
+  skipped_reason?: string;
+}
+
+export interface BatchCreateTestCasesFromSpecsResponse {
+  total: number;
+  created: number;
+  skipped: number;
+  failed: number;
+  items: BatchCreateTestCasesFromSpecsResultItem[];
 }
 
 export interface RunRequestInfo {
@@ -155,7 +178,7 @@ export interface TestCaseRun {
 }
 
 export interface TestCaseRunListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   testCaseId: number | string;
   page?: number;
   pageSize?: number;

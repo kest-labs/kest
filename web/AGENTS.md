@@ -2,6 +2,16 @@
 
 > This document is designed for AI coding assistants (Cursor, Windsurf, GitHub Copilot, etc.) to understand and work with this codebase effectively.
 
+## Kest Workspace Terminology
+
+Read `../AGENTS.md` before feature work. New user-facing business code must use `workspace`, not `project` or `projects`.
+
+Before and after frontend feature changes, run:
+
+```bash
+pnpm terminology
+```
+
 ## Project Overview
 
 **LlamaFront AI Scaffold** - A production-ready Next.js scaffold optimized for rapid AI-assisted development.

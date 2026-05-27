@@ -4,56 +4,67 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useT } from '@/i18n/client';
 import { flowService } from '@/services/flow';
-import type { CreateFlowRequest, SaveFlowRequest, UpdateFlowRequest } from '@/types/flow';
+import type {
+  CreateFlowRequest,
+  FlowRunListFilters,
+  ImportFlowMarkdownRequest,
+  SaveFlowRequest,
+  UpdateFlowMarkdownRequest,
+  UpdateFlowRequest,
+} from '@/types/flow';
 
 export const flowKeys = {
   all: ['flows'] as const,
-  project: (projectId: number | string) => [...flowKeys.all, 'workspace', projectId] as const,
-  list: (projectId: number | string) => [...flowKeys.project(projectId), 'list'] as const,
-  detail: (projectId: number | string, flowId: number | string) =>
-    [...flowKeys.project(projectId), 'detail', flowId] as const,
-  runs: (projectId: number | string, flowId: number | string) =>
-    [...flowKeys.project(projectId), 'runs', flowId] as const,
-  run: (projectId: number | string, flowId: number | string, runId: number | string) =>
-    [...flowKeys.runs(projectId, flowId), 'detail', runId] as const,
+  workspace: (workspaceId: number | string) => [...flowKeys.all, 'workspace', workspaceId] as const,
+  list: (workspaceId: number | string) => [...flowKeys.workspace(workspaceId), 'list'] as const,
+  detail: (workspaceId: number | string, flowId: number | string) =>
+    [...flowKeys.workspace(workspaceId), 'detail', flowId] as const,
+  runs: (workspaceId: number | string, flowId: number | string, filters?: FlowRunListFilters) =>
+    [...flowKeys.workspace(workspaceId), 'runs', flowId, filters ?? {}] as const,
+  run: (workspaceId: number | string, flowId: number | string, runId: number | string) =>
+    [...flowKeys.runs(workspaceId, flowId), 'detail', runId] as const,
 };
 
-export function useFlows(projectId?: number | string) {
+export function useFlows(workspaceId?: number | string) {
   return useQuery({
-    queryKey: flowKeys.list(projectId ?? 'unknown'),
-    queryFn: () => flowService.list(projectId as number | string),
-    enabled: projectId !== undefined && projectId !== null,
+    queryKey: flowKeys.list(workspaceId ?? 'unknown'),
+    queryFn: () => flowService.list(workspaceId as number | string),
+    enabled: workspaceId !== undefined && workspaceId !== null,
   });
 }
 
-export function useFlow(projectId?: number | string, flowId?: number | string) {
+export function useFlow(workspaceId?: number | string, flowId?: number | string) {
   return useQuery({
-    queryKey: flowKeys.detail(projectId ?? 'unknown', flowId ?? 'unknown'),
-    queryFn: () => flowService.getById(projectId as number | string, flowId as number | string),
-    enabled: projectId !== undefined && projectId !== null && flowId !== undefined && flowId !== null,
+    queryKey: flowKeys.detail(workspaceId ?? 'unknown', flowId ?? 'unknown'),
+    queryFn: () => flowService.getById(workspaceId as number | string, flowId as number | string),
+    enabled: workspaceId !== undefined && workspaceId !== null && flowId !== undefined && flowId !== null,
   });
 }
 
-export function useFlowRuns(projectId?: number | string, flowId?: number | string) {
+export function useFlowRuns(
+  workspaceId?: number | string,
+  flowId?: number | string,
+  filters?: FlowRunListFilters
+) {
   return useQuery({
-    queryKey: flowKeys.runs(projectId ?? 'unknown', flowId ?? 'unknown'),
-    queryFn: () => flowService.listRuns(projectId as number | string, flowId as number | string),
-    enabled: projectId !== undefined && projectId !== null && flowId !== undefined && flowId !== null,
+    queryKey: flowKeys.runs(workspaceId ?? 'unknown', flowId ?? 'unknown', filters),
+    queryFn: () => flowService.listRuns(workspaceId as number | string, flowId as number | string, filters),
+    enabled: workspaceId !== undefined && workspaceId !== null && flowId !== undefined && flowId !== null,
   });
 }
 
 export function useFlowRun(
-  projectId?: number | string,
+  workspaceId?: number | string,
   flowId?: number | string,
   runId?: number | string
 ) {
   return useQuery({
-    queryKey: flowKeys.run(projectId ?? 'unknown', flowId ?? 'unknown', runId ?? 'unknown'),
+    queryKey: flowKeys.run(workspaceId ?? 'unknown', flowId ?? 'unknown', runId ?? 'unknown'),
     queryFn: () =>
-      flowService.getRun(projectId as number | string, flowId as number | string, runId as number | string),
+      flowService.getRun(workspaceId as number | string, flowId as number | string, runId as number | string),
     enabled:
-      projectId !== undefined &&
-      projectId !== null &&
+      workspaceId !== undefined &&
+      workspaceId !== null &&
       flowId !== undefined &&
       flowId !== null &&
       runId !== undefined &&
@@ -61,74 +72,103 @@ export function useFlowRun(
   });
 }
 
-export function useCreateFlow(projectId: number | string) {
+export function useCreateFlow(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateFlowRequest) => flowService.create(projectId, data),
+    mutationFn: (data: CreateFlowRequest) => flowService.create(workspaceId, data),
     onSuccess: (flow) => {
-      queryClient.invalidateQueries({ queryKey: flowKeys.list(projectId) });
-      toast.success(t.project('toasts.flowCreated', { name: flow.name }));
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      toast.success(t.workspace('toasts.flowCreated', { name: flow.name }));
     },
   });
 }
 
-export function useUpdateFlow(projectId: number | string) {
+export function useImportFlowMarkdown(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (data: ImportFlowMarkdownRequest) => flowService.importMarkdown(workspaceId, data),
+    onSuccess: (flow) => {
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.setQueryData(flowKeys.detail(workspaceId, flow.id), flow);
+      toast.success(t.workspace('toasts.flowSaved', { name: flow.name }));
+    },
+  });
+}
+
+export function useUpdateFlow(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: ({ flowId, data }: { flowId: number | string; data: UpdateFlowRequest }) =>
-      flowService.update(projectId, flowId, data),
+      flowService.update(workspaceId, flowId, data),
     onSuccess: (flow) => {
-      queryClient.invalidateQueries({ queryKey: flowKeys.list(projectId) });
-      queryClient.invalidateQueries({ queryKey: flowKeys.detail(projectId, flow.id) });
-      toast.success(t.project('toasts.flowUpdated', { name: flow.name }));
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: flowKeys.detail(workspaceId, flow.id) });
+      toast.success(t.workspace('toasts.flowUpdated', { name: flow.name }));
     },
   });
 }
 
-export function useDeleteFlow(projectId: number | string) {
+export function useDeleteFlow(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (flowId: number | string) => flowService.delete(projectId, flowId),
+    mutationFn: (flowId: number | string) => flowService.delete(workspaceId, flowId),
     onSuccess: (_, flowId) => {
-      queryClient.invalidateQueries({ queryKey: flowKeys.list(projectId) });
-      queryClient.removeQueries({ queryKey: flowKeys.detail(projectId, flowId) });
-      queryClient.removeQueries({ queryKey: flowKeys.runs(projectId, flowId) });
-      toast.success(t.project('toasts.flowDeleted'));
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.removeQueries({ queryKey: flowKeys.detail(workspaceId, flowId) });
+      queryClient.removeQueries({ queryKey: flowKeys.runs(workspaceId, flowId) });
+      toast.success(t.workspace('toasts.flowDeleted'));
     },
   });
 }
 
-export function useSaveFlow(projectId: number | string) {
+export function useSaveFlow(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: ({ flowId, data }: { flowId: number | string; data: SaveFlowRequest }) =>
-      flowService.save(projectId, flowId, data),
+      flowService.save(workspaceId, flowId, data),
     onSuccess: (flow) => {
-      queryClient.invalidateQueries({ queryKey: flowKeys.list(projectId) });
-      queryClient.setQueryData(flowKeys.detail(projectId, flow.id), flow);
-      toast.success(t.project('toasts.flowSaved', { name: flow.name }));
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.setQueryData(flowKeys.detail(workspaceId, flow.id), flow);
+      toast.success(t.workspace('toasts.flowSaved', { name: flow.name }));
     },
   });
 }
 
-export function useRunFlow(projectId: number | string) {
+export function useUpdateFlowMarkdown(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (flowId: number | string) => flowService.run(projectId, flowId),
+    mutationFn: ({ flowId, data }: { flowId: number | string; data: UpdateFlowMarkdownRequest }) =>
+      flowService.updateMarkdown(workspaceId, flowId, data),
+    onSuccess: (flow) => {
+      queryClient.invalidateQueries({ queryKey: flowKeys.list(workspaceId) });
+      queryClient.setQueryData(flowKeys.detail(workspaceId, flow.id), flow);
+      toast.success(t.workspace('toasts.flowSaved', { name: flow.name }));
+    },
+  });
+}
+
+export function useRunFlow(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (flowId: number | string) => flowService.run(workspaceId, flowId),
     onSuccess: (run) => {
-      queryClient.invalidateQueries({ queryKey: flowKeys.runs(projectId, run.flow_id) });
-      queryClient.setQueryData(flowKeys.run(projectId, run.flow_id, run.id), run);
-      toast.success(t.project('toasts.flowRunStarted'));
+      queryClient.invalidateQueries({ queryKey: flowKeys.runs(workspaceId, run.flow_id) });
+      queryClient.setQueryData(flowKeys.run(workspaceId, run.flow_id, run.id), run);
+      toast.success(t.workspace('toasts.flowRunStarted'));
     },
   });
 }

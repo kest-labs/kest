@@ -8,19 +8,19 @@ import type { CreateRequestRequest, UpdateRequestRequest } from '@/types/request
 
 export const requestKeys = {
   all: ['requests'] as const,
-  project: (projectId: number | string) => [...requestKeys.all, 'workspace', projectId] as const,
-  collection: (projectId: number | string, collectionId: number | string) =>
-    [...requestKeys.project(projectId), 'collection', collectionId] as const,
-  list: (projectId: number | string, collectionId: number | string) =>
-    [...requestKeys.collection(projectId, collectionId), 'list'] as const,
+  workspace: (workspaceId: number | string) => [...requestKeys.all, 'workspace', workspaceId] as const,
+  collection: (workspaceId: number | string, collectionId: number | string) =>
+    [...requestKeys.workspace(workspaceId), 'collection', collectionId] as const,
+  list: (workspaceId: number | string, collectionId: number | string) =>
+    [...requestKeys.collection(workspaceId, collectionId), 'list'] as const,
   detail: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string
-  ) => [...requestKeys.collection(projectId, collectionId), 'detail', requestId] as const,
+  ) => [...requestKeys.collection(workspaceId, collectionId), 'detail', requestId] as const,
 };
 
-export function useCreateRequest(projectId: number | string) {
+export function useCreateRequest(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -31,17 +31,17 @@ export function useCreateRequest(projectId: number | string) {
     }: {
       collectionId: number | string;
       data: CreateRequestRequest;
-    }) => requestService.create(projectId, collectionId, data),
+    }) => requestService.create(workspaceId, collectionId, data),
     onSuccess: (createdRequest, variables) => {
       queryClient.invalidateQueries({
-        queryKey: requestKeys.collection(projectId, variables.collectionId),
+        queryKey: requestKeys.collection(workspaceId, variables.collectionId),
       });
-      toast.success(t.project('toasts.requestCreated', { name: createdRequest.name }));
+      toast.success(t.workspace('toasts.requestCreated', { name: createdRequest.name }));
     },
   });
 }
 
-export function useUpdateRequest(projectId: number | string) {
+export function useUpdateRequest(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -54,20 +54,46 @@ export function useUpdateRequest(projectId: number | string) {
       collectionId: number | string;
       requestId: number | string;
       data: UpdateRequestRequest;
-    }) => requestService.update(projectId, collectionId, requestId, data),
+    }) => requestService.update(workspaceId, collectionId, requestId, data),
     onSuccess: (updatedRequest, variables) => {
       queryClient.invalidateQueries({
-        queryKey: requestKeys.collection(projectId, variables.collectionId),
+        queryKey: requestKeys.collection(workspaceId, variables.collectionId),
       });
       queryClient.invalidateQueries({
-        queryKey: requestKeys.detail(projectId, variables.collectionId, variables.requestId),
+        queryKey: requestKeys.detail(workspaceId, variables.collectionId, variables.requestId),
       });
-      toast.success(t.project('toasts.requestUpdated', { name: updatedRequest.name }));
+      toast.success(t.workspace('toasts.requestUpdated', { name: updatedRequest.name }));
     },
   });
 }
 
-export function useDeleteRequest(projectId: number | string) {
+export function useGenRequestDoc(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      lang,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      lang: 'en' | 'zh';
+    }) => requestService.genDoc(workspaceId, collectionId, requestId, { lang }),
+    onSuccess: (updatedRequest, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: requestKeys.collection(workspaceId, variables.collectionId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: requestKeys.detail(workspaceId, variables.collectionId, variables.requestId),
+      });
+      toast.success(t.workspace('toasts.documentationGenerated', { path: updatedRequest.url }));
+    },
+  });
+}
+
+export function useDeleteRequest(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -78,15 +104,15 @@ export function useDeleteRequest(projectId: number | string) {
     }: {
       collectionId: number | string;
       requestId: number | string;
-    }) => requestService.delete(projectId, collectionId, requestId),
+    }) => requestService.delete(workspaceId, collectionId, requestId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: requestKeys.collection(projectId, variables.collectionId),
+        queryKey: requestKeys.collection(workspaceId, variables.collectionId),
       });
       queryClient.removeQueries({
-        queryKey: requestKeys.detail(projectId, variables.collectionId, variables.requestId),
+        queryKey: requestKeys.detail(workspaceId, variables.collectionId, variables.requestId),
       });
-      toast.success(t.project('toasts.requestDeleted'));
+      toast.success(t.workspace('toasts.requestDeleted'));
     },
   });
 }

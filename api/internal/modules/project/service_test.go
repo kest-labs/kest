@@ -18,6 +18,12 @@ func (r *testProjectRepo) GetByID(ctx context.Context, id string) (*Project, err
 	}
 	return r.project, nil
 }
+func (r *testProjectRepo) GetByWorkspaceID(ctx context.Context, workspaceID string) (*Project, error) {
+	if r.project == nil || r.project.WorkspaceID != workspaceID {
+		return nil, nil
+	}
+	return r.project, nil
+}
 func (r *testProjectRepo) GetBySlug(ctx context.Context, slug string) (*Project, error) {
 	if r.projectBySlug == nil {
 		return nil, nil
@@ -30,7 +36,9 @@ func (r *testProjectRepo) Update(ctx context.Context, project *Project) error {
 	r.updatedProject = &projectCopy
 	return nil
 }
-func (r *testProjectRepo) Delete(ctx context.Context, id string) error { return nil }
+func (r *testProjectRepo) Delete(ctx context.Context, id string, workspaceID string) error {
+	return nil
+}
 func (r *testProjectRepo) List(ctx context.Context, userID string, offset, limit int) ([]*Project, int64, error) {
 	return nil, 0, nil
 }
@@ -48,7 +56,7 @@ func TestUpdateProjectAppliesEditableFields(t *testing.T) {
 			Status:   1,
 		},
 	}
-	svc := NewService(repo, nil)
+	svc := NewService(repo, nil, nil)
 	inactive := 0
 
 	project, err := svc.Update(context.Background(), "12", &UpdateProjectRequest{

@@ -1,18 +1,18 @@
-import { WorkspaceLayout } from '@/components/features/workspace/workspace-layout';
+import { WorkspaceWorkspaceLayout } from '@/components/features/workspace/workspace-workspace-layout';
 
-interface WorkspaceRouteLayoutProps {
+interface WorkspaceWorkspaceRouteLayoutProps {
   children: React.ReactNode;
-  params: Promise<Record<string, string | string[] | undefined>>;
+  params: Promise<{
+    workspaceId: string;
+  }>;
 }
 
-export default async function WorkspaceRouteLayout({
+// 单个工作区的工作区布局。
+// 作用：为 `/workspace/:workspaceId/*` 提供固定的一层工作区模块侧栏，模块页只负责二层列表与内容区。
+export default async function WorkspaceWorkspaceRouteLayout({
   children,
   params,
-}: WorkspaceRouteLayoutProps) {
-  const routeParams = await params;
-  const workspaceId = Array.isArray(routeParams.workspaceId)
-    ? routeParams.workspaceId[0] ?? ''
-    : routeParams.workspaceId ?? '';
-
-  return <WorkspaceLayout workspaceId={workspaceId}>{children}</WorkspaceLayout>;
+}: WorkspaceWorkspaceRouteLayoutProps) {
+  const { workspaceId } = await params;
+  return <WorkspaceWorkspaceLayout workspaceId={workspaceId}>{children}</WorkspaceWorkspaceLayout>;
 }

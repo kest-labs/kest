@@ -56,6 +56,32 @@ log_enabled: true
 			return err
 		}
 
+		flowConfigFile := filepath.Join(dir, "flow.config.yaml")
+		if _, err := os.Stat(flowConfigFile); os.IsNotExist(err) {
+			flowConfigContent := `version: 1
+profiles:
+  local:
+    include: [".kest/flow/**/*.flow.md"]
+    env: local
+    base_url: "http://127.0.0.1:5119"
+    strict: true
+    fail_fast: false
+    sync: false
+  ci:
+    include: [".kest/flow/**/*.flow.md"]
+    env: staging
+    strict: true
+    fail_fast: false
+    sync: true
+    reports:
+      json: ".kest/reports/flow-results.json"
+      junit: ".kest/reports/flow-results.xml"
+`
+			if err := os.WriteFile(flowConfigFile, []byte(flowConfigContent), 0644); err != nil {
+				return err
+			}
+		}
+
 		// Create logs directory
 		logsDir := filepath.Join(dir, "logs")
 		if err := os.MkdirAll(logsDir, 0755); err != nil {
@@ -75,6 +101,7 @@ log_enabled: true
 
 		fmt.Println("✓ Initialized Kest project in .kest/")
 		fmt.Println("  - config.yaml")
+		fmt.Println("  - flow.config.yaml")
 		fmt.Println("  - flow/")
 		fmt.Println("  - logs/")
 		fmt.Println("  - .gitignore")

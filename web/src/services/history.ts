@@ -3,7 +3,7 @@ import type {
   CreateHistoryRequest,
   HistoryListParams,
   HistoryListResponse,
-  ProjectHistory,
+  WorkspaceHistory,
 } from '@/types/history';
 
 const normalizeParams = <T extends object>(params: T) =>
@@ -12,19 +12,19 @@ const normalizeParams = <T extends object>(params: T) =>
   ) as T;
 
 export const historyService = {
-  create: (projectId: number | string, data: CreateHistoryRequest) =>
-    request.post<ProjectHistory>(`/workspaces/${projectId}/history`, data, {
+  create: (workspaceId: number | string, data: CreateHistoryRequest) =>
+    request.post<WorkspaceHistory>(`/workspaces/${workspaceId}/history`, data, {
       skipErrorHandler: true,
     }),
 
   list: ({
-    projectId,
+    workspaceId,
     page = 1,
     pageSize = 20,
     entityType,
     entityId,
   }: HistoryListParams) =>
-    request.get<HistoryListResponse>(`/workspaces/${projectId}/history`, {
+    request.get<HistoryListResponse>(`/workspaces/${workspaceId}/history`, {
       params: normalizeParams({
         page,
         per_page: pageSize,
@@ -33,8 +33,8 @@ export const historyService = {
       }),
     }),
 
-  getById: (projectId: number | string, historyId: number | string) =>
-    request.get<ProjectHistory>(`/workspaces/${projectId}/history/${historyId}`),
+  getById: (workspaceId: number | string, historyId: number | string) =>
+    request.get<WorkspaceHistory>(`/workspaces/${workspaceId}/history/${historyId}`),
 };
 
 export type HistoryService = typeof historyService;

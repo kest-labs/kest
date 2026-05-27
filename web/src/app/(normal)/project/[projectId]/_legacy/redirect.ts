@@ -24,7 +24,7 @@ export const appendLegacySearchParams = (href: string, searchParams: LegacySearc
   return queryString ? `${href}?${queryString}` : href;
 };
 
-export const redirectLegacyProjectRoute = (
+export const redirectLegacyWorkspaceRoute = (
   href: string,
   searchParams?: LegacySearchParams
 ) => {

@@ -27,6 +27,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
@@ -70,7 +71,10 @@ func InitApplication() (*app.Application, error) {
 	workspaceService := workspace.NewService(workspaceRepository)
 	workspaceHandler := workspace.NewHandler(workspaceService)
 	projectRepository := project.NewRepository(db)
-	projectService := project.NewService(projectRepository, memberService)
+	projectService := project.NewService(projectRepository, memberService, workspaceService)
+	projectinviteRepository := projectinvite.NewRepository(db)
+	projectinviteService := projectinvite.NewService(projectinviteRepository)
+	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService, workspaceService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
 	collectionHandler := collection.NewHandler(collectionService, workspaceService)
@@ -92,7 +96,7 @@ func InitApplication() (*app.Application, error) {
 	apispecRepository := apispec.NewRepository(db)
 	apispecService := apispec.NewService(apispecRepository)
 	testcaseRepository := testcase.NewRepository(db)
-	apispecHandler := provideAPISpecHandler(apispecService, workspaceService, testcaseRepository)
+	apispecHandler := provideAPISpecHandler(apispecService, importerService, workspaceService, testcaseRepository)
 	projectHandler := provideProjectHandler(projectService, memberService, workspaceService, apispecHandler, historyHandler)
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
@@ -101,11 +105,11 @@ func InitApplication() (*app.Application, error) {
 	environmentService := environment.NewService(environmentRepository)
 	environmentHandler := environment.NewHandler(environmentService, workspaceService)
 	flowRepository := flow.NewRepository(db)
-	flowService := flow.NewService(flowRepository)
-	flowHandler := flow.NewHandler(flowService, workspaceService)
+	flowService := flow.NewService(flowRepository, historyService)
+	flowHandler := flow.NewHandler(flowService, memberService)
 	executor := testrunner.NewExecutor()
 	testcaseService := testcase.NewService(testcaseRepository, apispecRepository, environmentRepository, executor)
-	testcaseHandler := testcase.NewHandler(testcaseService, workspaceService)
+	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
 		User:          handler,
@@ -114,6 +118,7 @@ func InitApplication() (*app.Application, error) {
 		Audit:         auditHandler,
 		Workspace:     workspaceHandler,
 		Project:       projectHandler,
+		ProjectInvite: projectinviteHandler,
 		Collection:    collectionHandler,
 		Request:       requestHandler,
 		Example:       exampleHandler,

@@ -45,6 +45,8 @@ var configSetCmd = &cobra.Command{
 			conf.PlatformURL = value
 		case "platform_token":
 			conf.PlatformToken = value
+		case "platform_project_id":
+			conf.PlatformWorkspaceID = value
 		case "platform_workspace_id":
 			conf.PlatformWorkspaceID = value
 		case "platform_auto_sync_history":

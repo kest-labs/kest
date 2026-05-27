@@ -83,6 +83,11 @@ func SanitizeLogExcerpt(value string) (string, bool) {
 	return sanitizeStructuredText(value, DefaultLogLimit)
 }
 
+func SanitizeLog(value string) string {
+	sanitized, _ := sanitizeStructuredText(value, 0)
+	return sanitized
+}
+
 func SanitizeJSONPayload(raw json.RawMessage) any {
 	if len(raw) == 0 {
 		return nil

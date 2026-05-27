@@ -1,5 +1,5 @@
-import { CategoryManagementPage } from '@/components/features/project/category-management-page';
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { CategoryManagementPage } from '@/components/features/workspace/category-management-page';
+import { WorkspaceWorkspacePage } from '@/components/features/workspace/workspace-workspace-page';
 
 interface WorkspaceCategoriesPageProps {
   params: Promise<{
@@ -11,7 +11,7 @@ interface WorkspaceCategoriesPageProps {
   }>;
 }
 
-// 项目分类管理页面入口。
+// 工作区分类管理页面入口。
 // 作用：默认挂载新的 categories 工作区，并通过 `?mode=manage` 兼容旧管理页。
 export default async function WorkspaceCategoriesPage({
   params,
@@ -21,14 +21,14 @@ export default async function WorkspaceCategoriesPage({
   const { item, mode } = await searchParams;
 
   if (mode === 'manage') {
-    return <CategoryManagementPage projectId={workspaceId} />;
+    return <CategoryManagementPage workspaceId={workspaceId} />;
   }
 
   const selectedItemId = item?.trim() ? item : null;
 
   return (
-    <ProjectWorkspacePage
-      projectId={workspaceId}
+    <WorkspaceWorkspacePage
+      workspaceId={workspaceId}
       module="categories"
       selectedItemId={selectedItemId}
     />
