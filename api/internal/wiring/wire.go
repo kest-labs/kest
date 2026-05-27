@@ -21,6 +21,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
@@ -47,6 +48,7 @@ func InitApplication() (*app.Application, error) {
 		project.NewRepository,
 		project.NewService,
 		provideProjectHandler,
+		projectinvite.ProviderSet,
 		collection.ProviderSet,
 		request.ProviderSet,
 		example.ProviderSet,

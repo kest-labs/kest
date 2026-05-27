@@ -598,15 +598,14 @@
       }
     },
     "api/internal/wiring/wire_gen.go": {
-      "total": 12,
+      "total": 11,
       "matches": {
         "project": 3,
         "projectRepository": 2,
         "projectService": 2,
         "projectHandler": 2,
         "provideProjectHandler": 1,
-        "Project": 1,
-        "ProjectInvite": 1
+        "Project": 1
       }
     },
     "api/pkg/dbutil/query_test.go": {
@@ -947,5 +946,5 @@
       }
     }
   },
-  "generatedAt": "2026-05-27T11:29:11.693Z"
+  "generatedAt": "2026-05-27T11:54:25.877Z"
 }
