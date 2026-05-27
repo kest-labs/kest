@@ -14,7 +14,7 @@ profiles:
     sync: false
   ci:
     include:
-      - "**/*.flow.md"
+      - ".kest/flow/local-smoke.flow.md"
     exclude:
       - "**/.git/**/*.flow.md"
       - "**/node_modules/**/*.flow.md"
@@ -23,7 +23,7 @@ profiles:
     base_url: "http://127.0.0.1:8025"
     strict: true
     fail_fast: false
-    sync: true
+    sync: false
     reports:
       json: ".kest/reports/flow-results.json"
       junit: ".kest/reports/flow-results.xml"

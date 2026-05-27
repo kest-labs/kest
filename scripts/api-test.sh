@@ -22,10 +22,17 @@ fi
 
 cd "$WORKSPACE_ROOT"
 echo "Running Kest API flows with profile: $PROFILE"
-if [[ -n "${KEST_CLI_BIN:-}" ]]; then
-  "$KEST_CLI_BIN" run --profile "$PROFILE"
-elif [[ -d "$WORKSPACE_ROOT/cli" ]]; then
-  (cd "$WORKSPACE_ROOT/cli" && go run . run --profile "$PROFILE")
+RUN_ARGS=(run --profile "$PROFILE")
+if [[ "${KEST_SYNC_FLOWS:-}" == "1" ]]; then
+  RUN_ARGS+=(--sync)
 else
-  kest run --profile "$PROFILE"
+  RUN_ARGS+=(--sync=false)
+fi
+
+if [[ -n "${KEST_CLI_BIN:-}" ]]; then
+  "$KEST_CLI_BIN" "${RUN_ARGS[@]}"
+elif [[ -d "$WORKSPACE_ROOT/cli" ]]; then
+  (cd "$WORKSPACE_ROOT/cli" && KEST_WORKSPACE_ROOT="$WORKSPACE_ROOT" go run . "${RUN_ARGS[@]}")
+else
+  kest "${RUN_ARGS[@]}"
 fi

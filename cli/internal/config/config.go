@@ -103,6 +103,17 @@ func SaveToPath(conf *Config, configPath string) error {
 }
 
 func findProjectRoot() (string, error) {
+	if root := os.Getenv("KEST_WORKSPACE_ROOT"); root != "" {
+		abs, err := filepath.Abs(root)
+		if err != nil {
+			return "", err
+		}
+		if _, err := os.Stat(filepath.Join(abs, ".kest")); err != nil {
+			return "", err
+		}
+		return abs, nil
+	}
+
 	curr, err := os.Getwd()
 	if err != nil {
 		return "", err

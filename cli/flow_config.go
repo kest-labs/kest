@@ -167,6 +167,17 @@ func selectFlowRunProfile(cfg flowRunConfig, requested string) (string, flowRunP
 }
 
 func findKestWorkspaceRoot() (string, error) {
+	if root := strings.TrimSpace(os.Getenv("KEST_WORKSPACE_ROOT")); root != "" {
+		abs, err := filepath.Abs(root)
+		if err != nil {
+			return "", err
+		}
+		if _, err := os.Stat(filepath.Join(abs, ".kest")); err != nil {
+			return "", err
+		}
+		return abs, nil
+	}
+
 	curr, err := os.Getwd()
 	if err != nil {
 		return "", err
