@@ -8,15 +8,16 @@ import (
 
 // ProjectPO is the persistent object for database operations
 type ProjectPO struct {
-	ID        string `gorm:"primaryKey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
-	Name      string         `gorm:"size:100;not null"`
-	Slug      string         `gorm:"size:50;uniqueIndex"`
-	Platform  string         `gorm:"size:50"`   // go, javascript, python, etc.
-	PublicKey string         `gorm:"size:64"`   // Public key for project
-	Status    int            `gorm:"default:1"` // 1: active, 0: disabled
+	ID          string `gorm:"primaryKey"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	WorkspaceID string         `gorm:"index"`
+	Name        string         `gorm:"size:100;not null"`
+	Slug        string         `gorm:"size:50;uniqueIndex"`
+	Platform    string         `gorm:"size:50"`   // go, javascript, python, etc.
+	PublicKey   string         `gorm:"size:64"`   // Public key for project
+	Status      int            `gorm:"default:1"` // 1: active, 0: disabled
 }
 
 // TableName specifies the database table name
@@ -26,15 +27,16 @@ func (ProjectPO) TableName() string {
 
 // Project is the domain entity used in service layer
 type Project struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	Platform  string    `json:"platform"`
-	PublicKey string    `json:"public_key,omitempty"`
-	Role      string    `json:"role,omitempty"`
-	Status    int       `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id,omitempty"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Platform    string    `json:"platform"`
+	PublicKey   string    `json:"public_key,omitempty"`
+	Role        string    `json:"role,omitempty"`
+	Status      int       `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // toDomain converts ProjectPO to Project domain entity
@@ -43,14 +45,15 @@ func (po *ProjectPO) toDomain() *Project {
 		return nil
 	}
 	return &Project{
-		ID:        po.ID,
-		Name:      po.Name,
-		Slug:      po.Slug,
-		Platform:  po.Platform,
-		PublicKey: po.PublicKey,
-		Status:    po.Status,
-		CreatedAt: po.CreatedAt,
-		UpdatedAt: po.UpdatedAt,
+		ID:          po.ID,
+		WorkspaceID: po.WorkspaceID,
+		Name:        po.Name,
+		Slug:        po.Slug,
+		Platform:    po.Platform,
+		PublicKey:   po.PublicKey,
+		Status:      po.Status,
+		CreatedAt:   po.CreatedAt,
+		UpdatedAt:   po.UpdatedAt,
 	}
 }
 
@@ -60,12 +63,13 @@ func newProjectPO(p *Project) *ProjectPO {
 		return nil
 	}
 	return &ProjectPO{
-		ID:        p.ID,
-		Name:      p.Name,
-		Slug:      p.Slug,
-		Platform:  p.Platform,
-		PublicKey: p.PublicKey,
-		Status:    p.Status,
+		ID:          p.ID,
+		WorkspaceID: p.WorkspaceID,
+		Name:        p.Name,
+		Slug:        p.Slug,
+		Platform:    p.Platform,
+		PublicKey:   p.PublicKey,
+		Status:      p.Status,
 	}
 }
 

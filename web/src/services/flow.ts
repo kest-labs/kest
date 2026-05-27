@@ -7,17 +7,35 @@ import type {
   FlowListResponse,
   FlowRun,
   FlowRunListResponse,
+  FlowRunListFilters,
   FlowStreamStepEvent,
-  ProjectFlow,
+  ImportFlowMarkdownRequest,
+  WorkspaceFlow,
   SaveFlowRequest,
   StreamFlowRunOptions,
   UpdateFlowRequest,
+  UpdateFlowMarkdownRequest,
 } from '@/types/flow';
 
 const normalizePayload = <T extends object>(payload: T) =>
   Object.fromEntries(
     Object.entries(payload as Record<string, unknown>).filter(([, value]) => value !== undefined)
   ) as T;
+
+const buildRunQuery = (filters?: FlowRunListFilters) => {
+  if (!filters) {
+    return '';
+  }
+
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      params.set(key, String(value));
+    }
+  });
+  const query = params.toString();
+  return query ? `?${query}` : '';
+};
 
 const readSSEEvent = (
   chunk: string,
@@ -66,10 +84,19 @@ export const flowService = {
     request.get<FlowDetail>(`/workspaces/${workspaceId}/flows/${flowId}`),
 
   create: (workspaceId: number | string, data: CreateFlowRequest) =>
-    request.post<ProjectFlow>(`/workspaces/${workspaceId}/flows`, normalizePayload(data)),
+    request.post<WorkspaceFlow>(`/workspaces/${workspaceId}/flows`, normalizePayload(data)),
+
+  importMarkdown: (workspaceId: number | string, data: ImportFlowMarkdownRequest) =>
+    request.post<FlowDetail>(`/workspaces/${workspaceId}/flows/import-markdown`, normalizePayload(data)),
 
   update: (workspaceId: number | string, flowId: number | string, data: UpdateFlowRequest) =>
-    request.patch<ProjectFlow>(`/workspaces/${workspaceId}/flows/${flowId}`, normalizePayload(data)),
+    request.patch<WorkspaceFlow>(`/workspaces/${workspaceId}/flows/${flowId}`, normalizePayload(data)),
+
+  updateMarkdown: (
+    workspaceId: number | string,
+    flowId: number | string,
+    data: UpdateFlowMarkdownRequest
+  ) => request.put<FlowDetail>(`/workspaces/${workspaceId}/flows/${flowId}/markdown`, normalizePayload(data)),
 
   delete: (workspaceId: number | string, flowId: number | string) =>
     request.delete<void>(`/workspaces/${workspaceId}/flows/${flowId}`),
@@ -80,8 +107,8 @@ export const flowService = {
   run: (workspaceId: number | string, flowId: number | string) =>
     request.post<FlowRun>(`/workspaces/${workspaceId}/flows/${flowId}/run`),
 
-  listRuns: (workspaceId: number | string, flowId: number | string) =>
-    request.get<FlowRunListResponse>(`/workspaces/${workspaceId}/flows/${flowId}/runs`),
+  listRuns: (workspaceId: number | string, flowId: number | string, filters?: FlowRunListFilters) =>
+    request.get<FlowRunListResponse>(`/workspaces/${workspaceId}/flows/${flowId}/runs${buildRunQuery(filters)}`),
 
   getRun: (workspaceId: number | string, flowId: number | string, runId: number | string) =>
     request.get<FlowRun>(`/workspaces/${workspaceId}/flows/${flowId}/runs/${runId}`),

@@ -151,6 +151,10 @@ func (s *stubRequestService) Update(context.Context, string, string, string, *re
 	return nil, nil
 }
 
+func (s *stubRequestService) GenDoc(context.Context, string, string, string, string) (*request.Request, error) {
+	return nil, nil
+}
+
 func (s *stubRequestService) Delete(context.Context, string, string, string) error {
 	return nil
 }

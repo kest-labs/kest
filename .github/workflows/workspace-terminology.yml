@@ -1,0 +1,35 @@
+name: Workspace Terminology
+
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'cli/**'
+      - 'web/src/**'
+      - 'web/package.json'
+      - 'scripts/check-workspace-terminology.mjs'
+      - 'scripts/workspace-terminology-baseline.json'
+      - 'AGENTS.md'
+      - '.github/workflows/workspace-terminology.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+      - 'cli/**'
+      - 'web/src/**'
+      - 'web/package.json'
+      - 'scripts/check-workspace-terminology.mjs'
+      - 'scripts/workspace-terminology-baseline.json'
+      - 'AGENTS.md'
+      - '.github/workflows/workspace-terminology.yml'
+
+jobs:
+  workspace-terminology:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check workspace terminology
+        run: node scripts/check-workspace-terminology.mjs

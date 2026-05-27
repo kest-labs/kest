@@ -143,15 +143,23 @@ func (s *service) Delete(ctx context.Context, id, workspaceID string) error {
 		return ErrCollectionNotFound
 	}
 
-	// Check for children
+	return s.deleteTree(ctx, collection.ID, workspaceID)
+}
+
+func (s *service) deleteTree(ctx context.Context, id, workspaceID string) error {
 	children, err := s.repo.GetByParentID(ctx, workspaceID, &id)
 	if err != nil {
 		return err
 	}
-	if len(children) > 0 {
-		// Could either prevent delete or cascade delete
-		// For now, prevent delete if has children
-		return errors.New("cannot delete collection with children")
+
+	for _, child := range children {
+		if err := s.deleteTree(ctx, child.ID, workspaceID); err != nil {
+			return err
+		}
+	}
+
+	if err := s.repo.DeleteCollectionContents(ctx, id); err != nil {
+		return err
 	}
 
 	return s.repo.Delete(ctx, id)

@@ -40,14 +40,13 @@ func LoadConfig() (*Config, error) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 
-	// Global config
-	home, _ := os.UserHomeDir()
-	v.AddConfigPath(filepath.Join(home, ".kest"))
-
 	// Project detection
 	projectRoot, _ := findProjectRoot()
 	if projectRoot != "" {
-		v.AddConfigPath(filepath.Join(projectRoot, ".kest"))
+		v.SetConfigFile(filepath.Join(projectRoot, ".kest", "config.yaml"))
+	} else {
+		home, _ := os.UserHomeDir()
+		v.SetConfigFile(filepath.Join(home, ".kest", "config.yaml"))
 	}
 
 	if err := v.ReadInConfig(); err != nil {
@@ -104,6 +103,17 @@ func SaveToPath(conf *Config, configPath string) error {
 }
 
 func findProjectRoot() (string, error) {
+	if root := os.Getenv("KEST_WORKSPACE_ROOT"); root != "" {
+		abs, err := filepath.Abs(root)
+		if err != nil {
+			return "", err
+		}
+		if _, err := os.Stat(filepath.Join(abs, ".kest")); err != nil {
+			return "", err
+		}
+		return abs, nil
+	}
+
 	curr, err := os.Getwd()
 	if err != nil {
 		return "", err

@@ -6,41 +6,38 @@ import type { CreateHistoryRequest, HistoryListParams } from '@/types/history';
 
 export const historyKeys = {
   all: ['histories'] as const,
-  project: (projectId: number | string) => [...historyKeys.all, 'workspace', projectId] as const,
-  lists: (projectId: number | string) => [...historyKeys.project(projectId), 'lists'] as const,
-  list: (params: HistoryListParams) => [...historyKeys.lists(params.projectId), params] as const,
-  detail: (projectId: number | string, historyId: number | string) =>
-    [...historyKeys.project(projectId), 'detail', historyId] as const,
+  workspace: (workspaceId: number | string) => [...historyKeys.all, 'workspace', workspaceId] as const,
+  lists: (workspaceId: number | string) => [...historyKeys.workspace(workspaceId), 'lists'] as const,
+  list: (params: HistoryListParams) => [...historyKeys.lists(params.workspaceId), params] as const,
+  detail: (workspaceId: number | string, historyId: number | string) =>
+    [...historyKeys.workspace(workspaceId), 'detail', historyId] as const,
 };
 
-export function useProjectHistories(params: HistoryListParams) {
+export function useWorkspaceHistories(params: HistoryListParams) {
   return useQuery({
     queryKey: historyKeys.list(params),
     queryFn: () => historyService.list(params),
+    enabled: Boolean(params.workspaceId),
     placeholderData: (previousData) => previousData,
   });
 }
 
-export function useProjectHistory(projectId?: number | string, historyId?: number | string) {
+export function useWorkspaceHistory(workspaceId?: number | string, historyId?: number | string) {
   return useQuery({
-    queryKey: historyKeys.detail(projectId ?? 'unknown', historyId ?? 'unknown'),
-    queryFn: () => historyService.getById(projectId as number | string, historyId as number | string),
-    enabled:
-      projectId !== undefined &&
-      projectId !== null &&
-      historyId !== undefined &&
-      historyId !== null,
+    queryKey: historyKeys.detail(workspaceId ?? 'unknown', historyId ?? 'unknown'),
+    queryFn: () => historyService.getById(workspaceId as number | string, historyId as number | string),
+    enabled: Boolean(workspaceId) && Boolean(historyId),
   });
 }
 
-export function useCreateProjectHistory(projectId: number | string) {
+export function useCreateWorkspaceHistory(workspaceId: number | string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateHistoryRequest) => historyService.create(projectId, data),
+    mutationFn: (data: CreateHistoryRequest) => historyService.create(workspaceId, data),
     onSuccess: (history) => {
-      queryClient.invalidateQueries({ queryKey: historyKeys.lists(projectId) });
-      queryClient.setQueryData(historyKeys.detail(projectId, history.id), history);
+      queryClient.invalidateQueries({ queryKey: historyKeys.lists(workspaceId) });
+      queryClient.setQueryData(historyKeys.detail(workspaceId, history.id), history);
     },
   });
 }

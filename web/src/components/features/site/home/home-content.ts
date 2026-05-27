@@ -311,7 +311,7 @@ function buildComparisonRows(t: MarketingTranslator) {
       section: t('pricing.comparison.governance'),
       rows: [
         ['Workspace roles', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
-        ['Project permissions', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
+        ['Workspace permissions', t('pricing.values.basic'), t('pricing.values.team'), t('pricing.values.advanced'), t('pricing.values.custom')],
         ['SSO', t('pricing.values.limited'), t('pricing.values.limited'), t('pricing.values.advanced'), t('pricing.values.custom')],
         ['Audit logs', t('pricing.values.limited'), t('pricing.values.thirtyDays'), t('pricing.values.unlimited'), t('pricing.values.custom')],
         ['Data retention policy', t('pricing.values.basic'), t('pricing.values.standard'), t('pricing.values.advanced'), t('pricing.values.custom')],
@@ -357,11 +357,11 @@ export function buildMarketingPageContent(t: MarketingTranslator): MarketingPage
       supportingNote: t('hero.supportingNote'),
       mockup: {
         sidebarTitle: t('hero.mockup.sidebarTitle'),
-        projectsLabel: t('hero.mockup.projectsLabel'),
+        workspacesLabel: t('hero.mockup.workspacesLabel'),
         flowsLabel: t('hero.mockup.flowsLabel'),
         environmentsLabel: t('hero.mockup.environmentsLabel'),
         teamspacesLabel: t('hero.mockup.teamspacesLabel'),
-        activeProject: t('hero.mockup.activeProject'),
+        activeWorkspace: t('hero.mockup.activeWorkspace'),
         flowOne: t('hero.mockup.flowOne'),
         flowTwo: t('hero.mockup.flowTwo'),
         environmentValue: t('hero.mockup.environmentValue'),

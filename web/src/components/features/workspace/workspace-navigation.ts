@@ -1,12 +1,17 @@
 'use client';
 
+import type { LucideIcon } from 'lucide-react';
 import {
-  PROJECT_WORKSPACE_MODULES,
-  getProjectWorkspaceModuleMeta,
-  type ProjectWorkspaceModule,
-  type ProjectWorkspaceModuleI18nKey,
-  type ProjectWorkspaceModuleMeta,
-} from '@/components/features/project/project-navigation';
+  FileJson2,
+  FlaskConical,
+  FolderGit2,
+  FolderOpen,
+  Globe,
+  History,
+  KeyRound,
+  Tags,
+  Users,
+} from 'lucide-react';
 import {
   buildWorkspaceApiSpecsRoute,
   buildWorkspaceCategoriesRoute,
@@ -19,16 +24,103 @@ import {
   buildWorkspaceTestCasesRoute,
 } from '@/constants/routes';
 
-export type WorkspaceModule = ProjectWorkspaceModule;
-export type WorkspaceModuleI18nKey = ProjectWorkspaceModuleI18nKey;
-export type WorkspaceModuleMeta = ProjectWorkspaceModuleMeta;
+export type WorkspaceWorkspaceModule =
+  | 'api-specs'
+  | 'test-cases'
+  | 'environments'
+  | 'collections'
+  | 'categories'
+  | 'keys'
+  | 'members'
+  | 'histories'
+  | 'flows';
 
-export const WORKSPACE_MODULES = PROJECT_WORKSPACE_MODULES;
-export const getWorkspaceModuleMeta = getProjectWorkspaceModuleMeta;
+export type WorkspaceWorkspaceModuleI18nKey =
+  | 'apiSpecs'
+  | 'testCases'
+  | 'environments'
+  | 'collections'
+  | 'categories'
+  | 'keys'
+  | 'members'
+  | 'histories'
+  | 'flows';
 
-export const buildWorkspaceRoute = (
+export interface WorkspaceWorkspaceModuleMeta {
+  value: WorkspaceWorkspaceModule;
+  i18nKey: WorkspaceWorkspaceModuleI18nKey;
+  icon: LucideIcon;
+  status?: 'ready' | 'planned';
+}
+
+const WORKSPACE_WORKSPACE_MODULE_META: WorkspaceWorkspaceModuleMeta[] = [
+  {
+    value: 'collections',
+    i18nKey: 'collections',
+    icon: FolderOpen,
+    status: 'ready',
+  },
+  {
+    value: 'api-specs',
+    i18nKey: 'apiSpecs',
+    icon: FileJson2,
+    status: 'ready',
+  },
+  {
+    value: 'environments',
+    i18nKey: 'environments',
+    icon: Globe,
+    status: 'ready',
+  },
+  {
+    value: 'test-cases',
+    i18nKey: 'testCases',
+    icon: FlaskConical,
+    status: 'ready',
+  },
+  {
+    value: 'members',
+    i18nKey: 'members',
+    icon: Users,
+    status: 'ready',
+  },
+  {
+    value: 'keys',
+    i18nKey: 'keys',
+    icon: KeyRound,
+    status: 'ready',
+  },
+  {
+    value: 'histories',
+    i18nKey: 'histories',
+    icon: History,
+    status: 'ready',
+  },
+  {
+    value: 'flows',
+    i18nKey: 'flows',
+    icon: FolderGit2,
+    status: 'ready',
+  },
+  {
+    value: 'categories',
+    i18nKey: 'categories',
+    icon: Tags,
+    status: 'ready',
+  },
+];
+
+export const WORKSPACE_WORKSPACE_MODULES = WORKSPACE_WORKSPACE_MODULE_META.filter(
+  item => item.value !== 'categories'
+);
+
+export const getWorkspaceWorkspaceModuleMeta = (module: WorkspaceWorkspaceModule) =>
+  WORKSPACE_WORKSPACE_MODULE_META.find(item => item.value === module) ??
+  WORKSPACE_WORKSPACE_MODULE_META[0];
+
+export const buildWorkspaceWorkspaceRoute = (
   workspaceId: string | number,
-  module: WorkspaceModule
+  module: WorkspaceWorkspaceModule
 ) => {
   switch (module) {
     case 'api-specs':

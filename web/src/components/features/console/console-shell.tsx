@@ -29,7 +29,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/utils';
 
 type NavTitleKey =
-  | 'nav.projects'
+  | 'nav.workspaces'
   | 'nav.profile';
 
 interface NavItem {
@@ -50,7 +50,7 @@ const buildInitials = (name: string) =>
  * 控制台通用外壳组件。
  * 作用：
  * 1. 统一提供控制台顶部导航、侧边栏和用户菜单
- * 2. 让 `/console`、`/project` 等受保护页面共享同一套后台布局
+ * 2. 让 `/console`、`/workspace` 等受保护页面共享同一套后台布局
  * 3. 集中维护控制台导航项，避免多个页面布局重复拷贝
  */
 export function ConsoleShell({ children }: { children: React.ReactNode }) {
@@ -65,8 +65,8 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
   const mainNavItems: NavItem[] = [
     {
-      titleKey: 'nav.projects',
-      href: ROUTES.CONSOLE.PROJECTS,
+      titleKey: 'nav.workspaces',
+      href: ROUTES.CONSOLE.WORKSPACES,
       icon: FolderKanban,
     },
   ];

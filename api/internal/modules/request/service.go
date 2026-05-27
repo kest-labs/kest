@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
+	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/modules/collection"
 )
 
@@ -20,6 +23,7 @@ type Service interface {
 	Create(ctx context.Context, workspaceID string, req *CreateRequestRequest) (*Request, error)
 	GetByID(ctx context.Context, id, collectionID, workspaceID string) (*Request, error)
 	Update(ctx context.Context, id, collectionID, workspaceID string, req *UpdateRequestRequest) (*Request, error)
+	GenDoc(ctx context.Context, id, collectionID, workspaceID string, lang string) (*Request, error)
 	Delete(ctx context.Context, id, collectionID, workspaceID string) error
 	List(ctx context.Context, collectionID, workspaceID string, page, perPage int) ([]*Request, int64, error)
 	Move(ctx context.Context, id, collectionID, workspaceID string, req *MoveRequestRequest) (*Request, error)
@@ -62,20 +66,24 @@ func (s *service) Create(ctx context.Context, workspaceID string, req *CreateReq
 	pathParams := s.parsePathParams(req.PathParams)
 
 	request := &Request{
-		CollectionID: req.CollectionID,
-		Name:         req.Name,
-		Description:  req.Description,
-		Method:       method,
-		URL:          req.URL,
-		Headers:      req.Headers,
-		QueryParams:  req.QueryParams,
-		PathParams:   pathParams,
-		Body:         req.Body,
-		BodyType:     bodyType,
-		Auth:         req.Auth,
-		PreRequest:   req.PreRequest,
-		Test:         req.Test,
-		SortOrder:    req.SortOrder,
+		CollectionID:  req.CollectionID,
+		Name:          req.Name,
+		Description:   req.Description,
+		Method:        method,
+		URL:           req.URL,
+		Headers:       req.Headers,
+		QueryParams:   req.QueryParams,
+		PathParams:    pathParams,
+		Body:          req.Body,
+		BodyType:      bodyType,
+		Auth:          req.Auth,
+		DocMarkdown:   req.DocMarkdown,
+		DocMarkdownZh: req.DocMarkdownZh,
+		DocMarkdownEn: req.DocMarkdownEn,
+		DocSource:     defaultRequestDocSource(req.DocSource),
+		PreRequest:    req.PreRequest,
+		Test:          req.Test,
+		SortOrder:     req.SortOrder,
 	}
 
 	if err := s.repo.Create(ctx, request); err != nil {
@@ -144,6 +152,25 @@ func (s *service) Update(ctx context.Context, id, collectionID, workspaceID stri
 	if req.Auth != nil {
 		request.Auth = req.Auth
 	}
+	now := time.Now()
+	if req.DocMarkdown != nil {
+		request.DocMarkdown = *req.DocMarkdown
+		request.DocUpdatedAt = &now
+		request.DocSource = string(DocSourceManual)
+	}
+	if req.DocMarkdownZh != nil {
+		request.DocMarkdownZh = *req.DocMarkdownZh
+		request.DocUpdatedAtZh = &now
+		request.DocSource = string(DocSourceManual)
+	}
+	if req.DocMarkdownEn != nil {
+		request.DocMarkdownEn = *req.DocMarkdownEn
+		request.DocUpdatedAtEn = &now
+		request.DocSource = string(DocSourceManual)
+	}
+	if req.DocSource != nil {
+		request.DocSource = defaultRequestDocSource(*req.DocSource)
+	}
 	if req.PreRequest != nil {
 		request.PreRequest = *req.PreRequest
 	}
@@ -152,6 +179,62 @@ func (s *service) Update(ctx context.Context, id, collectionID, workspaceID stri
 	}
 	if req.SortOrder != nil {
 		request.SortOrder = *req.SortOrder
+	}
+
+	if err := s.repo.Update(ctx, request); err != nil {
+		return nil, err
+	}
+
+	return request, nil
+}
+
+func (s *service) GenDoc(ctx context.Context, id, collectionID, workspaceID string, lang string) (*Request, error) {
+	if err := s.ensureWorkspaceCollection(ctx, collectionID, workspaceID); err != nil {
+		return nil, err
+	}
+
+	request, err := s.repo.GetByIDAndCollection(ctx, id, collectionID)
+	if err != nil {
+		return nil, err
+	}
+	if request == nil {
+		return nil, ErrRequestNotFound
+	}
+
+	cfg := config.GlobalConfig
+	if cfg == nil || cfg.OpenAI.APIKey == "" {
+		return nil, fmt.Errorf("AI documentation generation is not configured (OPENAI_API_KEY missing)")
+	}
+
+	if lang != "zh" {
+		lang = "en"
+	}
+
+	client := &llmClient{
+		apiKey:  cfg.OpenAI.APIKey,
+		baseURL: cfg.OpenAI.BaseURL,
+		model:   cfg.OpenAI.Model,
+		timeout: 60 * time.Second,
+	}
+	markdown, err := client.complete(ctx, getDocSystemPrompt(lang), buildDocPrompt(request))
+	if err != nil {
+		return nil, err
+	}
+	markdown = cleanGeneratedMarkdown(markdown)
+	if markdown == "" {
+		return nil, fmt.Errorf("AI documentation generation returned empty content")
+	}
+
+	now := time.Now()
+	request.DocMarkdown = markdown
+	request.DocSource = string(DocSourceAI)
+	request.DocUpdatedAt = &now
+	if lang == "zh" {
+		request.DocMarkdownZh = markdown
+		request.DocUpdatedAtZh = &now
+	} else {
+		request.DocMarkdownEn = markdown
+		request.DocUpdatedAtEn = &now
 	}
 
 	if err := s.repo.Update(ctx, request); err != nil {
@@ -273,4 +356,11 @@ func (s *service) parsePathParams(params interface{}) map[string]string {
 	default:
 		return nil
 	}
+}
+
+func defaultRequestDocSource(value string) string {
+	if value == string(DocSourceAI) {
+		return value
+	}
+	return string(DocSourceManual)
 }

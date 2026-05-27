@@ -429,6 +429,7 @@ func normalizeCLITokenScopes(scopes []string) ([]string, error) {
 			CLITokenScopeEnvironmentRead,
 			CLITokenScopeTestCaseRun,
 			CLITokenScopeFlowRun,
+			CLITokenScopeFlowWrite,
 		}, nil
 	}
 

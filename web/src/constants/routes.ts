@@ -7,7 +7,7 @@ export const ROUTES = {
     ABOUT: '/about',
     CONTACT: '/contact',
     API_SPEC_SHARE: '/share/api-spec/:slug',
-    PROJECT_INVITE: '/invite/project/:slug',
+    WORKSPACE_INVITE: '/invite/workspace/:slug',
   },
 
   // 认证相关路由。
@@ -33,17 +33,6 @@ export const ROUTES = {
     WORKSPACE_HISTORIES: '/workspace/:workspaceId/histories',
     WORKSPACE_FLOWS: '/workspace/:workspaceId/flows',
     WORKSPACE_TEST_CASES: '/workspace/:workspaceId/test-cases',
-    PROJECTS: '/workspace',
-    PROJECT_DETAIL: '/project/:projectId',
-    PROJECT_COLLECTIONS: '/project/:projectId/collections',
-    PROJECT_CATEGORIES: '/project/:projectId/categories',
-    PROJECT_ENVIRONMENTS: '/project/:projectId/environments',
-    PROJECT_MEMBERS: '/project/:projectId/members',
-    PROJECT_KEYS: '/project/:projectId/keys',
-    PROJECT_API_SPECS: '/project/:projectId/api-specs',
-    PROJECT_HISTORIES: '/project/:projectId/histories',
-    PROJECT_FLOWS: '/project/:projectId/flows',
-    PROJECT_TEST_CASES: '/project/:projectId/test-cases',
     PROFILE: '/console/profile',
     SETTINGS: '/console/settings',
   },
@@ -86,91 +75,64 @@ export function getConsoleRoute(route: ConsoleRoutes): string {
   return ROUTES.CONSOLE[route];
 }
 
-// 项目详情动态路由 helper。
-// 作用：为 `/project/:projectId` 生成稳定地址，作为项目 stats 与详情页入口。
-export function buildWorkspaceDashboardRoute(): string {
-  return ROUTES.CONSOLE.WORKSPACES;
-}
-
+// 工作区详情动态路由 helper。
+// 作用：为 `/workspace/:workspaceId` 生成稳定地址，作为工作区 stats 与详情页入口。
 export function buildWorkspaceDetailRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_DETAIL, { workspaceId });
 }
 
+// 工作区 collections 动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/collections` 生成稳定地址，供工作区一级导航复用。
 export function buildWorkspaceCollectionsRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_COLLECTIONS, { workspaceId });
 }
 
+// 工作区环境动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/environments` 生成稳定地址，作为环境管理页入口。
 export function buildWorkspaceEnvironmentsRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_ENVIRONMENTS, { workspaceId });
 }
 
+// 工作区成员动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/members` 生成稳定地址，作为成员管理页入口。
 export function buildWorkspaceMembersRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_MEMBERS, { workspaceId });
 }
 
+// 工作区 Keys 动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/keys` 生成稳定地址，作为 CLI/Web 连接密钥管理入口。
 export function buildWorkspaceKeysRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_KEYS, { workspaceId });
 }
 
+// 工作区分类动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/categories` 生成稳定地址，作为分类管理页入口。
 export function buildWorkspaceCategoriesRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_CATEGORIES, { workspaceId });
 }
 
+// 工作区 API 规格动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/api-specs` 生成稳定地址，避免业务组件手写模板字符串。
 export function buildWorkspaceApiSpecsRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_API_SPECS, { workspaceId });
 }
 
+// 工作区 Histories 动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/histories` 生成稳定地址，供工作区一级导航复用。
 export function buildWorkspaceHistoriesRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_HISTORIES, { workspaceId });
 }
 
+// 工作区 Flows 动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/flows` 生成稳定地址，供工作区一级导航复用。
 export function buildWorkspaceFlowsRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_FLOWS, { workspaceId });
 }
 
+// 工作区 Test Cases 动态路由 helper。
+// 作用：为 `/workspace/:workspaceId/test-cases` 生成稳定地址，避免业务组件手写模板字符串。
 export function buildWorkspaceTestCasesRoute(workspaceId: string | number): string {
   return buildRoute(ROUTES.CONSOLE.WORKSPACE_TEST_CASES, { workspaceId });
-}
-
-// Legacy project route helpers kept for old public/internal callers.
-export function buildProjectDetailRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_DETAIL, { projectId });
-}
-
-export function buildProjectCollectionsRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_COLLECTIONS, { projectId });
-}
-
-export function buildProjectEnvironmentsRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_ENVIRONMENTS, { projectId });
-}
-
-export function buildProjectMembersRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_MEMBERS, { projectId });
-}
-
-export function buildProjectKeysRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_KEYS, { projectId });
-}
-
-export function buildProjectCategoriesRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_CATEGORIES, { projectId });
-}
-
-export function buildProjectApiSpecsRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_API_SPECS, { projectId });
-}
-
-export function buildProjectHistoriesRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_HISTORIES, { projectId });
-}
-
-export function buildProjectFlowsRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_FLOWS, { projectId });
-}
-
-export function buildProjectTestCasesRoute(projectId: string | number): string {
-  return buildRoute(ROUTES.CONSOLE.PROJECT_TEST_CASES, { projectId });
 }
 
 // API spec 分享页路由 helper。
@@ -179,8 +141,7 @@ export function buildApiSpecShareRoute(slug: string): string {
   return buildRoute(ROUTES.SITE.API_SPEC_SHARE, { slug });
 }
 
-// 项目邀请页路由 helper。
-// 作用：为公开邀请页生成稳定地址，方便成员管理页复制可分享链接。
-export function buildProjectInviteRoute(slug: string): string {
-  return buildRoute(ROUTES.SITE.PROJECT_INVITE, { slug });
+// Workspace invitation page route helper.
+export function buildWorkspaceInviteRoute(slug: string): string {
+  return buildRoute(ROUTES.SITE.WORKSPACE_INVITE, { slug });
 }

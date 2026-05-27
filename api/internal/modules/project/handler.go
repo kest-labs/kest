@@ -37,6 +37,10 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 	}
 }
 
+func (h *Handler) Service() Service {
+	return h.service
+}
+
 func (h *Handler) SetWorkspaceTokenValidator(validator middleware.WorkspaceCLITokenValidator) {
 	h.workspaceTokenValidator = validator
 }
@@ -47,6 +51,205 @@ func (h *Handler) SetSpecSyncer(syncer SpecSyncer) {
 
 func (h *Handler) SetHistorySyncer(syncer CLIHistorySyncer) {
 	h.historySyncer = syncer
+}
+
+func (h *Handler) CreateWorkspaceDashboard(c *gin.Context) {
+	var req CreateWorkspaceDashboardRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	uid, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	project, err := h.service.Create(c.Request.Context(), uid, &CreateProjectRequest{
+		Name:     req.Name,
+		Slug:     req.Slug,
+		Platform: req.Platform,
+	})
+	if err != nil {
+		if errors.Is(err, ErrSlugAlreadyExists) {
+			response.Error(c, http.StatusConflict, err.Error())
+			return
+		}
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Created(c, toWorkspaceDashboardResponse(project))
+}
+
+func (h *Handler) ListWorkspaceDashboard(c *gin.Context) {
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	page := handler.QueryInt(c, "page", 1)
+	perPage := handler.QueryInt(c, "per_page", 20)
+
+	projects, total, err := h.service.List(c.Request.Context(), userID, page, perPage)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"items": toWorkspaceDashboardResponseSlice(projects),
+		"meta": gin.H{
+			"total":    total,
+			"page":     page,
+			"per_page": perPage,
+			"pages":    (total + int64(perPage) - 1) / int64(perPage),
+		},
+	})
+}
+
+func (h *Handler) GetWorkspaceDashboard(c *gin.Context) {
+	project, ok := h.workspaceDashboardBacking(c)
+	if !ok {
+		return
+	}
+
+	response.Success(c, toWorkspaceDashboardResponse(project))
+}
+
+func (h *Handler) UpdateWorkspaceDashboard(c *gin.Context) {
+	project, ok := h.workspaceDashboardBacking(c)
+	if !ok {
+		return
+	}
+
+	var req UpdateWorkspaceDashboardRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	updated, err := h.service.Update(c.Request.Context(), project.ID, &UpdateProjectRequest{
+		Name:     req.Name,
+		Platform: req.Platform,
+		Status:   req.Status,
+	})
+	if err != nil {
+		if errors.Is(err, ErrProjectNotFound) {
+			response.NotFound(c, "Workspace not found")
+			return
+		}
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, toWorkspaceDashboardResponse(updated))
+}
+
+func (h *Handler) DeleteWorkspaceDashboard(c *gin.Context) {
+	project, ok := h.workspaceDashboardBacking(c)
+	if !ok {
+		return
+	}
+
+	if err := h.service.Delete(c.Request.Context(), project.ID); err != nil {
+		if errors.Is(err, ErrProjectNotFound) {
+			response.NotFound(c, "Workspace not found")
+			return
+		}
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "workspace deleted"})
+}
+
+func (h *Handler) GetWorkspaceStats(c *gin.Context) {
+	project, ok := h.workspaceDashboardBacking(c)
+	if !ok {
+		return
+	}
+
+	stats, err := h.service.GetStats(c.Request.Context(), project.ID)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, stats)
+}
+
+func (h *Handler) SyncWorkspaceSpecsFromCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	if h.specSyncer == nil {
+		response.Error(c, http.StatusServiceUnavailable, "CLI spec sync is not configured")
+		return
+	}
+
+	var req CLISpecSyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	result, err := h.specSyncer.SyncSpecsFromCLI(c.Request.Context(), workspaceID, &req)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func (h *Handler) SyncWorkspaceHistoryFromCLI(c *gin.Context) {
+	project, ok := h.workspaceDashboardBacking(c)
+	if !ok {
+		return
+	}
+
+	if h.historySyncer == nil {
+		response.Error(c, http.StatusServiceUnavailable, "CLI history sync is not configured")
+		return
+	}
+
+	var req CLIHistorySyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	createdBy, ok := getCLITokenCreatedBy(c)
+	if !ok {
+		response.Unauthorized(c)
+		return
+	}
+
+	result, err := h.historySyncer.SyncHistoryFromCLI(c.Request.Context(), project.ID, createdBy, &req)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func (h *Handler) workspaceDashboardBacking(c *gin.Context) (*Project, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return nil, false
+	}
+
+	project, err := h.service.GetByWorkspaceID(c.Request.Context(), workspaceID)
+	if err != nil {
+		if errors.Is(err, ErrProjectNotFound) {
+			response.NotFound(c, "Workspace not found")
+			return nil, false
+		}
+		response.InternalServerError(c, err.Error(), err)
+		return nil, false
+	}
+
+	return project, true
 }
 
 // Create handles POST /projects

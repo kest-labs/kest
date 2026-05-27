@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/output"
 	"github.com/kest-labs/kest/cli/internal/platformsync"
@@ -26,21 +27,28 @@ import (
 )
 
 var (
-	runParallel  bool
-	runJobs      int
-	runVerbose   bool
-	runDebugVars bool
-	runVars      []string
-	execTimeout  int
-	runFailFast  bool
-	runStrict    bool
-	runEnv       string
-	runHTML      bool
-	runOpen      bool
+	runParallel      bool
+	runJobs          int
+	runVerbose       bool
+	runDebugVars     bool
+	runVars          []string
+	execTimeout      int
+	runFailFast      bool
+	runStrict        bool
+	runEnv           string
+	runBaseURL       string
+	runProfile       string
+	runSync          bool
+	runReportJSON    string
+	runReportJUnit   string
+	runHTML          bool
+	runOpen          bool
+	runWorkspaceFlow string
+	runRunnerType    string
 )
 
 var runCmd = &cobra.Command{
-	Use:     "run [file]",
+	Use:     "run [targets...]",
 	Aliases: []string{"r"},
 	Short:   "Run a Kest scenario file (.kest) or a Markdown flow file (.flow.md)",
 	Long: `Execute API test scenarios defined in .kest or .flow.md files.
@@ -63,12 +71,15 @@ Kest Flow (.flow.md) allows you to use standard Markdown to document and test yo
   # Generate and open the HTML report in your browser
   kest run login.flow.md --open
 
+  # Run every enabled flow stored in the Kest web workspace
+  kest run --workspace-flow all --sync
+
   # Run a legacy .kest scenario
   kest run auth.kest`,
-	Args:         cobra.ExactArgs(1),
+	Args:         cobra.ArbitraryArgs,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runScenario(args[0])
+		return runScenarios(cmd, args)
 	},
 }
 
@@ -82,12 +93,226 @@ func init() {
 	runCmd.Flags().BoolVar(&runFailFast, "fail-fast", false, "Stop execution on first failed step")
 	runCmd.Flags().BoolVar(&runStrict, "strict", false, "Enable strict variable validation (error on undefined variables)")
 	runCmd.Flags().StringVarP(&runEnv, "env", "e", "", "Override active environment for this run (e.g. staging, production)")
+	runCmd.Flags().StringVar(&runBaseURL, "base-url", "", "Override active environment base URL for this run")
+	runCmd.Flags().StringVar(&runProfile, "profile", "", "Flow profile from .kest/flow.config.yaml (default: KEST_PROFILE or local)")
+	runCmd.Flags().BoolVar(&runSync, "sync", false, "Sync flow definitions and run results to the Kest web workspace")
+	runCmd.Flags().StringVar(&runReportJSON, "report-json", "", "Write aggregate flow results to a JSON file")
+	runCmd.Flags().StringVar(&runReportJUnit, "report-junit", "", "Write aggregate flow results to a JUnit XML file")
 	runCmd.Flags().BoolVar(&runHTML, "html", false, "Generate an HTML report after the run")
 	runCmd.Flags().BoolVar(&runOpen, "open", false, "Generate and open an HTML report after the run")
+	runCmd.Flags().StringVar(&runWorkspaceFlow, "workspace-flow", "", "Run enabled flow markdown from the Kest web workspace (all, flow id, source id, or source path)")
+	runCmd.Flags().StringVar(&runRunnerType, "runner-type", "", "Runner type for synced web flow results: test_machine or server_ci")
 	rootCmd.AddCommand(runCmd)
 }
 
+func runScenarios(cmd *cobra.Command, args []string) error {
+	cfg, root, err := loadFlowRunConfig()
+	if err != nil {
+		return err
+	}
+	profileName, profile, err := selectFlowRunProfile(cfg, runProfile)
+	if err != nil {
+		return err
+	}
+	applyRunProfile(cmd, profile)
+
+	conf := loadConfigWarn()
+	effectiveEnv := conf.ActiveEnv
+	effectiveBaseURL := strings.TrimSpace(runBaseURL)
+	if effectiveBaseURL == "" {
+		effectiveBaseURL = strings.TrimSpace(os.Getenv("KEST_BASE_URL"))
+	}
+	if effectiveBaseURL == "" {
+		effectiveBaseURL = conf.GetActiveEnv().BaseURL
+	}
+	workspaceID := ""
+	if runSync || strings.TrimSpace(runWorkspaceFlow) != "" {
+		var err error
+		workspaceID, err = validateFlowSyncConfig(conf)
+		if err != nil {
+			return err
+		}
+	}
+
+	targets := args
+	webFlowByPath := map[string]platformsync.RunnableFlow{}
+	cleanupWebFlows := func() {}
+	if strings.TrimSpace(runWorkspaceFlow) != "" {
+		var err error
+		targets, webFlowByPath, cleanupWebFlows, err = prepareWorkspaceFlowTargets(conf, workspaceID, runWorkspaceFlow)
+		if err != nil {
+			return err
+		}
+		defer cleanupWebFlows()
+	} else {
+		var err error
+		targets, err = resolveRunTargets(args, profile, root)
+		if err != nil {
+			return err
+		}
+	}
+
+	startedAt := time.Now().UTC()
+	results := make([]runExecutionResult, 0, len(targets))
+	var runErrs []string
+	for _, target := range targets {
+		result, err := runScenarioWithResult(target)
+		if result == nil {
+			result = &runExecutionResult{
+				SourcePath: target,
+				Err:        err,
+				StartedAt:  time.Now().UTC(),
+				FinishedAt: time.Now().UTC(),
+			}
+		}
+		if webFlow, ok := webFlowByPath[target]; ok {
+			result.SourceID = runnableFlowSourceID(webFlow)
+			result.SourcePath = webFlow.SourcePath
+			result.FlowID = webFlow.SourceID
+			result.FlowName = webFlow.Name
+		}
+		results = append(results, *result)
+		if err != nil {
+			runErrs = append(runErrs, fmt.Sprintf("%s: %v", target, err))
+			if runFailFast {
+				break
+			}
+		}
+	}
+	finishedAt := time.Now().UTC()
+
+	reportTargets := flowReportTargets{JSON: runReportJSON, JUnit: runReportJUnit}
+	if reportTargets.JSON == "" {
+		reportTargets.JSON = profile.Reports.JSON
+	}
+	if reportTargets.JUnit == "" {
+		reportTargets.JUnit = profile.Reports.JUnit
+	}
+	if err := writeFlowReports(flowSuiteResult{
+		Profile:     profileName,
+		Environment: effectiveEnv,
+		BaseURL:     effectiveBaseURL,
+		StartedAt:   startedAt,
+		FinishedAt:  finishedAt,
+		Files:       results,
+	}, reportTargets); err != nil {
+		return err
+	}
+
+	if runSync {
+		if err := syncFlowDefinitions(conf, workspaceID, results, profileName, root); err != nil {
+			return err
+		}
+		if err := syncFlowRuns(conf, workspaceID, results, profileName, effectiveEnv, effectiveBaseURL, root, normalizeCLIRunnerType(runRunnerType)); err != nil {
+			return err
+		}
+	}
+
+	if len(runErrs) > 0 {
+		return fmt.Errorf("flow suite failed: %s", strings.Join(runErrs, "; "))
+	}
+	return nil
+}
+
+func prepareWorkspaceFlowTargets(conf *config.Config, workspaceID string, selector string) ([]string, map[string]platformsync.RunnableFlow, func(), error) {
+	flows, err := platformsync.ListRunnableFlows(conf, workspaceID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	selected := selectRunnableFlows(flows, selector)
+	if len(selected) == 0 {
+		return nil, nil, nil, fmt.Errorf("no enabled Kest web flows matched %q", selector)
+	}
+
+	dir, err := os.MkdirTemp("", "kest-web-flows-*")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cleanup := func() {
+		_ = os.RemoveAll(dir)
+	}
+
+	targets := make([]string, 0, len(selected))
+	webFlowByPath := make(map[string]platformsync.RunnableFlow, len(selected))
+	for index, flow := range selected {
+		name := sanitizeFlowFileName(flow.SourcePath)
+		if name == "" {
+			name = sanitizeFlowFileName(flow.Name)
+		}
+		if name == "" {
+			name = fmt.Sprintf("flow-%d.flow.md", index+1)
+		}
+		if !strings.HasSuffix(name, ".flow.md") {
+			name += ".flow.md"
+		}
+		path := filepath.Join(dir, fmt.Sprintf("%03d-%s", index+1, name))
+		if err := os.WriteFile(path, []byte(flow.Definition), 0600); err != nil {
+			cleanup()
+			return nil, nil, nil, err
+		}
+		targets = append(targets, path)
+		webFlowByPath[path] = flow
+	}
+	return targets, webFlowByPath, cleanup, nil
+}
+
+func selectRunnableFlows(flows []platformsync.RunnableFlow, selector string) []platformsync.RunnableFlow {
+	selector = strings.TrimSpace(selector)
+	if selector == "" || strings.EqualFold(selector, "all") {
+		return flows
+	}
+	var selected []platformsync.RunnableFlow
+	for _, flow := range flows {
+		if flow.ID == selector || flow.SourceID == selector || flow.SourcePath == selector || flow.Name == selector {
+			selected = append(selected, flow)
+		}
+	}
+	return selected
+}
+
+func sanitizeFlowFileName(value string) string {
+	value = strings.TrimSpace(filepath.Base(value))
+	if value == "." || value == string(filepath.Separator) {
+		return ""
+	}
+	var b strings.Builder
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '.', r == '-', r == '_':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
+func applyRunProfile(cmd *cobra.Command, profile flowRunProfile) {
+	if !cmd.Flags().Changed("env") && strings.TrimSpace(os.Getenv("KEST_ENV")) == "" && profile.Env != "" {
+		runEnv = profile.Env
+	}
+	if !cmd.Flags().Changed("base-url") && strings.TrimSpace(os.Getenv("KEST_BASE_URL")) == "" && profile.BaseURL != "" {
+		runBaseURL = profile.BaseURL
+	}
+	if !cmd.Flags().Changed("strict") && profile.Strict != nil {
+		runStrict = *profile.Strict
+	}
+	if !cmd.Flags().Changed("fail-fast") && profile.FailFast != nil {
+		runFailFast = *profile.FailFast
+	}
+	if !cmd.Flags().Changed("sync") && profile.Sync != nil {
+		runSync = *profile.Sync
+	}
+}
+
 func runScenario(filePath string) error {
+	_, err := runScenarioWithResult(filePath)
+	return err
+}
+
+func runScenarioWithResult(filePath string) (*runExecutionResult, error) {
 	logger.StartSession(filepath.Base(filePath))
 	defer logger.EndSession()
 
@@ -104,14 +329,20 @@ func runScenario(filePath string) error {
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return err
+		result := &runExecutionResult{
+			SourcePath: filePath,
+			Err:        err,
+			StartedAt:  time.Now().UTC(),
+			FinishedAt: time.Now().UTC(),
+		}
+		return result, err
 	}
 
 	var blocks []KestBlock
 	if strings.HasSuffix(filePath, ".md") {
 		doc, legacy := ParseFlowDocument(string(content))
-		if len(doc.Steps) > 0 || len(doc.Edges) > 0 || doc.Meta.ID != "" {
-			return runFlowDocument(doc, filePath)
+		if len(doc.Setup) > 0 || len(doc.Steps) > 0 || len(doc.Teardown) > 0 || len(doc.Edges) > 0 || doc.Meta.ID != "" {
+			return runFlowDocumentWithResult(doc, filePath)
 		}
 		blocks = legacy
 	} else {
@@ -206,16 +437,28 @@ func runScenario(filePath string) error {
 
 	reportErr := maybeGenerateRunReport(filePath, summ, logPath)
 	maybeQueueRunHistory(filePath, summ, logPath)
+	result := &runExecutionResult{
+		SourcePath: filePath,
+		Summary:    summ,
+		LogPath:    logPath,
+		StartedAt:  summ.StartTime,
+		FinishedAt: time.Now().UTC(),
+	}
 	if summ.FailedTests > 0 {
 		if reportErr != nil {
-			return fmt.Errorf("test suite failed (also failed to generate HTML report: %w)", reportErr)
+			err := fmt.Errorf("test suite failed (also failed to generate HTML report: %w)", reportErr)
+			result.Err = err
+			return result, err
 		}
-		return fmt.Errorf("test suite failed")
+		err := fmt.Errorf("test suite failed")
+		result.Err = err
+		return result, err
 	}
 	if reportErr != nil {
-		return reportErr
+		result.Err = reportErr
+		return result, reportErr
 	}
-	return nil
+	return result, nil
 }
 
 func executeKestBlock(kb KestBlock, showOutput bool, verbose bool) summary.TestResult {
@@ -340,6 +583,11 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 }
 
 func runFlowDocument(doc FlowDoc, filePath string) error {
+	_, err := runFlowDocumentWithResult(doc, filePath)
+	return err
+}
+
+func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResult, error) {
 	// Apply @env from flow metadata if not already overridden by --env flag
 	if doc.Meta.Env != "" && runEnv == "" {
 		runEnv = doc.Meta.Env
@@ -398,8 +646,8 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 
 		if err := validateFlowStepVariables(step, captureOrigins, failedSteps); err != nil {
 			result := summary.TestResult{
-				Name:    stepName(step),
 				StepID:  step.ID,
+				Name:    stepName(step),
 				Method:  strings.ToUpper(step.Request.Method),
 				URL:     step.Request.URL,
 				Success: false,
@@ -435,8 +683,8 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 
 		if step.Request.Method == "" || step.Request.URL == "" {
 			result := summary.TestResult{
-				Name:    stepName(step),
 				StepID:  step.ID,
+				Name:    stepName(step),
 				Success: false,
 				Error:   fmt.Errorf("invalid step (missing METHOD/URL) at line %d", step.LineNum),
 			}
@@ -457,7 +705,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 		opts := step.Request
 		opts.Verbose = runVerbose
 		opts.DebugVars = runDebugVars
-		opts.StrictVars = true
+		opts.StrictVars = runStrict
 		opts.SilentOutput = true
 		opts.SkipHistorySync = true
 		if step.Retry > 0 {
@@ -472,6 +720,7 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 
 		res, err := executeFlowStepWithPoll(step, opts)
 		result := res
+		result.StepID = step.ID
 		result.Name = stepName(step)
 		result.StepID = step.ID
 		result.Success = (err == nil)
@@ -567,16 +816,31 @@ func runFlowDocument(doc FlowDoc, filePath string) error {
 
 	reportErr := maybeGenerateRunReport(filePath, summ, logPath)
 	maybeQueueRunHistory(filePath, summ, logPath)
+	result := &runExecutionResult{
+		SourcePath: filePath,
+		FlowID:     doc.Meta.ID,
+		FlowName:   doc.Meta.Name,
+		FlowDoc:    &doc,
+		Summary:    summ,
+		LogPath:    logPath,
+		StartedAt:  summ.StartTime,
+		FinishedAt: time.Now().UTC(),
+	}
 	if summ.FailedTests > 0 {
 		if reportErr != nil {
-			return fmt.Errorf("test suite failed (also failed to generate HTML report: %w)", reportErr)
+			err := fmt.Errorf("test suite failed (also failed to generate HTML report: %w)", reportErr)
+			result.Err = err
+			return result, err
 		}
-		return fmt.Errorf("test suite failed")
+		err := fmt.Errorf("test suite failed")
+		result.Err = err
+		return result, err
 	}
 	if reportErr != nil {
-		return reportErr
+		result.Err = reportErr
+		return result, reportErr
 	}
-	return nil
+	return result, nil
 }
 
 func orderFlowSteps(doc FlowDoc) []FlowStep {
@@ -647,6 +911,7 @@ func orderFlowSteps(doc FlowDoc) []FlowStep {
 func executeExecStep(step FlowStep) summary.TestResult {
 	startTime := time.Now()
 	result := summary.TestResult{
+		StepID:    step.ID,
 		Name:      stepName(step),
 		Method:    "EXEC",
 		StartTime: startTime,

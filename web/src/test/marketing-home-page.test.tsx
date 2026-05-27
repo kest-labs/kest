@@ -13,11 +13,11 @@ const mockContent: MarketingPageContent = {
     supportingNote: 'Open-source core note',
     mockup: {
       sidebarTitle: 'Workspace',
-      projectsLabel: 'Projects',
+      workspacesLabel: 'Workspaces',
       flowsLabel: 'Flows',
       environmentsLabel: 'Environments',
       teamspacesLabel: 'Team spaces',
-      activeProject: 'Payments Platform',
+      activeWorkspace: 'Payments Platform',
       flowOne: 'Auth chain',
       flowTwo: 'Checkout regression',
       environmentValue: 'Staging EU',
@@ -122,7 +122,7 @@ const mockContent: MarketingPageContent = {
         price: '$0',
         cadence: 'per user / month',
         cta: 'Start free',
-        features: ['Local projects', 'Basic flows', 'Seven-day history'],
+        features: ['Local workspaces', 'Basic flows', 'Seven-day history'],
       },
       {
         name: 'Starter',
@@ -130,7 +130,7 @@ const mockContent: MarketingPageContent = {
         price: '$8',
         cadence: 'per user / month',
         cta: 'Choose Starter',
-        features: ['Shared projects', 'Variables', 'Thirty-day history'],
+        features: ['Shared workspaces', 'Variables', 'Thirty-day history'],
       },
       {
         name: 'Business',

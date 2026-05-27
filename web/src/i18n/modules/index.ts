@@ -7,7 +7,7 @@ import metadata from './metadata/en-US';
 import dashboard from './dashboard/en-US';
 import test from './test/en-US';
 import marketing from './marketing/en-US';
-import project from './project/en-US';
+import workspace from './workspace/en-US';
 import console from './console/en-US';
 
 /**
@@ -24,7 +24,7 @@ export const messages = {
   dashboard,
   test,
   marketing,
-  project,
+  workspace,
   console,
 } as const;
 

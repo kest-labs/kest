@@ -13,6 +13,8 @@ type ExamplePO struct {
 	RequestID   string `gorm:"not null;index"`
 	Name        string `gorm:"size:100;not null"`
 	Description string `gorm:"size:500"`
+	Category    string `gorm:"size:32;default:general"`
+	Source      string `gorm:"size:20;default:manual"`
 	URL         string `gorm:"size:2000"` // Resolved URL with variables
 	Method      string `gorm:"size:10"`
 	Headers     string `gorm:"type:text"` // JSON array
@@ -20,6 +22,7 @@ type ExamplePO struct {
 	Body        string `gorm:"type:text"` // Request body
 	BodyType    string `gorm:"size:20"`   // none, json, form-data
 	Auth        string `gorm:"type:text"` // JSON object
+	Assertions  string `gorm:"type:text"`
 
 	// Response
 	ResponseStatus  int    `gorm:"default:0"` // HTTP status code
@@ -46,6 +49,8 @@ type Example struct {
 	RequestID   string      `json:"request_id"`
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
+	Category    string      `json:"category"`
+	Source      string      `json:"source"`
 	URL         string      `json:"url"`
 	Method      string      `json:"method"`
 	Headers     []KeyValue  `json:"headers"`
@@ -53,6 +58,7 @@ type Example struct {
 	Body        string      `json:"body"`
 	BodyType    string      `json:"body_type"`
 	Auth        *AuthConfig `json:"auth,omitempty"`
+	Assertions  []Assertion `json:"assertions"`
 
 	// Response
 	ResponseStatus  int               `json:"response_status"`
@@ -72,6 +78,14 @@ type KeyValue struct {
 	Type        string `json:"type,omitempty"`
 	Enabled     bool   `json:"enabled,omitempty"`
 	Description string `json:"description,omitempty"`
+}
+
+type Assertion struct {
+	Type     string `json:"type"`
+	Path     string `json:"path,omitempty"`
+	Operator string `json:"operator,omitempty"`
+	Expect   any    `json:"expect,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 type AuthConfig struct {
@@ -118,11 +132,13 @@ func (po *ExamplePO) toDomain() *Example {
 	var headers []KeyValue
 	var queryParams []KeyValue
 	var auth *AuthConfig
+	var assertions []Assertion
 	var responseHeaders map[string]string
 
 	_ = json.Unmarshal([]byte(po.Headers), &headers)
 	_ = json.Unmarshal([]byte(po.QueryParams), &queryParams)
 	_ = json.Unmarshal([]byte(po.Auth), &auth)
+	_ = json.Unmarshal([]byte(po.Assertions), &assertions)
 	_ = json.Unmarshal([]byte(po.ResponseHeaders), &responseHeaders)
 
 	bodyType := po.BodyType
@@ -135,6 +151,8 @@ func (po *ExamplePO) toDomain() *Example {
 		RequestID:       po.RequestID,
 		Name:            po.Name,
 		Description:     po.Description,
+		Category:        normalizeExampleCategory(po.Category),
+		Source:          normalizeExampleSource(po.Source),
 		URL:             po.URL,
 		Method:          po.Method,
 		Headers:         headers,
@@ -142,6 +160,7 @@ func (po *ExamplePO) toDomain() *Example {
 		Body:            po.Body,
 		BodyType:        bodyType,
 		Auth:            auth,
+		Assertions:      assertions,
 		ResponseStatus:  po.ResponseStatus,
 		ResponseHeaders: responseHeaders,
 		ResponseBody:    po.ResponseBody,
@@ -162,6 +181,7 @@ func newExamplePO(e *Example) *ExamplePO {
 	headers, _ := json.Marshal(e.Headers)
 	queryParams, _ := json.Marshal(e.QueryParams)
 	auth, _ := json.Marshal(e.Auth)
+	assertions, _ := json.Marshal(e.Assertions)
 	responseHeaders, _ := json.Marshal(e.ResponseHeaders)
 
 	return &ExamplePO{
@@ -169,6 +189,8 @@ func newExamplePO(e *Example) *ExamplePO {
 		RequestID:       e.RequestID,
 		Name:            e.Name,
 		Description:     e.Description,
+		Category:        normalizeExampleCategory(e.Category),
+		Source:          normalizeExampleSource(e.Source),
 		URL:             e.URL,
 		Method:          e.Method,
 		Headers:         string(headers),
@@ -176,6 +198,7 @@ func newExamplePO(e *Example) *ExamplePO {
 		Body:            e.Body,
 		BodyType:        e.BodyType,
 		Auth:            string(auth),
+		Assertions:      string(assertions),
 		ResponseStatus:  e.ResponseStatus,
 		ResponseHeaders: string(responseHeaders),
 		ResponseBody:    e.ResponseBody,
@@ -192,4 +215,20 @@ func toDomainList(poList []*ExamplePO) []*Example {
 		result[i] = po.toDomain()
 	}
 	return result
+}
+
+func normalizeExampleCategory(category string) string {
+	switch category {
+	case "positive", "negative", "boundary", "security":
+		return category
+	default:
+		return "general"
+	}
+}
+
+func normalizeExampleSource(source string) string {
+	if source == "ai" {
+		return "ai"
+	}
+	return "manual"
 }

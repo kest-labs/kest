@@ -1,0 +1,950 @@
+{
+  "version": 1,
+  "description": "Current legacy project terminology baseline. The default check fails when governed files add new project/projectId/projects terms.",
+  "governedPrefixes": [
+    "api/cmd/",
+    "api/database/",
+    "api/internal/",
+    "api/pkg/",
+    "api/routes/",
+    "api/test/",
+    "api/tests/",
+    "cli/",
+    "web/src/"
+  ],
+  "ignoredPrefixes": [
+    "api/docs/",
+    "cli/dist/",
+    "web/.next/",
+    "web/coverage/",
+    "web/node_modules/"
+  ],
+  "files": {
+    "api/cmd/tools/apidoc/parser/generator_test.go": {
+      "total": 2,
+      "matches": {
+        "projects": 2
+      }
+    },
+    "api/cmd/tools/apidoc/parser/routes.go": {
+      "total": 9,
+      "matches": {
+        "projects": 5,
+        "RequireProjectRole": 3,
+        "project": 1
+      }
+    },
+    "api/cmd/tools/apidoc/parser/routes_test.go": {
+      "total": 17,
+      "matches": {
+        "projects": 12,
+        "RequireProjectRole": 2,
+        "project": 3
+      }
+    },
+    "api/cmd/tools/seed_issues/main.go": {
+      "total": 2,
+      "matches": {
+        "projects": 1,
+        "project_id": 1
+      }
+    },
+    "api/database/migrations/2026_01_05_000000_create_projects_table.go": {
+      "total": 8,
+      "matches": {
+        "project": 2,
+        "createProjectsTable": 4,
+        "ProjectPO": 1,
+        "projects": 1
+      }
+    },
+    "api/database/migrations/2026_01_05_000001_create_project_members_table.go": {
+      "total": 6,
+      "matches": {
+        "createProjectMembersTable": 4,
+        "ProjectMemberPO": 1,
+        "project_members": 1
+      }
+    },
+    "api/database/migrations/2026_04_09_000018_create_project_cli_tokens_table.go": {
+      "total": 10,
+      "matches": {
+        "createProjectCLITokensTable": 4,
+        "projectCLITokenMigrationModel": 3,
+        "project_cli_tokens": 2,
+        "ProjectID": 1
+      }
+    },
+    "api/database/migrations/2026_04_19_000019_create_project_invitations_table.go": {
+      "total": 6,
+      "matches": {
+        "createProjectInvitationsTable": 4,
+        "ProjectInvitationPO": 1,
+        "project_invitations": 1
+      }
+    },
+    "api/database/migrations/2026_04_27_000021_migrate_legacy_uuid_columns_to_text.go": {
+      "total": 19,
+      "matches": {
+        "projects": 1,
+        "project_members": 2,
+        "project_id": 12,
+        "project_cli_tokens": 2,
+        "project_invitations": 2
+      }
+    },
+    "api/database/migrations/2026_04_27_000022_align_all_id_column_types.go": {
+      "total": 23,
+      "matches": {
+        "projects": 1,
+        "project_members": 3,
+        "project_id": 13,
+        "project_cli_tokens": 3,
+        "project_invitations": 3
+      }
+    },
+    "api/database/migrations/2026_04_30_000023_add_cli_sync_fields_to_history.go": {
+      "total": 2,
+      "matches": {
+        "project_id": 2
+      }
+    },
+    "api/database/migrations/2026_04_30_000024_convert_api_facing_increment_ids_to_text.go": {
+      "total": 3,
+      "matches": {
+        "project_members": 1,
+        "project_cli_tokens": 1,
+        "project_invitations": 1
+      }
+    },
+    "api/database/migrations/2026_05_08_000025_add_direct_invite_fields_to_project_invitations.go": {
+      "total": 6,
+      "matches": {
+        "addDirectInviteFieldsToProjectInvitations": 4,
+        "ProjectInvitationPO": 1,
+        "project_invitations": 1
+      }
+    },
+    "api/database/migrations/2026_05_18_000026_move_environments_to_workspaces.go": {
+      "total": 4,
+      "matches": {
+        "project_id": 4
+      }
+    },
+    "api/database/migrations/2026_05_18_000027_move_collections_to_workspaces.go": {
+      "total": 4,
+      "matches": {
+        "project_id": 4
+      }
+    },
+    "api/database/migrations/2026_05_18_000028_move_history_to_workspaces.go": {
+      "total": 5,
+      "matches": {
+        "project_id": 5
+      }
+    },
+    "api/database/migrations/2026_05_18_000029_move_categories_to_workspaces.go": {
+      "total": 4,
+      "matches": {
+        "project_id": 4
+      }
+    },
+    "api/database/migrations/2026_05_18_000030_move_api_specs_to_workspaces.go": {
+      "total": 8,
+      "matches": {
+        "renameProjectColumnToWorkspace": 2,
+        "renameWorkspaceColumnToProject": 2,
+        "project_id": 4
+      }
+    },
+    "api/database/migrations/2026_05_18_000031_move_cli_tokens_to_workspaces.go": {
+      "total": 8,
+      "matches": {
+        "project_cli_tokens": 4,
+        "project_id": 4
+      }
+    },
+    "api/database/migrations/2026_05_19_000032_move_flows_to_workspaces.go": {
+      "total": 4,
+      "matches": {
+        "project_id": 4
+      }
+    },
+    "api/database/migrations/2026_05_21_000032_add_workspace_id_to_projects.go": {
+      "total": 96,
+      "matches": {
+        "addWorkspaceIDToProjects": 4,
+        "projects": 9,
+        "projectWorkspaceColumn": 4,
+        "project_members": 2,
+        "backfillProjectWorkspaceIDs": 2,
+        "migrationProject": 7,
+        "migrationProjectMember": 5,
+        "ProjectID": 1,
+        "project_id": 2,
+        "project": 21,
+        "loadProjectMembersForWorkspaceBackfill": 2,
+        "projectWorkspace": 11,
+        "resolveWorkspaceForProject": 2,
+        "syncWorkspaceMembersFromProject": 2,
+        "projectID": 4,
+        "createWorkspaceForProjectMigration": 2,
+        "projectSlug": 2,
+        "projectName": 2,
+        "uniqueWorkspaceSlugForProject": 2,
+        "shortProjectID": 3,
+        "projectMembers": 2,
+        "projectMember": 5
+      }
+    },
+    "api/database/migrations/2026_05_22_000034_add_workspace_id_to_project_invitations.go": {
+      "total": 18,
+      "matches": {
+        "addWorkspaceIDToProjectInvitations": 4,
+        "ProjectInvitationPO": 1,
+        "project_invitations": 5,
+        "projects": 5,
+        "project_id": 3
+      }
+    },
+    "api/database/seeders/project_seeder.go": {
+      "total": 14,
+      "matches": {
+        "project": 7,
+        "projectSeeder": 4,
+        "project_seeder": 1,
+        "Project": 2
+      }
+    },
+    "api/internal/app/app.go": {
+      "total": 5,
+      "matches": {
+        "project": 2,
+        "Project": 3
+      }
+    },
+    "api/internal/infra/middleware/audit.go": {
+      "total": 2,
+      "matches": {
+        "projects": 2
+      }
+    },
+    "api/internal/infra/middleware/auth.go": {
+      "total": 13,
+      "matches": {
+        "project": 2,
+        "projectID": 3,
+        "RequireProjectRole": 2,
+        "projectIDStr": 5,
+        "Project": 1
+      }
+    },
+    "api/internal/modules/apispec/ai_draft_prompt.go": {
+      "total": 2,
+      "matches": {
+        "project": 1,
+        "project_conventions": 1
+      }
+    },
+    "api/internal/modules/apispec/ai_draft_service.go": {
+      "total": 3,
+      "matches": {
+        "useProjectConventions": 3
+      }
+    },
+    "api/internal/modules/apispec/cli_sync.go": {
+      "total": 8,
+      "matches": {
+        "project": 8
+      }
+    },
+    "api/internal/modules/audit/handler.go": {
+      "total": 1,
+      "matches": {
+        "projects": 1
+      }
+    },
+    "api/internal/modules/flow/handler.go": {
+      "total": 8,
+      "matches": {
+        "projects": 8
+      }
+    },
+    "api/internal/modules/flow/routes.go": {
+      "total": 1,
+      "matches": {
+        "projects": 1
+      }
+    },
+    "api/internal/modules/history/cli_sync.go": {
+      "total": 4,
+      "matches": {
+        "project": 4
+      }
+    },
+    "api/internal/modules/importer/markdown_test.go": {
+      "total": 41,
+      "matches": {
+        "project": 8,
+        "Project": 4,
+        "projects": 17,
+        "projectCollection": 4,
+        "getProject": 8
+      }
+    },
+    "api/internal/modules/member/dto.go": {
+      "total": 6,
+      "matches": {
+        "ProjectID": 3,
+        "project_id": 1,
+        "ProjectMemberPO": 2
+      }
+    },
+    "api/internal/modules/member/handler.go": {
+      "total": 23,
+      "matches": {
+        "projects": 1,
+        "RequireProjectRole": 4,
+        "projectID": 12,
+        "project": 6
+      }
+    },
+    "api/internal/modules/member/model.go": {
+      "total": 7,
+      "matches": {
+        "ProjectMemberPO": 3,
+        "project": 1,
+        "ProjectID": 1,
+        "project_id": 1,
+        "project_members": 1
+      }
+    },
+    "api/internal/modules/member/repository.go": {
+      "total": 23,
+      "matches": {
+        "ProjectMemberPO": 11,
+        "projectID": 9,
+        "project_id": 3
+      }
+    },
+    "api/internal/modules/member/service.go": {
+      "total": 26,
+      "matches": {
+        "projectID": 21,
+        "project": 3,
+        "ProjectMemberPO": 1,
+        "ProjectID": 1
+      }
+    },
+    "api/internal/modules/permission/routes.go": {
+      "total": 2,
+      "matches": {
+        "project": 2
+      }
+    },
+    "api/internal/modules/project/cli_history_sync_dto.go": {
+      "total": 1,
+      "matches": {
+        "project": 1
+      }
+    },
+    "api/internal/modules/project/cli_sync_dto.go": {
+      "total": 1,
+      "matches": {
+        "project": 1
+      }
+    },
+    "api/internal/modules/project/dto.go": {
+      "total": 32,
+      "matches": {
+        "project": 4,
+        "ProjectResponse": 5,
+        "ProjectListResponse": 8,
+        "projects": 7,
+        "Project": 7,
+        "Projects": 1
+      }
+    },
+    "api/internal/modules/project/handler.go": {
+      "total": 36,
+      "matches": {
+        "project": 25,
+        "projects": 10,
+        "Project": 1
+      }
+    },
+    "api/internal/modules/project/handler_cli_history_sync_test.go": {
+      "total": 1,
+      "matches": {
+        "project": 1
+      }
+    },
+    "api/internal/modules/project/model.go": {
+      "total": 25,
+      "matches": {
+        "project": 2,
+        "ProjectPO": 10,
+        "projects": 1,
+        "Project": 10,
+        "newProjectPO": 2
+      }
+    },
+    "api/internal/modules/project/provider.go": {
+      "total": 2,
+      "matches": {
+        "project": 2
+      }
+    },
+    "api/internal/modules/project/repository.go": {
+      "total": 77,
+      "matches": {
+        "project": 17,
+        "ProjectStats": 5,
+        "Project": 13,
+        "projectID": 4,
+        "newProjectPO": 2,
+        "ProjectPO": 7,
+        "project_id": 6,
+        "projectDeleteStatements": 2,
+        "projects": 8,
+        "project_members": 8,
+        "projectDeleteStatement": 3,
+        "project_invitations": 2
+      }
+    },
+    "api/internal/modules/project/repository_delete_test.go": {
+      "total": 35,
+      "matches": {
+        "project": 6,
+        "projects": 8,
+        "project_members": 3,
+        "project_id": 8,
+        "project_invitations": 3,
+        "projectID": 7
+      }
+    },
+    "api/internal/modules/project/routes.go": {
+      "total": 26,
+      "matches": {
+        "project": 2,
+        "Project": 1,
+        "projects": 18,
+        "RequireProjectRole": 5
+      }
+    },
+    "api/internal/modules/project/service.go": {
+      "total": 51,
+      "matches": {
+        "project": 26,
+        "Project": 11,
+        "projectID": 3,
+        "ProjectStats": 2,
+        "projectWorkspace": 7,
+        "createProjectWorkspace": 2
+      }
+    },
+    "api/internal/modules/project/service_test.go": {
+      "total": 55,
+      "matches": {
+        "project": 22,
+        "testProjectRepo": 10,
+        "Project": 10,
+        "projectBySlug": 3,
+        "updatedProject": 4,
+        "projectCopy": 3,
+        "projectID": 1,
+        "ProjectStats": 2
+      }
+    },
+    "api/internal/modules/projectinvite/dto.go": {
+      "total": 57,
+      "matches": {
+        "ProjectInvitationResponse": 5,
+        "ProjectID": 8,
+        "project_id": 4,
+        "ProjectInvitationUser": 1,
+        "ProjectName": 4,
+        "project_name": 2,
+        "ProjectSlug": 4,
+        "project_slug": 2,
+        "toProjectInvitationResponse": 1,
+        "ProjectInvitation": 3,
+        "buildProjectInvitationURLForBase": 2,
+        "toPublicProjectInvitationResponse": 1,
+        "project": 16,
+        "ProjectSummary": 2,
+        "toReceivedProjectInvitationResponse": 1,
+        "buildProjectInvitationURL": 1
+      }
+    },
+    "api/internal/modules/projectinvite/handler.go": {
+      "total": 23,
+      "matches": {
+        "projects": 6,
+        "RequireProjectRole": 3,
+        "project": 4,
+        "project_invitations": 4,
+        "projectID": 6
+      }
+    },
+    "api/internal/modules/projectinvite/model.go": {
+      "total": 34,
+      "matches": {
+        "ProjectInvitationPO": 6,
+        "project": 2,
+        "ProjectID": 6,
+        "ProjectInvitationUserPO": 4,
+        "project_invitations": 1,
+        "ProjectInvitation": 7,
+        "project_id": 1,
+        "ProjectInvitationUser": 4,
+        "ProjectSummary": 2,
+        "newProjectInvitationPO": 1
+      }
+    },
+    "api/internal/modules/projectinvite/repository.go": {
+      "total": 98,
+      "matches": {
+        "project": 4,
+        "ProjectInvitation": 23,
+        "projectID": 15,
+        "ProjectSummary": 6,
+        "newProjectInvitationPO": 2,
+        "ProjectInvitationPO": 15,
+        "project_id": 6,
+        "ProjectPO": 3,
+        "projects": 2,
+        "ProjectMemberPO": 5,
+        "ProjectID": 7,
+        "projectMember": 4,
+        "looksLikeProjectMemberConflict": 4,
+        "existingProjectMember": 2
+      }
+    },
+    "api/internal/modules/projectinvite/service.go": {
+      "total": 67,
+      "matches": {
+        "project": 8,
+        "projectID": 16,
+        "ProjectInvitationResponse": 11,
+        "projectSummary": 14,
+        "ProjectInvitation": 4,
+        "ProjectID": 8,
+        "toProjectInvitationResponse": 3,
+        "toReceivedProjectInvitationResponse": 1,
+        "toPublicProjectInvitationResponse": 1,
+        "ProjectSummary": 1
+      }
+    },
+    "api/internal/modules/projectinvite/service_test.go": {
+      "total": 80,
+      "matches": {
+        "testProjectInviteRepo": 25,
+        "ProjectInvitation": 19,
+        "projectSummary": 2,
+        "ProjectSummary": 6,
+        "projectSummaries": 4,
+        "hasProjectMember": 2,
+        "revokedDirectProjectID": 4,
+        "projectID": 4,
+        "ProjectID": 10,
+        "project": 3,
+        "ProjectSlug": 1
+      }
+    },
+    "api/internal/modules/projectinvite/url_test.go": {
+      "total": 6,
+      "matches": {
+        "projects": 3,
+        "buildProjectInvitationURLForBase": 3
+      }
+    },
+    "api/internal/modules/testcase/handler.go": {
+      "total": 8,
+      "matches": {
+        "projects": 8
+      }
+    },
+    "api/internal/modules/testcase/routes.go": {
+      "total": 21,
+      "matches": {
+        "project": 1,
+        "projects": 11,
+        "RequireProjectRole": 9
+      }
+    },
+    "api/internal/modules/workspace/README.md": {
+      "total": 15,
+      "matches": {
+        "Project": 1,
+        "project": 3,
+        "ProjectPO": 1,
+        "projects": 8,
+        "projectID": 2
+      }
+    },
+    "api/internal/wiring/providers.go": {
+      "total": 5,
+      "matches": {
+        "project": 4,
+        "provideProjectHandler": 1
+      }
+    },
+    "api/internal/wiring/wire.go": {
+      "total": 4,
+      "matches": {
+        "project": 3,
+        "provideProjectHandler": 1
+      }
+    },
+    "api/internal/wiring/wire_gen.go": {
+      "total": 11,
+      "matches": {
+        "project": 3,
+        "projectRepository": 2,
+        "projectService": 2,
+        "projectHandler": 2,
+        "provideProjectHandler": 1,
+        "Project": 1
+      }
+    },
+    "api/pkg/dbutil/query_test.go": {
+      "total": 2,
+      "matches": {
+        "projects": 2
+      }
+    },
+    "api/routes/api.go": {
+      "total": 8,
+      "matches": {
+        "Project": 8
+      }
+    },
+    "api/test/enterprise_regression.md": {
+      "total": 20,
+      "matches": {
+        "Project": 9,
+        "projects": 11
+      }
+    },
+    "api/test/full_business_verification.md": {
+      "total": 24,
+      "matches": {
+        "Project": 3,
+        "project": 1,
+        "projects": 7,
+        "projectID": 10,
+        "project_id": 3
+      }
+    },
+    "api/test/kest_life_cycle_flow.md": {
+      "total": 25,
+      "matches": {
+        "project": 2,
+        "Project": 1,
+        "projects": 11,
+        "projectID": 11
+      }
+    },
+    "api/test/rbac_full_flow.kest": {
+      "total": 23,
+      "matches": {
+        "project": 1,
+        "Project": 4,
+        "projects": 8,
+        "projectID": 9,
+        "project_id": 1
+      }
+    },
+    "api/test/rbac_test.md": {
+      "total": 20,
+      "matches": {
+        "Project": 4,
+        "project": 2,
+        "projects": 6,
+        "projectID": 7,
+        "project_id": 1
+      }
+    },
+    "api/test/real_login_flow.md": {
+      "total": 8,
+      "matches": {
+        "Project": 2,
+        "projects": 3,
+        "projectID": 3
+      }
+    },
+    "api/tests/unit/support_test.go": {
+      "total": 7,
+      "matches": {
+        "project": 7
+      }
+    },
+    "cli/.goreleaser.yaml": {
+      "total": 2,
+      "matches": {
+        "project_name": 1,
+        "ProjectName": 1
+      }
+    },
+    "cli/AGENTS.md": {
+      "total": 5,
+      "matches": {
+        "project": 4,
+        "projects": 1
+      }
+    },
+    "cli/CHANGELOG.md": {
+      "total": 5,
+      "matches": {
+        "project": 3,
+        "Project": 2
+      }
+    },
+    "cli/FAQ.md": {
+      "total": 41,
+      "matches": {
+        "Project": 9,
+        "project": 20,
+        "projects": 7,
+        "ProjectID": 3,
+        "project_id": 2
+      }
+    },
+    "cli/FLOW_GUIDE.md": {
+      "total": 6,
+      "matches": {
+        "Project": 2,
+        "project": 3,
+        "project_id": 1
+      }
+    },
+    "cli/GUIDE.md": {
+      "total": 14,
+      "matches": {
+        "Project": 3,
+        "project": 9,
+        "projects": 2
+      }
+    },
+    "cli/README.md": {
+      "total": 8,
+      "matches": {
+        "project": 8
+      }
+    },
+    "cli/SCENARIO_GUIDE.md": {
+      "total": 7,
+      "matches": {
+        "projects": 2,
+        "Project": 3,
+        "project_id": 1,
+        "project": 1
+      }
+    },
+    "cli/VARIABLES.md": {
+      "total": 3,
+      "matches": {
+        "project_id": 1,
+        "project": 2
+      }
+    },
+    "cli/doc_gen.go": {
+      "total": 12,
+      "matches": {
+        "project": 4,
+        "projectName": 5,
+        "Project": 2,
+        "project_id": 1
+      }
+    },
+    "cli/explain.go": {
+      "total": 1,
+      "matches": {
+        "Project": 1
+      }
+    },
+    "cli/generate.go": {
+      "total": 1,
+      "matches": {
+        "Project": 1
+      }
+    },
+    "cli/grpc.go": {
+      "total": 5,
+      "matches": {
+        "projectID": 3,
+        "ProjectID": 1,
+        "Project": 1
+      }
+    },
+    "cli/guide.go": {
+      "total": 1,
+      "matches": {
+        "project": 1
+      }
+    },
+    "cli/history.go": {
+      "total": 7,
+      "matches": {
+        "project": 1,
+        "projects": 2,
+        "projectID": 3,
+        "ProjectID": 1
+      }
+    },
+    "cli/init.go": {
+      "total": 1,
+      "matches": {
+        "project": 1
+      }
+    },
+    "cli/internal/config/config.go": {
+      "total": 18,
+      "matches": {
+        "ProjectID": 2,
+        "ProjectPath": 2,
+        "project": 1,
+        "Project": 1,
+        "projectRoot": 9,
+        "findProjectRoot": 3
+      }
+    },
+    "cli/internal/logger/logger.go": {
+      "total": 4,
+      "matches": {
+        "project": 1,
+        "ProjectPath": 2,
+        "Project": 1
+      }
+    },
+    "cli/internal/platformsync/history.go": {
+      "total": 14,
+      "matches": {
+        "ProjectID": 3,
+        "Project": 2,
+        "project": 9
+      }
+    },
+    "cli/internal/platformsync/history_test.go": {
+      "total": 8,
+      "matches": {
+        "ProjectID": 4,
+        "project": 3,
+        "Project": 1
+      }
+    },
+    "cli/internal/report/html.go": {
+      "total": 4,
+      "matches": {
+        "Project": 2,
+        "ProjectPath": 2
+      }
+    },
+    "cli/internal/report/html_test.go": {
+      "total": 3,
+      "matches": {
+        "Project": 1,
+        "project": 2
+      }
+    },
+    "cli/internal/scanner/gin/scanner.go": {
+      "total": 1,
+      "matches": {
+        "RequireProjectRole": 1
+      }
+    },
+    "cli/internal/storage/sqlite.go": {
+      "total": 58,
+      "matches": {
+        "Project": 12,
+        "project": 41,
+        "includeAllProjects": 3,
+        "platformProjectID": 2
+      }
+    },
+    "cli/key.go": {
+      "total": 6,
+      "matches": {
+        "project": 5,
+        "ProjectPath": 1
+      }
+    },
+    "cli/key_test.go": {
+      "total": 1,
+      "matches": {
+        "project": 1
+      }
+    },
+    "cli/replay.go": {
+      "total": 3,
+      "matches": {
+        "Project": 2,
+        "ProjectID": 1
+      }
+    },
+    "cli/request.go": {
+      "total": 6,
+      "matches": {
+        "ProjectID": 4,
+        "Project": 2
+      }
+    },
+    "cli/root.go": {
+      "total": 2,
+      "matches": {
+        "project": 2
+      }
+    },
+    "cli/run.go": {
+      "total": 3,
+      "matches": {
+        "Project": 1,
+        "ProjectID": 2
+      }
+    },
+    "cli/suggest.go": {
+      "total": 2,
+      "matches": {
+        "ProjectID": 2
+      }
+    },
+    "cli/sync.go": {
+      "total": 34,
+      "matches": {
+        "syncPushProjectID": 3,
+        "syncConfigProject": 5,
+        "project": 4,
+        "Project": 2,
+        "projects": 2,
+        "projectID": 8,
+        "localProjectID": 6,
+        "ProjectID": 2,
+        "includeAllProjects": 2
+      }
+    },
+    "cli/sync_test.go": {
+      "total": 15,
+      "matches": {
+        "projectID": 5,
+        "Project": 2,
+        "project": 5,
+        "projectDir": 3
+      }
+    },
+    "cli/vars.go": {
+      "total": 4,
+      "matches": {
+        "project": 2,
+        "ProjectID": 2
+      }
+    },
+    "cli/why.go": {
+      "total": 1,
+      "matches": {
+        "Project": 1
+      }
+    }
+  },
+  "generatedAt": "2026-05-27T11:54:25.877Z"
+}

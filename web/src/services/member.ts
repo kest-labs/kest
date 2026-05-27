@@ -1,8 +1,7 @@
 import request from '@/http';
 import type {
-  AddProjectMemberRequest,
-  ProjectMember,
-  UpdateProjectMemberRequest,
+  WorkspaceMember,
+  UpdateWorkspaceMemberRequest,
 } from '@/types/member';
 
 // 请求体清理器。
@@ -13,38 +12,26 @@ const normalizePayload = <T extends object>(payload: T) =>
   ) as T;
 
 // Members 服务层。
-// 作用：集中封装项目成员列表、当前角色和成员管理相关 HTTP 请求。
+// 作用：集中封装工作区成员列表、当前角色和成员管理相关 HTTP 请求。
 export const memberService = {
-  create: (projectId: number | string, data: AddProjectMemberRequest) =>
-    request.post<ProjectMember>(`/workspaces/${projectId}/members`, normalizePayload(data)),
+  list: (workspaceId: number | string) =>
+    request.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`),
 
-  list: (projectId: number | string) =>
-    request.get<ProjectMember[]>(`/workspaces/${projectId}/members`),
-
-  getMyRole: async (projectId: number | string, currentUserId?: number | string) => {
-    const members = await request.get<ProjectMember[]>(`/workspaces/${projectId}/members`);
-    const normalizedCurrentUserId = currentUserId === undefined ? '' : String(currentUserId);
-    const currentMember = members.find(member => String(member.user_id) === normalizedCurrentUserId);
-
-    if (currentMember) {
-      return currentMember;
-    }
-
-    return members[0];
-  },
+  getMyRole: (workspaceId: number | string) =>
+    request.get<WorkspaceMember>(`/workspaces/${workspaceId}/members/me`),
 
   update: (
-    projectId: number | string,
+    workspaceId: number | string,
     userId: number | string,
-    data: UpdateProjectMemberRequest
+    data: UpdateWorkspaceMemberRequest
   ) =>
-    request.patch<ProjectMember>(
-      `/workspaces/${projectId}/members/${userId}`,
+    request.patch<WorkspaceMember>(
+      `/workspaces/${workspaceId}/members/${userId}`,
       normalizePayload(data)
     ),
 
-  delete: (projectId: number | string, userId: number | string) =>
-    request.delete<void>(`/workspaces/${projectId}/members/${userId}`),
+  delete: (workspaceId: number | string, userId: number | string) =>
+    request.delete<void>(`/workspaces/${workspaceId}/members/${userId}`),
 };
 
 export type MemberService = typeof memberService;

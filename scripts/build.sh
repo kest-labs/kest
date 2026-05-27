@@ -3,7 +3,7 @@
 # ===========================================
 # Kest Platform Build Script
 # ===========================================
-# Builds Vite frontend and embeds into Go binary
+# Builds the Next.js frontend and Go API binary
 
 set -e  # Exit on error
 
@@ -21,9 +21,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # ===========================================
-# 1. Build Frontend (Vite)
+# 1. Build Frontend (Next.js)
 # ===========================================
-echo -e "${BLUE}📦 Building frontend (Vite + React)...${NC}"
+echo -e "${BLUE}📦 Building frontend (Next.js + React)...${NC}"
 cd "$PROJECT_ROOT/web"
 
 # Install dependencies if needed
@@ -32,13 +32,13 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Build Vite
-echo "  ⚙️  Compiling Vite..."
+# Build Next.js
+echo "  ⚙️  Compiling Next.js..."
 npm run build
 
 # Check if build succeeded
-if [ ! -d "dist" ]; then
-    echo -e "${YELLOW}⚠️  Error: dist/ directory not found${NC}"
+if [ ! -d ".next" ]; then
+    echo -e "${YELLOW}⚠️  Error: .next/ directory not found${NC}"
     exit 1
 fi
 
@@ -46,9 +46,9 @@ echo -e "${GREEN}  ✅ Frontend built successfully${NC}"
 echo ""
 
 # ===========================================
-# 2. Build Backend (Go + embedded frontend)
+# 2. Build Backend (Go API)
 # ===========================================
-echo -e "${BLUE}🔨 Building backend (Go + embedded frontend)...${NC}"
+echo -e "${BLUE}🔨 Building backend (Go API)...${NC}"
 cd "$PROJECT_ROOT/api"
 
 # Download Go dependencies
@@ -57,8 +57,7 @@ go mod download
 
 # Build binary
 echo "  ⚙️  Compiling Go binary..."
-cd "$PROJECT_ROOT"
-CGO_ENABLED=0 go build -ldflags="-s -w" -o kest-server cmd/main.go
+CGO_ENABLED=0 go build -ldflags="-s -w" -o "$PROJECT_ROOT/kest-server" ./cmd/api
 
 # Check if build succeeded
 if [ ! -f "$PROJECT_ROOT/kest-server" ]; then
@@ -77,8 +76,17 @@ echo ""
 echo "📦 Binary: $PROJECT_ROOT/kest-server"
 echo "📏 Size: $(du -h "$PROJECT_ROOT/kest-server" | cut -f1)"
 echo ""
+
+# ===========================================
+# 3. Run local Kest flows
+# ===========================================
+echo -e "${BLUE}🧪 Running local Kest flow tests...${NC}"
+KEST_PROFILE=local "$PROJECT_ROOT/scripts/run-kest-flows.sh"
+echo -e "${GREEN}  ✅ Kest flow tests completed${NC}"
+echo ""
+
 echo "🚀 To run:"
 echo "   cd $PROJECT_ROOT"
 echo "   ./kest-server"
 echo ""
-echo "   Server will start on http://localhost:8080"
+echo "   Server will start on http://localhost:${PORT:-8025}"

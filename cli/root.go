@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
@@ -72,10 +73,38 @@ func loadConfigWarn() *config.Config {
 	conf, err := config.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to load config: %v\n", err)
-		return &config.Config{}
+		conf = &config.Config{}
 	}
-	if runEnv != "" {
-		conf.ActiveEnv = runEnv
+	if env := strings.TrimSpace(os.Getenv("KEST_PLATFORM_URL")); env != "" {
+		conf.PlatformURL = env
+	}
+	if env := strings.TrimSpace(os.Getenv("KEST_PLATFORM_TOKEN")); env != "" {
+		conf.PlatformToken = env
+	}
+	if env := strings.TrimSpace(os.Getenv("KEST_PLATFORM_WORKSPACE_ID")); env != "" {
+		conf.PlatformWorkspaceID = env
+	}
+	activeEnv := strings.TrimSpace(runEnv)
+	if activeEnv == "" {
+		activeEnv = strings.TrimSpace(os.Getenv("KEST_ENV"))
+	}
+	if activeEnv != "" {
+		conf.ActiveEnv = activeEnv
+	}
+	baseURL := strings.TrimSpace(runBaseURL)
+	if baseURL == "" {
+		baseURL = strings.TrimSpace(os.Getenv("KEST_BASE_URL"))
+	}
+	if baseURL != "" {
+		if conf.ActiveEnv == "" {
+			conf.ActiveEnv = "default"
+		}
+		if conf.Environments == nil {
+			conf.Environments = map[string]config.Environment{}
+		}
+		env := conf.Environments[conf.ActiveEnv]
+		env.BaseURL = strings.TrimRight(baseURL, "/")
+		conf.Environments[conf.ActiveEnv] = env
 	}
 	return conf
 }

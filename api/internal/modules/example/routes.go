@@ -12,6 +12,7 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 		// Example CRUD
 		exs.POST("", h.Create).Name("examples.create").WhereUUIDOrNumber("id", "cid", "rid")
 		exs.GET("", h.List).Name("examples.list").WhereUUIDOrNumber("id", "cid", "rid")
+		exs.POST("/ai-generate", h.GenerateAI).Name("examples.ai_generate").WhereUUIDOrNumber("id", "cid", "rid")
 
 		// Single example operations
 		exs.GET("/:eid", h.Get).Name("examples.show").WhereUUIDOrNumber("id", "cid", "rid", "eid")

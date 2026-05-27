@@ -1,4 +1,4 @@
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { WorkspaceWorkspacePage } from '@/components/features/workspace/workspace-workspace-page';
 
 interface WorkspaceHistoriesPageProps {
   params: Promise<{
@@ -10,8 +10,8 @@ interface WorkspaceHistoriesPageProps {
   }>;
 }
 
-// 项目 histories 工作区入口。
-// 作用：挂载项目历史工作区，并通过 `?item=` 支持选中具体记录。
+// 工作区 histories 工作区入口。
+// 作用：挂载工作区历史工作区，并通过 `?item=` 支持选中具体记录。
 export default async function WorkspaceHistoriesPage({
   params,
   searchParams,
@@ -22,12 +22,11 @@ export default async function WorkspaceHistoriesPage({
   const initialHistoryEntityType = entityType?.trim() ? entityType : null;
 
   return (
-    <ProjectWorkspacePage
-      projectId={workspaceId}
+    <WorkspaceWorkspacePage
+      workspaceId={workspaceId}
       module="histories"
       selectedItemId={selectedItemId}
       initialHistoryEntityType={initialHistoryEntityType}
-      routeScope="workspace"
     />
   );
 }
