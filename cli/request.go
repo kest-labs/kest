@@ -454,6 +454,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	result.Duration = resp.Duration
 	result.ResponseHeaders = cloneHeaderMap(resp.Headers)
 	result.ResponseBody = string(resp.Body)
+	result.RequestID = extractRequestID(resp.Headers, resp.Body)
 
 	var recordID int64
 
@@ -471,16 +472,20 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				query := NormalizeJSONPath(strings.TrimSpace(parts[1]))
 
 				// Currently only supporting JSON body capture via gjson
-				result := gjson.Get(string(resp.Body), query)
-				if result.Exists() {
+				captureResult := gjson.Get(string(resp.Body), query)
+				if captureResult.Exists() {
 					store.SaveVariable(&storage.Variable{
 						Name:        varName,
-						Value:       result.String(),
+						Value:       captureResult.String(),
 						Environment: conf.ActiveEnv,
 						Project:     conf.ProjectID,
 					})
-					fmt.Printf("Captured: %s = %s\n", varName, result.String())
-					logger.LogToSession("Captured: %s = %s", varName, result.String())
+					if result.Captures == nil {
+						result.Captures = make(map[string]string)
+					}
+					result.Captures[varName] = captureResult.String()
+					fmt.Printf("Captured: %s = %s\n", varName, captureResult.String())
+					logger.LogToSession("Captured: %s = %s", varName, captureResult.String())
 				}
 			}
 		}
@@ -512,6 +517,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				logger.LogToSession("Assertion Failed: %s (%s)", assertion, msg)
 				if firstErr == "" {
 					firstErr = fmt.Sprintf("assertion failed: %s (%s)", assertion, msg)
+					result.FailedAssertion = assertion
 				}
 				allPassed = false
 			}
@@ -604,4 +610,22 @@ func cloneHeaderMap(input map[string][]string) map[string][]string {
 		cloned[key] = copied
 	}
 	return cloned
+}
+
+func extractRequestID(headers map[string][]string, body []byte) string {
+	for _, key := range []string{"X-Request-ID", "X-Request-Id", "X-Requestid", "Request-Id"} {
+		for headerKey, values := range headers {
+			if strings.EqualFold(headerKey, key) && len(values) > 0 {
+				return values[0]
+			}
+		}
+	}
+	if len(body) > 0 {
+		for _, path := range []string{"request_id", "data.request_id", "meta.request_id"} {
+			if value := gjson.GetBytes(body, path); value.Exists() {
+				return value.String()
+			}
+		}
+	}
+	return ""
 }

@@ -17,7 +17,7 @@ type Config struct {
 	ProjectPath             string                 // Absolute path to the project root
 	PlatformURL             string                 `yaml:"platform_url" mapstructure:"platform_url"`
 	PlatformToken           string                 `yaml:"platform_token" mapstructure:"platform_token"`
-	PlatformProjectID       string                 `yaml:"platform_project_id" mapstructure:"platform_project_id"`
+	PlatformWorkspaceID     string                 `yaml:"platform_workspace_id" mapstructure:"platform_workspace_id"`
 	PlatformAutoSyncHistory bool                   `yaml:"platform_auto_sync_history" mapstructure:"platform_auto_sync_history"`
 	LastSyncTime            string                 `yaml:"last_sync_time" mapstructure:"last_sync_time"`
 	AIKey                   string                 `yaml:"ai_key" mapstructure:"ai_key"`
@@ -93,7 +93,7 @@ func SaveToPath(conf *Config, configPath string) error {
 	v.Set("environments", conf.Environments)
 	v.Set("platform_url", conf.PlatformURL)
 	v.Set("platform_token", conf.PlatformToken)
-	v.Set("platform_project_id", conf.PlatformProjectID)
+	v.Set("platform_workspace_id", conf.PlatformWorkspaceID)
 	v.Set("platform_auto_sync_history", conf.PlatformAutoSyncHistory)
 	v.Set("last_sync_time", conf.LastSyncTime)
 	v.Set("ai_key", conf.AIKey)

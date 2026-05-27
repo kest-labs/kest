@@ -65,6 +65,8 @@ type WorkspaceMemberResponse struct {
 	Role        string `json:"role"`
 	InvitedBy   string `json:"invited_by"`
 	JoinedAt    string `json:"joined_at"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type WorkspaceCLITokenResponse struct {
@@ -122,9 +124,13 @@ func FromMember(m *WorkspaceMember) *WorkspaceMemberResponse {
 		ID:          m.ID,
 		WorkspaceID: m.WorkspaceID,
 		UserID:      m.UserID,
+		Username:    m.Username,
+		Email:       m.Email,
 		Role:        m.Role,
 		InvitedBy:   m.InvitedBy,
 		JoinedAt:    m.JoinedAt.Format("2006-01-02T15:04:05Z07:00"),
+		CreatedAt:   m.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:   m.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 

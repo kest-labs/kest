@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,22 @@ import { Label } from '@/components/ui/label';
 import { authConfig } from '@/config/auth';
 import { useLogin, useRegister } from '@/hooks/use-auth';
 import { useT } from '@/i18n/client';
+import {
+  clearAuthFormDraft,
+  readAuthFormDraft,
+  REGISTER_FORM_DRAFT_KEY,
+  writeAuthFormDraft,
+} from './auth-form-draft';
+
+const emptyRegisterForm = {
+  username: '',
+  email: '',
+  nickname: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  agreedToTerms: false,
+};
 
 export function RegisterForm() {
   const t = useT();
@@ -27,15 +43,69 @@ export function RegisterForm() {
   const registerMutation = useRegister();
   const loginMutation = useLogin();
   const returnUrl = searchParams.get('returnUrl');
-  const [form, setForm] = useState({
-    username: '',
-    email: '',
-    nickname: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    agreedToTerms: false,
-  });
+  const [form, setForm] = useState(emptyRegisterForm);
+  const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const nicknameInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    queueMicrotask(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      setForm(readAuthFormDraft(window.sessionStorage, REGISTER_FORM_DRAFT_KEY, emptyRegisterForm));
+      setHasHydratedDraft(true);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedDraft) {
+      return;
+    }
+
+    writeAuthFormDraft(window.sessionStorage, REGISTER_FORM_DRAFT_KEY, form);
+  }, [form, hasHydratedDraft]);
+
+  const persistCurrentForm = useCallback(() => {
+    writeAuthFormDraft(window.sessionStorage, REGISTER_FORM_DRAFT_KEY, {
+      username: usernameInputRef.current?.value ?? form.username,
+      email: emailInputRef.current?.value ?? form.email,
+      nickname: nicknameInputRef.current?.value ?? form.nickname,
+      phone: phoneInputRef.current?.value ?? form.phone,
+      password: passwordInputRef.current?.value ?? form.password,
+      confirmPassword: confirmPasswordInputRef.current?.value ?? form.confirmPassword,
+      agreedToTerms: form.agreedToTerms,
+    });
+  }, [
+    form.agreedToTerms,
+    form.confirmPassword,
+    form.email,
+    form.nickname,
+    form.password,
+    form.phone,
+    form.username,
+  ]);
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', persistCurrentForm);
+    window.addEventListener('pagehide', persistCurrentForm);
+
+    return () => {
+      window.removeEventListener('beforeunload', persistCurrentForm);
+      window.removeEventListener('pagehide', persistCurrentForm);
+    };
+  }, [persistCurrentForm]);
 
   const isPasswordConfirmed = useMemo(
     () => !form.confirmPassword || form.password === form.confirmPassword,
@@ -78,6 +148,7 @@ export function RegisterForm() {
         description: t.auth('accountCreated'),
       });
 
+      clearAuthFormDraft(window.sessionStorage, REGISTER_FORM_DRAFT_KEY);
       router.replace(returnUrl || authConfig.routes.afterLogin);
     } catch {
       // Error toast is handled by the global HTTP error handler.
@@ -99,6 +170,7 @@ export function RegisterForm() {
             <Label htmlFor="username">{t.auth('username')}</Label>
             <Input
               id="username"
+              ref={usernameInputRef}
               value={form.username}
               onChange={event => updateField('username', event.target.value)}
               placeholder={t.auth('enterUsername')}
@@ -111,6 +183,7 @@ export function RegisterForm() {
             <Label htmlFor="email">{t.auth('email')}</Label>
             <Input
               id="email"
+              ref={emailInputRef}
               type="email"
               value={form.email}
               onChange={event => updateField('email', event.target.value)}
@@ -124,6 +197,7 @@ export function RegisterForm() {
             <Label htmlFor="nickname">{t.auth('nickname')}</Label>
             <Input
               id="nickname"
+              ref={nicknameInputRef}
               value={form.nickname}
               onChange={event => updateField('nickname', event.target.value)}
               placeholder={t.auth('enterNickname')}
@@ -134,6 +208,7 @@ export function RegisterForm() {
             <Label htmlFor="phone">{t.auth('phone')}</Label>
             <Input
               id="phone"
+              ref={phoneInputRef}
               value={form.phone}
               onChange={event => updateField('phone', event.target.value)}
               placeholder={t.auth('enterPhone')}
@@ -145,6 +220,7 @@ export function RegisterForm() {
             <Label htmlFor="password">{t.auth('password')}</Label>
             <Input
               id="password"
+              ref={passwordInputRef}
               type="password"
               value={form.password}
               onChange={event => updateField('password', event.target.value)}
@@ -157,6 +233,7 @@ export function RegisterForm() {
             <Label htmlFor="confirm-password">{t.auth('confirmPassword')}</Label>
             <Input
               id="confirm-password"
+              ref={confirmPasswordInputRef}
               type="password"
               value={form.confirmPassword}
               onChange={event => updateField('confirmPassword', event.target.value)}

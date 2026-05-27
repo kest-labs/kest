@@ -229,6 +229,28 @@ func TestParseFlowStepExecTimeout(t *testing.T) {
 	}
 }
 
+func TestParseFlowStepExecCaptures(t *testing.T) {
+	content := "```step\n" +
+		"@id hmac\n" +
+		"@type exec\n" +
+		"printf 'signature\\n'\n" +
+		"[Captures]\n" +
+		"signature = $line.1\n" +
+		"```"
+
+	doc, _ := ParseFlowDocument(content)
+	if len(doc.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(doc.Steps))
+	}
+	step := doc.Steps[0]
+	if len(step.Exec.Captures) != 1 || step.Exec.Captures[0] != "signature = $line.1" {
+		t.Fatalf("expected exec capture preserved, got %+v", step.Exec.Captures)
+	}
+	if len(step.Request.Captures) != 0 {
+		t.Fatalf("expected no request captures for exec step, got %+v", step.Request.Captures)
+	}
+}
+
 func TestParseFlowStepRetryWaitAndOnFail(t *testing.T) {
 	content := `
 ` + "```step" + `

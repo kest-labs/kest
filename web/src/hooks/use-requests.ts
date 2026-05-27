@@ -8,7 +8,7 @@ import type { CreateRequestRequest, UpdateRequestRequest } from '@/types/request
 
 export const requestKeys = {
   all: ['requests'] as const,
-  project: (projectId: number | string) => [...requestKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...requestKeys.all, 'workspace', projectId] as const,
   collection: (projectId: number | string, collectionId: number | string) =>
     [...requestKeys.project(projectId), 'collection', collectionId] as const,
   list: (projectId: number | string, collectionId: number | string) =>

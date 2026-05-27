@@ -1,36 +1,20 @@
-import { CategoryManagementPage } from '@/components/features/project/category-management-page';
-import { ProjectWorkspacePage } from '@/components/features/project/project-workspace-page';
+import { buildWorkspaceDashboardRoute } from '@/constants/routes';
+import {
+  redirectLegacyProjectRoute,
+  type LegacySearchParams,
+} from '../_legacy/redirect';
 
-interface ProjectCategoriesPageProps {
+interface LegacyProjectCategoriesPageProps {
   params: Promise<{
     projectId: string;
   }>;
-  searchParams: Promise<{
-    item?: string;
-    mode?: string;
-  }>;
+  searchParams: Promise<LegacySearchParams>;
 }
 
-// 项目分类管理页面入口。
-// 作用：默认挂载新的 categories 工作区，并通过 `?mode=manage` 兼容旧管理页。
-export default async function ProjectCategoriesPage({
+export default async function LegacyProjectCategoriesPage({
   params,
   searchParams,
-}: ProjectCategoriesPageProps) {
-  const { projectId } = await params;
-  const { item, mode } = await searchParams;
-
-  if (mode === 'manage') {
-    return <CategoryManagementPage projectId={projectId} />;
-  }
-
-  const selectedItemId = item?.trim() ? item : null;
-
-  return (
-    <ProjectWorkspacePage
-      projectId={projectId}
-      module="categories"
-      selectedItemId={selectedItemId}
-    />
-  );
+}: LegacyProjectCategoriesPageProps) {
+  await params;
+  redirectLegacyProjectRoute(buildWorkspaceDashboardRoute(), await searchParams);
 }

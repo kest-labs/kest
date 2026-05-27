@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation';
-import { ProjectInvitationPage } from '@/components/features/project/project-invitation-page';
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/constants/routes';
 
 interface InviteProjectPageProps {
   params: Promise<{
@@ -11,8 +11,8 @@ export default async function InviteProjectPage({ params }: InviteProjectPagePro
   const { slug } = await params;
 
   if (!slug) {
-    notFound();
+    redirect(ROUTES.CONSOLE.WORKSPACES);
   }
 
-  return <ProjectInvitationPage slug={slug} />;
+  redirect(ROUTES.CONSOLE.WORKSPACES);
 }

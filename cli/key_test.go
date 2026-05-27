@@ -12,7 +12,7 @@ func TestParseConnectionKey(t *testing.T) {
 		Version:                 1,
 		PlatformURL:             "https://api.kest.dev/v1/",
 		PlatformToken:           "kest_pat_example",
-		PlatformProjectID:       "12",
+		PlatformWorkspaceID:     "12",
 		PlatformAutoSyncHistory: &autoSync,
 	}
 	raw, err := json.Marshal(payload)
@@ -32,8 +32,8 @@ func TestParseConnectionKey(t *testing.T) {
 	if got.PlatformToken != payload.PlatformToken {
 		t.Fatalf("expected token %q, got %q", payload.PlatformToken, got.PlatformToken)
 	}
-	if got.PlatformProjectID != payload.PlatformProjectID {
-		t.Fatalf("expected project ID %q, got %q", payload.PlatformProjectID, got.PlatformProjectID)
+	if got.PlatformWorkspaceID != payload.PlatformWorkspaceID {
+		t.Fatalf("expected workspace ID %q, got %q", payload.PlatformWorkspaceID, got.PlatformWorkspaceID)
 	}
 	if got.PlatformAutoSyncHistory == nil || !*got.PlatformAutoSyncHistory {
 		t.Fatalf("expected auto history sync to be true, got %#v", got.PlatformAutoSyncHistory)
@@ -51,7 +51,7 @@ func TestParseConnectionKeyRequiresFields(t *testing.T) {
 	raw, err := json.Marshal(connectionKeyPayload{
 		PlatformURL:       "https://api.kest.dev/v1",
 		PlatformToken:     "kest_pat_example",
-		PlatformProjectID: "",
+		PlatformWorkspaceID: "",
 	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)

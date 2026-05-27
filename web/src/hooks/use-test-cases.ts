@@ -16,7 +16,7 @@ import type {
 
 export const testCaseKeys = {
   all: ['test-cases'] as const,
-  project: (projectId: number | string) => [...testCaseKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...testCaseKeys.all, 'workspace', projectId] as const,
   lists: (projectId: number | string) => [...testCaseKeys.project(projectId), 'lists'] as const,
   list: (params: TestCaseListParams) => [...testCaseKeys.lists(params.projectId), params] as const,
   detail: (projectId: number | string, testCaseId: number | string) =>

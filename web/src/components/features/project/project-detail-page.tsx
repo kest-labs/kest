@@ -476,7 +476,7 @@ export function ProjectDetailPage({ projectId }: { projectId: number | string })
           version: 1,
           platform_url: cliPlatformUrl,
           platform_token: generatedCliToken.token,
-          platform_project_id: String(project.id),
+          platform_workspace_id: String(project.id),
           platform_auto_sync_history: true,
         })
       : '';

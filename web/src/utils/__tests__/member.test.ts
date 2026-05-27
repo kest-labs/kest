@@ -11,7 +11,7 @@ import {
 
 describe('project member helpers', () => {
   it('builds the project members route', () => {
-    expect(buildProjectMembersRoute(42)).toBe('/project/42/members');
+    expect(buildProjectMembersRoute(42)).toBe('/workspace/42/members');
   });
 
   it('resolves write and manage permissions by role', () => {

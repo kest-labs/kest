@@ -1593,19 +1593,19 @@ export function ApiSpecManagementPage({
     spec => spec.doc_markdown || spec.doc_markdown_zh || spec.doc_markdown_en
   ).length;
   const examplesOnPage = specs.reduce((count, spec) => count + (spec.examples?.length || 0), 0);
-  const apiSpecsPath = buildApiPath(`/projects/${projectId}/api-specs`);
+  const apiSpecsPath = buildApiPath(`/workspaces/${projectId}/api-specs`);
   const activeSpecPath = activeSpecId
-    ? buildApiPath(`/projects/${projectId}/api-specs/${activeSpecId}`)
-    : buildApiPath(`/projects/${projectId}/api-specs/:sid`);
+    ? buildApiPath(`/workspaces/${projectId}/api-specs/${activeSpecId}`)
+    : buildApiPath(`/workspaces/${projectId}/api-specs/:sid`);
   const activeSpecFullPath = activeSpecId
-    ? buildApiPath(`/projects/${projectId}/api-specs/${activeSpecId}/full`)
-    : buildApiPath(`/projects/${projectId}/api-specs/:sid/full`);
+    ? buildApiPath(`/workspaces/${projectId}/api-specs/${activeSpecId}/full`)
+    : buildApiPath(`/workspaces/${projectId}/api-specs/:sid/full`);
   const activeSpecExamplesPath = activeSpecId
-    ? buildApiPath(`/projects/${projectId}/api-specs/${activeSpecId}/examples`)
-    : buildApiPath(`/projects/${projectId}/api-specs/:sid/examples`);
+    ? buildApiPath(`/workspaces/${projectId}/api-specs/${activeSpecId}/examples`)
+    : buildApiPath(`/workspaces/${projectId}/api-specs/:sid/examples`);
   const activeSpecSharePath = activeSpecId
-    ? buildApiPath(`/projects/${projectId}/api-specs/${activeSpecId}/share`)
-    : buildApiPath(`/projects/${projectId}/api-specs/:sid/share`);
+    ? buildApiPath(`/workspaces/${projectId}/api-specs/${activeSpecId}/share`)
+    : buildApiPath(`/workspaces/${projectId}/api-specs/:sid/share`);
 
   const createSpecMutation = useCreateApiSpec(projectId);
   const updateSpecMutation = useUpdateApiSpec(projectId);

@@ -13,15 +13,15 @@ import type {
 
 // 关联缓存 key。
 // 作用：分类变更后同时刷新项目统计和 API Specs 中复用的分类下拉缓存。
-const projectStatsKey = (projectId: number | string) => ['projects', 'stats', projectId] as const;
+const projectStatsKey = (projectId: number | string) => ['workspaces', 'stats', projectId] as const;
 const apiSpecCategoriesKey = (projectId: number | string) =>
-  ['api-specs', 'project', projectId, 'categories'] as const;
+  ['api-specs', 'workspace', projectId, 'categories'] as const;
 
 // Categories 域的 React Query key。
 // 作用：统一管理分类列表、详情和项目级缓存命名。
 export const categoryKeys = {
   all: ['categories'] as const,
-  project: (projectId: number | string) => [...categoryKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...categoryKeys.all, 'workspace', projectId] as const,
   lists: (projectId: number | string) => [...categoryKeys.project(projectId), 'lists'] as const,
   list: (params: CategoryListParams) => [...categoryKeys.lists(params.projectId), params] as const,
   detail: (projectId: number | string, categoryId: number | string) =>

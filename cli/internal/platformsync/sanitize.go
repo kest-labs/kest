@@ -18,6 +18,7 @@ var (
 		"cookie",
 		"set-cookie",
 		"x-api-key",
+		"x-internal-signature",
 		"proxy-authorization",
 	}
 	sensitiveFieldNames = []string{
@@ -31,9 +32,11 @@ var (
 		"api_key",
 		"apikey",
 		"authorization",
+		"x-internal-signature",
+		"x_internal_signature",
 		"cookie",
 	}
-	headerLinePattern = regexp.MustCompile(`(?im)^([ \t]*)(authorization|cookie|set-cookie|x-api-key|proxy-authorization)(\s*:\s*)(.+)$`)
+	headerLinePattern = regexp.MustCompile(`(?im)^([ \t]*)(authorization|cookie|set-cookie|x-api-key|x-internal-signature|proxy-authorization)(\s*:\s*)(.+)$`)
 )
 
 func SanitizeStringMap(input map[string]string) map[string]string {

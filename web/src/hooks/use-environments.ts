@@ -14,7 +14,7 @@ import type {
 // 作用：统一管理环境列表、详情缓存，方便页面刷新和 mutation 失效。
 export const environmentKeys = {
   all: ['environments'] as const,
-  project: (projectId: number | string) => [...environmentKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...environmentKeys.all, 'workspace', projectId] as const,
   list: (projectId: number | string) => [...environmentKeys.project(projectId), 'list'] as const,
   // 单条环境详情 key。
   // 作用：让右侧详情面板、编辑弹窗和 duplicate 后的选中逻辑共享同一份缓存。

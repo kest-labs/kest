@@ -31,7 +31,7 @@
   
   --border: var(--miro-steel);
   --input: var(--miro-stone);
-  --ring: var(--miro-brand-blue);
+  --ring: var(--miro-brand-yellow);
 
   /* --- Semantic Design Tokens --- */
   
@@ -61,9 +61,9 @@
   --border-strong: var(--miro-stone);
 
   /* Brand / Primary */
-  --brand-main: var(--miro-brand-blue);
+  --brand-main: var(--miro-brand-yellow);
   --brand-subtle: var(--miro-ink-deep);
-  --brand-strong: var(--miro-blue-pressed);
+  --brand-strong: var(--miro-brand-yellow-deep);
 
   /* Marketing block colors stay pastel against dark chrome. */
   --block-lime: var(--miro-yellow-light);
@@ -85,7 +85,7 @@
   --error: var(--miro-coral-light);
   --error-subtle: var(--miro-coral-dark);
   
-  --info: var(--miro-brand-blue);
+  --info: var(--miro-brand-yellow);
   --info-subtle: var(--miro-ink-deep);
 
   --highlight: var(--miro-brand-yellow);

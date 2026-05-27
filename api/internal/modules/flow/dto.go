@@ -19,7 +19,7 @@ type UpdateFlowRequest struct {
 // FlowResponse represents the API response for a flow
 type FlowResponse struct {
 	ID          string    `json:"id"`
-	ProjectID   string    `json:"project_id"`
+	WorkspaceID string    `json:"workspace_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	CreatedBy   string    `json:"created_by"`
@@ -39,7 +39,7 @@ type FlowDetailResponse struct {
 func ToFlowResponse(po *FlowPO) *FlowResponse {
 	return &FlowResponse{
 		ID:          po.ID,
-		ProjectID:   po.ProjectID,
+		WorkspaceID: po.WorkspaceID,
 		Name:        po.Name,
 		Description: po.Description,
 		CreatedBy:   po.CreatedBy,

@@ -9,12 +9,12 @@ import (
 // Service defines the business logic interface for flows
 type Service interface {
 	// Flow CRUD
-	CreateFlow(ctx context.Context, projectID string, userID string, req *CreateFlowRequest) (*FlowResponse, error)
-	GetFlow(ctx context.Context, id string) (*FlowDetailResponse, error)
-	ListFlows(ctx context.Context, projectID string) ([]*FlowResponse, error)
-	UpdateFlow(ctx context.Context, id string, req *UpdateFlowRequest) (*FlowResponse, error)
-	DeleteFlow(ctx context.Context, id string) error
-	SaveFlow(ctx context.Context, id string, req *SaveFlowRequest) (*FlowDetailResponse, error)
+	CreateFlow(ctx context.Context, workspaceID string, userID string, req *CreateFlowRequest) (*FlowResponse, error)
+	GetFlow(ctx context.Context, workspaceID, id string) (*FlowDetailResponse, error)
+	ListFlows(ctx context.Context, workspaceID string) ([]*FlowResponse, error)
+	UpdateFlow(ctx context.Context, workspaceID, id string, req *UpdateFlowRequest) (*FlowResponse, error)
+	DeleteFlow(ctx context.Context, workspaceID, id string) error
+	SaveFlow(ctx context.Context, workspaceID, id string, req *SaveFlowRequest) (*FlowDetailResponse, error)
 
 	// Step CRUD
 	CreateStep(ctx context.Context, flowID string, req *CreateStepRequest) (*StepResponse, error)
@@ -27,7 +27,7 @@ type Service interface {
 	DeleteEdge(ctx context.Context, id string) error
 
 	// Run
-	RunFlow(ctx context.Context, flowID string, userID string) (*RunResponse, error)
+	RunFlow(ctx context.Context, workspaceID, flowID string, userID string) (*RunResponse, error)
 	ExecuteFlow(ctx context.Context, runID string, baseURL string, events chan<- StepEvent) error
 	GetRun(ctx context.Context, runID string) (*RunResponse, error)
 	ListRuns(ctx context.Context, flowID string) ([]*RunResponse, error)
@@ -44,14 +44,14 @@ func NewService(repo Repository) Service {
 
 // --- Flow CRUD ---
 
-func (s *service) CreateFlow(ctx context.Context, projectID string, userID string, req *CreateFlowRequest) (*FlowResponse, error) {
+func (s *service) CreateFlow(ctx context.Context, workspaceID string, userID string, req *CreateFlowRequest) (*FlowResponse, error) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		return nil, newFlowError(422, "flow name is required")
 	}
 
 	flow := &FlowPO{
-		ProjectID:   projectID,
+		WorkspaceID: workspaceID,
 		Name:        name,
 		Description: strings.TrimSpace(req.Description),
 		CreatedBy:   userID,
@@ -62,8 +62,8 @@ func (s *service) CreateFlow(ctx context.Context, projectID string, userID strin
 	return ToFlowResponse(flow), nil
 }
 
-func (s *service) GetFlow(ctx context.Context, id string) (*FlowDetailResponse, error) {
-	flow, err := s.repo.GetFlowByID(ctx, id)
+func (s *service) GetFlow(ctx context.Context, workspaceID, id string) (*FlowDetailResponse, error) {
+	flow, err := s.repo.GetFlowByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, newFlowError(404, "flow not found")
 	}
@@ -98,8 +98,8 @@ func (s *service) GetFlow(ctx context.Context, id string) (*FlowDetailResponse, 
 	return resp, nil
 }
 
-func (s *service) ListFlows(ctx context.Context, projectID string) ([]*FlowResponse, error) {
-	flows, err := s.repo.ListFlowsByProject(ctx, projectID)
+func (s *service) ListFlows(ctx context.Context, workspaceID string) ([]*FlowResponse, error) {
+	flows, err := s.repo.ListFlowsByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +115,8 @@ func (s *service) ListFlows(ctx context.Context, projectID string) ([]*FlowRespo
 	return responses, nil
 }
 
-func (s *service) UpdateFlow(ctx context.Context, id string, req *UpdateFlowRequest) (*FlowResponse, error) {
-	flow, err := s.repo.GetFlowByID(ctx, id)
+func (s *service) UpdateFlow(ctx context.Context, workspaceID, id string, req *UpdateFlowRequest) (*FlowResponse, error) {
+	flow, err := s.repo.GetFlowByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return nil, newFlowError(404, "flow not found")
 	}
@@ -138,8 +138,8 @@ func (s *service) UpdateFlow(ctx context.Context, id string, req *UpdateFlowRequ
 	return ToFlowResponse(flow), nil
 }
 
-func (s *service) DeleteFlow(ctx context.Context, id string) error {
-	_, err := s.repo.GetFlowByID(ctx, id)
+func (s *service) DeleteFlow(ctx context.Context, workspaceID, id string) error {
+	_, err := s.repo.GetFlowByIDAndWorkspace(ctx, id, workspaceID)
 	if err != nil {
 		return newFlowError(404, "flow not found")
 	}
@@ -154,8 +154,8 @@ func (s *service) DeleteFlow(ctx context.Context, id string) error {
 	return s.repo.DeleteFlow(ctx, id)
 }
 
-func (s *service) SaveFlow(ctx context.Context, id string, req *SaveFlowRequest) (*FlowDetailResponse, error) {
-	if _, err := s.repo.GetFlowByID(ctx, id); err != nil {
+func (s *service) SaveFlow(ctx context.Context, workspaceID, id string, req *SaveFlowRequest) (*FlowDetailResponse, error) {
+	if _, err := s.repo.GetFlowByIDAndWorkspace(ctx, id, workspaceID); err != nil {
 		return nil, newFlowError(404, "flow not found")
 	}
 	if err := validateSaveGraph(req.Steps, req.Edges); err != nil {
@@ -163,7 +163,7 @@ func (s *service) SaveFlow(ctx context.Context, id string, req *SaveFlowRequest)
 	}
 
 	if err := s.repo.WithTransaction(ctx, func(txRepo Repository) error {
-		flow, err := txRepo.GetFlowByID(ctx, id)
+		flow, err := txRepo.GetFlowByIDAndWorkspace(ctx, id, workspaceID)
 		if err != nil {
 			return newFlowError(404, "flow not found")
 		}
@@ -242,7 +242,7 @@ func (s *service) SaveFlow(ctx context.Context, id string, req *SaveFlowRequest)
 		return nil, err
 	}
 
-	return s.GetFlow(ctx, id)
+	return s.GetFlow(ctx, workspaceID, id)
 }
 
 // --- Step CRUD ---
@@ -490,8 +490,8 @@ func (s *service) ExecuteFlow(ctx context.Context, runID string, baseURL string,
 	return runner.Execute(ctx, run, stepValues, edgeValues, events)
 }
 
-func (s *service) RunFlow(ctx context.Context, flowID string, userID string) (*RunResponse, error) {
-	flowDetail, err := s.GetFlow(ctx, flowID)
+func (s *service) RunFlow(ctx context.Context, workspaceID, flowID string, userID string) (*RunResponse, error) {
+	flowDetail, err := s.GetFlow(ctx, workspaceID, flowID)
 	if err != nil {
 		return nil, err
 	}

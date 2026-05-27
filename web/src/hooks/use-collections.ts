@@ -16,7 +16,7 @@ import type {
 // 作用：统一 collection 树、详情和写入后的缓存命名，供工作台读写共用。
 export const collectionKeys = {
   all: ['collections'] as const,
-  project: (projectId: number | string) => [...collectionKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...collectionKeys.all, 'workspace', projectId] as const,
   list: (projectId: number | string) => [...collectionKeys.project(projectId), 'list'] as const,
   tree: (projectId: number | string) => [...collectionKeys.project(projectId), 'tree'] as const,
   workbenchTree: (projectId: number | string) =>
@@ -56,7 +56,7 @@ const isWorkbenchRequestsQueryForCollection = (
   collectionId: number | string
 ) =>
   queryKey[0] === 'collections' &&
-  queryKey[1] === 'project' &&
+  queryKey[1] === 'workspace' &&
   queryKey[2] === projectId &&
   queryKey[3] === 'workbench-requests' &&
   Array.isArray(queryKey[4]) &&

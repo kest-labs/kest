@@ -2175,7 +2175,7 @@ function ResultJsonCard({
   action?: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-xl border-border-subtle bg-bg-canvas">
+    <Card className="border-border-main bg-bg-canvas">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{title}</CardTitle>
@@ -2183,7 +2183,7 @@ function ResultJsonCard({
         </div>
       </CardHeader>
       <CardContent>
-        <pre className="max-h-[280px] overflow-auto rounded-xl border border-border-subtle bg-bg-soft p-4 text-xs leading-6 text-text-muted">
+        <pre className="max-h-[280px] overflow-auto rounded-md border border-border-subtle bg-bg-soft p-4 font-mono text-xs leading-6 text-text-muted">
           {JSON.stringify(value, null, 2)}
         </pre>
       </CardContent>
@@ -3361,8 +3361,8 @@ export function ProjectFlowManagementPage({
   };
 
   const flowSidebar = (
-    <aside className="flex w-full shrink-0 flex-col border-b border-border-subtle bg-bg-soft lg:h-full lg:w-[320px] lg:border-r lg:border-b-0">
-      <div className="space-y-4 border-b border-border-subtle px-4 pt-3 pb-3">
+    <aside className="flex w-full shrink-0 flex-col border-b border-border-main bg-bg-soft lg:h-full lg:w-[320px] lg:border-r lg:border-b-0">
+      <div className="space-y-4 border-b border-border-main bg-bg-canvas px-4 pt-3 pb-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-text-main">{t('modules.flows.label')}</p>
@@ -3374,7 +3374,7 @@ export function ProjectFlowManagementPage({
                 variant="outline"
                 size="sm"
                 isIcon
-                className="!size-8 rounded-full"
+                className="!size-8 rounded-md"
                 aria-label={t('flowPage.collapseFlowItems')}
                 title={t('flowPage.collapseFlowItems')}
                 onClick={() => setIsSidebarCollapsed(true)}
@@ -3385,7 +3385,7 @@ export function ProjectFlowManagementPage({
             <Button
               type="button"
               size="sm"
-              className="h-8 rounded-full px-4"
+              className="h-8 rounded-md px-4"
               onClick={() => setIsCreateOpen(true)}
               disabled={!canEdit}
             >
@@ -3407,11 +3407,11 @@ export function ProjectFlowManagementPage({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {flowListQuery.isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-24 animate-pulse rounded-xl bg-muted" />
+              <div key={index} className="h-24 animate-pulse rounded-md bg-muted" />
             ))}
           </div>
         ) : flowListQuery.error ? (
@@ -3420,9 +3420,9 @@ export function ProjectFlowManagementPage({
             <AlertDescription>{t('flowPage.loadFailedDescription')}</AlertDescription>
           </Alert>
         ) : filteredFlows.length === 0 ? (
-          <Card className="rounded-xl border-dashed border-border-subtle bg-bg-canvas">
+          <Card className="border-dashed border-border-main bg-bg-canvas">
             <CardContent className="space-y-4 py-10 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-border-subtle bg-bg-surface text-text-main">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-main">
                 <FolderGit2 className="h-6 w-6" />
               </div>
               <div className="space-y-2">
@@ -3443,10 +3443,10 @@ export function ProjectFlowManagementPage({
               <div
                 key={flow.id}
                 className={cn(
-                  'rounded-xl border px-4 py-3 transition-colors',
+                  'relative rounded-md border px-4 py-3 transition-colors',
                   selectedFlowId === flow.id
-                    ? 'border-border-subtle bg-bg-surface'
-                    : 'border-border-subtle bg-bg-canvas hover:bg-bg-subtle'
+                    ? 'border-border-strong bg-bg-canvas before:absolute before:inset-y-2 before:left-0 before:w-1 before:bg-[var(--miro-brand-yellow)]'
+                    : 'border-transparent bg-transparent hover:border-border-subtle hover:bg-bg-canvas'
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -3492,9 +3492,9 @@ export function ProjectFlowManagementPage({
       <div className="h-[420px] animate-pulse rounded-xl bg-muted" />
     </div>
   ) : selectedFlowId && !selectedFlowQuery.data ? (
-    <Card className="rounded-xl border-dashed border-border-subtle bg-bg-canvas">
+    <Card className="border-dashed border-border-main bg-bg-canvas">
       <CardContent className="space-y-4 py-14 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-border-subtle bg-bg-surface text-text-main">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-main">
           <FileClock className="h-6 w-6" />
         </div>
         <div className="space-y-2">
@@ -3507,9 +3507,9 @@ export function ProjectFlowManagementPage({
       </CardContent>
     </Card>
   ) : !selectedFlowId ? (
-    <Card className="rounded-xl border-dashed border-border-subtle bg-bg-canvas">
+    <Card className="border-dashed border-border-main bg-bg-canvas">
       <CardContent className="space-y-4 py-14 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-border-subtle bg-bg-surface text-text-main">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-main">
           <Workflow className="h-6 w-6" />
         </div>
         <div className="space-y-2">
@@ -3884,7 +3884,7 @@ export function ProjectFlowManagementPage({
                           size="lg"
                           isIcon
                           aria-label={t('flowPage.openCanvasTools')}
-                          className="h-14 w-14 rounded-full border border-border-subtle bg-primary text-primary-foreground"
+                          className="h-14 w-14 rounded-md border border-border-subtle bg-primary text-primary-foreground"
                           onClick={() => setIsCanvasToolsOpen(true)}
                         >
                           <CircleHelp className="h-5 w-5" />
@@ -3908,7 +3908,7 @@ export function ProjectFlowManagementPage({
                   variant="outline"
                   size="sm"
                   isIcon
-                  className="!size-8 rounded-full"
+                  className="!size-8 rounded-md"
                   aria-label={t('flowPage.openFlowSettings')}
                   onClick={() => setIsDesktopInspectorCollapsed(false)}
                 >
@@ -3928,7 +3928,7 @@ export function ProjectFlowManagementPage({
                     variant="ghost"
                     size="sm"
                     isIcon
-                    className="!size-8 rounded-full"
+                    className="!size-8 rounded-md"
                     aria-label={t('flowPage.closeFlowSettings')}
                     onClick={() => setIsDesktopInspectorCollapsed(true)}
                   >
@@ -3984,7 +3984,7 @@ export function ProjectFlowManagementPage({
                   variant="outline"
                   size="sm"
                   isIcon
-                  className="!size-8 rounded-full"
+                  className="!size-8 rounded-md"
                   aria-label={t('flowPage.expandFlowItems')}
                   onClick={() => setIsSidebarCollapsed(false)}
                 >

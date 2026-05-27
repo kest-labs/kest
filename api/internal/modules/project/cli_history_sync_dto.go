@@ -7,14 +7,14 @@ import (
 )
 
 type CLIHistorySyncer interface {
-	SyncHistoryFromCLI(ctx context.Context, projectID string, createdBy string, req *CLIHistorySyncRequest) (*CLIHistorySyncResponseBody, error)
+	SyncHistoryFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIHistorySyncRequest) (*CLIHistorySyncResponseBody, error)
 }
 
 type CLIHistorySyncRequest struct {
-	ProjectID *string               `json:"project_id,omitempty"`
-	Source    string                `json:"source"`
-	Metadata  json.RawMessage       `json:"metadata,omitempty"`
-	Entries   []CLIHistorySyncEntry `json:"entries" binding:"required,min=1"`
+	WorkspaceID *string               `json:"workspace_id,omitempty"`
+	Source      string                `json:"source"`
+	Metadata    json.RawMessage       `json:"metadata,omitempty"`
+	Entries     []CLIHistorySyncEntry `json:"entries" binding:"required,min=1"`
 }
 
 type CLIHistorySyncEntry struct {

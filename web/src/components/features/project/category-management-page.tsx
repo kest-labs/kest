@@ -474,7 +474,7 @@ export function CategoryManagementPage({
                   <p className="max-w-4xl text-sm text-text-muted">
                     {t('categoriesPage.description', {
                       projectName,
-                      path: buildApiPath('/projects/:id/categories'),
+                      path: buildApiPath('/workspaces/:id/categories'),
                     })}
                   </p>
                 </div>
@@ -588,7 +588,7 @@ export function CategoryManagementPage({
               <CardTitle>{t('categoriesPage.registryTitle')}</CardTitle>
               <CardDescription>
                 {t('categoriesPage.registryDescription', {
-                  path: buildApiPath('/projects/:id/categories'),
+                  path: buildApiPath('/workspaces/:id/categories'),
                 })}
               </CardDescription>
             </div>
@@ -801,7 +801,7 @@ export function CategoryManagementPage({
             <CardTitle>{t('categoriesPage.detailTitle')}</CardTitle>
             <CardDescription>
               {t('categoriesPage.detailDescription', {
-                path: buildApiPath('/projects/:id/categories/:cid'),
+                path: buildApiPath('/workspaces/:id/categories/:cid'),
               })}
             </CardDescription>
           </CardHeader>
@@ -965,12 +965,12 @@ export function CategoryManagementPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 pt-6 font-mono text-xs text-muted-foreground">
-          <div>GET {buildApiPath('/projects/:id/categories')}</div>
-          <div>POST {buildApiPath('/projects/:id/categories')}</div>
-          <div>GET {buildApiPath('/projects/:id/categories/:cid')}</div>
-          <div>PATCH {buildApiPath('/projects/:id/categories/:cid')}</div>
-          <div>DELETE {buildApiPath('/projects/:id/categories/:cid')}</div>
-          <div>PUT {buildApiPath('/projects/:id/categories/sort')}</div>
+          <div>GET {buildApiPath('/workspaces/:id/categories')}</div>
+          <div>POST {buildApiPath('/workspaces/:id/categories')}</div>
+          <div>GET {buildApiPath('/workspaces/:id/categories/:cid')}</div>
+          <div>PATCH {buildApiPath('/workspaces/:id/categories/:cid')}</div>
+          <div>DELETE {buildApiPath('/workspaces/:id/categories/:cid')}</div>
+          <div>PUT {buildApiPath('/workspaces/:id/categories/sort')}</div>
         </CardContent>
       </Card>
         </div>

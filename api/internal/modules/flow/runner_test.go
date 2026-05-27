@@ -50,8 +50,11 @@ func (r *runnerRepoStub) CreateFlow(context.Context, *FlowPO) error {
 func (r *runnerRepoStub) GetFlowByID(context.Context, string) (*FlowPO, error) {
 	panic("unexpected GetFlowByID call")
 }
-func (r *runnerRepoStub) ListFlowsByProject(context.Context, string) ([]*FlowPO, error) {
-	panic("unexpected ListFlowsByProject call")
+func (r *runnerRepoStub) GetFlowByIDAndWorkspace(context.Context, string, string) (*FlowPO, error) {
+	panic("unexpected GetFlowByIDAndWorkspace call")
+}
+func (r *runnerRepoStub) ListFlowsByWorkspace(context.Context, string) ([]*FlowPO, error) {
+	panic("unexpected ListFlowsByWorkspace call")
 }
 func (r *runnerRepoStub) UpdateFlow(context.Context, *FlowPO) error {
 	panic("unexpected UpdateFlow call")

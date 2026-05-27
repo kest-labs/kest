@@ -2007,7 +2007,7 @@ export function TestCaseManagementPage({
                 <CardTitle>{t('testCasesPage.listTitle')}</CardTitle>
                 <CardDescription>
                   {t('testCasesPage.listDescription', {
-                    path: buildApiPath('/projects/:id/test-cases'),
+                    path: buildApiPath('/workspaces/:id/test-cases'),
                   })}
                 </CardDescription>
               </CardHeader>
@@ -2254,7 +2254,7 @@ export function TestCaseManagementPage({
                 <CardTitle>{t('testCasesPage.detailTitle')}</CardTitle>
                 <CardDescription>
                   {t('testCasesPage.detailDescription', {
-                    path: buildApiPath('/projects/:id/test-cases/:tcid'),
+                    path: buildApiPath('/workspaces/:id/test-cases/:tcid'),
                   })}
                 </CardDescription>
               </CardHeader>

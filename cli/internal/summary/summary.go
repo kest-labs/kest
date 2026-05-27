@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 
 type TestResult struct {
 	Name            string
+	StepID          string
 	Method          string
 	URL             string
 	RequestHeaders  map[string]string
@@ -21,6 +24,9 @@ type TestResult struct {
 	StartTime       time.Time
 	ResponseBody    string
 	RecordID        int64
+	RequestID       string
+	Captures        map[string]string
+	FailedAssertion string
 	Command         string
 	Error           error
 	Success         bool
@@ -134,6 +140,80 @@ func (s *Summary) Print() {
 	} else {
 		fmt.Printf("\n\033[32m✓ All tests passed!\033[0m\n")
 	}
+}
+
+type RunJSON struct {
+	SourcePath  string           `json:"source_path,omitempty"`
+	LogPath     string           `json:"log_path,omitempty"`
+	Total       int              `json:"total"`
+	Passed      int              `json:"passed"`
+	Failed      int              `json:"failed"`
+	TotalMs     int64            `json:"total_ms"`
+	ElapsedMs   int64            `json:"elapsed_ms"`
+	GeneratedAt string           `json:"generated_at"`
+	Results     []TestResultJSON `json:"results"`
+}
+
+type TestResultJSON struct {
+	Name            string            `json:"name"`
+	StepID          string            `json:"step_id,omitempty"`
+	Method          string            `json:"method,omitempty"`
+	URL             string            `json:"url,omitempty"`
+	Status          int               `json:"status,omitempty"`
+	Success         bool              `json:"success"`
+	DurationMs      int64             `json:"duration_ms"`
+	StartTime       string            `json:"start_time,omitempty"`
+	RequestID       string            `json:"request_id,omitempty"`
+	RecordID        int64             `json:"record_id,omitempty"`
+	Captures        map[string]string `json:"captures,omitempty"`
+	FailedAssertion string            `json:"failed_assertion,omitempty"`
+	Error           string            `json:"error,omitempty"`
+	Command         string            `json:"command,omitempty"`
+}
+
+func (s *Summary) PrintJSON(sourcePath, logPath string) {
+	_ = s.WriteJSON(os.Stdout, sourcePath, logPath)
+}
+
+func (s *Summary) WriteJSON(w io.Writer, sourcePath, logPath string) error {
+	elapsed := time.Since(s.StartTime)
+	payload := RunJSON{
+		SourcePath:  sourcePath,
+		LogPath:     logPath,
+		Total:       s.TotalTests,
+		Passed:      s.PassedTests,
+		Failed:      s.FailedTests,
+		TotalMs:     s.TotalTime.Milliseconds(),
+		ElapsedMs:   elapsed.Milliseconds(),
+		GeneratedAt: time.Now().Format(time.RFC3339),
+		Results:     make([]TestResultJSON, 0, len(s.Results)),
+	}
+	for _, result := range s.Results {
+		item := TestResultJSON{
+			Name:            result.Name,
+			StepID:          result.StepID,
+			Method:          result.Method,
+			URL:             result.URL,
+			Status:          result.Status,
+			Success:         result.Success,
+			DurationMs:      result.Duration.Milliseconds(),
+			RequestID:       result.RequestID,
+			RecordID:        result.RecordID,
+			Captures:        result.Captures,
+			FailedAssertion: result.FailedAssertion,
+			Command:         result.Command,
+		}
+		if !result.StartTime.IsZero() {
+			item.StartTime = result.StartTime.Format(time.RFC3339)
+		}
+		if result.Error != nil {
+			item.Error = result.Error.Error()
+		}
+		payload.Results = append(payload.Results, item)
+	}
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(payload)
 }
 
 func truncate(s string, maxLen int) string {

@@ -84,7 +84,7 @@ export function ActionMenu({
           size={triggerSize}
           isIcon
           aria-label={ariaLabel}
-          className={cn('h-8 w-8 rounded-full', triggerClassName)}
+          className={cn('h-8 w-8 rounded-md', triggerClassName)}
           onClick={handleTriggerPropagation}
           onPointerDown={handleTriggerPropagation}
         >

@@ -6,16 +6,23 @@ export type AssignableProjectMemberRole = 'admin' | 'write' | 'read';
 
 export interface ProjectMember {
   id: string;
-  project_id: string;
+  project_id?: string;
+  workspace_id?: string;
   user_id: string;
-  username: string;
-  email: string;
+  username?: string;
+  email?: string;
   role: ProjectMemberRole;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  joined_at?: string;
 }
 
 export interface UpdateProjectMemberRequest {
+  role: AssignableProjectMemberRole;
+}
+
+export interface AddProjectMemberRequest {
+  user_id: string;
   role: AssignableProjectMemberRole;
 }
 
@@ -71,7 +78,7 @@ export const sortProjectMembers = <T extends Pick<ProjectMember, 'role' | 'usern
       return roleDiff;
     }
 
-    const usernameDiff = left.username.localeCompare(right.username, undefined, {
+    const usernameDiff = (left.username ?? '').localeCompare(right.username ?? '', undefined, {
       sensitivity: 'base',
     });
 

@@ -5,13 +5,14 @@ import { toast } from 'sonner';
 import { projectKeys } from '@/hooks/use-projects';
 import { useT } from '@/i18n/client';
 import { memberService } from '@/services/member';
-import type { UpdateProjectMemberRequest } from '@/types/member';
+import { useCurrentUser } from '@/store/auth-store';
+import type { AddProjectMemberRequest, UpdateProjectMemberRequest } from '@/types/member';
 
 // Members 域的 React Query key。
 // 作用：统一管理项目成员列表和当前用户成员角色缓存。
 export const memberKeys = {
   all: ['members'] as const,
-  project: (projectId: number | string) => [...memberKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...memberKeys.all, 'workspace', projectId] as const,
   list: (projectId: number | string) => [...memberKeys.project(projectId), 'list'] as const,
   role: (projectId: number | string) => [...memberKeys.project(projectId), 'me'] as const,
 };
@@ -29,9 +30,11 @@ export function useProjectMembers(projectId?: number | string) {
 // 当前用户在项目中的成员角色查询。
 // 作用：统一为项目工作区各页面提供 read/write/admin/owner 权限判断依据。
 export function useProjectMemberRole(projectId?: number | string) {
+  const currentUser = useCurrentUser();
+
   return useQuery({
     queryKey: memberKeys.role(projectId ?? 'unknown'),
-    queryFn: () => memberService.getMyRole(projectId as number | string),
+    queryFn: () => memberService.getMyRole(projectId as number | string, currentUser?.id),
     enabled: projectId !== undefined && projectId !== null && projectId !== '',
     staleTime: 60_000,
   });
@@ -77,6 +80,19 @@ export function useDeleteProjectMember(projectId: number | string) {
     onSuccess: () => {
       invalidateMemberProjectData(queryClient, projectId);
       toast.success(t.project('toasts.memberRemoved'));
+    },
+  });
+}
+
+export function useMembers(projectId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (data: AddProjectMemberRequest) => memberService.create(projectId, data),
+    onSuccess: () => {
+      invalidateMemberProjectData(queryClient, projectId);
+      toast.success(t.project('toasts.memberInvitationSent'));
     },
   });
 }

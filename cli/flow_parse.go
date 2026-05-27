@@ -182,7 +182,11 @@ func parseFlowStep(b FlowBlock) FlowStep {
 			requestLines = append(requestLines, line)
 		case "captures":
 			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
-				step.Request.Captures = append(step.Request.Captures, strings.TrimSpace(trimmed))
+				if step.Type == "exec" {
+					step.Exec.Captures = append(step.Exec.Captures, strings.TrimSpace(trimmed))
+				} else {
+					step.Request.Captures = append(step.Request.Captures, strings.TrimSpace(trimmed))
+				}
 			}
 		case "asserts":
 			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
@@ -215,7 +219,9 @@ func parseFlowStep(b FlowBlock) FlowStep {
 	requestRaw := strings.TrimSpace(strings.Join(requestLines, "\n"))
 	if requestRaw != "" {
 		if step.Type == "exec" {
+			savedCaptures := step.Exec.Captures
 			step.Exec = parseExecBlock(requestRaw)
+			step.Exec.Captures = append(step.Exec.Captures, savedCaptures...)
 		} else if opts, err := ParseBlock(requestRaw); err == nil {
 			// Preserve Captures/Asserts/SoftAsserts collected in the loop above,
 			// then merge any additional ones that ParseBlock may find inside the body.

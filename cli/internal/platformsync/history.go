@@ -37,10 +37,10 @@ type HistorySyncEntry struct {
 }
 
 type HistorySyncRequest struct {
-	ProjectID *string            `json:"project_id,omitempty"`
-	Source    string             `json:"source"`
-	Metadata  json.RawMessage    `json:"metadata,omitempty"`
-	Entries   []HistorySyncEntry `json:"entries"`
+	WorkspaceID *string            `json:"workspace_id,omitempty"`
+	Source      string             `json:"source"`
+	Metadata    json.RawMessage    `json:"metadata,omitempty"`
+	Entries     []HistorySyncEntry `json:"entries"`
 }
 
 type HistorySyncResponse struct {
@@ -66,7 +66,7 @@ func HistoryAutoSyncEnabled(conf *config.Config) bool {
 	return conf != nil &&
 		conf.PlatformAutoSyncHistory &&
 		strings.TrimSpace(conf.ProjectID) != "" &&
-		strings.TrimSpace(conf.PlatformProjectID) != "" &&
+		strings.TrimSpace(conf.PlatformWorkspaceID) != "" &&
 		strings.TrimSpace(conf.PlatformURL) != "" &&
 		strings.TrimSpace(conf.PlatformToken) != ""
 }
@@ -85,7 +85,7 @@ func FlushHistoryOutbox(conf *config.Config, store *storage.Store, maxItems int)
 		return nil
 	}
 
-	items, err := store.ListDueSyncOutbox(HistorySyncKind, conf.ProjectID, conf.PlatformProjectID, maxItems)
+	items, err := store.ListDueSyncOutbox(HistorySyncKind, conf.ProjectID, conf.PlatformWorkspaceID, maxItems)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func enqueueHistoryEntry(store *storage.Store, conf *config.Config, entry Histor
 	return store.EnqueueSyncOutbox(&storage.SyncOutboxItem{
 		SyncKind:          HistorySyncKind,
 		Project:           conf.ProjectID,
-		PlatformProjectID: conf.PlatformProjectID,
+		PlatformProjectID: conf.PlatformWorkspaceID,
 		SourceEventID:     entry.SourceEventID,
 		EntryPayload:      string(payload),
 		NextAttemptAt:     time.Now().UTC(),
@@ -225,9 +225,9 @@ func PushHistoryEntries(conf *config.Config, clientID string, entries []HistoryS
 		return HistorySyncResponse{}, nil
 	}
 
-	projectID := strings.TrimSpace(conf.PlatformProjectID)
-	if projectID == "" {
-		return HistorySyncResponse{}, fmt.Errorf("platform project ID is required")
+	workspaceID := strings.TrimSpace(conf.PlatformWorkspaceID)
+	if workspaceID == "" {
+		return HistorySyncResponse{}, fmt.Errorf("platform workspace ID is required")
 	}
 
 	metadata, _ := json.Marshal(map[string]any{
@@ -235,16 +235,16 @@ func PushHistoryEntries(conf *config.Config, clientID string, entries []HistoryS
 	})
 
 	reqBody, err := json.Marshal(HistorySyncRequest{
-		ProjectID: &projectID,
-		Source:    HistorySyncSource,
-		Metadata:  metadata,
-		Entries:   entries,
+		WorkspaceID: &workspaceID,
+		Source:      HistorySyncSource,
+		Metadata:    metadata,
+		Entries:     entries,
 	})
 	if err != nil {
 		return HistorySyncResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, buildHistorySyncEndpoint(conf.PlatformURL, projectID), bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPost, buildHistorySyncEndpoint(conf.PlatformURL, workspaceID), bytes.NewBuffer(reqBody))
 	if err != nil {
 		return HistorySyncResponse{}, err
 	}
@@ -287,13 +287,13 @@ func parseHistorySyncResponse(body []byte) (HistorySyncResponse, error) {
 	return resp, nil
 }
 
-func buildHistorySyncEndpoint(apiURL, projectID string) string {
+func buildHistorySyncEndpoint(apiURL, workspaceID string) string {
 	base := strings.TrimRight(strings.TrimSpace(apiURL), "/")
 	switch {
 	case strings.HasSuffix(base, "/v1"), strings.HasSuffix(base, "/api/v1"):
-		return fmt.Sprintf("%s/projects/%s/cli/history-sync", base, projectID)
+		return fmt.Sprintf("%s/workspaces/%s/cli/history-sync", base, workspaceID)
 	default:
-		return fmt.Sprintf("%s/v1/projects/%s/cli/history-sync", base, projectID)
+		return fmt.Sprintf("%s/v1/workspaces/%s/cli/history-sync", base, workspaceID)
 	}
 }
 

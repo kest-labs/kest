@@ -18,7 +18,7 @@ export const exampleService = {
     requestId: number | string
   ) =>
     request.get<RequestExample[]>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples`
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples`
     ),
 
   getById: (
@@ -28,7 +28,7 @@ export const exampleService = {
     exampleId: number | string
   ) =>
     request.get<RequestExample>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`
     ),
 
   create: (
@@ -38,7 +38,7 @@ export const exampleService = {
     data: CreateExampleRequest
   ) =>
     request.post<RequestExample>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples`,
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples`,
       normalizePayload(data)
     ),
 
@@ -50,7 +50,7 @@ export const exampleService = {
     data: UpdateExampleRequest
   ) =>
     request.put<RequestExample>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`,
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`,
       normalizePayload(data)
     ),
 
@@ -61,7 +61,7 @@ export const exampleService = {
     exampleId: number | string
   ) =>
     request.delete<void>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}`
     ),
 
   saveResponse: (
@@ -72,7 +72,7 @@ export const exampleService = {
     data: SaveExampleResponseRequest
   ) =>
     request.post<RequestExample>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}/response`,
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}/response`,
       normalizePayload(data)
     ),
 
@@ -83,7 +83,7 @@ export const exampleService = {
     exampleId: number | string
   ) =>
     request.post<RequestExample>(
-      `/projects/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}/default`
+      `/workspaces/${projectId}/collections/${collectionId}/requests/${requestId}/examples/${exampleId}/default`
     ),
 };
 

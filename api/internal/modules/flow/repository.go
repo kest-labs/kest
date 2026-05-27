@@ -13,7 +13,8 @@ type Repository interface {
 	// Flow CRUD
 	CreateFlow(ctx context.Context, flow *FlowPO) error
 	GetFlowByID(ctx context.Context, id string) (*FlowPO, error)
-	ListFlowsByProject(ctx context.Context, projectID string) ([]*FlowPO, error)
+	GetFlowByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*FlowPO, error)
+	ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error)
 	UpdateFlow(ctx context.Context, flow *FlowPO) error
 	DeleteFlow(ctx context.Context, id string) error
 
@@ -73,10 +74,20 @@ func (r *repository) GetFlowByID(ctx context.Context, id string) (*FlowPO, error
 	return &flow, nil
 }
 
-func (r *repository) ListFlowsByProject(ctx context.Context, projectID string) ([]*FlowPO, error) {
+func (r *repository) GetFlowByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*FlowPO, error) {
+	var flow FlowPO
+	if err := dbutil.ByID(r.db.WithContext(ctx), id).
+		Where("workspace_id = ?", workspaceID).
+		First(&flow).Error; err != nil {
+		return nil, err
+	}
+	return &flow, nil
+}
+
+func (r *repository) ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error) {
 	var flows []*FlowPO
 	err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Order("created_at DESC").
 		Find(&flows).Error
 	return flows, err

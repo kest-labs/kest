@@ -75,14 +75,14 @@ func init() {
 	syncCmd.AddCommand(syncHistoryCmd)
 
 	// Sync push flags
-	syncPushCmd.Flags().StringVarP(&syncPushProjectID, "project-id", "p", "", "Platform project ID")
+	syncPushCmd.Flags().StringVarP(&syncPushProjectID, "workspace-id", "w", "", "Platform workspace ID")
 	syncPushCmd.Flags().StringVar(&syncPushAPIURL, "api-url", "", "Platform API URL (override config)")
 	syncPushCmd.Flags().StringVar(&syncPushToken, "token", "", "Platform API token (override config)")
 	syncPushCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "Preview what would be synced without actually syncing")
 
 	syncConfigCmd.Flags().StringVar(&syncConfigAPIURL, "platform-url", "", "Platform API URL (for example: https://api.kest.dev/v1)")
 	syncConfigCmd.Flags().StringVar(&syncConfigToken, "platform-token", "", "Project-scoped CLI token")
-	syncConfigCmd.Flags().StringVar(&syncConfigProject, "project-id", "", "Default platform project ID")
+	syncConfigCmd.Flags().StringVar(&syncConfigProject, "workspace-id", "", "Default platform workspace ID")
 	syncConfigCmd.Flags().BoolVar(&syncConfigAutoHistory, "auto-sync-history", false, "Enable automatic CLI history sync to the platform")
 
 	syncHistoryCmd.Flags().IntVar(&syncHistoryLimit, "limit", 5000, "Maximum number of local history records to sync")
@@ -130,10 +130,10 @@ type Example struct {
 }
 
 type SyncRequest struct {
-	ProjectID string          `json:"project_id"`
-	Specs     []APISpecSync   `json:"specs"`
-	Source    string          `json:"source"`
-	Metadata  json.RawMessage `json:"metadata,omitempty"`
+	WorkspaceID string          `json:"workspace_id"`
+	Specs       []APISpecSync   `json:"specs"`
+	Source      string          `json:"source"`
+	Metadata    json.RawMessage `json:"metadata,omitempty"`
 }
 
 type SyncResponse struct {
@@ -179,10 +179,10 @@ func runSyncPush() error {
 
 	projectID := syncPushProjectID
 	if projectID == "" {
-		projectID = conf.PlatformProjectID
+		projectID = conf.PlatformWorkspaceID
 	}
 	if projectID == "" {
-		return fmt.Errorf("project ID not specified. Use --project-id flag or configure in .kest/config.yaml")
+		return fmt.Errorf("workspace ID not specified. Use --workspace-id flag or configure in .kest/config.yaml")
 	}
 
 	// 3. Load local history
@@ -352,10 +352,10 @@ func pushToPlatform(apiURL, token, projectID string, specs []APISpecSync, conf *
 	metadataJSON, _ := json.Marshal(metadata)
 
 	syncReq := SyncRequest{
-		ProjectID: projectID,
-		Specs:     specs,
-		Source:    "cli",
-		Metadata:  metadataJSON,
+		WorkspaceID: projectID,
+		Specs:       specs,
+		Source:      "cli",
+		Metadata:    metadataJSON,
 	}
 
 	// Make HTTP request
@@ -456,8 +456,8 @@ func runSyncHistory() error {
 	if strings.TrimSpace(conf.PlatformToken) == "" {
 		return fmt.Errorf("platform token not configured. Run `kest key ...` or `kest sync config --platform-token ...`")
 	}
-	if strings.TrimSpace(conf.PlatformProjectID) == "" {
-		return fmt.Errorf("platform project ID not configured. Run `kest key ...` or `kest sync config --project-id ...`")
+	if strings.TrimSpace(conf.PlatformWorkspaceID) == "" {
+		return fmt.Errorf("platform workspace ID not configured. Run `kest key ...` or `kest sync config --workspace-id ...`")
 	}
 
 	localProjectID := strings.TrimSpace(conf.ProjectID)
@@ -608,7 +608,7 @@ func runSyncConfig(cmd *cobra.Command) error {
 			conf.PlatformToken = syncConfigToken
 		}
 		if syncConfigProject != "" {
-			conf.PlatformProjectID = syncConfigProject
+			conf.PlatformWorkspaceID = syncConfigProject
 		}
 		if cmdFlagChanged(cmd, "auto-sync-history") {
 			conf.PlatformAutoSyncHistory = syncConfigAutoHistory
@@ -632,11 +632,11 @@ func runSyncConfig(cmd *cobra.Command) error {
 			conf.PlatformToken = token
 		}
 
-		fmt.Print("Default Project ID: ")
-		var projectID string
-		fmt.Scanln(&projectID)
-		if projectID != "" {
-			conf.PlatformProjectID = projectID
+		fmt.Print("Default Workspace ID: ")
+		var workspaceID string
+		fmt.Scanln(&workspaceID)
+		if workspaceID != "" {
+			conf.PlatformWorkspaceID = workspaceID
 		}
 
 		fmt.Print("Enable automatic history sync (true/false): ")
@@ -671,16 +671,16 @@ func cmdFlagChanged(cmd *cobra.Command, name string) bool {
 	return flag != nil && flag.Changed
 }
 
-func buildSpecSyncEndpoint(apiURL, projectID string) string {
+func buildSpecSyncEndpoint(apiURL, workspaceID string) string {
 	base := strings.TrimSpace(apiURL)
 	base = strings.TrimRight(base, "/")
 
 	switch {
 	case strings.HasSuffix(base, "/v1"):
-		return fmt.Sprintf("%s/projects/%s/cli/spec-sync", base, projectID)
+		return fmt.Sprintf("%s/workspaces/%s/cli/spec-sync", base, workspaceID)
 	case strings.HasSuffix(base, "/api/v1"):
-		return fmt.Sprintf("%s/projects/%s/cli/spec-sync", base, projectID)
+		return fmt.Sprintf("%s/workspaces/%s/cli/spec-sync", base, workspaceID)
 	default:
-		return fmt.Sprintf("%s/v1/projects/%s/cli/spec-sync", base, projectID)
+		return fmt.Sprintf("%s/v1/workspaces/%s/cli/spec-sync", base, workspaceID)
 	}
 }

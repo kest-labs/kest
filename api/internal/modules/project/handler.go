@@ -182,9 +182,9 @@ func (h *Handler) GetStats(c *gin.Context) {
 	response.Success(c, stats)
 }
 
-// SyncSpecsFromCLI handles POST /projects/:id/cli/spec-sync
+// SyncSpecsFromCLI handles POST /workspaces/:id/cli/spec-sync
 func (h *Handler) SyncSpecsFromCLI(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {
 		return
 	}
@@ -199,12 +199,12 @@ func (h *Handler) SyncSpecsFromCLI(c *gin.Context) {
 		return
 	}
 
-	if req.ProjectID != nil && *req.ProjectID != projectID {
-		response.BadRequest(c, "project_id in body must match URL project id")
+	if req.WorkspaceID != nil && *req.WorkspaceID != workspaceID {
+		response.BadRequest(c, "workspace_id in body must match URL workspace id")
 		return
 	}
 
-	result, err := h.specSyncer.SyncSpecsFromCLI(c.Request.Context(), projectID, &req)
+	result, err := h.specSyncer.SyncSpecsFromCLI(c.Request.Context(), workspaceID, &req)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -213,9 +213,9 @@ func (h *Handler) SyncSpecsFromCLI(c *gin.Context) {
 	response.Success(c, result)
 }
 
-// SyncHistoryFromCLI handles POST /projects/:id/cli/history-sync
+// SyncHistoryFromCLI handles POST /workspaces/:id/cli/history-sync
 func (h *Handler) SyncHistoryFromCLI(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := handler.ParseID(c, "id")
 	if !ok {
 		return
 	}
@@ -230,8 +230,8 @@ func (h *Handler) SyncHistoryFromCLI(c *gin.Context) {
 		return
 	}
 
-	if req.ProjectID != nil && *req.ProjectID != projectID {
-		response.BadRequest(c, "project_id in body must match URL project id")
+	if req.WorkspaceID != nil && *req.WorkspaceID != workspaceID {
+		response.BadRequest(c, "workspace_id in body must match URL workspace id")
 		return
 	}
 
@@ -241,7 +241,7 @@ func (h *Handler) SyncHistoryFromCLI(c *gin.Context) {
 		return
 	}
 
-	result, err := h.historySyncer.SyncHistoryFromCLI(c.Request.Context(), projectID, createdBy, &req)
+	result, err := h.historySyncer.SyncHistoryFromCLI(c.Request.Context(), workspaceID, createdBy, &req)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return

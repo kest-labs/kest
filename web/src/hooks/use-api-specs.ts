@@ -23,7 +23,7 @@ import type {
 // 作用：统一管理规格列表、详情、示例、分类和 AI 结果缓存。
 export const apiSpecKeys = {
   all: ['api-specs'] as const,
-  project: (projectId: number | string) => [...apiSpecKeys.all, 'project', projectId] as const,
+  project: (projectId: number | string) => [...apiSpecKeys.all, 'workspace', projectId] as const,
   lists: (projectId: number | string) => [...apiSpecKeys.project(projectId), 'lists'] as const,
   list: (params: ApiSpecListParams) => [...apiSpecKeys.lists(params.projectId), params] as const,
   spec: (projectId: number | string, specId: number | string) =>

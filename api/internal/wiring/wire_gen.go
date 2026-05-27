@@ -27,7 +27,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
 	"github.com/kest-labs/kest/api/internal/modules/project"
-	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
@@ -72,9 +71,6 @@ func InitApplication() (*app.Application, error) {
 	workspaceHandler := workspace.NewHandler(workspaceService)
 	projectRepository := project.NewRepository(db)
 	projectService := project.NewService(projectRepository, memberService)
-	projectinviteRepository := projectinvite.NewRepository(db)
-	projectinviteService := projectinvite.NewService(projectinviteRepository)
-	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
 	collectionHandler := collection.NewHandler(collectionService, workspaceService)
@@ -106,10 +102,10 @@ func InitApplication() (*app.Application, error) {
 	environmentHandler := environment.NewHandler(environmentService, workspaceService)
 	flowRepository := flow.NewRepository(db)
 	flowService := flow.NewService(flowRepository)
-	flowHandler := flow.NewHandler(flowService, memberService)
+	flowHandler := flow.NewHandler(flowService, workspaceService)
 	executor := testrunner.NewExecutor()
 	testcaseService := testcase.NewService(testcaseRepository, apispecRepository, environmentRepository, executor)
-	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
+	testcaseHandler := testcase.NewHandler(testcaseService, workspaceService)
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
 		User:          handler,
@@ -118,7 +114,6 @@ func InitApplication() (*app.Application, error) {
 		Audit:         auditHandler,
 		Workspace:     workspaceHandler,
 		Project:       projectHandler,
-		ProjectInvite: projectinviteHandler,
 		Collection:    collectionHandler,
 		Request:       requestHandler,
 		Example:       exampleHandler,

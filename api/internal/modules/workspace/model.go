@@ -46,6 +46,7 @@ type WorkspaceMemberPO struct {
 	ID          string `gorm:"primaryKey"`
 	WorkspaceID string `gorm:"index;uniqueIndex:idx_workspace_user;not null"`
 	UserID      string `gorm:"index;uniqueIndex:idx_workspace_user;not null"`
+	User        WorkspaceMemberUserPO `gorm:"foreignKey:UserID;references:ID"`
 	Role        string `gorm:"size:20;not null"` // owner|admin|write|read
 	InvitedBy   string `gorm:"index"`            // Inviter user ID
 	JoinedAt    time.Time
@@ -57,6 +58,16 @@ type WorkspaceMemberPO struct {
 // TableName specifies the database table name
 func (WorkspaceMemberPO) TableName() string {
 	return "workspace_members"
+}
+
+type WorkspaceMemberUserPO struct {
+	ID       string `gorm:"primaryKey"`
+	Username string `gorm:"column:username"`
+	Email    string `gorm:"column:email"`
+}
+
+func (WorkspaceMemberUserPO) TableName() string {
+	return "users"
 }
 
 const (
@@ -145,6 +156,8 @@ type WorkspaceMember struct {
 	ID          string    `json:"id"`
 	WorkspaceID string    `json:"workspace_id"`
 	UserID      string    `json:"user_id"`
+	Username    string    `json:"username,omitempty"`
+	Email       string    `json:"email,omitempty"`
 	Role        string    `json:"role"`
 	InvitedBy   string    `json:"invited_by"`
 	JoinedAt    time.Time `json:"joined_at"`
@@ -196,6 +209,8 @@ func (po *WorkspaceMemberPO) toMemberDomain() *WorkspaceMember {
 		ID:          po.ID,
 		WorkspaceID: po.WorkspaceID,
 		UserID:      po.UserID,
+		Username:    po.User.Username,
+		Email:       po.User.Email,
 		Role:        po.Role,
 		InvitedBy:   po.InvitedBy,
 		JoinedAt:    po.JoinedAt,

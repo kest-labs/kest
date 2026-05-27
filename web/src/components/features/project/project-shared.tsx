@@ -89,8 +89,8 @@ export function ProjectStatusBadge({
 /**
  * 项目表单弹窗。
  * 作用：
- * 1. 在创建模式下收集新项目字段，调用 `POST /v1/projects`
- * 2. 在编辑模式下修改已有项目字段，调用 `PATCH /v1/projects/:id`
+ * 1. 在创建模式下收集新 Workspace 字段，调用 `POST /v1/workspaces`
+ * 2. 在编辑模式下修改已有项目字段，调用 `PATCH /v1/workspaces/:id`
  */
 export function ProjectFormDialog({
   open,
@@ -275,7 +275,7 @@ function ProjectFormDialogBody({
  * 项目删除确认弹窗。
  * 作用：
  * 1. 明确提示用户删除是不可逆操作
- * 2. 在用户确认后触发 `DELETE /v1/projects/:id`
+ * 2. 在用户确认后触发 `DELETE /v1/workspaces/:id`
  */
 export function DeleteProjectDialog({
   open,

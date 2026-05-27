@@ -139,6 +139,7 @@ func (r *repository) FindMember(workspaceID, userID string) (*WorkspaceMemberPO,
 	var member WorkspaceMemberPO
 	err := r.db.
 		Where("workspace_id = ? AND user_id = ?", workspaceID, userID).
+		Preload("User").
 		First(&member).Error
 	if err != nil {
 		return nil, err
@@ -151,6 +152,7 @@ func (r *repository) ListMembers(workspaceID string) ([]*WorkspaceMemberPO, erro
 	var members []*WorkspaceMemberPO
 	err := r.db.
 		Where("workspace_id = ?", workspaceID).
+		Preload("User").
 		Order("role DESC, joined_at ASC").
 		Find(&members).Error
 	return members, err

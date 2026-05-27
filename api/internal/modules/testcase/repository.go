@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, tc *TestCasePO) error
 	GetByID(ctx context.Context, id string) (*TestCasePO, error)
+	GetByIDAndWorkspace(ctx context.Context, id string, workspaceID string) (*TestCasePO, error)
 	List(ctx context.Context, filter *ListFilter) ([]*TestCasePO, int64, error)
 	Update(ctx context.Context, tc *TestCasePO) error
 	Delete(ctx context.Context, id string) error
@@ -29,7 +30,7 @@ type Repository interface {
 
 // ListFilter represents the filter for listing test cases
 type ListFilter struct {
-	ProjectID *string
+	WorkspaceID *string
 	APISpecID *string
 	Env       *string
 	Keyword   *string
@@ -64,9 +65,30 @@ func (r *repository) GetByID(ctx context.Context, id string) (*TestCasePO, error
 	return &tc, nil
 }
 
+func (r *repository) GetByIDAndWorkspace(ctx context.Context, id string, workspaceID string) (*TestCasePO, error) {
+	var tc TestCasePO
+	err := r.db.WithContext(ctx).
+		Model(&TestCasePO{}).
+		Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+		Where("test_cases.id = ? AND api_specs.workspace_id = ?", id, workspaceID).
+		First(&tc).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &tc, nil
+}
+
 // List lists test cases with filtering and pagination
 func (r *repository) List(ctx context.Context, filter *ListFilter) ([]*TestCasePO, int64, error) {
 	query := r.db.WithContext(ctx).Model(&TestCasePO{})
+
+	if filter.WorkspaceID != nil && *filter.WorkspaceID != "" {
+		query = query.Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+			Where("api_specs.workspace_id = ?", *filter.WorkspaceID)
+	}
 
 	// Apply filters
 	if filter.APISpecID != nil {

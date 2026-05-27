@@ -60,7 +60,7 @@ const removeProjectFromListCache = (
 // 项目域的 React Query key。
 // 作用：统一项目列表、详情、统计的缓存命名，方便后续失效与刷新。
 export const projectKeys = {
-  all: ['projects'] as const,
+  all: ['workspaces'] as const,
   lists: () => [...projectKeys.all, 'list'] as const,
   list: (params: ProjectListParams) => [...projectKeys.lists(), params] as const,
   details: () => [...projectKeys.all, 'detail'] as const,
@@ -92,7 +92,7 @@ export function useProject(id?: number | string, options: ProjectQueryOptions = 
 }
 
 // 项目统计查询。
-// 作用：读取 `/projects/:id/stats`，展示 API specs、flows、members 等聚合信息。
+// 作用：读取 `/workspaces/:id/stats`，展示 API specs、flows、members 等聚合信息。
 export function useProjectStats(id?: number | string, options: ProjectQueryOptions = {}) {
   const isEnabled = options.enabled ?? true;
   return useQuery<ProjectStats>({

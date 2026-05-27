@@ -68,7 +68,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -112,6 +111,12 @@ import {
   buildProjectEnvironmentsRoute,
   buildProjectHistoriesRoute,
   buildProjectTestCasesRoute,
+  buildWorkspaceApiSpecsRoute,
+  buildWorkspaceCategoriesRoute,
+  buildWorkspaceDetailRoute,
+  buildWorkspaceEnvironmentsRoute,
+  buildWorkspaceHistoriesRoute,
+  buildWorkspaceTestCasesRoute,
 } from '@/constants/routes';
 import {
   useAcceptApiSpecAIDraft,
@@ -207,6 +212,41 @@ const buildModuleHref = (
   itemId?: string | number | null
 ) => {
   const baseRoute = buildProjectWorkspaceRoute(projectId, module);
+
+  if (!itemId) {
+    return baseRoute;
+  }
+
+  return `${baseRoute}?item=${itemId}`;
+};
+
+const buildWorkspaceModuleHref = (
+  workspaceId: number | string,
+  module: ProjectWorkspaceModule,
+  itemId?: string | number | null
+) => {
+  let baseRoute: string;
+
+  switch (module) {
+    case 'api-specs':
+      baseRoute = buildWorkspaceApiSpecsRoute(workspaceId);
+      break;
+    case 'test-cases':
+      baseRoute = buildWorkspaceTestCasesRoute(workspaceId);
+      break;
+    case 'environments':
+      baseRoute = buildWorkspaceEnvironmentsRoute(workspaceId);
+      break;
+    case 'categories':
+      baseRoute = buildWorkspaceCategoriesRoute(workspaceId);
+      break;
+    case 'histories':
+      baseRoute = buildWorkspaceHistoriesRoute(workspaceId);
+      break;
+    default:
+      baseRoute = buildProjectWorkspaceRoute(workspaceId, module);
+      break;
+  }
 
   if (!itemId) {
     return baseRoute;
@@ -1347,12 +1387,14 @@ export function ProjectWorkspacePage({
   selectedItemId,
   autoOpenAICreate = false,
   initialHistoryEntityType,
+  routeScope = 'project',
 }: {
   projectId: number | string;
   module: ProjectWorkspaceModule;
   selectedItemId?: string | number | null;
   autoOpenAICreate?: boolean;
   initialHistoryEntityType?: string | null;
+  routeScope?: 'project' | 'workspace';
 }) {
   const t = useT('project');
   const projectQuery = useProject(projectId);
@@ -1368,6 +1410,7 @@ export function ProjectWorkspacePage({
           projectName={projectName}
           selectedItemId={selectedItemId}
           autoOpenAICreate={autoOpenAICreate}
+          routeScope={routeScope}
         />
       );
     case 'environments':
@@ -1376,6 +1419,7 @@ export function ProjectWorkspacePage({
           projectId={projectId}
           projectName={projectName}
           selectedItemId={selectedItemId}
+          routeScope={routeScope}
         />
       );
     case 'categories':
@@ -1384,6 +1428,7 @@ export function ProjectWorkspacePage({
           projectId={projectId}
           projectName={projectName}
           selectedItemId={selectedItemId}
+          routeScope={routeScope}
         />
       );
     case 'keys':
@@ -1396,6 +1441,7 @@ export function ProjectWorkspacePage({
           projectName={projectName}
           selectedItemId={selectedItemId}
           initialEntityTypeFilter={initialHistoryEntityType}
+          routeScope={routeScope}
         />
       );
     case 'flows':
@@ -1406,6 +1452,7 @@ export function ProjectWorkspacePage({
           projectId={projectId}
           projectName={projectName}
           module="api-specs"
+          routeScope={routeScope}
         />
       );
   }
@@ -1433,7 +1480,7 @@ function ProjectKeysWorkspaceSection({
           version: 1,
           platform_url: cliPlatformUrl,
           platform_token: generatedCliToken.token,
-          platform_project_id: String(project.id),
+          platform_workspace_id: String(project.id),
           platform_auto_sync_history: true,
         })
       : '';
@@ -1462,7 +1509,7 @@ function ProjectKeysWorkspaceSection({
         id: project.id,
         data: {
           name: `${project.name} CLI sync`,
-          scopes: ['spec:write', 'run:write'],
+          scopes: ['collection:read', 'collection:run', 'environment:read'],
         },
       });
       setGeneratedCliToken(token);
@@ -1538,7 +1585,9 @@ function ProjectKeysWorkspaceSection({
                     <span className="font-mono">{scopedProjectId}</span>
                   </DetailField>
                   <DetailField label={t('keysPage.scopes')}>
-                    <span className="font-mono text-xs">spec:write, run:write</span>
+                    <span className="font-mono text-xs">
+                      collection:read, collection:run, environment:read
+                    </span>
                   </DetailField>
                   <DetailField label={t('keysPage.autoSyncHistory')}>
                     {t('keysPage.autoSyncHistoryEnabled')}
@@ -1636,11 +1685,13 @@ function ApiSpecsWorkspaceSection({
   projectName,
   selectedItemId,
   autoOpenAICreate,
+  routeScope = 'project',
 }: {
   projectId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
   autoOpenAICreate?: boolean;
+  routeScope?: 'project' | 'workspace';
 }) {
   const t = useT('project');
   const router = useRouter();
@@ -1664,6 +1715,22 @@ function ApiSpecsWorkspaceSection({
   );
   const [draggingSpecId, setDraggingSpecId] = useState<string | number | null>(null);
   const deferredSearch = useDeferredValue(searchQuery);
+  const buildScopedModuleHref = (module: ProjectWorkspaceModule, itemId?: string | number | null) =>
+    routeScope === 'workspace'
+      ? buildWorkspaceModuleHref(projectId, module, itemId)
+      : buildModuleHref(projectId, module, itemId);
+  const apiSpecsIndexHref =
+    routeScope === 'workspace' ? buildWorkspaceApiSpecsRoute(projectId) : buildProjectApiSpecsRoute(projectId);
+  const categoriesIndexHref =
+    routeScope === 'workspace' ? buildWorkspaceCategoriesRoute(projectId) : buildProjectCategoriesRoute(projectId);
+  const environmentsIndexHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceEnvironmentsRoute(projectId)
+      : buildProjectEnvironmentsRoute(projectId);
+  const testCasesHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceTestCasesRoute(projectId)
+      : buildProjectTestCasesRoute(projectId);
   const dragSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -1827,7 +1894,7 @@ function ApiSpecsWorkspaceSection({
       setCreateSpecCategoryId('');
       setSearchQuery('');
       await specsQuery.refetch();
-      router.replace(buildModuleHref(projectId, 'api-specs', createdSpec.id));
+      router.replace(buildScopedModuleHref('api-specs', createdSpec.id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -1852,7 +1919,7 @@ function ApiSpecsWorkspaceSection({
     setEditingSpecId(specId);
 
     if (String(selectedItemId ?? '') !== String(specId)) {
-      router.replace(buildModuleHref(projectId, 'api-specs', specId));
+      router.replace(buildScopedModuleHref('api-specs', specId));
     }
   };
 
@@ -1950,8 +2017,8 @@ function ApiSpecsWorkspaceSection({
       if (deletingActiveSpec) {
         router.replace(
           fallbackSpec
-            ? buildModuleHref(projectId, 'api-specs', fallbackSpec.id)
-            : buildProjectApiSpecsRoute(projectId)
+            ? buildScopedModuleHref('api-specs', fallbackSpec.id)
+            : apiSpecsIndexHref
         );
       }
     } catch {
@@ -1999,7 +2066,7 @@ function ApiSpecsWorkspaceSection({
 
   const queueSpecAiAction = (spec: ApiSpec, mode: 'doc' | 'test') => {
     if (String(selectedItemId ?? '') !== String(spec.id)) {
-      router.replace(buildModuleHref(projectId, 'api-specs', spec.id));
+      router.replace(buildScopedModuleHref('api-specs', spec.id));
     }
 
     setAiAction({ mode, spec });
@@ -2092,8 +2159,8 @@ function ApiSpecsWorkspaceSection({
     if (!open && autoOpenAICreate) {
       router.replace(
         selectedItemId
-          ? buildModuleHref(projectId, 'api-specs', selectedItemId)
-          : buildProjectApiSpecsRoute(projectId)
+          ? buildScopedModuleHref('api-specs', selectedItemId)
+          : apiSpecsIndexHref
       );
     }
   };
@@ -2233,20 +2300,20 @@ function ApiSpecsWorkspaceSection({
       key: 'api-specs-categories',
       label: t('categories.manageCategories'),
       icon: Tags,
-      href: buildProjectCategoriesRoute(projectId),
+      href: categoriesIndexHref,
       separatorBefore: true,
     },
     {
       key: 'api-specs-environments',
       label: t('environments.title'),
       icon: Globe,
-      href: buildProjectEnvironmentsRoute(projectId),
+      href: environmentsIndexHref,
     },
     {
       key: 'api-specs-test-cases',
       label: t('apiSpecs.openTestCases'),
       icon: FlaskConical,
-      href: buildProjectTestCasesRoute(projectId),
+      href: testCasesHref,
     },
   ];
 
@@ -2320,6 +2387,7 @@ function ApiSpecsWorkspaceSection({
                 movingSpecId={
                   updateSpecMutation.isPending ? updateSpecMutation.variables?.specId ?? null : null
                 }
+                routeScope={routeScope}
                 onOpenCreate={openCreateSpecDialog}
                 onOpenEdit={openEditDialog}
                 onQueueAiAction={queueSpecAiAction}
@@ -2374,13 +2442,13 @@ function ApiSpecsWorkspaceSection({
             ) : selectedItemId && !selectedSpec ? (
               <MissingDetailState
                 moduleLabel={t('apiSpecs.title')}
-                clearHref={buildProjectApiSpecsRoute(projectId)}
+                clearHref={apiSpecsIndexHref}
               />
             ) : !selectedSpec ? (
               <ApiSpecsGuideState
                 onOpenAICreate={() => setIsAICreateOpen(true)}
                 onOpenManualCreate={() => openCreateSpecDialog()}
-                testCasesHref={buildProjectTestCasesRoute(projectId)}
+                testCasesHref={testCasesHref}
               />
             ) : (
               <div className="space-y-6">
@@ -2614,11 +2682,11 @@ function ApiSpecsWorkspaceSection({
           void specsQuery.refetch();
 
           if (continueToTests) {
-            router.replace(`${buildProjectTestCasesRoute(projectId)}?fromSpec=${specId}&source=ai`);
+            router.replace(`${testCasesHref}?fromSpec=${specId}&source=ai`);
             return;
           }
 
-          router.replace(buildModuleHref(projectId, 'api-specs', specId));
+          router.replace(buildScopedModuleHref('api-specs', specId));
         }}
       />
 
@@ -2706,6 +2774,7 @@ function ApiSpecDirectoryList({
   selectedSpecId,
   canWrite,
   movingSpecId,
+  routeScope = 'project',
   onOpenCreate,
   onOpenEdit,
   onQueueAiAction,
@@ -2716,6 +2785,7 @@ function ApiSpecDirectoryList({
   selectedSpecId?: string | number | null;
   canWrite: boolean;
   movingSpecId?: string | number | null;
+  routeScope?: 'project' | 'workspace';
   onOpenCreate: (categoryId?: string) => void;
   onOpenEdit: (specId: string | number) => void;
   onQueueAiAction: (spec: ApiSpec, mode: 'doc' | 'test') => void;
@@ -2736,6 +2806,7 @@ function ApiSpecDirectoryList({
               key={spec.id}
               spec={spec}
               projectId={projectId}
+              routeScope={routeScope}
               active={String(spec.id) === String(selectedSpecId ?? '')}
               canWrite={canWrite}
               indentLevel={Math.min(group.depth + 1, 5)}
@@ -2801,6 +2872,7 @@ function ApiSpecCategoryDropZone({
 function DraggableApiSpecListItem({
   spec,
   projectId,
+  routeScope = 'project',
   active,
   canWrite,
   indentLevel,
@@ -2811,6 +2883,7 @@ function DraggableApiSpecListItem({
 }: {
   spec: ApiSpec;
   projectId: number | string;
+  routeScope?: 'project' | 'workspace';
   active: boolean;
   canWrite: boolean;
   indentLevel: number;
@@ -2820,6 +2893,10 @@ function DraggableApiSpecListItem({
   onDelete: (spec: ApiSpec) => void;
 }) {
   const t = useT('project');
+  const href =
+    routeScope === 'workspace'
+      ? buildWorkspaceModuleHref(projectId, 'api-specs', spec.id)
+      : buildModuleHref(projectId, 'api-specs', spec.id);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `api-spec-${spec.id}`,
     data: {
@@ -2835,7 +2912,7 @@ function DraggableApiSpecListItem({
       className={cn((isDragging || isMoving) && 'opacity-55')}
     >
       <ResourceListItem
-        href={buildModuleHref(projectId, 'api-specs', spec.id)}
+        href={href}
         active={active}
         title={`${spec.method} ${spec.path}`}
         description={spec.summary || spec.description || t('common.noSummaryProvided')}
@@ -2870,7 +2947,7 @@ function DraggableApiSpecListItem({
               {
                 key: `spec-open-${spec.id}`,
                 label: t('common.open'),
-                href: buildModuleHref(projectId, 'api-specs', spec.id),
+                href,
               },
               {
                 key: `spec-edit-${spec.id}`,
@@ -2935,10 +3012,12 @@ function EnvironmentsWorkspaceSection({
   projectId,
   projectName,
   selectedItemId,
+  routeScope = 'project',
 }: {
   projectId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
+  routeScope?: 'project' | 'workspace';
 }) {
   const t = useT('project');
   const router = useRouter();
@@ -2953,6 +3032,24 @@ function EnvironmentsWorkspaceSection({
   >(null);
   const deferredSearch = useDeferredValue(searchQuery);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
+  const buildScopedModuleHref = (module: ProjectWorkspaceModule, itemId?: string | number | null) =>
+    routeScope === 'workspace'
+      ? buildWorkspaceModuleHref(projectId, module, itemId)
+      : buildModuleHref(projectId, module, itemId);
+  const apiSpecsHref =
+    routeScope === 'workspace' ? buildWorkspaceApiSpecsRoute(projectId) : buildProjectApiSpecsRoute(projectId);
+  const categoriesHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceCategoriesRoute(projectId)
+      : buildProjectCategoriesRoute(projectId);
+  const testCasesHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceTestCasesRoute(projectId)
+      : buildProjectTestCasesRoute(projectId);
+  const environmentsHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceEnvironmentsRoute(projectId)
+      : buildProjectEnvironmentsRoute(projectId);
   const effectiveSelectedItemId =
     selectedItemId && String(selectedItemId) === String(suppressedSelectedEnvironmentId)
       ? null
@@ -2988,10 +3085,10 @@ function EnvironmentsWorkspaceSection({
   const canWrite = currentRole ? WRITE_ROLES.includes(currentRole) : false;
   const listPreview =
     normalizedSearch.length > 0 ? filteredEnvironments.slice(0, 5) : environments.slice(0, 5);
-  const environmentsPath = `/projects/${projectId}/environments`;
+  const environmentsPath = `/workspaces/${projectId}/environments`;
   const activeEnvironmentPath = selectedEnvironment
-    ? `/projects/${projectId}/environments/${selectedEnvironment.id}`
-    : `/projects/${projectId}/environments/:eid`;
+    ? `/workspaces/${projectId}/environments/${selectedEnvironment.id}`
+    : `/workspaces/${projectId}/environments/:eid`;
 
   const closeEnvironmentForm = () => {
     setIsFormOpen(false);
@@ -3021,7 +3118,7 @@ function EnvironmentsWorkspaceSection({
         setIsFormOpen(false);
         setEditingEnvironmentId(null);
         setSearchQuery('');
-        router.replace(buildModuleHref(projectId, 'environments', createdEnvironment.id));
+        router.replace(buildScopedModuleHref('environments', createdEnvironment.id));
         return;
       }
 
@@ -3035,7 +3132,7 @@ function EnvironmentsWorkspaceSection({
       });
       setIsFormOpen(false);
       setEditingEnvironmentId(null);
-      router.replace(buildModuleHref(projectId, 'environments', updatedEnvironment.id));
+      router.replace(buildScopedModuleHref('environments', updatedEnvironment.id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -3061,7 +3158,7 @@ function EnvironmentsWorkspaceSection({
       setDeleteTarget(null);
 
       if (isDeletingSelectedEnvironment) {
-        router.replace(buildProjectEnvironmentsRoute(projectId));
+        router.replace(environmentsHref);
       }
     } catch {
       if (isDeletingSelectedEnvironment) {
@@ -3083,7 +3180,7 @@ function EnvironmentsWorkspaceSection({
       });
       setDuplicateTarget(null);
       setSearchQuery('');
-      router.replace(buildModuleHref(projectId, 'environments', duplicatedEnvironment.id));
+      router.replace(buildScopedModuleHref('environments', duplicatedEnvironment.id));
     } catch {
       // Global HTTP error handling already surfaces failure feedback.
     }
@@ -3115,20 +3212,20 @@ function EnvironmentsWorkspaceSection({
       key: 'environments-api-specs',
       label: t('apiSpecs.title'),
       icon: FileJson2,
-      href: buildProjectApiSpecsRoute(projectId),
+      href: apiSpecsHref,
       separatorBefore: selectedEnvironment ? true : undefined,
     },
     {
       key: 'environments-categories',
       label: t('categories.title'),
       icon: Tags,
-      href: buildProjectCategoriesRoute(projectId),
+      href: categoriesHref,
     },
     {
       key: 'environments-test-cases',
       label: t('apiSpecs.openTestCases'),
       icon: FlaskConical,
-      href: buildProjectTestCasesRoute(projectId),
+      href: testCasesHref,
     },
   ];
 
@@ -3175,7 +3272,7 @@ function EnvironmentsWorkspaceSection({
             {filteredEnvironments.map(environment => (
               <ResourceListItem
                 key={environment.id}
-                href={buildModuleHref(projectId, 'environments', environment.id)}
+                href={buildScopedModuleHref('environments', environment.id)}
                 active={environment.id === selectedEnvironment?.id}
                 title={environment.display_name || environment.name}
                 description={environment.base_url || t('environments.baseUrlNotConfigured')}
@@ -3200,7 +3297,7 @@ function EnvironmentsWorkspaceSection({
                       {
                         key: `environment-open-${environment.id}`,
                         label: t('common.open'),
-                        href: buildModuleHref(projectId, 'environments', environment.id),
+                        href: buildScopedModuleHref('environments', environment.id),
                         onSelect: closeEnvironmentForm,
                       },
                       {
@@ -3313,7 +3410,7 @@ function EnvironmentsWorkspaceSection({
               ) : effectiveSelectedItemId && !selectedEnvironment ? (
                 <MissingDetailState
                   moduleLabel={t('modules.environments.label').toLowerCase()}
-                  clearHref={buildProjectEnvironmentsRoute(projectId)}
+                  clearHref={environmentsHref}
                 />
               ) : !selectedEnvironment ? (
                 environmentsQuery.isLoading ? (
@@ -3338,7 +3435,7 @@ function EnvironmentsWorkspaceSection({
                           {t('environments.createButton')}
                         </Button>
                         <Button asChild variant="outline">
-                          <Link href={buildProjectApiSpecsRoute(projectId)}>
+                          <Link href={apiSpecsHref}>
                             {t('environments.openApiSpecs')}
                           </Link>
                         </Button>
@@ -3358,7 +3455,7 @@ function EnvironmentsWorkspaceSection({
                           {t('environments.createButton')}
                         </Button>
                         <Button asChild variant="outline">
-                          <Link href={buildProjectTestCasesRoute(projectId)}>
+                          <Link href={testCasesHref}>
                             {t('environments.openTestCases')}
                           </Link>
                         </Button>
@@ -3386,7 +3483,7 @@ function EnvironmentsWorkspaceSection({
                             listPreview.map(environment => (
                               <Link
                                 key={environment.id}
-                                href={buildModuleHref(projectId, 'environments', environment.id)}
+                                href={buildScopedModuleHref('environments', environment.id)}
                                 className="block rounded-md border border-border-subtle bg-bg-canvas p-4 transition-colors hover:bg-bg-subtle"
                               >
                                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -3550,14 +3647,24 @@ function CategoriesWorkspaceSection({
   projectId,
   projectName,
   selectedItemId,
+  routeScope = 'project',
 }: {
   projectId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
+  routeScope?: 'project' | 'workspace';
 }) {
   const t = useT('project');
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearch = useDeferredValue(searchQuery);
+  const buildScopedModuleHref = (module: ProjectWorkspaceModule, itemId?: string | number | null) =>
+    routeScope === 'workspace'
+      ? buildWorkspaceModuleHref(projectId, module, itemId)
+      : buildModuleHref(projectId, module, itemId);
+  const categoriesHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceCategoriesRoute(projectId)
+      : buildProjectCategoriesRoute(projectId);
 
   const categoriesQuery = useProjectCategories({
     projectId,
@@ -3588,7 +3695,7 @@ function CategoriesWorkspaceSection({
     selectedCategory?.id
   );
   const childCategories = selectedCategoryTreeNode?.children ?? [];
-  const fullManagerHref = `${buildProjectCategoriesRoute(projectId)}?mode=manage`;
+  const fullManagerHref = `${categoriesHref}?mode=manage`;
   const refreshActionItems: ActionMenuItem[] = [
     {
       key: 'categories-refresh',
@@ -3631,7 +3738,7 @@ function CategoriesWorkspaceSection({
           {filteredCategories.map(category => (
             <ResourceListItem
               key={category.id}
-              href={buildModuleHref(projectId, 'categories', category.id)}
+              href={buildScopedModuleHref('categories', category.id)}
               active={category.id === selectedCategory?.id}
               title={category.name}
               description={category.description || t('common.noDescriptionProvided')}
@@ -3681,14 +3788,14 @@ function CategoriesWorkspaceSection({
           ) : selectedItemId && !selectedCategory ? (
             <MissingDetailState
               moduleLabel={t('modules.categories.label').toLowerCase()}
-              clearHref={buildProjectCategoriesRoute(projectId)}
+              clearHref={categoriesHref}
             />
           ) : !selectedCategory ? (
             <GuideState
               icon={Tags}
               title={t('categories.chooseCategory')}
               description={t('categories.chooseCategoryDescription')}
-              actionHref={`${buildProjectCategoriesRoute(projectId)}?mode=manage`}
+              actionHref={`${categoriesHref}?mode=manage`}
               actionLabel={t('categories.manageCategories')}
             />
           ) : (
@@ -3803,11 +3910,13 @@ function HistoryWorkspaceSection({
   projectName,
   selectedItemId,
   initialEntityTypeFilter,
+  routeScope = 'project',
 }: {
   projectId: number | string;
   projectName: string;
   selectedItemId?: string | number | null;
   initialEntityTypeFilter?: string | null;
+  routeScope?: 'project' | 'workspace';
 }) {
   const t = useT('project');
   const [searchQuery, setSearchQuery] = useState('');
@@ -3815,6 +3924,16 @@ function HistoryWorkspaceSection({
     initialEntityTypeFilter?.trim() || 'all'
   );
   const deferredSearch = useDeferredValue(searchQuery);
+  const buildScopedModuleHref = (module: ProjectWorkspaceModule, itemId?: string | number | null) =>
+    routeScope === 'workspace'
+      ? buildWorkspaceModuleHref(projectId, module, itemId)
+      : buildModuleHref(projectId, module, itemId);
+  const historiesHref =
+    routeScope === 'workspace' ? buildWorkspaceHistoriesRoute(projectId) : buildProjectHistoriesRoute(projectId);
+  const testCasesHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceTestCasesRoute(projectId)
+      : buildProjectTestCasesRoute(projectId);
 
   const historiesQuery = useProjectHistories({
     projectId: String(projectId),
@@ -3919,7 +4038,9 @@ function HistoryWorkspaceSection({
           {filteredHistories.map(history => (
             <ResourceListItem
               key={history.id}
-              href={buildModuleHref(projectId, 'histories', history.id)}
+              href={`${buildScopedModuleHref('histories', history.id)}${
+                entityTypeFilter !== 'all' ? `&entityType=${encodeURIComponent(entityTypeFilter)}` : ''
+              }`}
               active={history.id === selectedHistory?.id}
               title={getHistoryPrimaryTitle(history)}
               description={history.message || getHistoryFallbackDescription(history)}
@@ -3985,7 +4106,7 @@ function HistoryWorkspaceSection({
           ) : selectedItemId && !selectedHistory ? (
             <MissingDetailState
               moduleLabel={t('history.recordId').toLowerCase()}
-              clearHref={buildProjectHistoriesRoute(projectId)}
+              clearHref={historiesHref}
             />
           ) : historiesQuery.isLoading ? (
             <DetailSkeleton />
@@ -4007,18 +4128,20 @@ function HistoryWorkspaceSection({
             />
           ) : (
             <div className="space-y-6">
-              <Card className="border-border-subtle">
+              <Card className="border-border-main bg-bg-canvas">
                 <CardHeader>
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="border-border-subtle bg-bg-subtle text-text-main"
+                          className="border-border-subtle bg-bg-canvas font-mono text-text-main"
                         >
                           {selectedHistory.entity_type}
                         </Badge>
-                        <Badge variant="outline">{selectedHistory.action}</Badge>
+                        <Badge variant="outline" className="font-mono">
+                          {selectedHistory.action}
+                        </Badge>
                         {selectedHistory.entity_type === 'cli_request' &&
                         getHistoryRequestStatus(selectedHistory) !== null ? (
                           <Badge variant="secondary">
@@ -4034,7 +4157,7 @@ function HistoryWorkspaceSection({
                         </Badge>
                       </div>
                       <div>
-                        <CardTitle className="text-2xl tracking-normal">
+                        <CardTitle className="text-2xl font-semibold tracking-normal">
                           {getHistoryPrimaryTitle(selectedHistory)}
                         </CardTitle>
                         <CardDescription className="mt-2 max-w-4xl leading-6">
@@ -4057,8 +4180,8 @@ function HistoryWorkspaceSection({
                 </CardHeader>
               </Card>
 
-              <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                <Card className="border-border-subtle">
+              <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+                <Card className="border-border-main bg-bg-canvas">
                   <CardHeader>
                     <CardTitle>{t('history.metadata')}</CardTitle>
                     <CardDescription>{t('history.metadataDescription')}</CardDescription>
@@ -4085,7 +4208,7 @@ function HistoryWorkspaceSection({
                   </CardContent>
                 </Card>
 
-                <Card className="border-border-subtle">
+                <Card className="border-border-main bg-bg-canvas">
                   <CardHeader>
                     <CardTitle>{t('history.recordedNote')}</CardTitle>
                     <CardDescription>{t('history.recordedNoteDescription')}</CardDescription>
@@ -4162,8 +4285,8 @@ function HistoryWorkspaceSection({
 
               {selectedCLIRun ? (
                 <>
-                  <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                    <Card className="border-border-subtle">
+                  <div className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
+                    <Card className="border-border-main bg-bg-canvas">
                       <CardHeader>
                         <CardTitle>{t('history.cliRunSummary')}</CardTitle>
                         <CardDescription>{t('history.cliRunSummaryDescription')}</CardDescription>
@@ -4191,13 +4314,15 @@ function HistoryWorkspaceSection({
                       </CardContent>
                     </Card>
 
-                    <Card className="border-border-subtle">
+                    <Card className="border-border-main bg-[#101112] text-white">
                       <CardHeader>
-                        <CardTitle>{t('history.logExcerpt')}</CardTitle>
-                        <CardDescription>{t('history.logExcerptDescription')}</CardDescription>
+                        <CardTitle className="text-white">{t('history.logExcerpt')}</CardTitle>
+                        <CardDescription className="text-white/60">
+                          {t('history.logExcerptDescription')}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <pre className="max-h-[340px] overflow-auto rounded-md border border-border-subtle bg-bg-soft p-4 text-xs leading-6 text-text-muted">
+                        <pre className="max-h-[340px] overflow-auto rounded-md border border-white/10 bg-black p-4 font-mono text-xs leading-6 text-white/82">
                           {getHistoryString(selectedCLIRunLog?.excerpt) ||
                             t('history.noLogExcerpt')}
                         </pre>
@@ -4205,7 +4330,7 @@ function HistoryWorkspaceSection({
                     </Card>
                   </div>
 
-                  <Card className="border-border-subtle">
+                  <Card className="border-border-main bg-bg-canvas">
                     <CardHeader>
                       <CardTitle>{t('history.stepResults')}</CardTitle>
                       <CardDescription>{t('history.stepResultsDescription')}</CardDescription>
@@ -4275,10 +4400,12 @@ function PlaceholderWorkspaceSection({
   projectId,
   projectName,
   module,
+  routeScope = 'project',
 }: {
   projectId: number | string;
   projectName: string;
   module: ProjectWorkspaceModule;
+  routeScope?: 'project' | 'workspace';
 }) {
   const t = useT('project');
   const moduleMeta = getProjectWorkspaceModuleMeta(module);
@@ -4286,6 +4413,10 @@ function PlaceholderWorkspaceSection({
   const moduleDescription = getProjectModuleCopy(t, moduleMeta.i18nKey, 'description');
   const Icon = moduleMeta.icon;
   const isHistoryModule = module === 'histories';
+  const testCasesHref =
+    routeScope === 'workspace'
+      ? buildWorkspaceTestCasesRoute(projectId)
+      : buildProjectTestCasesRoute(projectId);
 
   return (
     <WorkspaceFrame
@@ -4320,7 +4451,7 @@ function PlaceholderWorkspaceSection({
           actions={
             isHistoryModule ? (
               <Button asChild variant="outline">
-                <Link href={buildProjectTestCasesRoute(projectId)}>
+                <Link href={testCasesHref}>
                   {t('common.openLegacyTestCases')}
                 </Link>
               </Button>
@@ -4335,7 +4466,7 @@ function PlaceholderWorkspaceSection({
                 ? t('workspace.historyPlaceholderDescription')
                 : t('workspace.placeholderDescription')
             }
-            actionHref={isHistoryModule ? buildProjectTestCasesRoute(projectId) : undefined}
+            actionHref={isHistoryModule ? testCasesHref : undefined}
             actionLabel={isHistoryModule ? t('common.openLegacyTestCases') : undefined}
           />
         </ResourceContent>
@@ -4353,7 +4484,7 @@ function WorkspaceFrame({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bg-canvas xl:flex-row">
-      <aside className="w-full shrink-0 border-b border-border-subtle bg-bg-canvas xl:w-[336px] xl:border-b-0 xl:border-r">
+      <aside className="w-full shrink-0 border-b border-border-main bg-bg-soft xl:w-[360px] xl:border-b-0 xl:border-r">
         {sidebar}
       </aside>
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{content}</div>
@@ -4390,9 +4521,9 @@ function ResourceSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="space-y-2 px-3 py-2">
+      <div className="space-y-2 border-b border-border-main bg-bg-canvas px-3 py-3">
         <div className="flex min-h-8 items-center">
-          <h2 className="truncate text-sm font-medium tracking-normal text-text-main">{title}</h2>
+          <h2 className="truncate text-sm font-semibold tracking-normal text-text-main">{title}</h2>
         </div>
 
         {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
@@ -4410,9 +4541,7 @@ function ResourceSidebar({
         ) : null}
       </div>
 
-      <Separator className="bg-border-main" />
-
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {loading ? (
           <div className="space-y-1.5">
             {Array.from({ length: 7 }).map((_, index) => (
@@ -4431,7 +4560,7 @@ function ResourceSidebar({
         ) : count === 0 ? (
           emptyState
         ) : (
-          <div className="space-y-1.5">{children}</div>
+          <div className="space-y-1">{children}</div>
         )}
       </div>
     </div>
@@ -4462,10 +4591,10 @@ function ResourceListItem({
   return (
     <div
       className={cn(
-        'group/resource rounded-md border px-3 py-2 transition-colors',
+        'group/resource relative rounded-md border px-3 py-2 transition-colors',
         active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border-subtle bg-bg-canvas hover:bg-bg-subtle'
+          ? 'border-border-strong bg-bg-canvas text-text-main before:absolute before:inset-y-2 before:left-0 before:w-1 before:bg-[var(--miro-brand-yellow)]'
+          : 'border-transparent bg-transparent hover:border-border-subtle hover:bg-bg-canvas'
       )}
       style={{ marginLeft: indentLevel > 0 ? `${indentLevel * 12}px` : undefined }}
     >
@@ -4476,7 +4605,7 @@ function ResourceListItem({
             <p
               className={cn(
                 'truncate text-[13px] font-medium leading-5',
-                active ? 'text-primary-foreground' : 'text-text-main'
+                active ? 'text-text-main' : 'text-text-main'
               )}
             >
               {title}
@@ -4484,7 +4613,7 @@ function ResourceListItem({
             <p
               className={cn(
                 'mt-0.5 line-clamp-1 text-xs leading-4',
-                active ? 'text-primary-foreground/72' : 'text-text-muted'
+                active ? 'text-text-muted' : 'text-text-muted'
               )}
             >
               {description}
@@ -4493,7 +4622,7 @@ function ResourceListItem({
               <div
                 className={cn(
                   'mt-1.5 flex max-w-full flex-nowrap items-center gap-1.5 overflow-hidden text-[11px] leading-4 [&_[data-slot=badge]]:px-1.5 [&_[data-slot=badge]]:py-0 [&_[data-slot=badge]]:text-[11px] [&_[data-slot=badge]]:font-medium [&_[data-slot=badge]]:leading-4 [&_span]:min-w-0 [&_span]:truncate',
-                  active ? 'text-primary-foreground/72' : 'text-text-muted'
+                  active ? 'text-text-muted' : 'text-text-muted'
                 )}
               >
                 {meta}
@@ -4528,7 +4657,7 @@ function ResourceContent({
 
   return (
     <main className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle bg-bg-canvas px-4 py-2 md:px-6">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-main bg-bg-canvas px-4 py-2 md:px-6">
         <Breadcrumb className="min-w-0">
           <BreadcrumbList className="flex-nowrap">
             <BreadcrumbItem className="min-w-0 shrink-0">
@@ -4558,7 +4687,7 @@ function ResourceContent({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto bg-bg-soft p-4 md:p-5">{children}</div>
     </main>
   );
 }
@@ -4574,7 +4703,7 @@ function SidebarEmptyState({
 }) {
   return (
     <div className="rounded-md border border-dashed border-border-subtle bg-bg-soft p-5 text-center">
-      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-bg-canvas text-text-muted">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-md border border-border-main bg-bg-canvas text-text-muted">
         <Icon className="h-5 w-5" />
       </div>
       <p className="mt-4 text-sm font-medium text-text-main">{title}</p>
@@ -4599,7 +4728,7 @@ function GuideState({
   return (
     <Card className="border-dashed border-border-subtle">
       <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <div className="flex h-14 w-14 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <Icon className="h-6 w-6" />
         </div>
         <div className="space-y-2">
@@ -4631,7 +4760,7 @@ function ApiSpecsGuideState({
     <Card className="min-w-0 border-border-subtle">
       <CardContent className="space-y-6 py-8">
         <div className="flex flex-col items-start gap-4 rounded-lg border border-border-subtle bg-bg-surface p-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <div className="flex h-14 w-14 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Bot className="h-6 w-6" />
           </div>
           <div className="space-y-2">
@@ -4716,7 +4845,7 @@ function DetailField({ label, children }: { label: string; children: React.React
 
 function InfoBadge({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-full border border-border-subtle bg-bg-canvas px-3 py-2 text-sm">
+    <div className="rounded-md border border-border-subtle bg-bg-canvas px-3 py-2 text-sm">
       <span className="text-text-muted">{label}: </span>
       <span className="font-medium text-text-main">{value}</span>
     </div>

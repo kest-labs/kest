@@ -17,7 +17,7 @@ type connectionKeyPayload struct {
 	Version                 int    `json:"version,omitempty"`
 	PlatformURL             string `json:"platform_url"`
 	PlatformToken           string `json:"platform_token"`
-	PlatformProjectID       string `json:"platform_project_id"`
+	PlatformWorkspaceID     string `json:"platform_workspace_id"`
 	PlatformAutoSyncHistory *bool  `json:"platform_auto_sync_history,omitempty"`
 }
 
@@ -25,7 +25,7 @@ var keyCmd = &cobra.Command{
 	Use:   "key [connection-key]",
 	Short: "Connect this project to Kest Web with a one-line key",
 	Long: `Connect the current Kest project to Kest Web using the connection key copied
-from the Web Console. The key contains the platform URL, project ID, and project-scoped
+from the Web Console. The key contains the platform URL, workspace ID, and workspace-scoped
 CLI token, so you do not need to edit .kest/config.yaml by hand.`,
 	Example: `  # Paste the command copied from Kest Web
   kest key kest_key_eyJ2ZXJzaW9uIjoxLCJwbGF0Zm9ybV91cmwiOiJodHRwczovL2FwaS5rZXN0LmRldi92MSJ9`,
@@ -61,7 +61,7 @@ func runKeyConnect(rawKey string) error {
 
 	conf.PlatformURL = payload.PlatformURL
 	conf.PlatformToken = payload.PlatformToken
-	conf.PlatformProjectID = payload.PlatformProjectID
+	conf.PlatformWorkspaceID = payload.PlatformWorkspaceID
 	if payload.PlatformAutoSyncHistory == nil {
 		conf.PlatformAutoSyncHistory = true
 	} else {
@@ -109,15 +109,15 @@ func parseConnectionKey(rawKey string) (*connectionKeyPayload, error) {
 
 	payload.PlatformURL = strings.TrimRight(strings.TrimSpace(payload.PlatformURL), "/")
 	payload.PlatformToken = strings.TrimSpace(payload.PlatformToken)
-	payload.PlatformProjectID = strings.TrimSpace(payload.PlatformProjectID)
+	payload.PlatformWorkspaceID = strings.TrimSpace(payload.PlatformWorkspaceID)
 
 	switch {
 	case payload.PlatformURL == "":
 		return nil, fmt.Errorf("connection key is missing platform_url")
 	case payload.PlatformToken == "":
 		return nil, fmt.Errorf("connection key is missing platform_token")
-	case payload.PlatformProjectID == "":
-		return nil, fmt.Errorf("connection key is missing platform_project_id")
+	case payload.PlatformWorkspaceID == "":
+		return nil, fmt.Errorf("connection key is missing platform_workspace_id")
 	}
 
 	return &payload, nil

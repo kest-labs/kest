@@ -116,9 +116,9 @@
   --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.75rem;
   --radius-feature: 1.75rem;
   --radius-pill: 9999px;
   --radius-full: 9999px;
@@ -454,7 +454,7 @@
     --muted-foreground: var(--miro-muted);
     --border: var(--miro-hairline);
     --input: var(--miro-hairline-strong);
-    --ring: var(--miro-brand-blue);
+    --ring: var(--miro-brand-yellow-deep);
 
     --bg-canvas: var(--miro-canvas);
     --bg-surface: var(--miro-surface);
@@ -469,9 +469,9 @@
     --border-main: var(--miro-hairline);
     --border-subtle: var(--miro-hairline-soft);
     --border-strong: var(--miro-hairline-strong);
-    --brand-main: var(--miro-brand-blue);
-    --brand-subtle: var(--miro-surface);
-    --brand-strong: var(--miro-blue-pressed);
+    --brand-main: var(--miro-brand-yellow);
+    --brand-subtle: var(--miro-surface-yellow);
+    --brand-strong: var(--miro-brand-yellow-deep);
     --highlight: var(--miro-brand-yellow);
     --highlight-subtle: var(--miro-yellow-light);
 

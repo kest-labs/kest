@@ -13,7 +13,7 @@ import (
 
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
@@ -22,7 +22,7 @@ import (
 type Handler struct {
 	contracts.BaseModule
 	service       Service
-	memberService member.Service
+	workspaceService workspace.Service
 }
 
 // Name returns the module name
@@ -31,21 +31,21 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new flow handler
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
 // RegisterRoutes registers flow routes
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	RegisterRoutes(r, h, h.memberService)
+	RegisterRoutes(r, h)
 }
 
 // --- helpers ---
 
-func (h *Handler) projectID(c *gin.Context) (string, bool) {
+func (h *Handler) workspaceID(c *gin.Context) (string, bool) {
 	return handler.ParseID(c, "id")
 }
 
@@ -104,12 +104,12 @@ func respondFlowError(c *gin.Context, err error) {
 
 // ListFlows handles GET /projects/:id/flows
 func (h *Handler) ListFlows(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
 
-	flows, err := h.service.ListFlows(c.Request.Context(), pid)
+	flows, err := h.service.ListFlows(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -123,7 +123,7 @@ func (h *Handler) ListFlows(c *gin.Context) {
 
 // CreateFlow handles POST /projects/:id/flows
 func (h *Handler) CreateFlow(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -134,7 +134,7 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 		return
 	}
 
-	flow, err := h.service.CreateFlow(c.Request.Context(), pid, h.userID(c), &req)
+	flow, err := h.service.CreateFlow(c.Request.Context(), workspaceID, h.userID(c), &req)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -145,12 +145,17 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 
 // GetFlow handles GET /projects/:id/flows/:fid
 func (h *Handler) GetFlow(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
 	}
 
-	flow, err := h.service.GetFlow(c.Request.Context(), fid)
+	flow, err := h.service.GetFlow(c.Request.Context(), workspaceID, fid)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -161,6 +166,11 @@ func (h *Handler) GetFlow(c *gin.Context) {
 
 // UpdateFlow handles PATCH /projects/:id/flows/:fid
 func (h *Handler) UpdateFlow(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -172,7 +182,7 @@ func (h *Handler) UpdateFlow(c *gin.Context) {
 		return
 	}
 
-	flow, err := h.service.UpdateFlow(c.Request.Context(), fid, &req)
+	flow, err := h.service.UpdateFlow(c.Request.Context(), workspaceID, fid, &req)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -183,12 +193,17 @@ func (h *Handler) UpdateFlow(c *gin.Context) {
 
 // DeleteFlow handles DELETE /projects/:id/flows/:fid
 func (h *Handler) DeleteFlow(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
 	}
 
-	if err := h.service.DeleteFlow(c.Request.Context(), fid); err != nil {
+	if err := h.service.DeleteFlow(c.Request.Context(), workspaceID, fid); err != nil {
 		respondFlowError(c, err)
 		return
 	}
@@ -198,6 +213,11 @@ func (h *Handler) DeleteFlow(c *gin.Context) {
 
 // SaveFlow handles PUT /projects/:id/flows/:fid (full save with steps + edges)
 func (h *Handler) SaveFlow(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -209,7 +229,7 @@ func (h *Handler) SaveFlow(c *gin.Context) {
 		return
 	}
 
-	flow, err := h.service.SaveFlow(c.Request.Context(), fid, &req)
+	flow, err := h.service.SaveFlow(c.Request.Context(), workspaceID, fid, &req)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -365,12 +385,17 @@ func (h *Handler) ExecuteFlowSSE(c *gin.Context) {
 
 // RunFlow handles POST /projects/:id/flows/:fid/run
 func (h *Handler) RunFlow(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
 	}
 
-	run, err := h.service.RunFlow(c.Request.Context(), fid, h.userID(c))
+	run, err := h.service.RunFlow(c.Request.Context(), workspaceID, fid, h.userID(c))
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -397,6 +422,11 @@ func (h *Handler) GetRun(c *gin.Context) {
 
 // ListRuns handles GET /projects/:id/flows/:fid/runs
 func (h *Handler) ListRuns(c *gin.Context) {
+	_, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
+		return
+	}
+
 	fid, ok := h.flowID(c)
 	if !ok {
 		return
@@ -412,4 +442,24 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		"items": runs,
 		"total": len(runs),
 	})
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, "workspace not found or access denied")
+		return "", false
+	}
+
+	return workspaceID, true
 }
