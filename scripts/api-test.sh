@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname "$SCRIPT_DIR")"
 BASE_URL="${KEST_BASE_URL:-http://127.0.0.1:8025}"
 PROFILE="${KEST_PROFILE:-local}"
+export KEST_BASE_URL="$BASE_URL"
 
 if [[ "${KEST_SKIP_FLOWS:-}" == "1" ]]; then
   echo "Kest flow run skipped (KEST_SKIP_FLOWS=1)"
@@ -22,7 +23,7 @@ fi
 
 cd "$WORKSPACE_ROOT"
 echo "Running Kest API flows with profile: $PROFILE"
-RUN_ARGS=(run --profile "$PROFILE")
+RUN_ARGS=(run --profile "$PROFILE" --base-url "$BASE_URL")
 if [[ "${KEST_SYNC_FLOWS:-}" == "1" ]]; then
   RUN_ARGS+=(--sync)
 else
