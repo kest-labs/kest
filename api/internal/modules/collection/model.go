@@ -12,7 +12,7 @@ type CollectionPO struct {
 	ID          string  `gorm:"primaryKey"`
 	Name        string  `gorm:"size:100;not null"`
 	Description string  `gorm:"size:500"`
-	ProjectID   string  `gorm:"not null;index"`
+	WorkspaceID string  `gorm:"not null;index"`
 	ParentID    *string `gorm:"index"` // For folder hierarchy
 	IsFolder    bool    `gorm:"default:false"`
 	SortOrder   int     `gorm:"default:0"`
@@ -32,7 +32,7 @@ type Collection struct {
 	ID          string                 `json:"id"`
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
-	ProjectID   string                 `json:"project_id"`
+	WorkspaceID string                 `json:"workspace_id"`
 	ParentID    *string                `json:"parent_id,omitempty"`
 	IsFolder    bool                   `json:"is_folder"`
 	SortOrder   int                    `json:"sort_order"`
@@ -56,7 +56,7 @@ func (po *CollectionPO) toDomain() *Collection {
 		ID:          po.ID,
 		Name:        po.Name,
 		Description: po.Description,
-		ProjectID:   po.ProjectID,
+		WorkspaceID: po.WorkspaceID,
 		ParentID:    po.ParentID,
 		IsFolder:    po.IsFolder,
 		SortOrder:   po.SortOrder,
@@ -82,7 +82,7 @@ func newCollectionPO(c *Collection) *CollectionPO {
 		ID:          c.ID,
 		Name:        c.Name,
 		Description: c.Description,
-		ProjectID:   c.ProjectID,
+		WorkspaceID: c.WorkspaceID,
 		ParentID:    c.ParentID,
 		IsFolder:    c.IsFolder,
 		SortOrder:   c.SortOrder,

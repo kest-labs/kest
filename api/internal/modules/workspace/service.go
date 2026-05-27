@@ -1,11 +1,25 @@
 package workspace
 
 import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/gosimple/slug"
+)
+
+var (
+	ErrInvalidCLIToken           = errors.New("invalid CLI token")
+	ErrCLITokenExpired           = errors.New("CLI token has expired")
+	ErrCLITokenScopeDenied       = errors.New("CLI token does not have the required scope")
+	ErrCLITokenWorkspaceMismatch = errors.New("CLI token is not scoped to this workspace")
+	ErrUnsupportedCLITokenScope  = errors.New("unsupported CLI token scope")
 )
 
 // Service defines the workspace business logic interface
@@ -22,6 +36,11 @@ type Service interface {
 	RemoveMember(workspaceID, targetUserID, requesterID string, isSuperAdmin bool) error
 	UpdateMemberRole(workspaceID, targetUserID string, role string, requesterID string, isSuperAdmin bool) error
 	ListMembers(workspaceID, userID string, isSuperAdmin bool) ([]*WorkspaceMember, error)
+
+	// CLI token operations
+	GenerateCLIToken(ctx context.Context, workspaceID string, createdBy string, req *GenerateWorkspaceCLITokenRequest) (*GenerateWorkspaceCLITokenResponse, error)
+	ListCLITokens(ctx context.Context, workspaceID string) ([]*WorkspaceCLIToken, error)
+	ValidateCLIToken(ctx context.Context, workspaceID string, rawToken string, requiredScopes []string) (string, string, error)
 
 	// Permission checks
 	CheckUserRole(workspaceID, userID string, isSuperAdmin bool) (string, error)
@@ -149,7 +168,7 @@ func (s *service) DeleteWorkspace(id string, userID string, isSuperAdmin bool) e
 // GetWorkspace gets a workspace by ID
 func (s *service) GetWorkspace(id string, userID string, isSuperAdmin bool) (*Workspace, error) {
 	// Check if user has access
-	hasPermission, err := s.repo.HasPermission(id, userID, RoleViewer, isSuperAdmin)
+	hasPermission, err := s.repo.HasPermission(id, userID, RoleRead, isSuperAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +285,7 @@ func (s *service) UpdateMemberRole(workspaceID, targetUserID string, role string
 // ListMembers lists all members of a workspace
 func (s *service) ListMembers(workspaceID, userID string, isSuperAdmin bool) ([]*WorkspaceMember, error) {
 	// Check if user has access to workspace
-	hasPermission, err := s.repo.HasPermission(workspaceID, userID, RoleViewer, isSuperAdmin)
+	hasPermission, err := s.repo.HasPermission(workspaceID, userID, RoleRead, isSuperAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -282,6 +301,91 @@ func (s *service) ListMembers(workspaceID, userID string, isSuperAdmin bool) ([]
 	return toMemberDomainList(members), nil
 }
 
+func (s *service) GenerateCLIToken(ctx context.Context, workspaceID string, createdBy string, req *GenerateWorkspaceCLITokenRequest) (*GenerateWorkspaceCLITokenResponse, error) {
+	if req == nil {
+		req = &GenerateWorkspaceCLITokenRequest{}
+	}
+
+	workspace, err := s.repo.FindByID(workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	scopes, err := normalizeCLITokenScopes(req.Scopes)
+	if err != nil {
+		return nil, err
+	}
+
+	rawToken, tokenPrefix, tokenHash, err := generateCLITokenMaterial()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate CLI token: %w", err)
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		name = fmt.Sprintf("%s CLI token", workspace.Name)
+	}
+
+	token := &WorkspaceCLIToken{
+		WorkspaceID: workspaceID,
+		CreatedBy:   createdBy,
+		Name:        name,
+		TokenPrefix: tokenPrefix,
+		Scopes:      scopes,
+		ExpiresAt:   req.ExpiresAt,
+	}
+
+	if err := s.repo.CreateCLIToken(ctx, token, tokenHash); err != nil {
+		return nil, err
+	}
+
+	return &GenerateWorkspaceCLITokenResponse{
+		Token:       rawToken,
+		TokenType:   "bearer",
+		WorkspaceID: workspaceID,
+		TokenInfo:   FromCLIToken(token),
+	}, nil
+}
+
+func (s *service) ListCLITokens(ctx context.Context, workspaceID string) ([]*WorkspaceCLIToken, error) {
+	return s.repo.ListCLITokens(ctx, workspaceID)
+}
+
+func (s *service) ValidateCLIToken(ctx context.Context, workspaceID string, rawToken string, requiredScopes []string) (string, string, error) {
+	tokenHash := hashCLIToken(strings.TrimSpace(rawToken))
+	if tokenHash == "" {
+		return "", "", ErrInvalidCLIToken
+	}
+
+	token, err := s.repo.GetCLITokenByHash(ctx, tokenHash)
+	if err != nil {
+		return "", "", err
+	}
+	if token == nil {
+		return "", "", ErrInvalidCLIToken
+	}
+	if token.WorkspaceID != workspaceID {
+		return "", "", ErrCLITokenWorkspaceMismatch
+	}
+	if token.ExpiresAt != nil && token.ExpiresAt.Before(time.Now()) {
+		return "", "", ErrCLITokenExpired
+	}
+
+	scopes, err := normalizeRequiredCLITokenScopes(requiredScopes)
+	if err != nil {
+		return "", "", err
+	}
+	if !hasRequiredScopes(token.Scopes, scopes) {
+		return "", "", ErrCLITokenScopeDenied
+	}
+
+	if err := s.repo.TouchCLIToken(ctx, token.ID, time.Now().UTC()); err != nil {
+		return "", "", err
+	}
+
+	return token.ID, token.CreatedBy, nil
+}
+
 // CheckUserRole returns the user's role in a workspace
 func (s *service) CheckUserRole(workspaceID, userID string, isSuperAdmin bool) (string, error) {
 	return s.repo.CheckPermission(workspaceID, userID, isSuperAdmin)
@@ -290,4 +394,92 @@ func (s *service) CheckUserRole(workspaceID, userID string, isSuperAdmin bool) (
 // HasPermission checks if a user has at least the required role level
 func (s *service) HasPermission(workspaceID, userID string, requiredRole string, isSuperAdmin bool) (bool, error) {
 	return s.repo.HasPermission(workspaceID, userID, requiredRole, isSuperAdmin)
+}
+
+func generateCLITokenMaterial() (rawToken, tokenPrefix, tokenHash string, err error) {
+	bytes := make([]byte, 24)
+	if _, err = rand.Read(bytes); err != nil {
+		return "", "", "", err
+	}
+
+	rawToken = "kest_pat_" + hex.EncodeToString(bytes)
+	tokenPrefix = rawToken
+	if len(tokenPrefix) > 18 {
+		tokenPrefix = tokenPrefix[:18]
+	}
+
+	return rawToken, tokenPrefix, hashCLIToken(rawToken), nil
+}
+
+func hashCLIToken(rawToken string) string {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return ""
+	}
+
+	sum := sha256.Sum256([]byte(rawToken))
+	return hex.EncodeToString(sum[:])
+}
+
+func normalizeCLITokenScopes(scopes []string) ([]string, error) {
+	if len(scopes) == 0 {
+		return []string{
+			CLITokenScopeCollectionRead,
+			CLITokenScopeCollectionRun,
+			CLITokenScopeEnvironmentRead,
+			CLITokenScopeTestCaseRun,
+			CLITokenScopeFlowRun,
+		}, nil
+	}
+
+	seen := make(map[string]struct{}, len(scopes))
+	normalized := make([]string, 0, len(scopes))
+	for _, scope := range scopes {
+		scope = strings.TrimSpace(scope)
+		if scope == "" {
+			continue
+		}
+		if _, ok := supportedCLITokenScopes[scope]; !ok {
+			return nil, fmt.Errorf("%w: %s", ErrUnsupportedCLITokenScope, scope)
+		}
+		if _, exists := seen[scope]; exists {
+			continue
+		}
+		seen[scope] = struct{}{}
+		normalized = append(normalized, scope)
+	}
+
+	if len(normalized) == 0 {
+		return normalizeCLITokenScopes(nil)
+	}
+
+	sort.Strings(normalized)
+	return normalized, nil
+}
+
+func normalizeRequiredCLITokenScopes(scopes []string) ([]string, error) {
+	if len(scopes) == 0 {
+		return nil, nil
+	}
+
+	return normalizeCLITokenScopes(scopes)
+}
+
+func hasRequiredScopes(actual, required []string) bool {
+	if len(required) == 0 {
+		return true
+	}
+
+	available := make(map[string]struct{}, len(actual))
+	for _, scope := range actual {
+		available[scope] = struct{}{}
+	}
+
+	for _, scope := range required {
+		if _, ok := available[scope]; !ok {
+			return false
+		}
+	}
+
+	return true
 }

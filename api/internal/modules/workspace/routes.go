@@ -22,5 +22,9 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 		auth.GET("/workspaces/:id/members", h.ListMembers).Name("workspaces.members.list").WhereUUIDOrNumber("id")
 		auth.PATCH("/workspaces/:id/members/:uid", h.UpdateMemberRole).Name("workspaces.members.update").WhereUUIDOrNumber("id", "uid")
 		auth.DELETE("/workspaces/:id/members/:uid", h.RemoveMember).Name("workspaces.members.remove").WhereUUIDOrNumber("id", "uid")
+
+		// CLI tokens
+		auth.POST("/workspaces/:id/cli-tokens", h.GenerateCLIToken).Name("workspaces.cli_tokens.create").WhereUUIDOrNumber("id")
+		auth.GET("/workspaces/:id/cli-tokens", h.ListCLITokens).Name("workspaces.cli_tokens.list").WhereUUIDOrNumber("id")
 	})
 }

@@ -78,7 +78,7 @@ type PostmanScript struct {
 }
 
 type Service interface {
-	ExportPostman(ctx context.Context, projectID, collectionID string) ([]byte, error)
+	ExportPostman(ctx context.Context, workspaceID, collectionID string) ([]byte, error)
 }
 
 type service struct {
@@ -93,13 +93,13 @@ func NewService(collectionService collection.Service, requestService request.Ser
 	}
 }
 
-func (s *service) ExportPostman(ctx context.Context, projectID, collectionID string) ([]byte, error) {
-	col, err := s.collectionService.GetByID(ctx, collectionID, projectID)
+func (s *service) ExportPostman(ctx context.Context, workspaceID, collectionID string) ([]byte, error) {
+	col, err := s.collectionService.GetByID(ctx, collectionID, workspaceID)
 	if err != nil {
 		return nil, err
 	}
 
-	tree, err := s.collectionService.GetTree(ctx, projectID)
+	tree, err := s.collectionService.GetTree(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (s *service) buildPostmanItems(ctx context.Context, nodes []*collection.Col
 		} else {
 			// It's a request, we need to fetch its details
 			// Assuming Collection = Request mapping (1:1) in this implementation pattern
-			reqs, _, err := s.requestService.List(ctx, node.ID, node.ProjectID, 1, 100)
+			reqs, _, err := s.requestService.List(ctx, node.ID, node.WorkspaceID, 1, 100)
 			if err == nil && len(reqs) > 0 {
 				req := reqs[0] // take the first request in the collection node
 				item.Request = s.convertToPostmanRequest(req)

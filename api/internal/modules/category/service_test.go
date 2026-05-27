@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-func TestServiceGetCategoryRespectsProjectScope(t *testing.T) {
+func TestServiceGetCategoryRespectsWorkspaceScope(t *testing.T) {
 	repo := &stubCategoryRepository{
 		categories: map[string]*CategoryPO{
 			"7": {
-				ID:        "7",
-				ProjectID: "2",
-				Name:      "Foreign",
+				ID:          "7",
+				WorkspaceID: "2",
+				Name:        "Foreign",
 			},
 		},
 	}
@@ -24,22 +24,22 @@ func TestServiceGetCategoryRespectsProjectScope(t *testing.T) {
 	}
 }
 
-func TestServiceUpdateCategoryRejectsCrossProjectParent(t *testing.T) {
-	projectID := "1"
+func TestServiceUpdateCategoryRejectsCrossWorkspaceParent(t *testing.T) {
+	workspaceID := "1"
 	categoryID := "10"
 	foreignParentID := "99"
 
 	repo := &stubCategoryRepository{
 		categories: map[string]*CategoryPO{
 			categoryID: {
-				ID:        categoryID,
-				ProjectID: projectID,
-				Name:      "Orders",
+				ID:          categoryID,
+				WorkspaceID: workspaceID,
+				Name:        "Orders",
 			},
 			foreignParentID: {
-				ID:        foreignParentID,
-				ProjectID: "2",
-				Name:      "Foreign Parent",
+				ID:          foreignParentID,
+				WorkspaceID: "2",
+				Name:        "Foreign Parent",
 			},
 		},
 	}
@@ -49,19 +49,19 @@ func TestServiceUpdateCategoryRejectsCrossProjectParent(t *testing.T) {
 		ParentID: ptrToPtr(foreignParentID),
 	}
 
-	_, err := service.UpdateCategory(context.Background(), projectID, categoryID, req)
+	_, err := service.UpdateCategory(context.Background(), workspaceID, categoryID, req)
 	if !errors.Is(err, ErrInvalidParentCategory) {
 		t.Fatalf("expected ErrInvalidParentCategory, got %v", err)
 	}
 }
 
-func TestServiceDeleteCategoryRespectsProjectScope(t *testing.T) {
+func TestServiceDeleteCategoryRespectsWorkspaceScope(t *testing.T) {
 	repo := &stubCategoryRepository{
 		categories: map[string]*CategoryPO{
 			"8": {
-				ID:        "8",
-				ProjectID: "2",
-				Name:      "Foreign",
+				ID:          "8",
+				WorkspaceID: "2",
+				Name:        "Foreign",
 			},
 		},
 	}
@@ -86,19 +86,19 @@ func (r *stubCategoryRepository) GetByID(_ context.Context, id string) (*Categor
 	return cloneCategory(r.categories[id]), nil
 }
 
-func (r *stubCategoryRepository) GetByIDAndProject(_ context.Context, id, projectID string) (*CategoryPO, error) {
+func (r *stubCategoryRepository) GetByIDAndWorkspace(_ context.Context, id, workspaceID string) (*CategoryPO, error) {
 	category := r.categories[id]
-	if category == nil || category.ProjectID != projectID {
+	if category == nil || category.WorkspaceID != workspaceID {
 		return nil, nil
 	}
 
 	return cloneCategory(category), nil
 }
 
-func (r *stubCategoryRepository) ListByProject(_ context.Context, projectID string) ([]*CategoryPO, error) {
+func (r *stubCategoryRepository) ListByWorkspace(_ context.Context, workspaceID string) ([]*CategoryPO, error) {
 	var categories []*CategoryPO
 	for _, category := range r.categories {
-		if category.ProjectID == projectID {
+		if category.WorkspaceID == workspaceID {
 			categories = append(categories, cloneCategory(category))
 		}
 	}
@@ -115,10 +115,10 @@ func (r *stubCategoryRepository) Delete(_ context.Context, id string) error {
 	return nil
 }
 
-func (r *stubCategoryRepository) UpdateSortOrder(_ context.Context, projectID string, categoryIDs []string) error {
+func (r *stubCategoryRepository) UpdateSortOrder(_ context.Context, workspaceID string, categoryIDs []string) error {
 	for i, id := range categoryIDs {
 		category := r.categories[id]
-		if category == nil || category.ProjectID != projectID {
+		if category == nil || category.WorkspaceID != workspaceID {
 			continue
 		}
 		category.SortOrder = i

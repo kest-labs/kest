@@ -663,8 +663,8 @@ const docTemplate = `{
                     "enum": [
                         "owner",
                         "admin",
-                        "editor",
-                        "viewer"
+                        "write",
+                        "read"
                     ]
                 },
                 "user_id": {
@@ -721,8 +721,8 @@ const docTemplate = `{
                     "enum": [
                         "owner",
                         "admin",
-                        "editor",
-                        "viewer"
+                        "write",
+                        "read"
                     ]
                 }
             }

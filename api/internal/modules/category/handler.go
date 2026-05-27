@@ -10,15 +10,18 @@ import (
 
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
+	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
+
+var errCategoryAccessDenied = errors.New("workspace not found or access denied")
 
 // Handler handles HTTP requests for categories
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	workspaceService workspace.Service
 }
 
 // Name returns the module name
@@ -27,23 +30,22 @@ func (h *Handler) Name() string {
 }
 
 // NewHandler creates a new category handler
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
 // RegisterRoutes registers category routes
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	RegisterRoutes(r, h, h.memberService)
+	RegisterRoutes(r, h)
 }
 
-// ListCategories handles GET /api/v1/projects/:pid/categories
+// ListCategories handles GET /api/v1/workspaces/:id/categories
 func (h *Handler) ListCategories(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
 		return
 	}
 
@@ -53,9 +55,9 @@ func (h *Handler) ListCategories(c *gin.Context) {
 	)
 
 	if c.Query("tree") == "true" {
-		categories, err = h.service.GetCategoryTree(c.Request.Context(), projectID)
+		categories, err = h.service.GetCategoryTree(c.Request.Context(), workspaceID)
 	} else {
-		categories, err = h.service.ListCategories(c.Request.Context(), projectID)
+		categories, err = h.service.ListCategories(c.Request.Context(), workspaceID)
 	}
 
 	if err != nil {
@@ -85,11 +87,10 @@ func (h *Handler) ListCategories(c *gin.Context) {
 	})
 }
 
-// CreateCategory handles POST /api/v1/projects/:pid/categories
+// CreateCategory handles POST /api/v1/workspaces/:id/categories
 func (h *Handler) CreateCategory(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
 		return
 	}
 
@@ -99,7 +100,7 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.CreateCategory(c.Request.Context(), projectID, &req)
+	category, err := h.service.CreateCategory(c.Request.Context(), workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidParentCategory) {
 			response.Error(c, http.StatusBadRequest, err.Error())
@@ -112,11 +113,10 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 	response.Created(c, category)
 }
 
-// GetCategory handles GET /api/v1/projects/:id/categories/:cid
+// GetCategory handles GET /api/v1/workspaces/:id/categories/:cid
 func (h *Handler) GetCategory(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
+	if !ok {
 		return
 	}
 
@@ -126,7 +126,7 @@ func (h *Handler) GetCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.GetCategory(c.Request.Context(), projectID, id)
+	category, err := h.service.GetCategory(c.Request.Context(), workspaceID, id)
 	if err != nil {
 		if errors.Is(err, ErrCategoryNotFound) {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -139,11 +139,10 @@ func (h *Handler) GetCategory(c *gin.Context) {
 	response.Success(c, category)
 }
 
-// UpdateCategory handles PATCH /api/v1/projects/:id/categories/:cid
+// UpdateCategory handles PATCH /api/v1/workspaces/:id/categories/:cid
 func (h *Handler) UpdateCategory(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
 		return
 	}
 
@@ -159,7 +158,7 @@ func (h *Handler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.UpdateCategory(c.Request.Context(), projectID, id, &req)
+	category, err := h.service.UpdateCategory(c.Request.Context(), workspaceID, id, &req)
 	if err != nil {
 		if errors.Is(err, ErrCategoryNotFound) {
 			response.Error(c, http.StatusNotFound, err.Error())
@@ -176,11 +175,10 @@ func (h *Handler) UpdateCategory(c *gin.Context) {
 	response.Success(c, category)
 }
 
-// DeleteCategory handles DELETE /api/v1/projects/:id/categories/:cid
+// DeleteCategory handles DELETE /api/v1/workspaces/:id/categories/:cid
 func (h *Handler) DeleteCategory(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
 		return
 	}
 
@@ -190,7 +188,7 @@ func (h *Handler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteCategory(c.Request.Context(), projectID, id); err != nil {
+	if err := h.service.DeleteCategory(c.Request.Context(), workspaceID, id); err != nil {
 		if errors.Is(err, ErrCategoryNotFound) {
 			response.Error(c, http.StatusNotFound, err.Error())
 			return
@@ -202,11 +200,10 @@ func (h *Handler) DeleteCategory(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// SortCategories handles PUT /api/v1/projects/:pid/categories/sort
+// SortCategories handles PUT /api/v1/workspaces/:id/categories/sort
 func (h *Handler) SortCategories(c *gin.Context) {
-	projectID := c.Param("id")
-	if projectID == "" {
-		response.Error(c, http.StatusBadRequest, "Invalid project ID")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
 		return
 	}
 
@@ -216,12 +213,32 @@ func (h *Handler) SortCategories(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.SortCategories(c.Request.Context(), projectID, &req); err != nil {
+	if err := h.service.SortCategories(c.Request.Context(), workspaceID, &req); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	response.Success(c, nil)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, errCategoryAccessDenied.Error())
+		return "", false
+	}
+
+	return workspaceID, true
 }
 
 // Convenience methods for router registration

@@ -59,8 +59,8 @@ type PostmanBody struct {
 }
 
 type Service interface {
-	ImportPostman(ctx context.Context, projectID, parentID string, file *multipart.FileHeader) error
-	ImportMarkdown(ctx context.Context, projectID, parentID string, file *multipart.FileHeader) (*MarkdownImportResult, error)
+	ImportPostman(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) error
+	ImportMarkdown(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) (*MarkdownImportResult, error)
 }
 
 type service struct {
@@ -75,7 +75,7 @@ func NewService(collectionService collection.Service, requestService request.Ser
 	}
 }
 
-func (s *service) ImportPostman(ctx context.Context, projectID, parentID string, file *multipart.FileHeader) error {
+func (s *service) ImportPostman(ctx context.Context, workspaceID, parentID string, file *multipart.FileHeader) error {
 	f, err := file.Open()
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
@@ -92,12 +92,12 @@ func (s *service) ImportPostman(ctx context.Context, projectID, parentID string,
 		return fmt.Errorf("%w: %v", ErrInvalidPostmanCollection, err)
 	}
 
-	return s.importPostmanCollection(ctx, projectID, parentID, &pmCol)
+	return s.importPostmanCollection(ctx, workspaceID, parentID, &pmCol)
 }
 
 func (s *service) importPostmanCollection(
 	ctx context.Context,
-	projectID, parentID string,
+	workspaceID, parentID string,
 	pmCol *PostmanCollection,
 ) error {
 	rootName := pmCol.Info.Name
@@ -106,7 +106,7 @@ func (s *service) importPostmanCollection(
 	}
 
 	rootReq := &collection.CreateCollectionRequest{
-		ProjectID:   projectID,
+		WorkspaceID: workspaceID,
 		Name:        rootName,
 		Description: pmCol.Info.Description,
 		IsFolder:    false,
@@ -123,7 +123,7 @@ func (s *service) importPostmanCollection(
 	requestItems := flattenPostmanRequests(pmCol.Item)
 	for i, item := range requestItems {
 		reqReq := s.convertFromPostmanRequest(item, rootCol.ID, i)
-		if _, err := s.requestService.Create(ctx, projectID, reqReq); err != nil {
+		if _, err := s.requestService.Create(ctx, workspaceID, reqReq); err != nil {
 			return err
 		}
 	}

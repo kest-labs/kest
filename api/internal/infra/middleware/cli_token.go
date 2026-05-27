@@ -10,12 +10,12 @@ import (
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
-type ProjectCLITokenValidator interface {
-	ValidateCLIToken(ctx context.Context, projectID string, rawToken string, requiredScopes []string) (string, string, error)
+type WorkspaceCLITokenValidator interface {
+	ValidateCLIToken(ctx context.Context, workspaceID string, rawToken string, requiredScopes []string) (string, string, error)
 }
 
-// RequireProjectCLIToken validates a project-scoped CLI token and enforces required scopes.
-func RequireProjectCLIToken(validator ProjectCLITokenValidator, requiredScopes ...string) gin.HandlerFunc {
+// RequireWorkspaceCLIToken validates a workspace-scoped CLI token and enforces required scopes.
+func RequireWorkspaceCLIToken(validator WorkspaceCLITokenValidator, requiredScopes ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" {
@@ -31,17 +31,23 @@ func RequireProjectCLIToken(validator ProjectCLITokenValidator, requiredScopes .
 			return
 		}
 
-		projectIDStr := c.Param("id")
-		if projectIDStr == "" {
-			projectIDStr = c.Param("pid")
+		workspaceIDStr := c.Param("id")
+		if workspaceIDStr == "" {
+			workspaceIDStr = c.Param("wid")
 		}
-		if projectIDStr == "" {
-			response.Error(c, http.StatusBadRequest, "Invalid Project ID")
+		if workspaceIDStr == "" {
+			response.Error(c, http.StatusBadRequest, "Invalid Workspace ID")
 			c.Abort()
 			return
 		}
 
-		tokenID, createdBy, err := validator.ValidateCLIToken(c.Request.Context(), projectIDStr, parts[1], requiredScopes)
+		if validator == nil {
+			response.Error(c, http.StatusServiceUnavailable, "CLI token validation is not configured")
+			c.Abort()
+			return
+		}
+
+		tokenID, createdBy, err := validator.ValidateCLIToken(c.Request.Context(), workspaceIDStr, parts[1], requiredScopes)
 		if err != nil {
 			response.Error(c, http.StatusUnauthorized, err.Error())
 			c.Abort()

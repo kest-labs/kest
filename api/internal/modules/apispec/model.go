@@ -9,7 +9,7 @@ import (
 // APISpecPO is the persistent object for API specifications
 type APISpecPO struct {
 	ID             string  `gorm:"primaryKey"`
-	ProjectID      string  `gorm:"index;not null"`          // Foreign key to projects table
+	WorkspaceID    string  `gorm:"index;not null"`          // Foreign key to workspaces table
 	CategoryID     *string `gorm:"index"`                   // Optional category
 	Method         string  `gorm:"size:10;not null;index"`  // GET, POST, etc.
 	Path           string  `gorm:"size:500;not null;index"` // /api/users/:id

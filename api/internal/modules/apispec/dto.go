@@ -8,7 +8,7 @@ import (
 // ========== Request DTOs ==========
 
 type CreateAPISpecRequest struct {
-	ProjectID     string                  `json:"project_id"`
+	WorkspaceID   string                  `json:"workspace_id"`
 	CategoryID    *string                 `json:"category_id"`
 	Method        string                  `json:"method" binding:"required,oneof=GET POST PUT DELETE PATCH HEAD OPTIONS"`
 	Path          string                  `json:"path" binding:"required,max=500"`
@@ -68,7 +68,7 @@ type CreateAPIExampleRequest struct {
 
 type APISpecResponse struct {
 	ID             string                  `json:"id"`
-	ProjectID      string                  `json:"project_id"`
+	WorkspaceID    string                  `json:"workspace_id"`
 	CategoryID     *string                 `json:"category_id,omitempty"`
 	Method         string                  `json:"method"`
 	Path           string                  `json:"path"`
@@ -136,7 +136,7 @@ type ResponseSpec struct {
 // ToAPISpecPO converts domain request to persistent object
 func ToAPISpecPO(req *CreateAPISpecRequest) *APISpecPO {
 	po := &APISpecPO{
-		ProjectID:     req.ProjectID,
+		WorkspaceID:   req.WorkspaceID,
 		Method:        req.Method,
 		Path:          req.Path,
 		Summary:       req.Summary,
@@ -207,7 +207,7 @@ func FromAPISpecPO(po *APISpecPO) *APISpecResponse {
 
 	resp := &APISpecResponse{
 		ID:             po.ID,
-		ProjectID:      po.ProjectID,
+		WorkspaceID:    po.WorkspaceID,
 		Method:         po.Method,
 		Path:           po.Path,
 		Summary:        po.Summary,

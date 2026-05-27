@@ -75,8 +75,8 @@ definitions:
         enum:
         - owner
         - admin
-        - editor
-        - viewer
+        - write
+        - read
         type: string
       user_id:
         type: string
@@ -118,8 +118,8 @@ definitions:
         enum:
         - owner
         - admin
-        - editor
-        - viewer
+        - write
+        - read
         type: string
     required:
     - role

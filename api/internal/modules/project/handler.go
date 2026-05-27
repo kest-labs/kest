@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	idpkg "github.com/kest-labs/kest/api/pkg/id"
@@ -16,10 +17,11 @@ import (
 // Handler handles HTTP requests for project module
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
-	specSyncer    SpecSyncer
-	historySyncer CLIHistorySyncer
+	service                 Service
+	memberService           member.Service
+	workspaceTokenValidator middleware.WorkspaceCLITokenValidator
+	specSyncer              SpecSyncer
+	historySyncer           CLIHistorySyncer
 }
 
 // Name returns the module name
@@ -33,6 +35,10 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 		service:       service,
 		memberService: memberService,
 	}
+}
+
+func (h *Handler) SetWorkspaceTokenValidator(validator middleware.WorkspaceCLITokenValidator) {
+	h.workspaceTokenValidator = validator
 }
 
 func (h *Handler) SetSpecSyncer(syncer SpecSyncer) {
@@ -174,39 +180,6 @@ func (h *Handler) GetStats(c *gin.Context) {
 	}
 
 	response.Success(c, stats)
-}
-
-// GenerateCLIToken handles POST /projects/:id/cli-tokens
-func (h *Handler) GenerateCLIToken(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
-	if !ok {
-		return
-	}
-
-	userID, ok := handler.GetUserID(c)
-	if !ok {
-		return
-	}
-
-	var req GenerateProjectCLITokenRequest
-	if !handler.BindJSON(c, &req) {
-		return
-	}
-
-	token, err := h.service.GenerateCLIToken(c.Request.Context(), projectID, userID, &req)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrProjectNotFound):
-			response.NotFound(c, err.Error())
-		case errors.Is(err, ErrUnsupportedCLITokenScope):
-			response.BadRequest(c, err.Error(), err)
-		default:
-			response.InternalServerError(c, err.Error(), err)
-		}
-		return
-	}
-
-	response.Created(c, token)
 }
 
 // SyncSpecsFromCLI handles POST /projects/:id/cli/spec-sync

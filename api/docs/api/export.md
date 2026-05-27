@@ -10,13 +10,13 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/collections/:cid/export/postman` | Export Postman export | 🔒 |
+| `GET` | `/v1/workspaces/:id/collections/:cid/export/postman` | Export Postman export | 🔒 |
 
 ---
 
 ## Details
 
-### GET `/v1/projects/:id/collections/:cid/export/postman`
+### GET `/v1/workspaces/:id/collections/:cid/export/postman`
 
 **Export Postman export**
 
@@ -35,7 +35,7 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/collections/1/export/postman' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/collections/1/export/postman' \
   -H 'Authorization: Bearer <token>'
 ```
 

@@ -4,6 +4,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 // RegisterRoutes registers the project module routes
@@ -37,20 +38,16 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			Name("projects.stats").
 			WhereUUIDOrNumber("id").
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
-		auth.POST("/projects/:id/cli-tokens", h.GenerateCLIToken).
-			Name("projects.cli_tokens.create").
-			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
 	})
 
 	r.Group("", func(cli *router.Router) {
 		cli.POST("/projects/:id/cli/spec-sync", h.SyncSpecsFromCLI).
 			Name("projects.cli.spec_sync").
 			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectCLIToken(h.service, CLITokenScopeSpecWrite))
+			Middleware(middleware.RequireWorkspaceCLIToken(h.workspaceTokenValidator, workspace.CLITokenScopeCollectionRead))
 		cli.POST("/projects/:id/cli/history-sync", h.SyncHistoryFromCLI).
 			Name("projects.cli.history_sync").
 			WhereUUIDOrNumber("id").
-			Middleware(middleware.RequireProjectCLIToken(h.service, CLITokenScopeRunWrite))
+			Middleware(middleware.RequireWorkspaceCLIToken(h.workspaceTokenValidator, workspace.CLITokenScopeCollectionRun))
 	})
 }

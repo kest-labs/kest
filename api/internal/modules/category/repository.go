@@ -12,11 +12,11 @@ import (
 type Repository interface {
 	Create(ctx context.Context, category *CategoryPO) error
 	GetByID(ctx context.Context, id string) (*CategoryPO, error)
-	GetByIDAndProject(ctx context.Context, id, projectID string) (*CategoryPO, error)
-	ListByProject(ctx context.Context, projectID string) ([]*CategoryPO, error)
+	GetByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*CategoryPO, error)
+	ListByWorkspace(ctx context.Context, workspaceID string) ([]*CategoryPO, error)
 	Update(ctx context.Context, category *CategoryPO) error
 	Delete(ctx context.Context, id string) error
-	UpdateSortOrder(ctx context.Context, projectID string, categoryIDs []string) error
+	UpdateSortOrder(ctx context.Context, workspaceID string, categoryIDs []string) error
 }
 
 type repository struct {
@@ -43,10 +43,10 @@ func (r *repository) GetByID(ctx context.Context, id string) (*CategoryPO, error
 	return &category, nil
 }
 
-func (r *repository) GetByIDAndProject(ctx context.Context, id, projectID string) (*CategoryPO, error) {
+func (r *repository) GetByIDAndWorkspace(ctx context.Context, id, workspaceID string) (*CategoryPO, error) {
 	var category CategoryPO
 	if err := r.db.WithContext(ctx).
-		Where("id = ? AND project_id = ?", id, projectID).
+		Where("id = ? AND workspace_id = ?", id, workspaceID).
 		First(&category).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -57,10 +57,10 @@ func (r *repository) GetByIDAndProject(ctx context.Context, id, projectID string
 	return &category, nil
 }
 
-func (r *repository) ListByProject(ctx context.Context, projectID string) ([]*CategoryPO, error) {
+func (r *repository) ListByWorkspace(ctx context.Context, workspaceID string) ([]*CategoryPO, error) {
 	var categories []*CategoryPO
 	if err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Order("sort_order ASC, id ASC").
 		Find(&categories).Error; err != nil {
 		return nil, err
@@ -83,11 +83,11 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 	})
 }
 
-func (r *repository) UpdateSortOrder(ctx context.Context, projectID string, categoryIDs []string) error {
+func (r *repository) UpdateSortOrder(ctx context.Context, workspaceID string, categoryIDs []string) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for i, id := range categoryIDs {
 			if err := tx.Model(&CategoryPO{}).
-				Where("id = ? AND project_id = ?", id, projectID).
+				Where("id = ? AND workspace_id = ?", id, workspaceID).
 				Update("sort_order", i).Error; err != nil {
 				return err
 			}

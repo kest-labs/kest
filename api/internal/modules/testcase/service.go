@@ -275,11 +275,9 @@ func (s *service) RunTestCase(ctx context.Context, id string, req *RunTestCaseRe
 	if req.EnvID != nil {
 		env, _ = s.envRepo.GetByID(ctx, *req.EnvID)
 	} else if tc.Env != "" {
-		// Get project ID from API Spec
-		spec, _ := s.apiSpecRepo.GetSpecByID(ctx, tc.APISpecID)
-		if spec != nil {
-			env, _ = s.envRepo.GetByProjectAndName(ctx, spec.ProjectID, tc.Env)
-		}
+		// Environment name lookup is workspace-scoped after the Workspace-first
+		// migration. Test case runs should pass EnvID until TestCase itself is
+		// migrated to carry workspace context.
 	}
 
 	if env != nil {

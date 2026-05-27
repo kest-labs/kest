@@ -46,13 +46,14 @@ type APISpecAIDraftConventions struct {
 }
 
 type CreateAPISpecAIDraftRequest struct {
-	Intent                string   `json:"intent" binding:"required"`
-	Method                string   `json:"method" binding:"omitempty,oneof=GET POST PUT DELETE PATCH HEAD OPTIONS"`
-	Path                  string   `json:"path" binding:"omitempty,max=500"`
-	CategoryID            *string  `json:"category_id"`
-	UseProjectConventions *bool    `json:"use_project_conventions"`
-	ReferenceSpecIDs      []string `json:"reference_spec_ids"`
-	Lang                  string   `json:"lang" binding:"omitempty,oneof=en zh"`
+	Intent                  string   `json:"intent" binding:"required"`
+	Method                  string   `json:"method" binding:"omitempty,oneof=GET POST PUT DELETE PATCH HEAD OPTIONS"`
+	Path                    string   `json:"path" binding:"omitempty,max=500"`
+	CategoryID              *string  `json:"category_id"`
+	UseWorkspaceConventions *bool    `json:"use_workspace_conventions"`
+	UseProjectConventions   *bool    `json:"use_project_conventions,omitempty"`
+	ReferenceSpecIDs        []string `json:"reference_spec_ids"`
+	Lang                    string   `json:"lang" binding:"omitempty,oneof=en zh"`
 }
 
 type RefineAPISpecAIDraftRequest struct {
@@ -71,7 +72,7 @@ type AcceptAPISpecAIDraftRequest struct {
 
 type APISpecAIDraftResponse struct {
 	ID             string                                `json:"id"`
-	ProjectID      string                                `json:"project_id"`
+	WorkspaceID    string                                `json:"workspace_id"`
 	CreatedBy      string                                `json:"created_by"`
 	AcceptedSpecID *string                               `json:"accepted_spec_id,omitempty"`
 	Status         string                                `json:"status"`
@@ -94,6 +95,16 @@ type AcceptAPISpecAIDraftResponse struct {
 	Warnings      []string         `json:"warnings,omitempty"`
 }
 
+func (req *CreateAPISpecAIDraftRequest) workspaceConventionsEnabled() *bool {
+	if req == nil {
+		return nil
+	}
+	if req.UseWorkspaceConventions != nil {
+		return req.UseWorkspaceConventions
+	}
+	return req.UseProjectConventions
+}
+
 func marshalAIDraftJSON(value interface{}) (string, error) {
 	if value == nil {
 		return "", nil
@@ -114,7 +125,7 @@ func fromAIDraftPO(po *APISpecAIDraftPO) (*APISpecAIDraftResponse, error) {
 
 	resp := &APISpecAIDraftResponse{
 		ID:             po.ID,
-		ProjectID:      po.ProjectID,
+		WorkspaceID:    po.WorkspaceID,
 		CreatedBy:      po.CreatedBy,
 		AcceptedSpecID: po.AcceptedSpecID,
 		Status:         po.Status,
@@ -164,7 +175,7 @@ func fromAIDraftPO(po *APISpecAIDraftPO) (*APISpecAIDraftResponse, error) {
 	return resp, nil
 }
 
-func (draft *APISpecAIDraftSpec) toCreateSpecRequest(projectID string) *CreateAPISpecRequest {
+func (draft *APISpecAIDraftSpec) toCreateSpecRequest(workspaceID string) *CreateAPISpecRequest {
 	if draft == nil {
 		return nil
 	}
@@ -172,7 +183,7 @@ func (draft *APISpecAIDraftSpec) toCreateSpecRequest(projectID string) *CreateAP
 	isPublic := draft.IsPublic
 
 	return &CreateAPISpecRequest{
-		ProjectID:   projectID,
+		WorkspaceID: workspaceID,
 		CategoryID:  draft.CategoryID,
 		Method:      draft.Method,
 		Path:        draft.Path,

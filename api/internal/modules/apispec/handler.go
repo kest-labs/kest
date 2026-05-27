@@ -15,10 +15,12 @@ import (
 
 	"github.com/kest-labs/kest/api/internal/contracts"
 	"github.com/kest-labs/kest/api/internal/infra/router"
-	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
+
+var errAPISpecAccessDenied = errors.New("workspace not found or access denied")
 
 // TestCaseSaver is a minimal interface to save a generated test case, avoiding import cycles.
 type TestCaseSaver interface {
@@ -28,16 +30,16 @@ type TestCaseSaver interface {
 // Handler handles API specification HTTP requests
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
-	tcSaver       TestCaseSaver
+	service          Service
+	workspaceService workspace.Service
+	tcSaver          TestCaseSaver
 }
 
 // NewHandler creates a new API spec handler
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		workspaceService: workspaceService,
 	}
 }
 
@@ -53,12 +55,12 @@ func (h *Handler) Name() string {
 
 // RegisterRoutes registers API specification routes
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	RegisterRoutes(r, h, h.memberService)
+	RegisterRoutes(r, h)
 }
 
 // CreateSpec creates a new API specification
 func (h *Handler) CreateSpec(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -69,7 +71,7 @@ func (h *Handler) CreateSpec(c *gin.Context) {
 		return
 	}
 
-	req.ProjectID = projectID
+	req.WorkspaceID = workspaceID
 	spec, err := h.service.CreateSpec(c.Request.Context(), &req)
 	if err != nil {
 		if errors.Is(err, ErrSpecAlreadyExists) {
@@ -85,7 +87,7 @@ func (h *Handler) CreateSpec(c *gin.Context) {
 
 // GetSpec gets an API specification by ID
 func (h *Handler) GetSpec(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -95,7 +97,7 @@ func (h *Handler) GetSpec(c *gin.Context) {
 		return
 	}
 
-	spec, err := h.service.GetSpecByID(c.Request.Context(), projectID, id)
+	spec, err := h.service.GetSpecByID(c.Request.Context(), workspaceID, id)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -110,7 +112,7 @@ func (h *Handler) GetSpec(c *gin.Context) {
 
 // GetSpecWithExamples gets an API specification with examples
 func (h *Handler) GetSpecWithExamples(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -120,7 +122,7 @@ func (h *Handler) GetSpecWithExamples(c *gin.Context) {
 		return
 	}
 
-	spec, err := h.service.GetSpecWithExamples(c.Request.Context(), projectID, id)
+	spec, err := h.service.GetSpecWithExamples(c.Request.Context(), workspaceID, id)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -135,7 +137,7 @@ func (h *Handler) GetSpecWithExamples(c *gin.Context) {
 
 // UpdateSpec updates an API specification
 func (h *Handler) UpdateSpec(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -161,7 +163,7 @@ func (h *Handler) UpdateSpec(c *gin.Context) {
 		}
 	}
 
-	spec, err := h.service.UpdateSpec(c.Request.Context(), projectID, id, &req)
+	spec, err := h.service.UpdateSpec(c.Request.Context(), workspaceID, id, &req)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -176,7 +178,7 @@ func (h *Handler) UpdateSpec(c *gin.Context) {
 
 // DeleteSpec deletes an API specification
 func (h *Handler) DeleteSpec(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -186,7 +188,7 @@ func (h *Handler) DeleteSpec(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteSpec(c.Request.Context(), projectID, id); err != nil {
+	if err := h.service.DeleteSpec(c.Request.Context(), workspaceID, id); err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
 			return
@@ -200,7 +202,7 @@ func (h *Handler) DeleteSpec(c *gin.Context) {
 
 // ListSpecs lists API specifications
 func (h *Handler) ListSpecs(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -209,13 +211,13 @@ func (h *Handler) ListSpecs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
 	filter := &SpecListFilter{
-		ProjectID: projectID,
-		Version:   c.Query("version"),
-		Method:    c.Query("method"),
-		Tag:       c.Query("tag"),
-		Keyword:   c.Query("keyword"),
-		Page:      page,
-		PageSize:  pageSize,
+		WorkspaceID: workspaceID,
+		Version:     c.Query("version"),
+		Method:      c.Query("method"),
+		Tag:         c.Query("tag"),
+		Keyword:     c.Query("keyword"),
+		Page:        page,
+		PageSize:    pageSize,
 	}
 
 	specs, total, err := h.service.ListSpecs(c.Request.Context(), filter)
@@ -237,7 +239,7 @@ func (h *Handler) ListSpecs(c *gin.Context) {
 
 // CreateAIDraft generates a structured AI draft for an API spec.
 func (h *Handler) CreateAIDraft(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -254,7 +256,7 @@ func (h *Handler) CreateAIDraft(c *gin.Context) {
 		return
 	}
 
-	draft, err := h.service.CreateAIDraft(c.Request.Context(), projectID, userID, &req)
+	draft, err := h.service.CreateAIDraft(c.Request.Context(), workspaceID, userID, &req)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrAIUnavailable):
@@ -277,7 +279,7 @@ type aiDraftStreamEvent struct {
 
 // CreateAIDraftStream generates a structured AI draft and streams status/token updates over SSE.
 func (h *Handler) CreateAIDraftStream(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -314,7 +316,7 @@ func (h *Handler) CreateAIDraftStream(c *gin.Context) {
 
 		draft, err := h.service.CreateAIDraftStream(
 			c.Request.Context(),
-			projectID,
+			workspaceID,
 			userID,
 			&req,
 			AIDraftStreamCallbacks{
@@ -366,7 +368,7 @@ func (h *Handler) streamAIDraftErrorMessage(err error) string {
 
 // GetAIDraft fetches a stored AI draft by ID.
 func (h *Handler) GetAIDraft(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -376,7 +378,7 @@ func (h *Handler) GetAIDraft(c *gin.Context) {
 		return
 	}
 
-	draft, err := h.service.GetAIDraft(c.Request.Context(), projectID, draftID)
+	draft, err := h.service.GetAIDraft(c.Request.Context(), workspaceID, draftID)
 	if err != nil {
 		if errors.Is(err, ErrAIDraftNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -391,7 +393,7 @@ func (h *Handler) GetAIDraft(c *gin.Context) {
 
 // RefineAIDraft applies an extra instruction to an existing AI draft.
 func (h *Handler) RefineAIDraft(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -407,7 +409,7 @@ func (h *Handler) RefineAIDraft(c *gin.Context) {
 		return
 	}
 
-	draft, err := h.service.RefineAIDraft(c.Request.Context(), projectID, draftID, &req)
+	draft, err := h.service.RefineAIDraft(c.Request.Context(), workspaceID, draftID, &req)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrAIDraftNotFound):
@@ -427,7 +429,7 @@ func (h *Handler) RefineAIDraft(c *gin.Context) {
 
 // AcceptAIDraft creates a formal API spec from a stored AI draft.
 func (h *Handler) AcceptAIDraft(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -443,7 +445,7 @@ func (h *Handler) AcceptAIDraft(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.AcceptAIDraft(c.Request.Context(), projectID, draftID, &req)
+	result, err := h.service.AcceptAIDraft(c.Request.Context(), workspaceID, draftID, &req)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrAIDraftNotFound):
@@ -463,7 +465,7 @@ func (h *Handler) AcceptAIDraft(c *gin.Context) {
 
 // CreateExample creates an API example
 func (h *Handler) CreateExample(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -480,7 +482,7 @@ func (h *Handler) CreateExample(c *gin.Context) {
 	}
 
 	req.APISpecID = sid
-	example, err := h.service.CreateExample(c.Request.Context(), projectID, &req)
+	example, err := h.service.CreateExample(c.Request.Context(), workspaceID, &req)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -495,7 +497,7 @@ func (h *Handler) CreateExample(c *gin.Context) {
 
 // ListExamples lists all examples for an API specification
 func (h *Handler) ListExamples(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -505,7 +507,7 @@ func (h *Handler) ListExamples(c *gin.Context) {
 		return
 	}
 
-	examples, err := h.service.GetExamplesBySpecID(c.Request.Context(), projectID, sid)
+	examples, err := h.service.GetExamplesBySpecID(c.Request.Context(), workspaceID, sid)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -520,7 +522,7 @@ func (h *Handler) ListExamples(c *gin.Context) {
 
 // ImportSpecs imports multiple API specifications
 func (h *Handler) ImportSpecs(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -534,7 +536,7 @@ func (h *Handler) ImportSpecs(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.ImportSpecs(c.Request.Context(), projectID, req.Specs); err != nil {
+	if err := h.service.ImportSpecs(c.Request.Context(), workspaceID, req.Specs); err != nil {
 		response.HandleError(c, "Failed to import specs", err)
 		return
 	}
@@ -544,14 +546,14 @@ func (h *Handler) ImportSpecs(c *gin.Context) {
 
 // ExportSpecs exports API specifications
 func (h *Handler) ExportSpecs(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
 
 	format := c.DefaultQuery("format", "json")
 
-	data, err := h.service.ExportSpecs(c.Request.Context(), projectID, format)
+	data, err := h.service.ExportSpecs(c.Request.Context(), workspaceID, format)
 	if err != nil {
 		response.HandleError(c, "Failed to export specs", err)
 		return
@@ -562,7 +564,7 @@ func (h *Handler) ExportSpecs(c *gin.Context) {
 
 // GenTest generates an AI-powered Kest flow test file for an API specification
 func (h *Handler) GenTest(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -574,7 +576,7 @@ func (h *Handler) GenTest(c *gin.Context) {
 
 	lang := c.DefaultQuery("lang", "en")
 
-	flowContent, err := h.service.GenTest(c.Request.Context(), projectID, id, lang)
+	flowContent, err := h.service.GenTest(c.Request.Context(), workspaceID, id, lang)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -598,7 +600,7 @@ func (h *Handler) GenTest(c *gin.Context) {
 
 // GenDoc generates AI-powered documentation for an API specification
 func (h *Handler) GenDoc(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -610,7 +612,7 @@ func (h *Handler) GenDoc(c *gin.Context) {
 
 	lang := c.DefaultQuery("lang", "en")
 
-	spec, err := h.service.GenDoc(c.Request.Context(), projectID, id, lang)
+	spec, err := h.service.GenDoc(c.Request.Context(), workspaceID, id, lang)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -625,7 +627,7 @@ func (h *Handler) GenDoc(c *gin.Context) {
 
 // BatchGenDoc triggers AI documentation generation for multiple specs concurrently.
 func (h *Handler) BatchGenDoc(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -636,7 +638,7 @@ func (h *Handler) BatchGenDoc(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.BatchGenDoc(c.Request.Context(), projectID, &req)
+	result, err := h.service.BatchGenDoc(c.Request.Context(), workspaceID, &req)
 	if err != nil {
 		response.HandleError(c, "Failed to start batch doc generation", err)
 		return
@@ -647,7 +649,7 @@ func (h *Handler) BatchGenDoc(c *gin.Context) {
 
 // GetShare returns the current internal share metadata for a spec.
 func (h *Handler) GetShare(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleRead)
 	if !ok {
 		return
 	}
@@ -657,7 +659,7 @@ func (h *Handler) GetShare(c *gin.Context) {
 		return
 	}
 
-	share, err := h.service.GetShareBySpecID(c.Request.Context(), projectID, specID)
+	share, err := h.service.GetShareBySpecID(c.Request.Context(), workspaceID, specID)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -676,7 +678,7 @@ func (h *Handler) GetShare(c *gin.Context) {
 
 // PublishShare creates or refreshes the public share snapshot for a spec.
 func (h *Handler) PublishShare(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -692,7 +694,7 @@ func (h *Handler) PublishShare(c *gin.Context) {
 		return
 	}
 
-	share, err := h.service.PublishShare(c.Request.Context(), projectID, specID, userID)
+	share, err := h.service.PublishShare(c.Request.Context(), workspaceID, specID, userID)
 	if err != nil {
 		if errors.Is(err, ErrSpecNotFound) {
 			response.NotFound(c, err.Error(), err)
@@ -707,7 +709,7 @@ func (h *Handler) PublishShare(c *gin.Context) {
 
 // DeleteShare disables a published share.
 func (h *Handler) DeleteShare(c *gin.Context) {
-	projectID, ok := handler.ParseID(c, "id")
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
 	if !ok {
 		return
 	}
@@ -717,7 +719,7 @@ func (h *Handler) DeleteShare(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteShareBySpecID(c.Request.Context(), projectID, specID); err != nil {
+	if err := h.service.DeleteShareBySpecID(c.Request.Context(), workspaceID, specID); err != nil {
 		if errors.Is(err, ErrSpecNotFound) || errors.Is(err, ErrShareNotFound) {
 			response.NotFound(c, err.Error(), err)
 			return
@@ -761,6 +763,27 @@ func (h *Handler) Create(c *gin.Context) {
 
 func getCurrentUserID(c *gin.Context) (string, bool) {
 	return handler.GetUserID(c)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		response.Unauthorized(c, "Authentication required")
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil || !allowed {
+		response.Error(c, http.StatusForbidden, errAPISpecAccessDenied.Error())
+		return "", false
+	}
+
+	return workspaceID, true
 }
 
 func (h *Handler) Get(c *gin.Context) {

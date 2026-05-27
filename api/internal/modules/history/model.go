@@ -12,10 +12,10 @@ type HistoryPO struct {
 	ID            string         `gorm:"primaryKey" json:"id"`
 	EntityType    string         `gorm:"size:50;not null;index" json:"entity_type"` // e.g., "collection", "request"
 	EntityID      string         `gorm:"not null;index" json:"entity_id"`
-	ProjectID     string         `gorm:"not null;index;uniqueIndex:idx_history_project_source_event,priority:1" json:"project_id"`
+	WorkspaceID   string         `gorm:"not null;index;uniqueIndex:idx_history_workspace_source_event,priority:1" json:"workspace_id"`
 	UserID        string         `gorm:"not null" json:"user_id"` // who made the change
-	Source        string         `gorm:"size:32;not null;default:web;index;uniqueIndex:idx_history_project_source_event,priority:2" json:"source"`
-	SourceEventID string         `gorm:"size:191;not null;index;uniqueIndex:idx_history_project_source_event,priority:3" json:"source_event_id"`
+	Source        string         `gorm:"size:32;not null;default:web;index;uniqueIndex:idx_history_workspace_source_event,priority:2" json:"source"`
+	SourceEventID string         `gorm:"size:191;not null;index;uniqueIndex:idx_history_workspace_source_event,priority:3" json:"source_event_id"`
 	Action        string         `gorm:"size:20;not null" json:"action"` // "create", "update", "delete", "move"
 	Data          string         `gorm:"type:text" json:"data"`          // JSON snapshot of the entity at this version
 	Diff          string         `gorm:"type:text" json:"diff"`          // JSON describing what changed (optional)
@@ -34,7 +34,7 @@ type History struct {
 	ID            string                 `json:"id"`
 	EntityType    string                 `json:"entity_type"`
 	EntityID      string                 `json:"entity_id"`
-	ProjectID     string                 `json:"project_id"`
+	WorkspaceID   string                 `json:"workspace_id"`
 	UserID        string                 `json:"user_id"`
 	Source        string                 `json:"source"`
 	SourceEventID string                 `json:"source_event_id"`
@@ -62,7 +62,7 @@ func (po *HistoryPO) toDomain() *History {
 		ID:            po.ID,
 		EntityType:    po.EntityType,
 		EntityID:      po.EntityID,
-		ProjectID:     po.ProjectID,
+		WorkspaceID:   po.WorkspaceID,
 		UserID:        po.UserID,
 		Source:        po.Source,
 		SourceEventID: po.SourceEventID,
@@ -95,7 +95,7 @@ func newHistoryPO(h *History) *HistoryPO {
 		ID:            h.ID,
 		EntityType:    h.EntityType,
 		EntityID:      h.EntityID,
-		ProjectID:     h.ProjectID,
+		WorkspaceID:   h.WorkspaceID,
 		UserID:        h.UserID,
 		Source:        h.Source,
 		SourceEventID: h.SourceEventID,

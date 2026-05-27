@@ -28,6 +28,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/system"
 	"github.com/kest-labs/kest/api/internal/modules/testcase"
 	"github.com/kest-labs/kest/api/internal/modules/user"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 // Application holds all application dependencies injected via Wire.
@@ -48,6 +49,7 @@ type Handlers struct {
 	Member        *member.Handler
 	Permission    *permission.Handler
 	Audit         *audit.Handler
+	Workspace     *workspace.Handler
 	Project       *project.Handler
 	ProjectInvite *projectinvite.Handler
 	Collection    *collection.Handler
@@ -67,7 +69,7 @@ type Handlers struct {
 
 // Modules returns a list of all active modules
 func (h *Handlers) Modules() []contracts.Module {
-	modules := make([]contracts.Module, 0, 19)
+	modules := make([]contracts.Module, 0, 20)
 
 	if h.User != nil {
 		modules = append(modules, h.User)
@@ -80,6 +82,9 @@ func (h *Handlers) Modules() []contracts.Module {
 	}
 	if h.Audit != nil {
 		modules = append(modules, h.Audit)
+	}
+	if h.Workspace != nil {
+		modules = append(modules, h.Workspace)
 	}
 	if h.Project != nil {
 		modules = append(modules, h.Project)

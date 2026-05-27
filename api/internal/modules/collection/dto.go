@@ -6,7 +6,7 @@ import "time"
 type CreateCollectionRequest struct {
 	Name        string  `json:"name" binding:"required,min=1,max=100"`
 	Description string  `json:"description" binding:"max=500"`
-	ProjectID   string  `json:"project_id"`
+	WorkspaceID string  `json:"workspace_id"`
 	ParentID    *string `json:"parent_id,omitempty"`
 	IsFolder    bool    `json:"is_folder"`
 	SortOrder   int     `json:"sort_order"`
@@ -31,7 +31,7 @@ type CollectionResponse struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	ProjectID   string    `json:"project_id"`
+	WorkspaceID string    `json:"workspace_id"`
 	ParentID    *string   `json:"parent_id,omitempty"`
 	IsFolder    bool      `json:"is_folder"`
 	SortOrder   int       `json:"sort_order"`
@@ -44,7 +44,7 @@ type CollectionTreeNode struct {
 	ID           string                `json:"id"`
 	Name         string                `json:"name"`
 	Description  string                `json:"description"`
-	ProjectID    string                `json:"project_id"`
+	WorkspaceID  string                `json:"workspace_id"`
 	ParentID     *string               `json:"parent_id,omitempty"`
 	IsFolder     bool                  `json:"is_folder"`
 	SortOrder    int                   `json:"sort_order"`
@@ -61,7 +61,7 @@ func toResponse(c *Collection) *CollectionResponse {
 		ID:          c.ID,
 		Name:        c.Name,
 		Description: c.Description,
-		ProjectID:   c.ProjectID,
+		WorkspaceID: c.WorkspaceID,
 		ParentID:    c.ParentID,
 		IsFolder:    c.IsFolder,
 		SortOrder:   c.SortOrder,

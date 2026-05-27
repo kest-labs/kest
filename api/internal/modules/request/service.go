@@ -10,20 +10,19 @@ import (
 
 // Common errors
 var (
-	ErrRequestNotFound    = errors.New("request not found")
-	ErrCollectionNotFound = errors.New("collection not found")
-	ErrInvalidCollection  = errors.New("invalid collection")
-	ErrVersionNotFound    = errors.New("version not found")
+	ErrRequestNotFound   = errors.New("request not found")
+	ErrInvalidCollection = errors.New("invalid collection")
+	ErrVersionNotFound   = errors.New("version not found")
 )
 
 // Service defines the interface for request business logic
 type Service interface {
-	Create(ctx context.Context, projectID string, req *CreateRequestRequest) (*Request, error)
-	GetByID(ctx context.Context, id, collectionID, projectID string) (*Request, error)
-	Update(ctx context.Context, id, collectionID, projectID string, req *UpdateRequestRequest) (*Request, error)
-	Delete(ctx context.Context, id, collectionID, projectID string) error
-	List(ctx context.Context, collectionID, projectID string, page, perPage int) ([]*Request, int64, error)
-	Move(ctx context.Context, id, collectionID, projectID string, req *MoveRequestRequest) (*Request, error)
+	Create(ctx context.Context, workspaceID string, req *CreateRequestRequest) (*Request, error)
+	GetByID(ctx context.Context, id, collectionID, workspaceID string) (*Request, error)
+	Update(ctx context.Context, id, collectionID, workspaceID string, req *UpdateRequestRequest) (*Request, error)
+	Delete(ctx context.Context, id, collectionID, workspaceID string) error
+	List(ctx context.Context, collectionID, workspaceID string, page, perPage int) ([]*Request, int64, error)
+	Move(ctx context.Context, id, collectionID, workspaceID string, req *MoveRequestRequest) (*Request, error)
 	Rollback(ctx context.Context, id, collectionID, versionID string) (*Request, error)
 }
 
@@ -41,8 +40,8 @@ func NewService(repo Repository, collectionRepo collection.Repository) Service {
 	}
 }
 
-func (s *service) Create(ctx context.Context, projectID string, req *CreateRequestRequest) (*Request, error) {
-	parentCollection, err := s.collectionRepo.GetByIDAndProject(ctx, req.CollectionID, projectID)
+func (s *service) Create(ctx context.Context, workspaceID string, req *CreateRequestRequest) (*Request, error) {
+	parentCollection, err := s.collectionRepo.GetByIDAndWorkspace(ctx, req.CollectionID, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +85,8 @@ func (s *service) Create(ctx context.Context, projectID string, req *CreateReque
 	return request, nil
 }
 
-func (s *service) GetByID(ctx context.Context, id, collectionID, projectID string) (*Request, error) {
-	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+func (s *service) GetByID(ctx context.Context, id, collectionID, workspaceID string) (*Request, error) {
+	if err := s.ensureWorkspaceCollection(ctx, collectionID, workspaceID); err != nil {
 		return nil, err
 	}
 
@@ -101,8 +100,8 @@ func (s *service) GetByID(ctx context.Context, id, collectionID, projectID strin
 	return request, nil
 }
 
-func (s *service) Update(ctx context.Context, id, collectionID, projectID string, req *UpdateRequestRequest) (*Request, error) {
-	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+func (s *service) Update(ctx context.Context, id, collectionID, workspaceID string, req *UpdateRequestRequest) (*Request, error) {
+	if err := s.ensureWorkspaceCollection(ctx, collectionID, workspaceID); err != nil {
 		return nil, err
 	}
 
@@ -162,8 +161,8 @@ func (s *service) Update(ctx context.Context, id, collectionID, projectID string
 	return request, nil
 }
 
-func (s *service) Delete(ctx context.Context, id, collectionID, projectID string) error {
-	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+func (s *service) Delete(ctx context.Context, id, collectionID, workspaceID string) error {
+	if err := s.ensureWorkspaceCollection(ctx, collectionID, workspaceID); err != nil {
 		return err
 	}
 
@@ -178,8 +177,8 @@ func (s *service) Delete(ctx context.Context, id, collectionID, projectID string
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *service) List(ctx context.Context, collectionID, projectID string, page, perPage int) ([]*Request, int64, error) {
-	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+func (s *service) List(ctx context.Context, collectionID, workspaceID string, page, perPage int) ([]*Request, int64, error) {
+	if err := s.ensureWorkspaceCollection(ctx, collectionID, workspaceID); err != nil {
 		return nil, 0, err
 	}
 
@@ -197,8 +196,8 @@ func (s *service) List(ctx context.Context, collectionID, projectID string, page
 	return s.repo.List(ctx, collectionID, offset, perPage)
 }
 
-func (s *service) Move(ctx context.Context, id, collectionID, projectID string, req *MoveRequestRequest) (*Request, error) {
-	if err := s.ensureProjectCollection(ctx, collectionID, projectID); err != nil {
+func (s *service) Move(ctx context.Context, id, collectionID, workspaceID string, req *MoveRequestRequest) (*Request, error) {
+	if err := s.ensureWorkspaceCollection(ctx, collectionID, workspaceID); err != nil {
 		return nil, err
 	}
 
@@ -211,7 +210,7 @@ func (s *service) Move(ctx context.Context, id, collectionID, projectID string, 
 	}
 
 	if req.CollectionID != nil {
-		targetCollection, err := s.collectionRepo.GetByIDAndProject(ctx, *req.CollectionID, projectID)
+		targetCollection, err := s.collectionRepo.GetByIDAndWorkspace(ctx, *req.CollectionID, workspaceID)
 		if err != nil {
 			return nil, err
 		}
@@ -238,8 +237,8 @@ func (s *service) Rollback(ctx context.Context, id, collectionID, versionID stri
 	return nil, ErrVersionNotFound
 }
 
-func (s *service) ensureProjectCollection(ctx context.Context, collectionID, projectID string) error {
-	parentCollection, err := s.collectionRepo.GetByIDAndProject(ctx, collectionID, projectID)
+func (s *service) ensureWorkspaceCollection(ctx context.Context, collectionID, workspaceID string) error {
+	parentCollection, err := s.collectionRepo.GetByIDAndWorkspace(ctx, collectionID, workspaceID)
 	if err != nil {
 		return err
 	}

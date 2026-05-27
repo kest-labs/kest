@@ -5,9 +5,11 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/collections/:cid/export", func(ex *router.Router) {
+	r.Group("/workspaces/:id/collections/:cid/export", func(ex *router.Router) {
 		ex.WithMiddleware("auth")
 
-		ex.GET("/postman", h.ExportPostman).Name("export.postman")
+		ex.GET("/postman", h.ExportPostman).
+			Name("export.postman").
+			WhereUUIDOrNumber("id", "cid")
 	})
 }

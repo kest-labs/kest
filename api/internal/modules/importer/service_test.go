@@ -11,7 +11,7 @@ import (
 
 func TestImportPostmanCollectionCreatesSingleCollectionForAllRequests(t *testing.T) {
 	parentID := "9"
-	projectID := "7"
+	workspaceID := "7"
 	collectionService := &stubCollectionService{}
 	requestService := &stubRequestService{}
 	service := NewService(collectionService, requestService).(*service)
@@ -44,7 +44,7 @@ func TestImportPostmanCollectionCreatesSingleCollectionForAllRequests(t *testing
 		},
 	}
 
-	if err := service.importPostmanCollection(context.Background(), projectID, parentID, pmCol); err != nil {
+	if err := service.importPostmanCollection(context.Background(), workspaceID, parentID, pmCol); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
@@ -174,7 +174,7 @@ func (s *stubCollectionService) Create(_ context.Context, req *collection.Create
 		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
-		ProjectID:   req.ProjectID,
+		WorkspaceID: req.WorkspaceID,
 		ParentID:    cloneStringPtr(req.ParentID),
 		IsFolder:    req.IsFolder,
 		SortOrder:   req.SortOrder,
@@ -260,7 +260,7 @@ func cloneCreateCollectionRequest(req *collection.CreateCollectionRequest) *coll
 	}
 
 	return &collection.CreateCollectionRequest{
-		ProjectID:   req.ProjectID,
+		WorkspaceID: req.WorkspaceID,
 		Name:        req.Name,
 		Description: req.Description,
 		ParentID:    cloneStringPtr(req.ParentID),

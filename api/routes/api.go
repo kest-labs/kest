@@ -27,6 +27,9 @@ func RegisterAPI(r *router.Router, handlers *app.Handlers) {
 	if handlers.Project != nil && handlers.History != nil {
 		handlers.Project.SetHistorySyncer(handlers.History)
 	}
+	if handlers.Project != nil && handlers.Workspace != nil {
+		handlers.Project.SetWorkspaceTokenValidator(handlers.Workspace.Service())
+	}
 
 	// 2. Register Module Routes
 	for _, m := range handlers.Modules() {

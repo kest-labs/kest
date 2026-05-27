@@ -5,10 +5,14 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/collections/import", func(imp *router.Router) {
+	r.Group("/workspaces/:id/collections/import", func(imp *router.Router) {
 		imp.WithMiddleware("auth")
 
-		imp.POST("/postman", h.ImportPostman).Name("importer.postman")
-		imp.POST("/markdown", h.ImportMarkdown).Name("importer.markdown")
+		imp.POST("/postman", h.ImportPostman).
+			Name("importer.postman").
+			WhereUUIDOrNumber("id")
+		imp.POST("/markdown", h.ImportMarkdown).
+			Name("importer.markdown").
+			WhereUUIDOrNumber("id")
 	})
 }
