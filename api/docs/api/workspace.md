@@ -10,17 +10,15 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v1/workspaces` | Create Workspace workspace | 🔒 |
-| `GET` | `/v1/workspaces` | List Workspaces workspace | 🔒 |
-| `GET` | `/v1/workspaces/:id` | Get Workspace workspace | 🔒 |
-| `PATCH` | `/v1/workspaces/:id` | Update Workspace workspace | 🔒 |
-| `DELETE` | `/v1/workspaces/:id` | Delete Workspace workspace | 🔒 |
-| `POST` | `/v1/workspaces/:id/members` | Add Member workspace | 🔒 |
-| `GET` | `/v1/workspaces/:id/members` | List Members workspace | 🔒 |
-| `PATCH` | `/v1/workspaces/:id/members/:uid` | Update Member Role workspace | 🔒 |
-| `DELETE` | `/v1/workspaces/:id/members/:uid` | Remove Member workspace | 🔒 |
-| `POST` | `/v1/workspaces/:id/cli-tokens` | Generate C L I Token workspace | 🔒 |
-| `GET` | `/v1/workspaces/:id/cli-tokens` | List C L I Tokens workspace | 🔒 |
+| `POST` | `/v1/workspaces` | Create workspace | 🔒 |
+| `GET` | `/v1/workspaces` | List workspaces | 🔒 |
+| `GET` | `/v1/workspaces/:id` | Get workspace details | 🔒 |
+| `PUT` | `/v1/workspaces/:id` | Update workspace | 🔒 |
+| `PATCH` | `/v1/workspaces/:id` | Update workspace | 🔒 |
+| `DELETE` | `/v1/workspaces/:id` | Delete workspace | 🔒 |
+| `GET` | `/v1/workspaces/:id/stats` | Get Stats workspace | 🔒 |
+| `POST` | `/v1/workspaces/:id/cli/spec-sync` | Sync Specs From C L I workspace | 🔒 |
+| `POST` | `/v1/workspaces/:id/cli/history-sync` | Sync History From C L I workspace | 🔒 |
 
 ---
 
@@ -28,47 +26,25 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 ### POST `/v1/workspaces`
 
-**Create Workspace workspace**
+**Create workspace**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
 | Route Name | `workspaces.create` |
 
-#### Request Body
-
-```json
-{
-  "description": "string",
-  "name": "John Doe",
-  "slug": "string",
-  "type": "string",
-  "visibility": "string"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `name` | `string` | ✅ | Required, Max: 100 |
-| `slug` | `string` | ✅ | Required, Max: 50 |
-| `description` | `string` | ❌ | Max: 500 |
-| `type` | `string` | ✅ | Required, One of: personal team public |
-| `visibility` | `string` | ❌ | One of: private team public |
-
 #### Response
 
 ```json
 {
   "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
+  "public_key": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
 }
 ```
 
@@ -76,36 +52,29 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 ```bash
 curl -X POST 'http://localhost:8025/api/v1/workspaces' \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"description": "string","name": "John Doe","slug": "string","type": "string","visibility": "string"}'
+  -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
 ### GET `/v1/workspaces`
 
-**List Workspaces workspace**
+**List workspaces**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `workspaces.index` |
+| Route Name | `workspaces.list` |
 
 #### Response
 
 ```json
 {
-  "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1
 }
 ```
 
@@ -120,12 +89,11 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces' \
 
 ### GET `/v1/workspaces/:id`
 
-**Get Workspace workspace**
+**Get workspace details**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `workspaces.show` |
 
 #### Path Parameters
 
@@ -138,15 +106,13 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces' \
 ```json
 {
   "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
+  "public_key": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
 }
 ```
 
@@ -159,30 +125,13 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces/1' \
 
 ---
 
-### PATCH `/v1/workspaces/:id`
+### PUT `/v1/workspaces/:id`
 
-**Update Workspace workspace**
+**Update workspace**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `workspaces.update` |
-
-#### Request Body
-
-```json
-{
-  "description": null,
-  "name": null,
-  "visibility": null
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `name` | `*string` | ❌ | Optional, Max: 100 |
-| `description` | `*string` | ❌ | Optional, Max: 500 |
-| `visibility` | `*string` | ❌ | Optional, One of: private team public |
 
 #### Path Parameters
 
@@ -195,15 +144,51 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces/1' \
 ```json
 {
   "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
+  "public_key": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
+}
+```
+
+#### Example
+
+```bash
+curl -X PUT 'http://localhost:8025/api/v1/workspaces/1' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### PATCH `/v1/workspaces/:id`
+
+**Update workspace**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Response
+
+```json
+{
+  "created_at": "2024-01-01T00:00:00Z",
+  "id": 1,
+  "name": "John Doe",
+  "platform": "string",
+  "public_key": "string",
+  "slug": "string",
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
 }
 ```
 
@@ -211,21 +196,18 @@ curl -X GET 'http://localhost:8025/api/v1/workspaces/1' \
 
 ```bash
 curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1' \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"description": null,"name": null,"visibility": null}'
+  -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
 ### DELETE `/v1/workspaces/:id`
 
-**Delete Workspace workspace**
+**Delete workspace**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `workspaces.delete` |
 
 #### Path Parameters
 
@@ -238,15 +220,13 @@ curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1' \
 ```json
 {
   "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
+  "public_key": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
 }
 ```
 
@@ -259,28 +239,13 @@ curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1' \
 
 ---
 
-### POST `/v1/workspaces/:id/members`
+### GET `/v1/workspaces/:id/stats`
 
-**Add Member workspace**
+**Get Stats workspace**
 
 | Property | Value |
 |----------|-------|
 | Auth | 🔒 JWT Required |
-| Route Name | `workspaces.members.add` |
-
-#### Request Body
-
-```json
-{
-  "role": "string",
-  "user_id": 1
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `user_id` | `uint` | ✅ | Required |
-| `role` | `string` | ✅ | Required, One of: owner admin write read |
 
 #### Path Parameters
 
@@ -293,186 +258,70 @@ curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1' \
 ```json
 {
   "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
+  "public_key": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/workspaces/1/members' \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"role": "string","user_id": 1}'
-```
-
----
-
-### GET `/v1/workspaces/:id/members`
-
-**List Members workspace**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-| Route Name | `workspaces.members.list` |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Response
-
-```json
-{
-  "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
-  "id": 1,
-  "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
-  "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
-}
-```
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/workspaces/1/members' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/stats' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/workspaces/:id/members/:uid`
+### POST `/v1/workspaces/:id/cli/spec-sync`
 
-**Update Member Role workspace**
+**Sync Specs From C L I workspace**
 
 | Property | Value |
 |----------|-------|
-| Auth | 🔒 JWT Required |
-| Route Name | `workspaces.members.update` |
-
-#### Request Body
-
-```json
-{
-  "role": "string"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `role` | `string` | ✅ | Required, One of: owner admin write read |
+| Auth | 🔒 Workspace CLI token required |
 
 #### Path Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `id` | `integer` | Resource identifier |
-| `uid` | `integer` | Resource identifier |
 
 #### Response
 
 ```json
 {
   "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
   "id": 1,
   "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
+  "platform": "string",
+  "public_key": "string",
   "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
+  "status": 1,
+  "updated_at": "2024-01-01T00:00:00Z"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/members/1' \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"role": "string"}'
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/cli/spec-sync' \
+  -H 'Authorization: Bearer <workspace-cli-token>'
 ```
 
 ---
 
-### DELETE `/v1/workspaces/:id/members/:uid`
+### POST `/v1/workspaces/:id/cli/history-sync`
 
-**Remove Member workspace**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-| Route Name | `workspaces.members.remove` |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-| `uid` | `integer` | Resource identifier |
-
-#### Response
-
-```json
-{
-  "created_at": "2024-01-01T00:00:00Z",
-  "description": "string",
-  "id": 1,
-  "name": "John Doe",
-  "owner_id": 1,
-  "settings": "object",
-  "slug": "string",
-  "type": "string",
-  "updated_at": "2024-01-01T00:00:00Z",
-  "visibility": "string"
-}
-```
-
-#### Example
-
-```bash
-curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/members/1' \
-  -H 'Authorization: Bearer <token>'
-```
-
----
-
-### POST `/v1/workspaces/:id/cli-tokens`
-
-**Generate C L I Token workspace**
+**Sync History From C L I workspace**
 
 | Property | Value |
 |----------|-------|
-| Auth | 🔒 JWT Required |
-| Route Name | `workspaces.cli_tokens.create` |
-
-#### Request Body
-
-```json
-{
-  "expires_at": null,
-  "name": "Workspace CLI sync",
-  "scopes": ["collection:read", "collection:run"]
-}
-```
+| Auth | 🔒 Workspace CLI token required |
 
 #### Path Parameters
 
@@ -480,72 +329,11 @@ curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/members/1' \
 |-----------|------|-------------|
 | `id` | `integer` | Resource identifier |
 
-#### Response
-
-```json
-{
-  "token": "kest_pat_...",
-  "token_type": "bearer",
-  "workspace_id": "1",
-  "token_info": {
-    "id": "string",
-    "workspace_id": "1",
-    "name": "Workspace CLI sync",
-    "token_prefix": "kest_pat_...",
-    "scopes": ["collection:read", "collection:run"],
-    "created_at": "2024-01-01T00:00:00Z"
-  }
-}
-```
-
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/workspaces/1/cli-tokens' \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Workspace CLI sync","scopes":["collection:read","collection:run"]}'
-```
-
----
-
-### GET `/v1/workspaces/:id/cli-tokens`
-
-**List C L I Tokens workspace**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-| Route Name | `workspaces.cli_tokens.list` |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Response
-
-```json
-[
-  {
-    "id": "string",
-    "workspace_id": "1",
-    "name": "Workspace CLI sync",
-    "token_prefix": "kest_pat_...",
-    "scopes": ["collection:read", "collection:run"],
-    "last_used_at": null,
-    "expires_at": null,
-    "created_at": "2024-01-01T00:00:00Z"
-  }
-]
-```
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/workspaces/1/cli-tokens' \
-  -H 'Authorization: Bearer <token>'
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/cli/history-sync' \
+  -H 'Authorization: Bearer <workspace-cli-token>'
 ```
 
 ---

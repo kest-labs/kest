@@ -51,7 +51,6 @@ type CreateAPISpecAIDraftRequest struct {
 	Path                    string   `json:"path" binding:"omitempty,max=500"`
 	CategoryID              *string  `json:"category_id"`
 	UseWorkspaceConventions *bool    `json:"use_workspace_conventions"`
-	UseProjectConventions   *bool    `json:"use_project_conventions,omitempty"`
 	ReferenceSpecIDs        []string `json:"reference_spec_ids"`
 	Lang                    string   `json:"lang" binding:"omitempty,oneof=en zh"`
 }
@@ -99,10 +98,24 @@ func (req *CreateAPISpecAIDraftRequest) workspaceConventionsEnabled() *bool {
 	if req == nil {
 		return nil
 	}
-	if req.UseWorkspaceConventions != nil {
-		return req.UseWorkspaceConventions
+	return req.UseWorkspaceConventions
+}
+
+func (req *CreateAPISpecAIDraftRequest) UnmarshalJSON(data []byte) error {
+	type createAPISpecAIDraftRequestAlias CreateAPISpecAIDraftRequest
+	payload := struct {
+		*createAPISpecAIDraftRequestAlias
+		LegacyConventions *bool `json:"use_project_conventions,omitempty"`
+	}{
+		createAPISpecAIDraftRequestAlias: (*createAPISpecAIDraftRequestAlias)(req),
 	}
-	return req.UseProjectConventions
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return err
+	}
+	if req.UseWorkspaceConventions == nil && payload.LegacyConventions != nil {
+		req.UseWorkspaceConventions = payload.LegacyConventions
+	}
+	return nil
 }
 
 func marshalAIDraftJSON(value interface{}) (string, error) {

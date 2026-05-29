@@ -10,45 +10,22 @@ See [API Documentation](./api.md) for environment-specific base URLs.
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/v1/projects/:id/test-cases` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases` | Require Project Role testcase | 🔒 |
-| `GET` | `/v1/projects/:id/test-cases/:tcid` | Require Project Role testcase | 🔒 |
-| `PATCH` | `/v1/projects/:id/test-cases/:tcid` | Require Project Role testcase | 🔒 |
-| `DELETE` | `/v1/projects/:id/test-cases/:tcid` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases/:tcid/duplicate` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases/from-spec` | Require Project Role testcase | 🔒 |
-| `POST` | `/v1/projects/:id/test-cases/:tcid/run` | Require Project Role testcase | 🔒 |
+| `GET` | `/v1/workspaces/:id/test-cases` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases` | Require Workspace Role testcase | 🔒 |
+| `GET` | `/v1/workspaces/:id/test-cases/:tcid` | Require Workspace Role testcase | 🔒 |
+| `PATCH` | `/v1/workspaces/:id/test-cases/:tcid` | Require Workspace Role testcase | 🔒 |
+| `DELETE` | `/v1/workspaces/:id/test-cases/:tcid` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases/:tcid/duplicate` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases/from-spec` | Require Workspace Role testcase | 🔒 |
+| `POST` | `/v1/workspaces/:id/test-cases/:tcid/run` | Require Workspace Role testcase | 🔒 |
 
 ---
 
 ## Details
 
-### GET `/v1/projects/:id/test-cases`
+### GET `/v1/workspaces/:id/test-cases`
 
-**Require Project Role testcase**
-
-| Property | Value |
-|----------|-------|
-| Auth | 🔒 JWT Required |
-
-#### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | `integer` | Resource identifier |
-
-#### Example
-
-```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases' \
-  -H 'Authorization: Bearer <token>'
-```
-
----
-
-### POST `/v1/projects/:id/test-cases`
-
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -63,15 +40,38 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/test-cases' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### GET `/v1/projects/:id/test-cases/:tcid`
+### POST `/v1/workspaces/:id/test-cases`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
+
+| Property | Value |
+|----------|-------|
+| Auth | 🔒 JWT Required |
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `integer` | Resource identifier |
+
+#### Example
+
+```bash
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases' \
+  -H 'Authorization: Bearer <token>'
+```
+
+---
+
+### GET `/v1/workspaces/:id/test-cases/:tcid`
+
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -87,15 +87,15 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases' \
 #### Example
 
 ```bash
-curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
+curl -X GET 'http://localhost:8025/api/v1/workspaces/1/test-cases/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### PATCH `/v1/projects/:id/test-cases/:tcid`
+### PATCH `/v1/workspaces/:id/test-cases/:tcid`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -111,15 +111,15 @@ curl -X GET 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
 #### Example
 
 ```bash
-curl -X PATCH 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
+curl -X PATCH 'http://localhost:8025/api/v1/workspaces/1/test-cases/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### DELETE `/v1/projects/:id/test-cases/:tcid`
+### DELETE `/v1/workspaces/:id/test-cases/:tcid`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -135,15 +135,15 @@ curl -X PATCH 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
 #### Example
 
 ```bash
-curl -X DELETE 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
+curl -X DELETE 'http://localhost:8025/api/v1/workspaces/1/test-cases/1' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/test-cases/:tcid/duplicate`
+### POST `/v1/workspaces/:id/test-cases/:tcid/duplicate`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -159,15 +159,15 @@ curl -X DELETE 'http://localhost:8025/api/v1/projects/1/test-cases/1' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/1/duplicate' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases/1/duplicate' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/test-cases/from-spec`
+### POST `/v1/workspaces/:id/test-cases/from-spec`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -182,15 +182,15 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/1/duplicate' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/from-spec' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases/from-spec' \
   -H 'Authorization: Bearer <token>'
 ```
 
 ---
 
-### POST `/v1/projects/:id/test-cases/:tcid/run`
+### POST `/v1/workspaces/:id/test-cases/:tcid/run`
 
-**Require Project Role testcase**
+**Require Workspace Role testcase**
 
 | Property | Value |
 |----------|-------|
@@ -206,7 +206,7 @@ curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/from-spec' \
 #### Example
 
 ```bash
-curl -X POST 'http://localhost:8025/api/v1/projects/1/test-cases/1/run' \
+curl -X POST 'http://localhost:8025/api/v1/workspaces/1/test-cases/1/run' \
   -H 'Authorization: Bearer <token>'
 ```
 

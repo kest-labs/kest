@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 )
 
@@ -16,15 +17,21 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 		auth.GET("/workspaces/:id", h.GetWorkspace).Name("workspaces.show").WhereUUIDOrNumber("id")
 		auth.PATCH("/workspaces/:id", h.UpdateWorkspace).Name("workspaces.update").WhereUUIDOrNumber("id")
 		auth.DELETE("/workspaces/:id", h.DeleteWorkspace).Name("workspaces.delete").WhereUUIDOrNumber("id")
-
-		// Member management
-		auth.POST("/workspaces/:id/members", h.AddMember).Name("workspaces.members.add").WhereUUIDOrNumber("id")
-		auth.GET("/workspaces/:id/members", h.ListMembers).Name("workspaces.members.list").WhereUUIDOrNumber("id")
-		auth.PATCH("/workspaces/:id/members/:uid", h.UpdateMemberRole).Name("workspaces.members.update").WhereUUIDOrNumber("id", "uid")
-		auth.DELETE("/workspaces/:id/members/:uid", h.RemoveMember).Name("workspaces.members.remove").WhereUUIDOrNumber("id", "uid")
+		auth.GET("/workspaces/:id/stats", h.GetStats).Name("workspaces.stats").WhereUUIDOrNumber("id")
 
 		// CLI tokens
 		auth.POST("/workspaces/:id/cli-tokens", h.GenerateCLIToken).Name("workspaces.cli_tokens.create").WhereUUIDOrNumber("id")
 		auth.GET("/workspaces/:id/cli-tokens", h.ListCLITokens).Name("workspaces.cli_tokens.list").WhereUUIDOrNumber("id")
+	})
+
+	r.Group("", func(cli *router.Router) {
+		cli.POST("/workspaces/:id/cli/spec-sync", h.SyncSpecsFromCLI).
+			Name("workspaces.cli.spec_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(h.service, CLITokenScopeCollectionRead))
+		cli.POST("/workspaces/:id/cli/history-sync", h.SyncHistoryFromCLI).
+			Name("workspaces.cli.history_sync").
+			WhereUUIDOrNumber("id").
+			Middleware(middleware.RequireWorkspaceCLIToken(h.service, CLITokenScopeCollectionRun))
 	})
 }

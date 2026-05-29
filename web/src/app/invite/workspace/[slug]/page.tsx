@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { ProjectInvitationPage } from '@/components/features/project/project-invitation-page';
+import { WorkspaceInvitationPage } from '@/components/features/workspace/workspace-invitation-page';
 
 interface InviteWorkspacePageProps {
   params: Promise<{
@@ -14,5 +14,5 @@ export default async function InviteWorkspacePage({ params }: InviteWorkspacePag
     notFound();
   }
 
-  return <ProjectInvitationPage slug={slug} />;
+  return <WorkspaceInvitationPage slug={slug} />;
 }

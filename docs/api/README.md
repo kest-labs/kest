@@ -19,7 +19,7 @@ Most Kest API endpoints use JWT (JSON Web Token) authentication. Include the tok
 Authorization: Bearer <your-jwt-token>
 ```
 
-Project-scoped CLI upload endpoints use a generated CLI token instead:
+Workspace-scoped CLI upload endpoints use a generated CLI token instead:
 
 ```
 Authorization: Bearer <kest_pat_...>
@@ -27,7 +27,7 @@ Authorization: Bearer <kest_pat_...>
 
 ## Rate Limiting
 
-API requests are rate limited per project. Default limits:
+API requests are rate limited per workspace. Default limits:
 - Free tier: 100 requests per minute
 - Pro tier: 1000 requests per minute
 - Enterprise: Custom limits
@@ -81,17 +81,17 @@ All API responses follow a consistent format:
 
 Based on the current `web/src` service, hook, and page usage audit on 2026-04-15, the following Collection endpoints are not connected in the frontend yet:
 
-- `GET /v1/projects/:id/collections/tree`
-- `GET /v1/projects/:id/collections/:cid`
-- `PATCH /v1/projects/:id/collections/:cid/move`
+- `GET /v1/workspaces/:id/collections/tree`
+- `GET /v1/workspaces/:id/collections/:cid`
+- `PATCH /v1/workspaces/:id/collections/:cid/move`
 
 The following Export endpoint is also not connected in the frontend yet:
 
-- `GET /v1/projects/:id/collections/:cid/export/postman`
+- `GET /v1/workspaces/:id/collections/:cid/export/postman`
 
 History write is now connected in the frontend:
 
-- `POST /v1/projects/:id/history`
+- `POST /v1/workspaces/:id/history`
 
 The request workbench uses this endpoint after `Send` to automatically write one `request` history record for each execution attempt.
 
@@ -100,8 +100,8 @@ The request workbench uses this endpoint after `Send` to automatically write one
 1. [Authentication & Users](./01-authentication.md)
    - Registration, Login, Profile Management
    
-2. [Projects](./02-projects.md)
-   - Project CRUD operations, DSN management
+2. [Workspaces](./02-workspaces.md)
+   - Workspace CRUD operations, DSN management
    
 3. [API Specifications](./03-api-specifications.md)
    - API spec management, Import/Export
@@ -116,7 +116,7 @@ The request workbench uses this endpoint after `Send` to automatically write one
    - Test case categorization
    
 7. [Members](./07-members.md)
-   - Project member management
+   - Workspace member management
    
 8. [Permissions](./08-permissions.md)
    - Role-based access control
@@ -128,7 +128,7 @@ The request workbench uses this endpoint after `Send` to automatically write one
     - System health and utilities
 
 11. [CLI Sync](./11-cli-sync.md)
-    - Project-scoped CLI tokens and spec upload
+    - Workspace-scoped CLI tokens and spec upload
 
 ## SDKs and Tools
 

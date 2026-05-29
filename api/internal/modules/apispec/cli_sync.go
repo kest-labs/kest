@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 type CLISpecSyncInput struct {
@@ -66,7 +66,7 @@ type CLISpecSyncResult struct {
 	Errors  []string
 }
 
-func (h *Handler) SyncSpecsFromCLI(ctx context.Context, workspaceID string, req *project.CLISpecSyncRequest) (*project.CLISpecSyncResponseBody, error) {
+func (h *Handler) SyncSpecsFromCLI(ctx context.Context, workspaceID string, req *workspace.CLISpecSyncRequest) (*workspace.CLISpecSyncResponseBody, error) {
 	input := &CLISpecSyncInput{
 		Source:   req.Source,
 		Metadata: req.Metadata,
@@ -93,7 +93,7 @@ func (h *Handler) SyncSpecsFromCLI(ctx context.Context, workspaceID string, req 
 		return nil, err
 	}
 
-	return &project.CLISpecSyncResponseBody{
+	return &workspace.CLISpecSyncResponseBody{
 		Created: result.Created,
 		Updated: result.Updated,
 		Skipped: result.Skipped,
@@ -393,7 +393,7 @@ func boolPtr(v bool) *bool {
 	return &v
 }
 
-func toCLISyncRequestBodyInput(input *project.CLISpecSyncRequestBody) *CLISpecSyncRequestBodyInput {
+func toCLISyncRequestBodyInput(input *workspace.CLISpecSyncRequestBody) *CLISpecSyncRequestBodyInput {
 	if input == nil {
 		return nil
 	}
@@ -406,7 +406,7 @@ func toCLISyncRequestBodyInput(input *project.CLISpecSyncRequestBody) *CLISpecSy
 	}
 }
 
-func toCLISyncParameterInputs(input []project.CLISpecSyncParameter) []CLISpecSyncParameterInput {
+func toCLISyncParameterInputs(input []workspace.CLISpecSyncParameter) []CLISpecSyncParameterInput {
 	if len(input) == 0 {
 		return nil
 	}
@@ -426,7 +426,7 @@ func toCLISyncParameterInputs(input []project.CLISpecSyncParameter) []CLISpecSyn
 	return output
 }
 
-func toCLISyncResponseInputs(input map[string]project.CLISpecSyncResponse) map[string]CLISpecSyncResponseInput {
+func toCLISyncResponseInputs(input map[string]workspace.CLISpecSyncResponse) map[string]CLISpecSyncResponseInput {
 	if len(input) == 0 {
 		return nil
 	}
@@ -443,7 +443,7 @@ func toCLISyncResponseInputs(input map[string]project.CLISpecSyncResponse) map[s
 	return output
 }
 
-func toCLISyncExampleInputs(input []project.CLISpecSyncExample) []CLISpecSyncExampleInput {
+func toCLISyncExampleInputs(input []workspace.CLISpecSyncExample) []CLISpecSyncExampleInput {
 	if len(input) == 0 {
 		return nil
 	}

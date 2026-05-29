@@ -2,12 +2,12 @@
 
 ## Overview
 
-CLI Sync lets the Kest CLI upload API usage-derived specifications into a project with a project-scoped CLI token.
+CLI Sync lets the Kest CLI upload API usage-derived specifications into a workspace with a workspace-scoped CLI token.
 
 This flow has two parts:
 
-1. A project member generates a CLI token in the Web Console or through the authenticated API.
-2. The CLI stores `platform_url`, `platform_token`, and `platform_project_id` in `.kest/config.yaml`, then uploads specs with `kest sync push`.
+1. A workspace member generates a CLI token in the Web Console or through the authenticated API.
+2. The CLI stores `platform_url`, `platform_token`, and `platform_workspace_id` in `.kest/config.yaml`, then uploads specs with `kest sync push`.
 
 ---
 
@@ -15,7 +15,7 @@ This flow has two parts:
 
 ### 1. Generate Token
 
-Use a normal user JWT and project write permission.
+Use a normal user JWT and workspace write permission.
 
 ```http
 Authorization: Bearer <jwt-token>
@@ -23,23 +23,23 @@ Authorization: Bearer <jwt-token>
 
 ### 2. Upload Specs
 
-Use the generated project-scoped CLI token.
+Use the generated workspace-scoped CLI token.
 
 ```http
 Authorization: Bearer <kest_pat_...>
 ```
 
-The upload token is scoped to a single `project_id`. If the URL project does not match the token scope, the request is rejected.
+The upload token is scoped to a single `workspace_id`. If the URL workspace does not match the token scope, the request is rejected.
 
 ---
 
 ## 1. Generate CLI Token
 
-### POST /projects/:id/cli-tokens
+### POST /workspaces/:id/cli-tokens
 
-Generate a project-scoped CLI token for sync uploads.
+Generate a workspace-scoped CLI token for sync uploads.
 
-**Authentication**: JWT + project write access
+**Authentication**: JWT + workspace write access
 
 #### Request Body
 
@@ -59,10 +59,10 @@ Generate a project-scoped CLI token for sync uploads.
   "data": {
     "token": "kest_pat_3f3b7c...",
     "token_type": "bearer",
-    "project_id": 12,
+    "workspace_id": 12,
     "token_info": {
       "id": 5,
-      "project_id": 12,
+      "workspace_id": 12,
       "name": "Payments API CLI sync",
       "token_prefix": "kest_pat_3f3b7c12",
       "scopes": ["spec:write"],
@@ -82,9 +82,9 @@ Generate a project-scoped CLI token for sync uploads.
 
 ## 2. CLI Spec Sync Upload
 
-### POST /projects/:id/cli/spec-sync
+### POST /workspaces/:id/cli/spec-sync
 
-Upload API specs derived from CLI history into a project.
+Upload API specs derived from CLI history into a workspace.
 
 **Authentication**: CLI token with `spec:write`
 
@@ -92,7 +92,7 @@ Upload API specs derived from CLI history into a project.
 
 ```json
 {
-  "project_id": 12,
+  "workspace_id": 12,
   "source": "cli",
   "metadata": {
     "cli_version": "0.1.0",
@@ -166,13 +166,13 @@ During sync, Kest redacts common secrets before storing uploaded examples:
 
 ## CLI Configuration
 
-Run inside a Kest project so the CLI writes to `.kest/config.yaml`:
+Run inside a Kest workspace so the CLI writes to `.kest/config.yaml`:
 
 ```bash
 kest sync config \
   --platform-url "https://api.kest.dev/v1" \
   --platform-token "kest_pat_..." \
-  --project-id "12"
+  --workspace-id "12"
 ```
 
 Then push local history:

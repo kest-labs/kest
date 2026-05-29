@@ -22,6 +22,7 @@ type Repository interface {
 
 	// List workspaces accessible to a user (as member or super admin)
 	ListByUserID(userID string, isSuperAdmin bool) ([]*WorkspacePO, error)
+	GetStats(ctx context.Context, workspaceID string) (*WorkspaceStats, error)
 
 	// Member management
 	AddMember(member *WorkspaceMemberPO) error
@@ -46,6 +47,52 @@ type repository struct {
 	db *gorm.DB
 }
 
+type WorkspaceStats struct {
+	APISpecCount     int64 `json:"api_spec_count"`
+	FlowCount        int64 `json:"flow_count"`
+	EnvironmentCount int64 `json:"environment_count"`
+	MemberCount      int64 `json:"member_count"`
+	CategoryCount    int64 `json:"category_count"`
+}
+
+type workspaceDeleteStatement struct {
+	table string
+	sql   string
+	args  []any
+}
+
+func workspaceDeleteStatements(workspaceID string) []workspaceDeleteStatement {
+	flowIDsSubquery := "SELECT id FROM api_flows WHERE workspace_id = ?"
+	flowRunIDsSubquery := "SELECT id FROM api_flow_runs WHERE flow_id IN (" + flowIDsSubquery + ")"
+
+	return []workspaceDeleteStatement{
+		{
+			table: "api_flow_step_results",
+			sql:   "DELETE FROM api_flow_step_results WHERE run_id IN (" + flowRunIDsSubquery + ")",
+			args:  []any{workspaceID},
+		},
+		{
+			table: "api_flow_runs",
+			sql:   "DELETE FROM api_flow_runs WHERE flow_id IN (" + flowIDsSubquery + ")",
+			args:  []any{workspaceID},
+		},
+		{
+			table: "api_flow_edges",
+			sql:   "DELETE FROM api_flow_edges WHERE flow_id IN (" + flowIDsSubquery + ")",
+			args:  []any{workspaceID},
+		},
+		{
+			table: "api_flow_steps",
+			sql:   "DELETE FROM api_flow_steps WHERE flow_id IN (" + flowIDsSubquery + ")",
+			args:  []any{workspaceID},
+		},
+		{table: "api_flows", sql: "DELETE FROM api_flows WHERE workspace_id = ?", args: []any{workspaceID}},
+		{table: "audit_logs", sql: "DELETE FROM audit_logs WHERE workspace_id = ?", args: []any{workspaceID}},
+		{table: "workspace_invitations", sql: "DELETE FROM workspace_invitations WHERE workspace_id = ?", args: []any{workspaceID}},
+		{table: "workspace_members", sql: "DELETE FROM workspace_members WHERE workspace_id = ?", args: []any{workspaceID}},
+	}
+}
+
 // NewRepository creates a new workspace repository
 func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
@@ -63,7 +110,19 @@ func (r *repository) Update(workspace *WorkspacePO) error {
 
 // Delete soft deletes a workspace
 func (r *repository) Delete(id string) error {
-	return dbutil.DeleteByID(r.db, &WorkspacePO{}, id).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, statement := range workspaceDeleteStatements(id) {
+			if !tx.Migrator().HasTable(statement.table) {
+				continue
+			}
+
+			if err := tx.Exec(statement.sql, statement.args...).Error; err != nil {
+				return err
+			}
+		}
+
+		return dbutil.DeleteByID(tx, &WorkspacePO{}, id).Error
+	})
 }
 
 // FindByID finds a workspace by ID
@@ -105,13 +164,44 @@ func (r *repository) ListByUserID(userID string, isSuperAdmin bool) ([]*Workspac
 	}
 
 	// Regular users see workspaces they are members of
+	var rows []struct {
+		WorkspacePO
+		Role string
+	}
+
 	err := r.db.
+		Model(&WorkspacePO{}).
+		Select("workspaces.*, workspace_members.role AS role").
 		Joins("JOIN workspace_members ON workspace_members.workspace_id = workspaces.id").
 		Where("workspace_members.user_id = ?", userID).
+		Where("workspace_members.deleted_at IS NULL").
 		Order("workspaces.created_at DESC").
-		Find(&workspaces).Error
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
 
-	return workspaces, err
+	workspaces = make([]*WorkspacePO, len(rows))
+	for index, row := range rows {
+		workspace := row.WorkspacePO
+		workspace.Role = row.Role
+		workspaces[index] = &workspace
+	}
+
+	return workspaces, nil
+}
+
+func (r *repository) GetStats(ctx context.Context, workspaceID string) (*WorkspaceStats, error) {
+	stats := &WorkspaceStats{}
+	db := r.db.WithContext(ctx)
+
+	db.Table("api_specs").Where("workspace_id = ?", workspaceID).Count(&stats.APISpecCount)
+	db.Table("api_flows").Where("workspace_id = ?", workspaceID).Count(&stats.FlowCount)
+	db.Table("environments").Where("workspace_id = ?", workspaceID).Count(&stats.EnvironmentCount)
+	db.Table("workspace_members").Where("workspace_id = ?", workspaceID).Count(&stats.MemberCount)
+	db.Table("api_categories").Where("workspace_id = ?", workspaceID).Count(&stats.CategoryCount)
+
+	return stats, nil
 }
 
 // AddMember adds a member to a workspace

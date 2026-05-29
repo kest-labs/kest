@@ -29,12 +29,12 @@ type Repository interface {
 
 // ListFilter represents the filter for listing test cases
 type ListFilter struct {
-	ProjectID *string
-	APISpecID *string
-	Env       *string
-	Keyword   *string
-	Page      int
-	PageSize  int
+	WorkspaceID *string
+	APISpecID   *string
+	Env         *string
+	Keyword     *string
+	Page        int
+	PageSize    int
 }
 
 type repository struct {
@@ -69,17 +69,22 @@ func (r *repository) List(ctx context.Context, filter *ListFilter) ([]*TestCaseP
 	query := r.db.WithContext(ctx).Model(&TestCasePO{})
 
 	// Apply filters
+	if filter.WorkspaceID != nil && *filter.WorkspaceID != "" {
+		query = query.Joins("JOIN api_specs ON api_specs.id = test_cases.api_spec_id").
+			Where("api_specs.workspace_id = ?", *filter.WorkspaceID)
+	}
+
 	if filter.APISpecID != nil {
-		query = query.Where("api_spec_id = ?", *filter.APISpecID)
+		query = query.Where("test_cases.api_spec_id = ?", *filter.APISpecID)
 	}
 
 	if filter.Env != nil && *filter.Env != "" {
-		query = query.Where("env = ?", *filter.Env)
+		query = query.Where("test_cases.env = ?", *filter.Env)
 	}
 
 	if filter.Keyword != nil && *filter.Keyword != "" {
 		keyword := "%" + *filter.Keyword + "%"
-		query = query.Where("name LIKE ? OR description LIKE ?", keyword, keyword)
+		query = query.Where("test_cases.name LIKE ? OR test_cases.description LIKE ?", keyword, keyword)
 	}
 
 	// Count total
@@ -101,7 +106,7 @@ func (r *repository) List(ctx context.Context, filter *ListFilter) ([]*TestCaseP
 	// Get results
 	var testCases []*TestCasePO
 	err := query.
-		Order("id DESC").
+		Order("test_cases.id DESC").
 		Limit(filter.PageSize).
 		Offset(offset).
 		Find(&testCases).Error

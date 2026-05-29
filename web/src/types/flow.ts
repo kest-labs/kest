@@ -5,9 +5,9 @@ export interface FlowVariableMappingRule {
   target: string;
 }
 
-export interface ProjectFlow {
+export interface WorkspaceFlow {
   id: string;
-  project_id: string;
+  workspace_id: string;
   name: string;
   description: string;
   created_by: string;
@@ -45,13 +45,13 @@ export interface FlowEdge {
   updated_at: string;
 }
 
-export interface FlowDetail extends ProjectFlow {
+export interface FlowDetail extends WorkspaceFlow {
   steps: FlowStep[];
   edges: FlowEdge[];
 }
 
 export interface FlowListResponse {
-  items: ProjectFlow[];
+  items: WorkspaceFlow[];
   total: number;
 }
 

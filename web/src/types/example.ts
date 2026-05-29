@@ -32,7 +32,7 @@ export interface RequestExample {
 }
 
 export interface RequestExamplePathParams {
-  projectId: number | string;
+  workspaceId: number | string;
   collectionId: number | string;
   requestId: number | string;
 }
@@ -62,6 +62,15 @@ export interface SaveExampleResponseRequest {
   response_headers?: Record<string, string>;
   response_body?: string;
   response_time: number;
+}
+
+export interface GenerateAIExamplesRequest {
+  count?: number;
+}
+
+export interface GenerateAIExamplesResponse {
+  total: number;
+  items: RequestExample[];
 }
 
 export interface GenerateAIExamplesRequest {

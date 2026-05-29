@@ -2,9 +2,9 @@ import request from '@/http';
 import type {
   CollectionListParams,
   CreateCollectionRequest,
-  ProjectCollection,
-  ProjectCollectionListResponse,
-  ProjectCollectionTreeNode,
+  WorkspaceCollection,
+  WorkspaceCollectionListResponse,
+  WorkspaceCollectionTreeNode,
   UpdateCollectionRequest,
 } from '@/types/collection';
 
@@ -16,40 +16,40 @@ const normalizePayload = <T extends object>(payload: T) =>
   ) as T;
 
 // Collections 服务层。
-// 作用：集中封装项目 collections 的查询和写入请求，供工作台复用。
+// 作用：集中封装工作区 collections 的查询和写入请求，供工作台复用。
 export const collectionService = {
   list: ({
-    projectId,
+    workspaceId,
     page,
     perPage,
   }: CollectionListParams) =>
-    request.get<ProjectCollectionListResponse>(`/workspaces/${projectId}/collections`, {
+    request.get<WorkspaceCollectionListResponse>(`/workspaces/${workspaceId}/collections`, {
       params: normalizePayload({
         page,
         per_page: perPage,
       }),
     }),
 
-  create: (projectId: number | string, data: CreateCollectionRequest) =>
-    request.post<ProjectCollection>(`/workspaces/${projectId}/collections`, normalizePayload(data)),
+  create: (workspaceId: number | string, data: CreateCollectionRequest) =>
+    request.post<WorkspaceCollection>(`/workspaces/${workspaceId}/collections`, normalizePayload(data)),
 
-  tree: (projectId: number | string) =>
-    request.get<ProjectCollectionTreeNode[]>(`/workspaces/${projectId}/collections/tree`, {
+  tree: (workspaceId: number | string) =>
+    request.get<WorkspaceCollectionTreeNode[]>(`/workspaces/${workspaceId}/collections/tree`, {
       skipErrorHandler: true,
     }),
 
   update: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     data: UpdateCollectionRequest
   ) =>
-    request.put<ProjectCollection>(
-      `/workspaces/${projectId}/collections/${collectionId}`,
+    request.put<WorkspaceCollection>(
+      `/workspaces/${workspaceId}/collections/${collectionId}`,
       normalizePayload(data)
     ),
 
-  delete: (projectId: number | string, collectionId: number | string) =>
-    request.delete<void>(`/workspaces/${projectId}/collections/${collectionId}`),
+  delete: (workspaceId: number | string, collectionId: number | string) =>
+    request.delete<void>(`/workspaces/${workspaceId}/collections/${collectionId}`),
 };
 
 export type CollectionService = typeof collectionService;

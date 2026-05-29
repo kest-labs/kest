@@ -7,26 +7,26 @@ The Categories module manages test case categories for better organization and g
 ## Base Path
 
 ```
-/v1/projects/:id/categories
+/v1/workspaces/:id/categories
 ```
 
-All category endpoints require authentication and are scoped to a specific project.
+All category endpoints require authentication and are scoped to a specific workspace.
 
 ---
 
 ## 1. List Categories
 
-### GET /projects/:id/categories
+### GET /workspaces/:id/categories
 
-List all categories for a project.
+List all categories for a workspace.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Query Parameters
 
@@ -40,7 +40,7 @@ List all categories for a project.
 #### Example Request
 
 ```
-GET /projects/1/categories?include_count=true
+GET /workspaces/1/categories?include_count=true
 ```
 
 #### Response (200 OK)
@@ -90,17 +90,17 @@ GET /projects/1/categories?include_count=true
 
 ## 2. Create Category
 
-### POST /projects/:id/categories
+### POST /workspaces/:id/categories
 
 Create a new category.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 
 #### Request Body
 
@@ -147,17 +147,17 @@ Create a new category.
 
 ## 3. Get Category
 
-### GET /projects/:id/categories/:cid
+### GET /workspaces/:id/categories/:cid
 
 Get a specific category details.
 
-**Authentication**: Required (Project Read access)
+**Authentication**: Required (Workspace Read access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `cid` | integer | ✅ Yes | Category ID |
 
 #### Response (200 OK)
@@ -192,17 +192,17 @@ Get a specific category details.
 
 ## 4. Update Category
 
-### PATCH /projects/:id/categories/:cid
+### PATCH /workspaces/:id/categories/:cid
 
 Update a category.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `cid` | integer | ✅ Yes | Category ID |
 
 #### Request Body
@@ -233,19 +233,19 @@ Update a category.
 
 ## 5. Delete Category
 
-### DELETE /projects/:id/categories/:cid
+### DELETE /workspaces/:id/categories/:cid
 
 Delete a category.
 
 **⚠️ Warning**: This will unassociate all test cases from this category.
 
-**Authentication**: Required (Project Write access)
+**Authentication**: Required (Workspace Write access)
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | integer | ✅ Yes | Project ID |
+| `id` | integer | ✅ Yes | Workspace ID |
 | `cid` | integer | ✅ Yes | Category ID |
 
 #### Query Parameters
@@ -274,11 +274,11 @@ Delete a category.
 
 ```javascript
 const token = 'your-jwt-token';
-const projectId = 1;
+const workspaceId = 1;
 
 // Create category
 const createCategory = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/categories`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/categories`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -297,7 +297,7 @@ const createCategory = async () => {
 
 // List categories with counts
 const listCategories = async () => {
-  const response = await fetch(`http://localhost:8025/projects/${projectId}/categories?include_count=true`, {
+  const response = await fetch(`http://localhost:8025/workspaces/${workspaceId}/categories?include_count=true`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -311,7 +311,7 @@ const listCategories = async () => {
 
 ```bash
 # Create category
-curl -X POST http://localhost:8025/projects/1/categories \
+curl -X POST http://localhost:8025/workspaces/1/categories \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TOKEN" \
   -d '{
@@ -322,6 +322,6 @@ curl -X POST http://localhost:8025/projects/1/categories \
   }'
 
 # List categories
-curl -X GET "http://localhost:8025/projects/1/categories?include_count=true" \
+curl -X GET "http://localhost:8025/workspaces/1/categories?include_count=true" \
   -H "Authorization: Bearer TOKEN"
 ```

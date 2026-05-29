@@ -10,7 +10,7 @@ export const authConfig = {
   
   routes: {
     login: '/login',
-    afterLogin: '/project',
+    afterLogin: '/workspace',
     afterLogout: '/login',
   },
 };

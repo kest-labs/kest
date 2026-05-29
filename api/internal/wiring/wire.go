@@ -20,8 +20,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
-	"github.com/kest-labs/kest/api/internal/modules/project"
-	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
@@ -30,6 +28,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/testrunner"
 	"github.com/kest-labs/kest/api/internal/modules/user"
 	"github.com/kest-labs/kest/api/internal/modules/workspace"
+	"github.com/kest-labs/kest/api/internal/modules/workspaceinvite"
 )
 
 // InitApplication initializes the entire application with all dependencies.
@@ -45,10 +44,7 @@ func InitApplication() (*app.Application, error) {
 		permission.ProviderSet,
 		audit.ProviderSet,
 		workspace.ProviderSet,
-		project.NewRepository,
-		project.NewService,
-		provideProjectHandler,
-		projectinvite.ProviderSet,
+		workspaceinvite.ProviderSet,
 		collection.ProviderSet,
 		request.ProviderSet,
 		example.ProviderSet,

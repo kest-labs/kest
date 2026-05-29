@@ -21,14 +21,11 @@ func RegisterAPI(r *router.Router, handlers *app.Handlers) {
 		return
 	}
 
-	if handlers.Project != nil && handlers.APISpec != nil {
-		handlers.Project.SetSpecSyncer(handlers.APISpec)
+	if handlers.Workspace != nil && handlers.APISpec != nil {
+		handlers.Workspace.SetSpecSyncer(handlers.APISpec)
 	}
-	if handlers.Project != nil && handlers.History != nil {
-		handlers.Project.SetHistorySyncer(handlers.History)
-	}
-	if handlers.Project != nil && handlers.Workspace != nil {
-		handlers.Project.SetWorkspaceTokenValidator(handlers.Workspace.Service())
+	if handlers.Workspace != nil && handlers.History != nil {
+		handlers.Workspace.SetHistorySyncer(handlers.History)
 	}
 
 	// 2. Register Module Routes

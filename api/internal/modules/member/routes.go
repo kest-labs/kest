@@ -8,12 +8,12 @@ import (
 
 // RegisterRoutes registers member routes
 func RegisterRoutes(rg *gin.RouterGroup, handler *Handler, memberService Service) {
-	// Project based member routes
-	projects := rg.Group("/projects/:id/members")
-	projects.Use(middleware.RequireProjectRole(memberService, RoleAdmin))
+	// Workspace based member routes
+	workspaces := rg.Group("/workspaces/:id/members")
+	workspaces.Use(middleware.RequireWorkspaceRole(memberService, RoleAdmin))
 	{
-		projects.GET("", middleware.RequireProjectRole(memberService, RoleRead), handler.List)
-		projects.PATCH("/:uid", handler.Update)
-		projects.DELETE("/:uid", handler.Delete)
+		workspaces.GET("", middleware.RequireWorkspaceRole(memberService, RoleRead), handler.List)
+		workspaces.PATCH("/:uid", handler.Update)
+		workspaces.DELETE("/:uid", handler.Delete)
 	}
 }

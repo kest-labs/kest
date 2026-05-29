@@ -26,8 +26,6 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/importer"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/internal/modules/permission"
-	"github.com/kest-labs/kest/api/internal/modules/project"
-	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/run"
 	"github.com/kest-labs/kest/api/internal/modules/runner"
@@ -36,6 +34,7 @@ import (
 	"github.com/kest-labs/kest/api/internal/modules/testrunner"
 	"github.com/kest-labs/kest/api/internal/modules/user"
 	"github.com/kest-labs/kest/api/internal/modules/workspace"
+	"github.com/kest-labs/kest/api/internal/modules/workspaceinvite"
 )
 
 // Injectors from wire.go:
@@ -70,11 +69,9 @@ func InitApplication() (*app.Application, error) {
 	workspaceRepository := workspace.NewRepository(db)
 	workspaceService := workspace.NewService(workspaceRepository)
 	workspaceHandler := workspace.NewHandler(workspaceService)
-	projectRepository := project.NewRepository(db)
-	projectService := project.NewService(projectRepository, memberService, workspaceService)
-	projectinviteRepository := projectinvite.NewRepository(db)
-	projectinviteService := projectinvite.NewService(projectinviteRepository)
-	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService, workspaceService)
+	workspaceinviteRepository := workspaceinvite.NewRepository(db)
+	workspaceinviteService := workspaceinvite.NewService(workspaceinviteRepository)
+	workspaceinviteHandler := workspaceinvite.NewHandler(workspaceinviteService, memberService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
 	collectionHandler := collection.NewHandler(collectionService, workspaceService)
@@ -97,7 +94,6 @@ func InitApplication() (*app.Application, error) {
 	apispecService := apispec.NewService(apispecRepository)
 	testcaseRepository := testcase.NewRepository(db)
 	apispecHandler := provideAPISpecHandler(apispecService, importerService, workspaceService, testcaseRepository)
-	projectHandler := provideProjectHandler(projectService, memberService, workspaceService, apispecHandler, historyHandler)
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
 	categoryHandler := category.NewHandler(categoryService, workspaceService)
@@ -112,26 +108,25 @@ func InitApplication() (*app.Application, error) {
 	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
-		User:          handler,
-		Member:        memberHandler,
-		Permission:    permissionHandler,
-		Audit:         auditHandler,
-		Workspace:     workspaceHandler,
-		Project:       projectHandler,
-		ProjectInvite: projectinviteHandler,
-		Collection:    collectionHandler,
-		Request:       requestHandler,
-		Example:       exampleHandler,
-		Run:           runHandler,
-		History:       historyHandler,
-		Export:        exportHandler,
-		Importer:      importerHandler,
-		APISpec:       apispecHandler,
-		Category:      categoryHandler,
-		Environment:   environmentHandler,
-		Flow:          flowHandler,
-		TestCase:      testcaseHandler,
-		System:        systemHandler,
+		User:            handler,
+		Member:          memberHandler,
+		Permission:      permissionHandler,
+		Audit:           auditHandler,
+		Workspace:       workspaceHandler,
+		WorkspaceInvite: workspaceinviteHandler,
+		Collection:      collectionHandler,
+		Request:         requestHandler,
+		Example:         exampleHandler,
+		Run:             runHandler,
+		History:         historyHandler,
+		Export:          exportHandler,
+		Importer:        importerHandler,
+		APISpec:         apispecHandler,
+		Category:        categoryHandler,
+		Environment:     environmentHandler,
+		Flow:            flowHandler,
+		TestCase:        testcaseHandler,
+		System:          systemHandler,
 	}
 	application := &app.Application{
 		Config:       configConfig,

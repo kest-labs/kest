@@ -30,7 +30,11 @@ type WorkspacePO struct {
 	Type        string `gorm:"size:20;not null;default:'personal'"` // personal|team|public
 	OwnerID     string `gorm:"not null;index"`                      // Creator
 	Visibility  string `gorm:"size:20;default:'private'"`           // private|team|public
-	Settings    string `gorm:"type:text"`                           // JSON settings as string
+	Platform    string `gorm:"size:50"`
+	PublicKey   string `gorm:"size:64"`
+	Status      int    `gorm:"default:1"`
+	Role        string `gorm:"-"`
+	Settings    string `gorm:"type:text"` // JSON settings as string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
@@ -135,6 +139,10 @@ type Workspace struct {
 	Type        string                 `json:"type"`
 	OwnerID     string                 `json:"owner_id"`
 	Visibility  string                 `json:"visibility"`
+	Platform    string                 `json:"platform"`
+	PublicKey   string                 `json:"public_key,omitempty"`
+	Role        string                 `json:"role,omitempty"`
+	Status      int                    `json:"status"`
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
@@ -172,6 +180,10 @@ func (po *WorkspacePO) toDomain() *Workspace {
 		Type:        po.Type,
 		OwnerID:     po.OwnerID,
 		Visibility:  po.Visibility,
+		Platform:    po.Platform,
+		PublicKey:   po.PublicKey,
+		Role:        po.Role,
+		Status:      po.Status,
 		Settings:    settings,
 		CreatedAt:   po.CreatedAt,
 		UpdatedAt:   po.UpdatedAt,

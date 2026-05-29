@@ -21,23 +21,23 @@ var RoleLevel = map[string]int{
 	RoleRead:  10,
 }
 
-// ProjectMemberPO represents a membership of a user in a project
-type ProjectMemberPO struct {
-	ID        string         `gorm:"primaryKey" json:"id"`
-	ProjectID string         `gorm:"index;uniqueIndex:idx_project_user;not null" json:"project_id"`
-	UserID    string         `gorm:"index;uniqueIndex:idx_project_user;not null" json:"user_id"`
-	User      MemberUserPO   `gorm:"foreignKey:UserID;references:ID" json:"-"`
-	Role      string         `gorm:"size:20;not null" json:"role"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+// WorkspaceMemberPO represents a membership of a user in a workspace
+type WorkspaceMemberPO struct {
+	ID          string         `gorm:"primaryKey" json:"id"`
+	WorkspaceID string         `gorm:"index;uniqueIndex:idx_workspace_user;not null" json:"workspace_id"`
+	UserID      string         `gorm:"index;uniqueIndex:idx_workspace_user;not null" json:"user_id"`
+	User        MemberUserPO   `gorm:"foreignKey:UserID;references:ID" json:"-"`
+	Role        string         `gorm:"size:20;not null" json:"role"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-func (ProjectMemberPO) TableName() string {
-	return "project_members"
+func (WorkspaceMemberPO) TableName() string {
+	return "workspace_members"
 }
 
-// MemberUserPO is a lightweight user projection used for member listings.
+// MemberUserPO is a lightweight user workspaceion used for member listings.
 type MemberUserPO struct {
 	ID       string `gorm:"primaryKey"`
 	Username string `gorm:"column:username"`

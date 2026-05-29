@@ -75,11 +75,11 @@ type BatchFromSpecsRequest struct {
 }
 
 type BatchFromSpecsResultItem struct {
-	SpecID      string            `json:"spec_id"`
-	Status      string            `json:"status"`
-	TestCase    *TestCaseResponse `json:"test_case,omitempty"`
-	Message     string            `json:"message,omitempty"`
-	SkippedReason string          `json:"skipped_reason,omitempty"`
+	SpecID        string            `json:"spec_id"`
+	Status        string            `json:"status"`
+	TestCase      *TestCaseResponse `json:"test_case,omitempty"`
+	Message       string            `json:"message,omitempty"`
+	SkippedReason string            `json:"skipped_reason,omitempty"`
 }
 
 type BatchFromSpecsResponse struct {

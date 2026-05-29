@@ -15,8 +15,8 @@ import metadataEn from '@/i18n/modules/metadata/en-US';
 import metadataZh from '@/i18n/modules/metadata/zh-Hans';
 import navEn from '@/i18n/modules/nav/en-US';
 import navZh from '@/i18n/modules/nav/zh-Hans';
-import projectEn from '@/i18n/modules/project/en-US';
-import projectZh from '@/i18n/modules/project/zh-Hans';
+import workspaceEn from '@/i18n/modules/workspace/en-US';
+import workspaceZh from '@/i18n/modules/workspace/zh-Hans';
 import settingsEn from '@/i18n/modules/settings/en-US';
 import settingsZh from '@/i18n/modules/settings/zh-Hans';
 import testEn from '@/i18n/modules/test/en-US';
@@ -31,7 +31,7 @@ const modules = {
   marketing: [marketingEn, marketingZh],
   metadata: [metadataEn, metadataZh],
   nav: [navEn, navZh],
-  project: [projectEn, projectZh],
+  workspace: [workspaceEn, workspaceZh],
   settings: [settingsEn, settingsZh],
   test: [testEn, testZh],
 } as const;

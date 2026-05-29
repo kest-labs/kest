@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/kest-labs/kest/api/internal/modules/project"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 )
 
 type CLIHistorySyncInput struct {
@@ -32,7 +32,7 @@ type CLIHistorySyncResult struct {
 	Errors  []string
 }
 
-func (h *Handler) SyncHistoryFromCLI(ctx context.Context, projectID string, createdBy string, req *project.CLIHistorySyncRequest) (*project.CLIHistorySyncResponseBody, error) {
+func (h *Handler) SyncHistoryFromCLI(ctx context.Context, workspaceID string, createdBy string, req *workspace.CLIHistorySyncRequest) (*workspace.CLIHistorySyncResponseBody, error) {
 	input := &CLIHistorySyncInput{
 		Source:   req.Source,
 		Metadata: req.Metadata,
@@ -52,12 +52,12 @@ func (h *Handler) SyncHistoryFromCLI(ctx context.Context, projectID string, crea
 		})
 	}
 
-	result, err := h.service.SyncHistoryFromCLI(ctx, projectID, createdBy, input)
+	result, err := h.service.SyncHistoryFromCLI(ctx, workspaceID, createdBy, input)
 	if err != nil {
 		return nil, err
 	}
 
-	return &project.CLIHistorySyncResponseBody{
+	return &workspace.CLIHistorySyncResponseBody{
 		Created: result.Created,
 		Updated: result.Updated,
 		Skipped: result.Skipped,

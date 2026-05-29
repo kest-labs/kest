@@ -41,7 +41,7 @@ export interface RequestAuthConfig {
   oauth2?: RequestOAuth2Auth;
 }
 
-export interface ProjectRequest {
+export interface WorkspaceRequest {
   id: number | string;
   collection_id: number | string;
   name: string;
@@ -76,14 +76,14 @@ export interface RequestListMeta {
 }
 
 export interface RequestListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   collectionId: number | string;
   page?: number;
   perPage?: number;
 }
 
 export interface RequestListResponse {
-  items: ProjectRequest[];
+  items: WorkspaceRequest[];
   meta: RequestListMeta;
 }
 

@@ -4,7 +4,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/kest-labs/kest/api/internal/infra/migration"
-	"github.com/kest-labs/kest/api/internal/modules/member"
 )
 
 func init() {
@@ -16,7 +15,7 @@ type createProjectMembersTable struct {
 }
 
 func (m *createProjectMembersTable) Up(db *gorm.DB) error {
-	return db.AutoMigrate(&member.ProjectMemberPO{})
+	return db.AutoMigrate(&legacyProjectMemberPO{})
 }
 
 func (m *createProjectMembersTable) Down(db *gorm.DB) error {

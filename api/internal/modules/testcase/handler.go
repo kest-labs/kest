@@ -32,32 +32,32 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 
 // RegisterRoutes registers test case routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/test-cases", func(tc *router.Router) {
+	r.Group("/workspaces/:id/test-cases", func(tc *router.Router) {
 		tc.WithMiddleware("auth")
 
 		tc.GET("", h.List).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleRead))
 		tc.POST("", h.Create).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/from-spec", h.FromSpec).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/batch-from-specs", h.BatchFromSpecs).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 
 		tc.GET("/:tcid", h.Get).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleRead))
 		tc.PATCH("/:tcid", h.Update).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.DELETE("/:tcid", h.Delete).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/:tcid/duplicate", h.Duplicate).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/:tcid/run", h.RunTestCase).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.GET("/:tcid/runs", h.ListRuns).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleRead))
 		tc.GET("/:tcid/runs/:rid", h.GetRun).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireWorkspaceRole(h.memberService, member.RoleRead))
 	})
 }
 
@@ -65,8 +65,13 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 func (h *Handler) ListTestCases(c *gin.Context) {
 	// Parse filters
 	filter := &ListFilter{
-		Page:     1,
-		PageSize: 20,
+		Page:        1,
+		PageSize:    20,
+		WorkspaceID: nil,
+	}
+
+	if workspaceID := c.Param("id"); workspaceID != "" {
+		filter.WorkspaceID = &workspaceID
 	}
 
 	if apiSpecID := c.Query("api_spec_id"); apiSpecID != "" {
@@ -123,7 +128,7 @@ func (h *Handler) CreateTestCase(c *gin.Context) {
 	response.Created(c, testCase)
 }
 
-// GetTestCase handles GET /api/v1/projects/:id/test-cases/:tcid
+// GetTestCase handles GET /api/v1/workspaces/:id/test-cases/:tcid
 func (h *Handler) GetTestCase(c *gin.Context) {
 	id := c.Param("tcid")
 	if id == "" {
@@ -144,7 +149,7 @@ func (h *Handler) GetTestCase(c *gin.Context) {
 	response.Success(c, testCase)
 }
 
-// UpdateTestCase handles PATCH /api/v1/projects/:id/test-cases/:tcid
+// UpdateTestCase handles PATCH /api/v1/workspaces/:id/test-cases/:tcid
 func (h *Handler) UpdateTestCase(c *gin.Context) {
 	id := c.Param("tcid")
 	if id == "" {
@@ -171,7 +176,7 @@ func (h *Handler) UpdateTestCase(c *gin.Context) {
 	response.Success(c, testCase)
 }
 
-// DeleteTestCase handles DELETE /api/v1/projects/:id/test-cases/:tcid
+// DeleteTestCase handles DELETE /api/v1/workspaces/:id/test-cases/:tcid
 func (h *Handler) DeleteTestCase(c *gin.Context) {
 	id := c.Param("tcid")
 	if id == "" {
@@ -191,7 +196,7 @@ func (h *Handler) DeleteTestCase(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// DuplicateTestCase handles POST /api/v1/projects/:id/test-cases/:tcid/duplicate
+// DuplicateTestCase handles POST /api/v1/workspaces/:id/test-cases/:tcid/duplicate
 func (h *Handler) DuplicateTestCase(c *gin.Context) {
 	id := c.Param("tcid")
 	if id == "" {
@@ -218,7 +223,7 @@ func (h *Handler) DuplicateTestCase(c *gin.Context) {
 	response.Created(c, testCase)
 }
 
-// RunTestCase handles POST /api/v1/projects/:id/test-cases/:tcid/run
+// RunTestCase handles POST /api/v1/workspaces/:id/test-cases/:tcid/run
 func (h *Handler) RunTestCase(c *gin.Context) {
 	id := c.Param("tcid")
 	if id == "" {
@@ -281,7 +286,7 @@ func (h *Handler) BatchCreateFromSpecs(c *gin.Context) {
 	response.Success(c, result)
 }
 
-// ListRuns handles GET /projects/:id/test-cases/:tcid/runs
+// ListRuns handles GET /workspaces/:id/test-cases/:tcid/runs
 func (h *Handler) ListRuns(c *gin.Context) {
 	tcid := c.Param("tcid")
 	if tcid == "" {
@@ -314,7 +319,7 @@ func (h *Handler) ListRuns(c *gin.Context) {
 	response.Success(c, gin.H{"items": runs, "meta": meta})
 }
 
-// GetRun handles GET /projects/:id/test-cases/:tcid/runs/:rid
+// GetRun handles GET /workspaces/:id/test-cases/:tcid/runs/:rid
 func (h *Handler) GetRun(c *gin.Context) {
 	rid := c.Param("rid")
 	if rid == "" {

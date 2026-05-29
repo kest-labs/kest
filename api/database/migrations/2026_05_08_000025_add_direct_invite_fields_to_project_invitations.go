@@ -4,7 +4,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/kest-labs/kest/api/internal/infra/migration"
-	"github.com/kest-labs/kest/api/internal/modules/projectinvite"
 )
 
 func init() {
@@ -16,7 +15,7 @@ type addDirectInviteFieldsToProjectInvitations struct {
 }
 
 func (m *addDirectInviteFieldsToProjectInvitations) Up(db *gorm.DB) error {
-	return db.AutoMigrate(&projectinvite.ProjectInvitationPO{})
+	return db.AutoMigrate(&legacyProjectInvitationPO{})
 }
 
 func (m *addDirectInviteFieldsToProjectInvitations) Down(db *gorm.DB) error {

@@ -29,16 +29,16 @@ func NewHandler(repo Repository) *Handler {
 
 // RegisterRoutes registers audit log routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/audit-logs", func(auditRoutes *router.Router) {
+	r.Group("/workspaces/:id/audit-logs", func(auditRoutes *router.Router) {
 		auditRoutes.WithMiddleware("auth")
 
-		auditRoutes.GET("", h.ListByProject)
+		auditRoutes.GET("", h.ListByWorkspace)
 	})
 }
 
-// ListByProject handles GET /v1/projects/:id/audit-logs
-func (h *Handler) ListByProject(c *gin.Context) {
-	projectID := c.Param("id")
+// ListByWorkspace handles GET /v1/workspaces/:id/audit-logs
+func (h *Handler) ListByWorkspace(c *gin.Context) {
+	workspaceID := c.Param("id")
 
 	page := 1
 	pageSize := 20
@@ -53,7 +53,7 @@ func (h *Handler) ListByProject(c *gin.Context) {
 		}
 	}
 
-	logs, total, err := h.repo.ListByProject(c.Request.Context(), projectID, page, pageSize)
+	logs, total, err := h.repo.ListByWorkspace(c.Request.Context(), workspaceID, page, pageSize)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

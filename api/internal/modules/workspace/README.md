@@ -35,12 +35,12 @@ type UserPO struct {
 }
 ```
 
-### 3. 更新 Project 模型
+### 3. 更新 Workspace 模型
 
-在 `internal/modules/project/model.go` 中添加：
+在 `internal/modules/workspace/model.go` 中添加：
 
 ```go
-type ProjectPO struct {
+type WorkspacePO struct {
     // ... 现有字段
     WorkspaceID uint `gorm:"not null;index"`
     // ...
@@ -120,15 +120,15 @@ DELETE /workspaces/:id/members/:uid       # 移除成员
 ### 项目管理 (需要更新)
 ```
 # 旧路由 (将废弃)
-GET    /projects
-POST   /projects
+GET    /workspaces
+POST   /workspaces
 
 # 新路由 (推荐)
-GET    /workspaces/:workspace_id/projects
-POST   /workspaces/:workspace_id/projects
-GET    /workspaces/:workspace_id/projects/:id
-PATCH  /workspaces/:workspace_id/projects/:id
-DELETE /workspaces/:workspace_id/projects/:id
+GET    /workspaces/:workspace_id/workspaces
+POST   /workspaces/:workspace_id/workspaces
+GET    /workspaces/:workspace_id/workspaces/:id
+PATCH  /workspaces/:workspace_id/workspaces/:id
+DELETE /workspaces/:workspace_id/workspaces/:id
 ```
 
 ## 📝 使用示例
@@ -163,7 +163,7 @@ curl -X POST https://api.kest.dev/v1/workspaces/1/members \
 ### 3. 在 Workspace 中创建项目
 
 ```bash
-curl -X POST https://api.kest.dev/v1/workspaces/1/projects \
+curl -X POST https://api.kest.dev/v1/workspaces/1/workspaces \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -179,14 +179,14 @@ curl -X POST https://api.kest.dev/v1/workspaces/1/projects \
 
 ```go
 // ❌ 错误: 直接查询项目
-project, err := repo.FindByID(projectID)
+workspace, err := repo.FindByID(workspaceID)
 
 // ✅ 正确: 先验证 Workspace 权限
 hasAccess, _ := workspaceService.HasPermission(workspaceID, userID, RoleRead, user.IsSuperAdmin)
 if !hasAccess {
     return errors.New("access denied")
 }
-project, err := repo.FindByID(projectID)
+workspace, err := repo.FindByID(workspaceID)
 ```
 
 ### 2. 超级管理员特权

@@ -66,7 +66,7 @@ function HeroMockup({ content }: { content: MarketingHeroMockupContent }) {
 
         <div className="absolute left-8 top-8 hidden w-40 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3 md:block">
           <p className="figma-caption text-text-muted">{content.sidebarTitle}</p>
-          <p className="mt-2 text-sm font-medium text-text-main">{content.activeProject}</p>
+          <p className="mt-2 text-sm font-medium text-text-main">{content.activeWorkspace}</p>
         </div>
 
         {stickyNotes.map((item) => (

@@ -16,8 +16,8 @@ This API documentation is organized into the following files:
    - User registration, login, profile management
    - Password reset and account management
    
-5. **[02-projects.md](./02-projects.md)** - Projects API
-   - Project CRUD operations
+5. **[02-workspaces.md](./02-workspaces.md)** - Workspaces API
+   - Workspace CRUD operations
    - DSN generation and management
    - Rate limiting configuration
    
@@ -41,7 +41,7 @@ This API documentation is organized into the following files:
    - Hierarchical category structure
    
 10. **[07-members.md](./07-members.md)** - Members API
-    - Project member management
+    - Workspace member management
     - Role-based access control
     - Invitation system
     
@@ -69,7 +69,7 @@ This API documentation is organized into the following files:
 - Secure secret management
 
 ### Core Functionality
-- Project management with DSN generation
+- Workspace management with DSN generation
 - OpenAPI/Swagger specification support
 - Automated test case generation
 - Multi-environment support
@@ -98,14 +98,14 @@ This API documentation is organized into the following files:
    POST /v1/login
    ```
 
-3. **Create a project**
+3. **Create a workspace**
    ```bash
-   POST /v1/projects
+   POST /v1/workspaces
    ```
 
 4. **Get your DSN**
    ```bash
-   GET /v1/projects/{id}/dsn
+   GET /v1/workspaces/{id}/dsn
    ```
 
 5. **Start testing!**
@@ -166,7 +166,7 @@ X-RateLimit-Reset: 1641234567
 import Kest from '@kest-lab/kest-js';
 
 const kest = new Kest({
-  dsn: 'https://api.kest.com/v1/ingest?public_key=xxx&project_id=1'
+  dsn: 'https://api.kest.com/v1/ingest?public_key=xxx&workspace_id=1'
 });
 ```
 
@@ -175,7 +175,7 @@ const kest = new Kest({
 import "github.com/kest-lab/kest-go"
 
 kest.Init(kest.Config{
-    DSN: "https://api.kest.com/v1/ingest?public_key=xxx&project_id=1",
+    DSN: "https://api.kest.com/v1/ingest?public_key=xxx&workspace_id=1",
 })
 ```
 
@@ -184,7 +184,7 @@ kest.Init(kest.Config{
 1. **Security**
    - Always use HTTPS in production
    - Keep your JWT tokens secure
-   - Use environment-specific projects
+   - Use environment-specific workspaces
    - Rotate secrets regularly
 
 2. **Performance**

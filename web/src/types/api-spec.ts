@@ -54,7 +54,6 @@ export interface ApiSpecExample {
 export interface ApiSpec {
   id: number | string;
   workspace_id?: number | string;
-  project_id?: number | string;
   category_id?: number | string | null;
   method: HttpMethod;
   path: string;
@@ -93,7 +92,7 @@ export interface ApiSpecListMeta {
 // API 规格列表查询参数。
 // 作用：约束 page、pageSize、keyword、method、version、tag 这些筛选项。
 export interface ApiSpecListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   page?: number;
   pageSize?: number;
   version?: string;
@@ -215,7 +214,6 @@ export interface ApiSpecExamplesResponse {
 export interface ApiSpecShare {
   id: number | string;
   workspace_id?: number | string;
-  project_id?: number | string;
   api_spec_id: number | string;
   slug: string;
   created_by: string;
@@ -290,7 +288,7 @@ export interface CreateApiSpecAIDraftRequest {
   method?: HttpMethod;
   path?: string;
   category_id?: number | string;
-  use_project_conventions?: boolean;
+  use_workspace_conventions?: boolean;
   reference_spec_ids?: Array<number | string>;
   lang?: ApiSpecLanguage;
 }
@@ -318,7 +316,6 @@ export interface AcceptApiSpecAIDraftRequest {
 export interface ApiSpecAIDraft {
   id: number | string;
   workspace_id?: number | string;
-  project_id?: number | string;
   created_by: string;
   accepted_spec_id?: number | string | null;
   status: string;
@@ -342,4 +339,4 @@ export interface AcceptApiSpecAIDraftResponse {
 }
 
 export type ApiSpecExportPayload = ApiSpec[] | Record<string, unknown> | string;
-export type { ProjectCategory, ProjectCategoryListResponse } from './category';
+export type { WorkspaceCategory, WorkspaceCategoryListResponse } from './category';

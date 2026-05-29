@@ -11,7 +11,7 @@
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/v1/projects/:id/audit-logs` | 获取项目审计日志列表 |
+| GET | `/v1/workspaces/:id/audit-logs` | 获取项目审计日志列表 |
 
 ## Query Parameters
 
@@ -31,11 +31,11 @@
       {
         "id": 1,
         "user_id": 12,
-        "project_id": 35,
+        "workspace_id": 35,
         "action": "PATCH",
-        "resource": "/v1/projects/35/api-specs/50",
+        "resource": "/v1/workspaces/35/api-specs/50",
         "method": "PATCH",
-        "path": "/v1/projects/35/api-specs/50",
+        "path": "/v1/workspaces/35/api-specs/50",
         "status_code": 200,
         "duration_ms": 36,
         "ip": "127.0.0.1",

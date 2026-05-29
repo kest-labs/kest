@@ -30,11 +30,11 @@ const messages = {
     supportingNote: '开源核心，团队协作工作区，企业级诊断体验。',
     mockup: {
       sidebarTitle: '工作区',
-      projectsLabel: '项目',
+      workspacesLabel: '工作区',
       flowsLabel: '测试流',
       environmentsLabel: '环境',
       teamspacesLabel: '团队空间',
-      activeProject: '支付平台',
+      activeWorkspace: '支付平台',
       flowOne: '认证链路',
       flowTwo: '订单回归',
       environmentValue: 'Staging EU',
@@ -207,7 +207,7 @@ const messages = {
         cadence: '每用户 / 每月',
         cta: '免费开始',
         features: {
-          one: '本地项目与请求集合',
+          one: '本地工作区与请求集合',
           two: '基础 .flow.md 编写',
           three: '7 天执行历史',
         },
@@ -219,7 +219,7 @@ const messages = {
         cadence: '每用户 / 每月',
         cta: '选择 Starter',
         features: {
-          one: '共享项目与环境',
+          one: '共享工作区与环境',
           two: '可复用变量和示例',
           three: '30 天运行历史',
         },
@@ -233,7 +233,7 @@ const messages = {
         cta: '选择 Business',
         features: {
           one: '优先 AI 失败诊断',
-          two: '高级项目角色',
+          two: '高级工作区角色',
           three: '无限运行历史',
         },
       },

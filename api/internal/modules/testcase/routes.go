@@ -9,17 +9,17 @@ import (
 
 // RegisterRoutes registers test case routes
 func RegisterRoutes(router *gin.RouterGroup, handler *Handler, memberService member.Service) {
-	// All test case operations are now project-scoped
-	projects := router.Group("/projects/:id/test-cases")
+	// All test case operations are now workspace-scoped
+	workspaces := router.Group("/workspaces/:id/test-cases")
 	{
-		projects.GET("", middleware.RequireProjectRole(memberService, member.RoleRead), handler.List)
-		projects.POST("", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.Create)
-		projects.GET("/:tcid", middleware.RequireProjectRole(memberService, member.RoleRead), handler.Get)
-		projects.PATCH("/:tcid", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.Update)
-		projects.DELETE("/:tcid", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.Delete)
-		projects.POST("/:tcid/duplicate", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.Duplicate)
-		projects.POST("/from-spec", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.FromSpec)
-		projects.POST("/batch-from-specs", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.BatchFromSpecs)
-		projects.POST("/:tcid/run", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.RunTestCase)
+		workspaces.GET("", middleware.RequireWorkspaceRole(memberService, member.RoleRead), handler.List)
+		workspaces.POST("", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.Create)
+		workspaces.GET("/:tcid", middleware.RequireWorkspaceRole(memberService, member.RoleRead), handler.Get)
+		workspaces.PATCH("/:tcid", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.Update)
+		workspaces.DELETE("/:tcid", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.Delete)
+		workspaces.POST("/:tcid/duplicate", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.Duplicate)
+		workspaces.POST("/from-spec", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.FromSpec)
+		workspaces.POST("/batch-from-specs", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.BatchFromSpecs)
+		workspaces.POST("/:tcid/run", middleware.RequireWorkspaceRole(memberService, member.RoleWrite), handler.RunTestCase)
 	}
 }
