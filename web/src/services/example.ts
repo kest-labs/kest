@@ -1,6 +1,8 @@
 import request from '@/http';
 import type {
   CreateExampleRequest,
+  GenerateAIExamplesRequest,
+  GenerateAIExamplesResponse,
   RequestExample,
   SaveExampleResponseRequest,
   UpdateExampleRequest,
@@ -39,6 +41,17 @@ export const exampleService = {
   ) =>
     request.post<RequestExample>(
       `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}/examples`,
+      normalizePayload(data)
+    ),
+
+  generateAI: (
+    workspaceId: number | string,
+    collectionId: number | string,
+    requestId: number | string,
+    data: GenerateAIExamplesRequest = {}
+  ) =>
+    request.post<GenerateAIExamplesResponse>(
+      `/workspaces/${workspaceId}/collections/${collectionId}/requests/${requestId}/examples/ai-generate`,
       normalizePayload(data)
     ),
 

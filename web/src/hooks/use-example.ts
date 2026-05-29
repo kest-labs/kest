@@ -6,6 +6,7 @@ import { useT } from '@/i18n/client';
 import { exampleService } from '@/services/example';
 import type {
   CreateExampleRequest,
+  GenerateAIExamplesRequest,
   RequestExamplePathParams,
   SaveExampleResponseRequest,
   UpdateExampleRequest,
@@ -108,6 +109,33 @@ export function useCreateRequestExample(workspaceId: number | string) {
         example
       );
       toast.success(t.workspace('toasts.exampleCreated', { name: example.name }));
+    },
+  });
+}
+
+export function useGenerateRequestExamples(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      data,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      data?: GenerateAIExamplesRequest;
+    }) => exampleService.generateAI(workspaceId, collectionId, requestId, data),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
+      });
+      result.items.forEach(example => {
+        queryClient.setQueryData(
+          exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
+          example
+        );
+      });
     },
   });
 }

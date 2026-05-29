@@ -4,18 +4,22 @@ import "time"
 
 // CreateExampleRequest is the request body for creating an example
 type CreateExampleRequest struct {
-	RequestID   string      `json:"request_id"`
-	Name        string      `json:"name" binding:"required,min=1,max=100"`
-	Description string      `json:"description" binding:"max=500"`
-	URL         string      `json:"url" binding:"max=2000"`
-	Method      string      `json:"method"`
-	Headers     []KeyValue  `json:"headers"`
-	QueryParams []KeyValue  `json:"query_params"`
-	Body        string      `json:"body"`
-	BodyType    string      `json:"body_type"`
-	Auth        *AuthConfig `json:"auth"`
-	IsDefault   bool        `json:"is_default"`
-	SortOrder   int         `json:"sort_order"`
+	RequestID       string            `json:"request_id"`
+	Name            string            `json:"name" binding:"required,min=1,max=100"`
+	Description     string            `json:"description" binding:"max=500"`
+	URL             string            `json:"url" binding:"max=2000"`
+	Method          string            `json:"method"`
+	Headers         []KeyValue        `json:"headers"`
+	QueryParams     []KeyValue        `json:"query_params"`
+	Body            string            `json:"body"`
+	BodyType        string            `json:"body_type"`
+	Auth            *AuthConfig       `json:"auth"`
+	ResponseStatus  int               `json:"response_status"`
+	ResponseHeaders map[string]string `json:"response_headers"`
+	ResponseBody    string            `json:"response_body"`
+	ResponseTime    int64             `json:"response_time"`
+	IsDefault       bool              `json:"is_default"`
+	SortOrder       int               `json:"sort_order"`
 }
 
 // UpdateExampleRequest is the request body for updating an example
@@ -39,6 +43,17 @@ type SaveResponseRequest struct {
 	ResponseHeaders map[string]string `json:"response_headers"`
 	ResponseBody    string            `json:"response_body"`
 	ResponseTime    int64             `json:"response_time"`
+}
+
+// GenerateAIExamplesRequest is the request body for AI-generated examples
+type GenerateAIExamplesRequest struct {
+	Count int `json:"count"`
+}
+
+// GenerateAIExamplesResponse is the response for AI-generated examples
+type GenerateAIExamplesResponse struct {
+	Total int                `json:"total"`
+	Items []*ExampleResponse `json:"items"`
 }
 
 // ExampleResponse is the response for example endpoints

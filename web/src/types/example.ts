@@ -47,6 +47,10 @@ export interface CreateExampleRequest {
   body?: string;
   body_type?: RequestExampleBodyType;
   auth?: RequestAuthConfig | null;
+  response_status?: number;
+  response_headers?: Record<string, string>;
+  response_body?: string;
+  response_time?: number;
   is_default?: boolean;
   sort_order?: number;
 }
@@ -58,4 +62,22 @@ export interface SaveExampleResponseRequest {
   response_headers?: Record<string, string>;
   response_body?: string;
   response_time: number;
+}
+
+export interface GenerateAIExamplesRequest {
+  count?: number;
+}
+
+export interface GenerateAIExamplesResponse {
+  total: number;
+  items: RequestExample[];
+}
+
+export interface GenerateAIExamplesRequest {
+  count?: number;
+}
+
+export interface GenerateAIExamplesResponse {
+  total: number;
+  items: RequestExample[];
 }

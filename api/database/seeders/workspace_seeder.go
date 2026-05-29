@@ -20,8 +20,8 @@ func (s *workspaceSeeder) Run(db *gorm.DB) error {
 	ownerID := resolveSeederWorkspaceOwnerID(db)
 
 	testWorkspace := &workspace.WorkspacePO{
-		Name:       "Test Project",
-		Slug:       "test-project",
+		Name:       "Test Workspace",
+		Slug:       "test-workspace",
 		OwnerID:    ownerID,
 		Type:       workspace.TypePersonal,
 		Visibility: workspace.VisibilityPrivate,
