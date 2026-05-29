@@ -67,6 +67,29 @@ type FromSpecRequest struct {
 	ExampleID  *string `json:"example_id,omitempty"`
 }
 
+type BatchFromSpecsRequest struct {
+	SpecIDs    []string `json:"spec_ids" binding:"required,min=1"`
+	NamePrefix string   `json:"name_prefix,omitempty" binding:"omitempty,max=255"`
+	Env        string   `json:"env,omitempty" binding:"omitempty,max=50"`
+	UseExample bool     `json:"use_example,omitempty"`
+}
+
+type BatchFromSpecsResultItem struct {
+	SpecID      string            `json:"spec_id"`
+	Status      string            `json:"status"`
+	TestCase    *TestCaseResponse `json:"test_case,omitempty"`
+	Message     string            `json:"message,omitempty"`
+	SkippedReason string          `json:"skipped_reason,omitempty"`
+}
+
+type BatchFromSpecsResponse struct {
+	Total   int                        `json:"total"`
+	Created int                        `json:"created"`
+	Skipped int                        `json:"skipped"`
+	Failed  int                        `json:"failed"`
+	Items   []BatchFromSpecsResultItem `json:"items"`
+}
+
 // DuplicateRequest represents the request to duplicate a test case
 type DuplicateRequest struct {
 	Name string `json:"name" binding:"required,max=255"`

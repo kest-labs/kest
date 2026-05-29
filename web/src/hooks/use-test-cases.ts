@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useT } from '@/i18n/client';
 import { testCaseService } from '@/services/test-case';
 import type {
+  BatchCreateTestCasesFromSpecsRequest,
   CreateTestCaseFromSpecRequest,
   CreateTestCaseRequest,
   DuplicateTestCaseRequest,
@@ -16,20 +17,20 @@ import type {
 
 export const testCaseKeys = {
   all: ['test-cases'] as const,
-  project: (projectId: number | string) => [...testCaseKeys.all, 'project', projectId] as const,
-  lists: (projectId: number | string) => [...testCaseKeys.project(projectId), 'lists'] as const,
-  list: (params: TestCaseListParams) => [...testCaseKeys.lists(params.projectId), params] as const,
-  detail: (projectId: number | string, testCaseId: number | string) =>
-    [...testCaseKeys.project(projectId), 'detail', testCaseId] as const,
-  runs: (projectId: number | string, testCaseId: number | string) =>
-    [...testCaseKeys.project(projectId), 'runs', testCaseId] as const,
+  workspace: (workspaceId: number | string) => [...testCaseKeys.all, 'workspace', workspaceId] as const,
+  lists: (workspaceId: number | string) => [...testCaseKeys.workspace(workspaceId), 'lists'] as const,
+  list: (params: TestCaseListParams) => [...testCaseKeys.lists(params.workspaceId), params] as const,
+  detail: (workspaceId: number | string, testCaseId: number | string) =>
+    [...testCaseKeys.workspace(workspaceId), 'detail', testCaseId] as const,
+  runs: (workspaceId: number | string, testCaseId: number | string) =>
+    [...testCaseKeys.workspace(workspaceId), 'runs', testCaseId] as const,
   runList: (params: TestCaseRunListParams) =>
-    [...testCaseKeys.runs(params.projectId, params.testCaseId), 'list', params] as const,
+    [...testCaseKeys.runs(params.workspaceId, params.testCaseId), 'list', params] as const,
   run: (
-    projectId: number | string,
+    workspaceId: number | string,
     testCaseId: number | string,
     runId: number | string
-  ) => [...testCaseKeys.runs(projectId, testCaseId), 'detail', runId] as const,
+  ) => [...testCaseKeys.runs(workspaceId, testCaseId), 'detail', runId] as const,
 };
 
 export function useTestCases(params: TestCaseListParams) {
@@ -40,13 +41,13 @@ export function useTestCases(params: TestCaseListParams) {
   });
 }
 
-export function useTestCase(projectId?: number | string, testCaseId?: number | string) {
+export function useTestCase(workspaceId?: number | string, testCaseId?: number | string) {
   return useQuery({
-    queryKey: testCaseKeys.detail(projectId ?? 'unknown', testCaseId ?? 'unknown'),
-    queryFn: () => testCaseService.getById(projectId as number | string, testCaseId as number | string),
+    queryKey: testCaseKeys.detail(workspaceId ?? 'unknown', testCaseId ?? 'unknown'),
+    queryFn: () => testCaseService.getById(workspaceId as number | string, testCaseId as number | string),
     enabled:
-      projectId !== undefined &&
-      projectId !== null &&
+      workspaceId !== undefined &&
+      workspaceId !== null &&
       testCaseId !== undefined &&
       testCaseId !== null,
   });
@@ -55,30 +56,30 @@ export function useTestCase(projectId?: number | string, testCaseId?: number | s
 export function useTestCaseRuns(params?: TestCaseRunListParams) {
   return useQuery({
     queryKey: testCaseKeys.runList(
-      params ?? { projectId: 'unknown', testCaseId: 'unknown' }
+      params ?? { workspaceId: 'unknown', testCaseId: 'unknown' }
     ),
     queryFn: () => testCaseService.listRuns(params as TestCaseRunListParams),
-    enabled: Boolean(params?.projectId && params?.testCaseId),
+    enabled: Boolean(params?.workspaceId && params?.testCaseId),
     placeholderData: (previousData) => previousData,
   });
 }
 
 export function useTestCaseRun(
-  projectId?: number | string,
+  workspaceId?: number | string,
   testCaseId?: number | string,
   runId?: number | string
 ) {
   return useQuery({
-    queryKey: testCaseKeys.run(projectId ?? 'unknown', testCaseId ?? 'unknown', runId ?? 'unknown'),
+    queryKey: testCaseKeys.run(workspaceId ?? 'unknown', testCaseId ?? 'unknown', runId ?? 'unknown'),
     queryFn: () =>
       testCaseService.getRunById(
-        projectId as number | string,
+        workspaceId as number | string,
         testCaseId as number | string,
         runId as number | string
       ),
     enabled:
-      projectId !== undefined &&
-      projectId !== null &&
+      workspaceId !== undefined &&
+      workspaceId !== null &&
       testCaseId !== undefined &&
       testCaseId !== null &&
       runId !== undefined &&
@@ -86,24 +87,24 @@ export function useTestCaseRun(
   });
 }
 
-export function useCreateTestCase(projectId: number | string) {
+export function useCreateTestCase(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateTestCaseRequest) => testCaseService.create(projectId, data),
+    mutationFn: (data: CreateTestCaseRequest) => testCaseService.create(workspaceId, data),
     onSuccess: (testCase) => {
-      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(projectId) });
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(workspaceId) });
       queryClient.setQueryData(
-        testCaseKeys.detail(projectId, testCase.id),
+        testCaseKeys.detail(workspaceId, testCase.id),
         testCase
       );
-      toast.success(t.project('toasts.testCaseCreated', { name: testCase.name }));
+      toast.success(t.workspace('toasts.testCaseCreated', { name: testCase.name }));
     },
   });
 }
 
-export function useUpdateTestCase(projectId: number | string) {
+export function useUpdateTestCase(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -114,38 +115,38 @@ export function useUpdateTestCase(projectId: number | string) {
     }: {
       testCaseId: number | string;
       data: UpdateTestCaseRequest;
-    }) => testCaseService.update(projectId, testCaseId, data),
+    }) => testCaseService.update(workspaceId, testCaseId, data),
     onSuccess: (testCase) => {
-      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(projectId) });
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(workspaceId) });
       queryClient.setQueryData(
-        testCaseKeys.detail(projectId, testCase.id),
+        testCaseKeys.detail(workspaceId, testCase.id),
         testCase
       );
-      toast.success(t.project('toasts.testCaseUpdated', { name: testCase.name }));
+      toast.success(t.workspace('toasts.testCaseUpdated', { name: testCase.name }));
     },
   });
 }
 
-export function useDeleteTestCase(projectId: number | string) {
+export function useDeleteTestCase(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (testCaseId: number | string) => testCaseService.delete(projectId, testCaseId),
+    mutationFn: (testCaseId: number | string) => testCaseService.delete(workspaceId, testCaseId),
     onSuccess: (_, testCaseId) => {
-      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(projectId) });
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(workspaceId) });
       queryClient.removeQueries({
-        queryKey: testCaseKeys.detail(projectId, testCaseId),
+        queryKey: testCaseKeys.detail(workspaceId, testCaseId),
       });
       queryClient.removeQueries({
-        queryKey: testCaseKeys.runs(projectId, testCaseId),
+        queryKey: testCaseKeys.runs(workspaceId, testCaseId),
       });
-      toast.success(t.project('toasts.testCaseDeleted'));
+      toast.success(t.workspace('toasts.testCaseDeleted'));
     },
   });
 }
 
-export function useDuplicateTestCase(projectId: number | string) {
+export function useDuplicateTestCase(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -156,36 +157,56 @@ export function useDuplicateTestCase(projectId: number | string) {
     }: {
       testCaseId: number | string;
       data: DuplicateTestCaseRequest;
-    }) => testCaseService.duplicate(projectId, testCaseId, data),
+    }) => testCaseService.duplicate(workspaceId, testCaseId, data),
     onSuccess: (testCase) => {
-      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(projectId) });
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(workspaceId) });
       queryClient.setQueryData(
-        testCaseKeys.detail(projectId, testCase.id),
+        testCaseKeys.detail(workspaceId, testCase.id),
         testCase
       );
-      toast.success(t.project('toasts.testCaseDuplicated', { name: testCase.name }));
+      toast.success(t.workspace('toasts.testCaseDuplicated', { name: testCase.name }));
     },
   });
 }
 
-export function useCreateTestCaseFromSpec(projectId: number | string) {
+export function useCreateTestCaseFromSpec(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateTestCaseFromSpecRequest) => testCaseService.fromSpec(projectId, data),
+    mutationFn: (data: CreateTestCaseFromSpecRequest) => testCaseService.fromSpec(workspaceId, data),
     onSuccess: (testCase) => {
-      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(projectId) });
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(workspaceId) });
       queryClient.setQueryData(
-        testCaseKeys.detail(projectId, testCase.id),
+        testCaseKeys.detail(workspaceId, testCase.id),
         testCase
       );
-      toast.success(t.project('toasts.testCaseFromSpecCreated', { name: testCase.name }));
+      toast.success(t.workspace('toasts.testCaseFromSpecCreated', { name: testCase.name }));
     },
   });
 }
 
-export function useRunTestCase(projectId: number | string) {
+export function useCreateTestCasesFromSpecs(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+  const t = useT();
+
+  return useMutation({
+    mutationFn: (data: BatchCreateTestCasesFromSpecsRequest) =>
+      testCaseService.batchFromSpecs(workspaceId, data),
+    onSuccess: result => {
+      queryClient.invalidateQueries({ queryKey: testCaseKeys.lists(workspaceId) });
+      toast.success(
+        t.workspace('toasts.testCasesBatchFromSpecsCreated', {
+          created: result.created,
+          skipped: result.skipped,
+          failed: result.failed,
+        })
+      );
+    },
+  });
+}
+
+export function useRunTestCase(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -196,18 +217,18 @@ export function useRunTestCase(projectId: number | string) {
     }: {
       testCaseId: number | string;
       data: RunTestCaseRequest;
-    }) => testCaseService.run(projectId, testCaseId, data),
+    }) => testCaseService.run(workspaceId, testCaseId, data),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({
-        queryKey: testCaseKeys.runs(projectId, variables.testCaseId),
+        queryKey: testCaseKeys.runs(workspaceId, variables.testCaseId),
       });
 
       if (result.status === 'pass' || result.status === 'passed') {
-        toast.success(t.project('toasts.testCaseRunPassed'));
+        toast.success(t.workspace('toasts.testCaseRunPassed'));
         return;
       }
 
-      toast.error(result.message || t.project('toasts.testCaseRunFinished', { status: result.status }));
+      toast.error(result.message || t.workspace('toasts.testCaseRunFinished', { status: result.status }));
     },
   });
 }

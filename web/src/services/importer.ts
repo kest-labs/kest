@@ -8,14 +8,14 @@ import type {
 
 export const importerService = {
   importPostman: (
-    projectId: number | string,
+    workspaceId: number | string,
     data: ImportPostmanCollectionRequest
   ) => {
     const formData = new FormData();
     formData.append('file', data.file);
 
     return request.post<ImportPostmanCollectionResponse>(
-      `/projects/${projectId}/collections/import/postman`,
+      `/workspaces/${workspaceId}/collections/import/postman`,
       formData,
       {
         params: data.parent_id ? { parent_id: data.parent_id } : undefined,
@@ -27,17 +27,25 @@ export const importerService = {
   },
 
   importMarkdown: (
-    projectId: number | string,
+    workspaceId: number | string,
     data: ImportMarkdownCollectionRequest
   ) => {
     const formData = new FormData();
     formData.append('file', data.file);
 
     return request.post<ImportMarkdownCollectionResponse>(
-      `/projects/${projectId}/collections/import/markdown`,
+      `/workspaces/${workspaceId}/collections/import/markdown`,
       formData,
       {
-        params: data.parent_id ? { parent_id: data.parent_id } : undefined,
+        params:
+          data.parent_id || data.base_url_override
+            ? {
+                ...(data.parent_id ? { parent_id: data.parent_id } : {}),
+                ...(data.base_url_override
+                  ? { base_url_override: data.base_url_override }
+                  : {}),
+              }
+            : undefined,
         headers: {
           'Content-Type': 'multipart/form-data',
         },

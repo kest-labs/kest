@@ -10,20 +10,23 @@ import (
 	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/internal/modules/member"
+	"github.com/kest-labs/kest/api/internal/modules/workspace"
 	"github.com/kest-labs/kest/api/pkg/handler"
 	"github.com/kest-labs/kest/api/pkg/response"
 )
 
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service          Service
+	memberService    member.Service
+	workspaceService workspace.Service
 }
 
-func NewHandler(service Service, memberService member.Service) *Handler {
+func NewHandler(service Service, memberService member.Service, workspaceService workspace.Service) *Handler {
 	return &Handler{
-		service:       service,
-		memberService: memberService,
+		service:          service,
+		memberService:    memberService,
+		workspaceService: workspaceService,
 	}
 }
 
@@ -48,6 +51,25 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 			WhereUUIDOrNumber("id").
 			WhereUUID("inviteId").
 			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleAdmin))
+
+		auth.POST("/workspaces/:id/invitations", h.CreateWorkspaceInvitation).
+			Name("workspaces.invitations.create").
+			WhereUUIDOrNumber("id")
+		auth.GET("/workspaces/:id/invitations", h.ListWorkspaceInvitations).
+			Name("workspaces.invitations.list").
+			WhereUUIDOrNumber("id")
+		auth.DELETE("/workspaces/:id/invitations/:inviteId", h.DeleteWorkspaceInvitation).
+			Name("workspaces.invitations.delete").
+			WhereUUIDOrNumber("id").
+			WhereUUID("inviteId")
+
+		auth.GET("/workspace-invitations/received", h.ListReceivedInvitations).
+			Name("workspace_invitations.received")
+		auth.POST("/workspace-invitations/:slug/accept", h.AcceptInvitation).
+			Name("workspace_invitations.accept")
+		auth.POST("/workspace-invitations/:slug/reject", h.RejectInvitation).
+			Name("workspace_invitations.reject")
+
 		auth.GET("/project-invitations/received", h.ListReceivedInvitations).
 			Name("project_invitations.received")
 
@@ -59,6 +81,8 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 
 	r.GET("/project-invitations/:slug", h.GetInvitation).
 		Name("project_invitations.show")
+	r.GET("/workspace-invitations/:slug", h.GetInvitation).
+		Name("workspace_invitations.show")
 }
 
 func (h *Handler) CreateInvitation(c *gin.Context) {
@@ -94,6 +118,39 @@ func (h *Handler) CreateInvitation(c *gin.Context) {
 	response.Created(c, invitation.withBaseURL(baseURL))
 }
 
+func (h *Handler) CreateWorkspaceInvitation(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleAdmin)
+	if !ok {
+		return
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	var req CreateProjectInvitationRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	baseURL := resolveInvitationBaseURL(c.Request)
+	invitation, err := h.service.CreateWorkspaceInvitation(c.Request.Context(), workspaceID, userID, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrProjectInvitationInvalidRole),
+			errors.Is(err, ErrProjectInvitationInvalidUses),
+			errors.Is(err, ErrProjectInvitationInvalidExpiry):
+			response.BadRequest(c, err.Error(), err)
+		default:
+			response.InternalServerError(c, err.Error(), err)
+		}
+		return
+	}
+
+	response.Created(c, invitation.withBaseURL(baseURL))
+}
+
 func (h *Handler) ListInvitations(c *gin.Context) {
 	projectID, ok := handler.ParseID(c, "id")
 	if !ok {
@@ -102,6 +159,25 @@ func (h *Handler) ListInvitations(c *gin.Context) {
 
 	baseURL := resolveInvitationBaseURL(c.Request)
 	invitations, err := h.service.ListInvitations(c.Request.Context(), projectID)
+	if err != nil {
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	for _, invitation := range invitations {
+		invitation.withBaseURL(baseURL)
+	}
+	response.Success(c, invitations)
+}
+
+func (h *Handler) ListWorkspaceInvitations(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleAdmin)
+	if !ok {
+		return
+	}
+
+	baseURL := resolveInvitationBaseURL(c.Request)
+	invitations, err := h.service.ListWorkspaceInvitations(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.InternalServerError(c, err.Error(), err)
 		return
@@ -125,6 +201,29 @@ func (h *Handler) DeleteInvitation(c *gin.Context) {
 	}
 
 	if err := h.service.RevokeInvitation(c.Request.Context(), projectID, invitationID); err != nil {
+		if errors.Is(err, ErrProjectInvitationNotFound) {
+			response.NotFound(c, err.Error(), err)
+			return
+		}
+		response.InternalServerError(c, err.Error(), err)
+		return
+	}
+
+	response.NoContent(c)
+}
+
+func (h *Handler) DeleteWorkspaceInvitation(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleAdmin)
+	if !ok {
+		return
+	}
+
+	invitationID, ok := handler.ParseID(c, "inviteId")
+	if !ok {
+		return
+	}
+
+	if err := h.service.RevokeWorkspaceInvitation(c.Request.Context(), workspaceID, invitationID); err != nil {
 		if errors.Is(err, ErrProjectInvitationNotFound) {
 			response.NotFound(c, err.Error(), err)
 			return
@@ -230,4 +329,28 @@ func (h *Handler) RejectInvitation(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+func (h *Handler) authorizeWorkspace(c *gin.Context, requiredRole string) (string, bool) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return "", false
+	}
+
+	userID, ok := handler.GetUserID(c)
+	if !ok {
+		return "", false
+	}
+
+	allowed, err := h.workspaceService.HasPermission(workspaceID, userID, requiredRole, false)
+	if err != nil {
+		response.Forbidden(c, "Workspace access denied")
+		return "", false
+	}
+	if !allowed {
+		response.Forbidden(c, "Insufficient workspace permissions")
+		return "", false
+	}
+
+	return workspaceID, true
 }

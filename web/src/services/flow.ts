@@ -7,17 +7,35 @@ import type {
   FlowListResponse,
   FlowRun,
   FlowRunListResponse,
+  FlowRunListFilters,
   FlowStreamStepEvent,
-  ProjectFlow,
+  ImportFlowMarkdownRequest,
+  WorkspaceFlow,
   SaveFlowRequest,
   StreamFlowRunOptions,
   UpdateFlowRequest,
+  UpdateFlowMarkdownRequest,
 } from '@/types/flow';
 
 const normalizePayload = <T extends object>(payload: T) =>
   Object.fromEntries(
     Object.entries(payload as Record<string, unknown>).filter(([, value]) => value !== undefined)
   ) as T;
+
+const buildRunQuery = (filters?: FlowRunListFilters) => {
+  if (!filters) {
+    return '';
+  }
+
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      params.set(key, String(value));
+    }
+  });
+  const query = params.toString();
+  return query ? `?${query}` : '';
+};
 
 const readSSEEvent = (
   chunk: string,
@@ -59,41 +77,50 @@ const readSSEEvent = (
 };
 
 export const flowService = {
-  list: (projectId: number | string) =>
-    request.get<FlowListResponse>(`/projects/${projectId}/flows`),
+  list: (workspaceId: number | string) =>
+    request.get<FlowListResponse>(`/workspaces/${workspaceId}/flows`),
 
-  getById: (projectId: number | string, flowId: number | string) =>
-    request.get<FlowDetail>(`/projects/${projectId}/flows/${flowId}`),
+  getById: (workspaceId: number | string, flowId: number | string) =>
+    request.get<FlowDetail>(`/workspaces/${workspaceId}/flows/${flowId}`),
 
-  create: (projectId: number | string, data: CreateFlowRequest) =>
-    request.post<ProjectFlow>(`/projects/${projectId}/flows`, normalizePayload(data)),
+  create: (workspaceId: number | string, data: CreateFlowRequest) =>
+    request.post<WorkspaceFlow>(`/workspaces/${workspaceId}/flows`, normalizePayload(data)),
 
-  update: (projectId: number | string, flowId: number | string, data: UpdateFlowRequest) =>
-    request.patch<ProjectFlow>(`/projects/${projectId}/flows/${flowId}`, normalizePayload(data)),
+  importMarkdown: (workspaceId: number | string, data: ImportFlowMarkdownRequest) =>
+    request.post<FlowDetail>(`/workspaces/${workspaceId}/flows/import-markdown`, normalizePayload(data)),
 
-  delete: (projectId: number | string, flowId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/flows/${flowId}`),
+  update: (workspaceId: number | string, flowId: number | string, data: UpdateFlowRequest) =>
+    request.patch<WorkspaceFlow>(`/workspaces/${workspaceId}/flows/${flowId}`, normalizePayload(data)),
 
-  save: (projectId: number | string, flowId: number | string, data: SaveFlowRequest) =>
-    request.put<FlowDetail>(`/projects/${projectId}/flows/${flowId}`, normalizePayload(data)),
+  updateMarkdown: (
+    workspaceId: number | string,
+    flowId: number | string,
+    data: UpdateFlowMarkdownRequest
+  ) => request.put<FlowDetail>(`/workspaces/${workspaceId}/flows/${flowId}/markdown`, normalizePayload(data)),
 
-  run: (projectId: number | string, flowId: number | string) =>
-    request.post<FlowRun>(`/projects/${projectId}/flows/${flowId}/run`),
+  delete: (workspaceId: number | string, flowId: number | string) =>
+    request.delete<void>(`/workspaces/${workspaceId}/flows/${flowId}`),
 
-  listRuns: (projectId: number | string, flowId: number | string) =>
-    request.get<FlowRunListResponse>(`/projects/${projectId}/flows/${flowId}/runs`),
+  save: (workspaceId: number | string, flowId: number | string, data: SaveFlowRequest) =>
+    request.put<FlowDetail>(`/workspaces/${workspaceId}/flows/${flowId}`, normalizePayload(data)),
 
-  getRun: (projectId: number | string, flowId: number | string, runId: number | string) =>
-    request.get<FlowRun>(`/projects/${projectId}/flows/${flowId}/runs/${runId}`),
+  run: (workspaceId: number | string, flowId: number | string) =>
+    request.post<FlowRun>(`/workspaces/${workspaceId}/flows/${flowId}/run`),
+
+  listRuns: (workspaceId: number | string, flowId: number | string, filters?: FlowRunListFilters) =>
+    request.get<FlowRunListResponse>(`/workspaces/${workspaceId}/flows/${flowId}/runs${buildRunQuery(filters)}`),
+
+  getRun: (workspaceId: number | string, flowId: number | string, runId: number | string) =>
+    request.get<FlowRun>(`/workspaces/${workspaceId}/flows/${flowId}/runs/${runId}`),
 
   streamRun: async (
-    projectId: number | string,
+    workspaceId: number | string,
     flowId: number | string,
     runId: number | string,
     options: StreamFlowRunOptions = {}
   ) => {
     const { accessToken } = getAuthTokens();
-    let streamUrl = buildApiUrl(`/projects/${projectId}/flows/${flowId}/runs/${runId}/events`);
+    let streamUrl = buildApiUrl(`/workspaces/${workspaceId}/flows/${flowId}/runs/${runId}/events`);
     const selectedBaseUrl = options.baseUrl?.trim();
     if (selectedBaseUrl) {
       const separator = streamUrl.includes('?') ? '&' : '?';

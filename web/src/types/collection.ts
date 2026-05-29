@@ -1,8 +1,8 @@
-export interface ProjectCollection {
+export interface WorkspaceCollection {
   id: number | string;
   name: string;
   description: string;
-  project_id: number | string;
+  workspace_id?: number | string;
   parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
@@ -18,25 +18,25 @@ export interface CollectionListMeta {
 }
 
 export interface CollectionListParams {
-  projectId: number | string;
+  workspaceId: number | string;
   page?: number;
   perPage?: number;
 }
 
-export interface ProjectCollectionListResponse {
-  items: ProjectCollection[];
+export interface WorkspaceCollectionListResponse {
+  items: WorkspaceCollection[];
   meta: CollectionListMeta;
 }
 
-export interface ProjectCollectionTreeNode {
+export interface WorkspaceCollectionTreeNode {
   id: number | string;
   name: string;
   description: string;
-  project_id: number | string;
+  workspace_id?: number | string;
   parent_id?: number | string | null;
   is_folder: boolean;
   sort_order: number;
-  children?: ProjectCollectionTreeNode[];
+  children?: WorkspaceCollectionTreeNode[];
   request_count?: number;
 }
 

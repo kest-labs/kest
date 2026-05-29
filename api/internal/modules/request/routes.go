@@ -24,6 +24,9 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 		reqs.PUT("/:rid", h.Update).
 			Name("requests.update").
 			WhereUUIDOrNumber("id", "cid", "rid")
+		reqs.POST("/:rid/gen-doc", h.GenDoc).
+			Name("requests.gen-doc").
+			WhereUUIDOrNumber("id", "cid", "rid")
 		reqs.DELETE("/:rid", h.Delete).
 			Name("requests.delete").
 			WhereUUIDOrNumber("id", "cid", "rid")

@@ -19,6 +19,7 @@ func RegisterRoutes(router *gin.RouterGroup, handler *Handler, memberService mem
 		projects.DELETE("/:tcid", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.Delete)
 		projects.POST("/:tcid/duplicate", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.Duplicate)
 		projects.POST("/from-spec", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.FromSpec)
+		projects.POST("/batch-from-specs", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.BatchFromSpecs)
 		projects.POST("/:tcid/run", middleware.RequireProjectRole(memberService, member.RoleWrite), handler.RunTestCase)
 	}
 }

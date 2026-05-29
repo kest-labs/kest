@@ -71,10 +71,10 @@ func InitApplication() (*app.Application, error) {
 	workspaceService := workspace.NewService(workspaceRepository)
 	workspaceHandler := workspace.NewHandler(workspaceService)
 	projectRepository := project.NewRepository(db)
-	projectService := project.NewService(projectRepository, memberService)
+	projectService := project.NewService(projectRepository, memberService, workspaceService)
 	projectinviteRepository := projectinvite.NewRepository(db)
 	projectinviteService := projectinvite.NewService(projectinviteRepository)
-	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService)
+	projectinviteHandler := projectinvite.NewHandler(projectinviteService, memberService, workspaceService)
 	collectionRepository := collection.NewRepository(db)
 	collectionService := collection.NewService(collectionRepository)
 	collectionHandler := collection.NewHandler(collectionService, workspaceService)
@@ -96,7 +96,7 @@ func InitApplication() (*app.Application, error) {
 	apispecRepository := apispec.NewRepository(db)
 	apispecService := apispec.NewService(apispecRepository)
 	testcaseRepository := testcase.NewRepository(db)
-	apispecHandler := provideAPISpecHandler(apispecService, workspaceService, testcaseRepository)
+	apispecHandler := provideAPISpecHandler(apispecService, importerService, workspaceService, testcaseRepository)
 	projectHandler := provideProjectHandler(projectService, memberService, workspaceService, apispecHandler, historyHandler)
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
@@ -105,33 +105,33 @@ func InitApplication() (*app.Application, error) {
 	environmentService := environment.NewService(environmentRepository)
 	environmentHandler := environment.NewHandler(environmentService, workspaceService)
 	flowRepository := flow.NewRepository(db)
-	flowService := flow.NewService(flowRepository)
+	flowService := flow.NewService(flowRepository, historyService)
 	flowHandler := flow.NewHandler(flowService, memberService)
 	executor := testrunner.NewExecutor()
 	testcaseService := testcase.NewService(testcaseRepository, apispecRepository, environmentRepository, executor)
 	testcaseHandler := testcase.NewHandler(testcaseService, memberService)
 	systemHandler := system.NewHandler()
 	handlers := &app.Handlers{
-		User:          handler,
-		Member:        memberHandler,
-		Permission:    permissionHandler,
-		Audit:         auditHandler,
-		Workspace:     workspaceHandler,
-		Project:       projectHandler,
-		ProjectInvite: projectinviteHandler,
-		Collection:    collectionHandler,
-		Request:       requestHandler,
-		Example:       exampleHandler,
-		Run:           runHandler,
-		History:       historyHandler,
-		Export:        exportHandler,
-		Importer:      importerHandler,
-		APISpec:       apispecHandler,
-		Category:      categoryHandler,
-		Environment:   environmentHandler,
-		Flow:          flowHandler,
-		TestCase:      testcaseHandler,
-		System:        systemHandler,
+		User:            handler,
+		Member:          memberHandler,
+		Permission:      permissionHandler,
+		Audit:           auditHandler,
+		Workspace:       workspaceHandler,
+		Project:         projectHandler,
+		WorkspaceInvite: projectinviteHandler,
+		Collection:      collectionHandler,
+		Request:         requestHandler,
+		Example:         exampleHandler,
+		Run:             runHandler,
+		History:         historyHandler,
+		Export:          exportHandler,
+		Importer:        importerHandler,
+		APISpec:         apispecHandler,
+		Category:        categoryHandler,
+		Environment:     environmentHandler,
+		Flow:            flowHandler,
+		TestCase:        testcaseHandler,
+		System:          systemHandler,
 	}
 	application := &app.Application{
 		Config:       configConfig,

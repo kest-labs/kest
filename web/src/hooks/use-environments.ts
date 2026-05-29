@@ -14,61 +14,57 @@ import type {
 // 作用：统一管理环境列表、详情缓存，方便页面刷新和 mutation 失效。
 export const environmentKeys = {
   all: ['environments'] as const,
-  project: (projectId: number | string) => [...environmentKeys.all, 'project', projectId] as const,
-  list: (projectId: number | string) => [...environmentKeys.project(projectId), 'list'] as const,
+  workspace: (workspaceId: number | string) => [...environmentKeys.all, 'workspace', workspaceId] as const,
+  list: (workspaceId: number | string) => [...environmentKeys.workspace(workspaceId), 'list'] as const,
   // 单条环境详情 key。
   // 作用：让右侧详情面板、编辑弹窗和 duplicate 后的选中逻辑共享同一份缓存。
-  detail: (projectId: number | string, environmentId: number | string) =>
-    [...environmentKeys.project(projectId), 'detail', environmentId] as const,
+  detail: (workspaceId: number | string, environmentId: number | string) =>
+    [...environmentKeys.workspace(workspaceId), 'detail', environmentId] as const,
 };
 
 // 环境列表查询。
-// 作用：拉取指定项目下全部环境记录。
-export function useEnvironments(projectId?: number | string) {
+// 作用：拉取指定工作区下全部环境记录。
+export function useEnvironments(workspaceId?: number | string) {
   return useQuery({
-    queryKey: environmentKeys.list(projectId ?? 'unknown'),
-    queryFn: () => environmentService.list(projectId as number | string),
-    enabled: projectId !== undefined && projectId !== null,
+    queryKey: environmentKeys.list(workspaceId ?? 'unknown'),
+    queryFn: () => environmentService.list(workspaceId as number | string),
+    enabled: Boolean(workspaceId),
   });
 }
 
 // 环境详情查询。
 // 作用：按环境 ID 拉取完整详情，供右侧详情面板和编辑弹窗复用。
-export function useEnvironment(projectId?: number | string, environmentId?: number | string) {
+export function useEnvironment(workspaceId?: number | string, environmentId?: number | string) {
   return useQuery({
-    queryKey: environmentKeys.detail(projectId ?? 'unknown', environmentId ?? 'unknown'),
+    queryKey: environmentKeys.detail(workspaceId ?? 'unknown', environmentId ?? 'unknown'),
     queryFn: () =>
-      environmentService.getById(projectId as number | string, environmentId as number | string),
-    enabled:
-      projectId !== undefined &&
-      projectId !== null &&
-      environmentId !== undefined &&
-      environmentId !== null,
+      environmentService.getById(workspaceId as number | string, environmentId as number | string),
+    enabled: Boolean(workspaceId) && Boolean(environmentId),
   });
 }
 
 // 创建环境 mutation。
 // 作用：创建成功后刷新列表并把新环境详情提前写入缓存。
-export function useCreateEnvironment(projectId: number | string) {
+export function useCreateEnvironment(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
-    mutationFn: (data: CreateEnvironmentRequest) => environmentService.create(projectId, data),
+    mutationFn: (data: CreateEnvironmentRequest) => environmentService.create(workspaceId, data),
     onSuccess: (environment) => {
-      queryClient.invalidateQueries({ queryKey: environmentKeys.list(projectId) });
+      queryClient.invalidateQueries({ queryKey: environmentKeys.list(workspaceId) });
       queryClient.setQueryData(
-        environmentKeys.detail(projectId, environment.id),
+        environmentKeys.detail(workspaceId, environment.id),
         environment
       );
-      toast.success(t.project('toasts.environmentCreated', { name: environment.name }));
+      toast.success(t.workspace('toasts.environmentCreated', { name: environment.name }));
     },
   });
 }
 
 // 更新环境 mutation。
 // 作用：更新成功后同步刷新列表和详情缓存。
-export function useUpdateEnvironment(projectId: number | string) {
+export function useUpdateEnvironment(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -79,40 +75,40 @@ export function useUpdateEnvironment(projectId: number | string) {
     }: {
       environmentId: number | string;
       data: UpdateEnvironmentRequest;
-    }) => environmentService.update(projectId, environmentId, data),
+    }) => environmentService.update(workspaceId, environmentId, data),
     onSuccess: (environment) => {
-      queryClient.invalidateQueries({ queryKey: environmentKeys.list(projectId) });
+      queryClient.invalidateQueries({ queryKey: environmentKeys.list(workspaceId) });
       queryClient.setQueryData(
-        environmentKeys.detail(projectId, environment.id),
+        environmentKeys.detail(workspaceId, environment.id),
         environment
       );
-      toast.success(t.project('toasts.environmentUpdated', { name: environment.name }));
+      toast.success(t.workspace('toasts.environmentUpdated', { name: environment.name }));
     },
   });
 }
 
 // 删除环境 mutation。
 // 作用：删除成功后清理详情缓存并刷新列表。
-export function useDeleteEnvironment(projectId: number | string) {
+export function useDeleteEnvironment(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: (environmentId: number | string) =>
-      environmentService.delete(projectId, environmentId),
+      environmentService.delete(workspaceId, environmentId),
     onSuccess: (_, environmentId) => {
-      queryClient.invalidateQueries({ queryKey: environmentKeys.list(projectId) });
+      queryClient.invalidateQueries({ queryKey: environmentKeys.list(workspaceId) });
       queryClient.removeQueries({
-        queryKey: environmentKeys.detail(projectId, environmentId),
+        queryKey: environmentKeys.detail(workspaceId, environmentId),
       });
-      toast.success(t.project('toasts.environmentDeleted'));
+      toast.success(t.workspace('toasts.environmentDeleted'));
     },
   });
 }
 
 // 复制环境 mutation。
 // 作用：复制成功后刷新列表，并把新环境详情写入缓存以便页面立即选中。
-export function useDuplicateEnvironment(projectId: number | string) {
+export function useDuplicateEnvironment(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -123,14 +119,14 @@ export function useDuplicateEnvironment(projectId: number | string) {
     }: {
       environmentId: number | string;
       data: DuplicateEnvironmentRequest;
-    }) => environmentService.duplicate(projectId, environmentId, data),
+    }) => environmentService.duplicate(workspaceId, environmentId, data),
     onSuccess: (environment) => {
-      queryClient.invalidateQueries({ queryKey: environmentKeys.list(projectId) });
+      queryClient.invalidateQueries({ queryKey: environmentKeys.list(workspaceId) });
       queryClient.setQueryData(
-        environmentKeys.detail(projectId, environment.id),
+        environmentKeys.detail(workspaceId, environment.id),
         environment
       );
-      toast.success(t.project('toasts.environmentDuplicated', { name: environment.name }));
+      toast.success(t.workspace('toasts.environmentDuplicated', { name: environment.name }));
     },
   });
 }

@@ -50,18 +50,25 @@ func (s *service) Create(ctx context.Context, req *CreateExampleRequest) (*Examp
 	}
 
 	example := &Example{
-		RequestID:   req.RequestID,
-		Name:        req.Name,
-		Description: req.Description,
-		URL:         req.URL,
-		Method:      method,
-		Headers:     req.Headers,
-		QueryParams: req.QueryParams,
-		Body:        req.Body,
-		BodyType:    bodyType,
-		Auth:        req.Auth,
-		IsDefault:   req.IsDefault,
-		SortOrder:   req.SortOrder,
+		RequestID:       req.RequestID,
+		Name:            req.Name,
+		Description:     req.Description,
+		Category:        normalizeExampleCategory(req.Category),
+		Source:          normalizeExampleSource(req.Source),
+		URL:             req.URL,
+		Method:          method,
+		Headers:         req.Headers,
+		QueryParams:     req.QueryParams,
+		Body:            req.Body,
+		BodyType:        bodyType,
+		Auth:            req.Auth,
+		Assertions:      req.Assertions,
+		ResponseStatus:  req.ResponseStatus,
+		ResponseHeaders: req.ResponseHeaders,
+		ResponseBody:    req.ResponseBody,
+		ResponseTime:    req.ResponseTime,
+		IsDefault:       req.IsDefault,
+		SortOrder:       req.SortOrder,
 	}
 
 	if err := s.repo.Create(ctx, example); err != nil {
@@ -104,6 +111,12 @@ func (s *service) Update(ctx context.Context, id, requestID string, req *UpdateE
 	if req.Description != nil {
 		example.Description = *req.Description
 	}
+	if req.Category != nil {
+		example.Category = normalizeExampleCategory(*req.Category)
+	}
+	if req.Source != nil {
+		example.Source = normalizeExampleSource(*req.Source)
+	}
 	if req.URL != nil {
 		example.URL = *req.URL
 	}
@@ -124,6 +137,9 @@ func (s *service) Update(ctx context.Context, id, requestID string, req *UpdateE
 	}
 	if req.Auth != nil {
 		example.Auth = req.Auth
+	}
+	if req.Assertions != nil {
+		example.Assertions = req.Assertions
 	}
 	if req.SortOrder != nil {
 		example.SortOrder = *req.SortOrder

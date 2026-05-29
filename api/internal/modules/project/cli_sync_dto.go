@@ -6,14 +6,14 @@ import (
 )
 
 type SpecSyncer interface {
-	SyncSpecsFromCLI(ctx context.Context, projectID string, req *CLISpecSyncRequest) (*CLISpecSyncResponseBody, error)
+	SyncSpecsFromCLI(ctx context.Context, workspaceID string, req *CLISpecSyncRequest) (*CLISpecSyncResponseBody, error)
 }
 
 type CLISpecSyncRequest struct {
-	ProjectID *string           `json:"project_id,omitempty"`
-	Source    string            `json:"source"`
-	Metadata  json.RawMessage   `json:"metadata,omitempty"`
-	Specs     []CLISpecSyncSpec `json:"specs" binding:"required,min=1"`
+	WorkspaceID *string           `json:"workspace_id,omitempty"`
+	Source      string            `json:"source"`
+	Metadata    json.RawMessage   `json:"metadata,omitempty"`
+	Specs       []CLISpecSyncSpec `json:"specs" binding:"required,min=1"`
 }
 
 type CLISpecSyncSpec struct {

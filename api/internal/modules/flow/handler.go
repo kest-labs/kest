@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/contracts"
+	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/infra/router"
 	"github.com/kest-labs/kest/api/internal/modules/member"
 	"github.com/kest-labs/kest/api/pkg/handler"
@@ -21,8 +23,10 @@ import (
 // Handler handles HTTP requests for flows
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service                  Service
+	memberService            member.Service
+	workspaceBackingResolver middleware.WorkspaceBackingResolver
+	workspaceTokenValidator  middleware.WorkspaceCLITokenValidator
 }
 
 // Name returns the module name
@@ -38,6 +42,14 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 	}
 }
 
+func (h *Handler) SetWorkspaceBackingResolver(resolver middleware.WorkspaceBackingResolver) {
+	h.workspaceBackingResolver = resolver
+}
+
+func (h *Handler) SetWorkspaceTokenValidator(validator middleware.WorkspaceCLITokenValidator) {
+	h.workspaceTokenValidator = validator
+}
+
 // RegisterRoutes registers flow routes
 func (h *Handler) RegisterRoutes(r *router.Router) {
 	RegisterRoutes(r, h, h.memberService)
@@ -45,7 +57,12 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 
 // --- helpers ---
 
-func (h *Handler) projectID(c *gin.Context) (string, bool) {
+func (h *Handler) workspaceID(c *gin.Context) (string, bool) {
+	if workspaceID, ok := c.Get("workspaceID"); ok {
+		if id, ok := workspaceID.(string); ok && id != "" {
+			return id, true
+		}
+	}
 	return handler.ParseID(c, "id")
 }
 
@@ -102,14 +119,14 @@ func respondFlowError(c *gin.Context, err error) {
 
 // --- Flow handlers ---
 
-// ListFlows handles GET /projects/:id/flows
+// ListFlows handles GET /workspaces/:id/flows
 func (h *Handler) ListFlows(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	workspaceID, ok := h.workspaceID(c)
 	if !ok {
 		return
 	}
 
-	flows, err := h.service.ListFlows(c.Request.Context(), pid)
+	flows, err := h.service.ListFlows(c.Request.Context(), workspaceID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -121,9 +138,9 @@ func (h *Handler) ListFlows(c *gin.Context) {
 	})
 }
 
-// CreateFlow handles POST /projects/:id/flows
+// CreateFlow handles POST /workspaces/:id/flows
 func (h *Handler) CreateFlow(c *gin.Context) {
-	pid, ok := h.projectID(c)
+	workspaceID, ok := h.workspaceID(c)
 	if !ok {
 		return
 	}
@@ -134,7 +151,7 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 		return
 	}
 
-	flow, err := h.service.CreateFlow(c.Request.Context(), pid, h.userID(c), &req)
+	flow, err := h.service.CreateFlow(c.Request.Context(), workspaceID, h.userID(c), &req)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -143,7 +160,29 @@ func (h *Handler) CreateFlow(c *gin.Context) {
 	response.Created(c, flow)
 }
 
-// GetFlow handles GET /projects/:id/flows/:fid
+// ImportFlowMarkdown handles POST /workspaces/:id/flows/import-markdown
+func (h *Handler) ImportFlowMarkdown(c *gin.Context) {
+	workspaceID, ok := h.workspaceID(c)
+	if !ok {
+		return
+	}
+
+	var req ImportFlowMarkdownRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	flow, err := h.service.ImportFlowMarkdown(c.Request.Context(), workspaceID, h.userID(c), &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Created(c, flow)
+}
+
+// GetFlow handles GET /workspaces/:id/flows/:fid
 func (h *Handler) GetFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -159,7 +198,7 @@ func (h *Handler) GetFlow(c *gin.Context) {
 	response.Success(c, flow)
 }
 
-// UpdateFlow handles PATCH /projects/:id/flows/:fid
+// UpdateFlow handles PATCH /workspaces/:id/flows/:fid
 func (h *Handler) UpdateFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -181,7 +220,29 @@ func (h *Handler) UpdateFlow(c *gin.Context) {
 	response.Success(c, flow)
 }
 
-// DeleteFlow handles DELETE /projects/:id/flows/:fid
+// UpdateFlowMarkdown handles PUT /workspaces/:id/flows/:fid/markdown
+func (h *Handler) UpdateFlowMarkdown(c *gin.Context) {
+	fid, ok := h.flowID(c)
+	if !ok {
+		return
+	}
+
+	var req UpdateFlowMarkdownRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	flow, err := h.service.UpdateFlowMarkdown(c.Request.Context(), fid, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, flow)
+}
+
+// DeleteFlow handles DELETE /workspaces/:id/flows/:fid
 func (h *Handler) DeleteFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -196,7 +257,7 @@ func (h *Handler) DeleteFlow(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// SaveFlow handles PUT /projects/:id/flows/:fid (full save with steps + edges)
+// SaveFlow handles PUT /workspaces/:id/flows/:fid (full save with steps + edges)
 func (h *Handler) SaveFlow(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -220,7 +281,7 @@ func (h *Handler) SaveFlow(c *gin.Context) {
 
 // --- Step handlers ---
 
-// CreateStep handles POST /projects/:id/flows/:fid/steps
+// CreateStep handles POST /workspaces/:id/flows/:fid/steps
 func (h *Handler) CreateStep(c *gin.Context) {
 	fid, ok := h.flowID(c)
 	if !ok {
@@ -402,7 +463,13 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		return
 	}
 
-	runs, err := h.service.ListRuns(c.Request.Context(), fid)
+	filter, err := flowRunListFilterFromQuery(c)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	runs, err := h.service.ListRuns(c.Request.Context(), fid, filter)
 	if err != nil {
 		respondFlowError(c, err)
 		return
@@ -412,4 +479,128 @@ func (h *Handler) ListRuns(c *gin.Context) {
 		"items": runs,
 		"total": len(runs),
 	})
+}
+
+func flowRunListFilterFromQuery(c *gin.Context) (FlowRunListFilter, error) {
+	filter := FlowRunListFilter{
+		RunnerType: strings.TrimSpace(c.Query("runner_type")),
+		Status:     strings.TrimSpace(c.Query("status")),
+		Source:     strings.TrimSpace(c.Query("source")),
+		Profile:    strings.TrimSpace(c.Query("profile")),
+	}
+
+	if value := strings.TrimSpace(c.Query("from")); value != "" {
+		parsed, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return filter, fmt.Errorf("invalid from query parameter")
+		}
+		filter.From = &parsed
+	}
+	if value := strings.TrimSpace(c.Query("to")); value != "" {
+		parsed, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return filter, fmt.Errorf("invalid to query parameter")
+		}
+		filter.To = &parsed
+	}
+	return filter, nil
+}
+
+func (h *Handler) SyncFlowsFromCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req CLIFlowSyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	createdBy, ok := getCLITokenCreatedBy(c)
+	if !ok {
+		response.Unauthorized(c)
+		return
+	}
+
+	result, err := h.service.SyncFlowsFromCLI(c.Request.Context(), workspaceID, createdBy, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func (h *Handler) ListRunnableFlowsForCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	flows, err := h.service.ListRunnableFlowsForCLI(c.Request.Context(), workspaceID)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"items": flows,
+		"total": len(flows),
+	})
+}
+
+func (h *Handler) HandleCIWebhook(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req CIWebhookRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	result, err := h.service.HandleCIWebhook(c.Request.Context(), workspaceID, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Accepted(c, result)
+}
+
+func (h *Handler) SyncFlowRunFromCLI(c *gin.Context) {
+	workspaceID, ok := handler.ParseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req CLIFlowRunSyncRequest
+	if !handler.BindJSON(c, &req) {
+		return
+	}
+
+	createdBy, ok := getCLITokenCreatedBy(c)
+	if !ok {
+		response.Unauthorized(c)
+		return
+	}
+
+	result, err := h.service.SyncFlowRunFromCLI(c.Request.Context(), workspaceID, createdBy, &req)
+	if err != nil {
+		respondFlowError(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+func getCLITokenCreatedBy(c *gin.Context) (string, bool) {
+	value, exists := c.Get("cliTokenCreatedBy")
+	if !exists {
+		return "", false
+	}
+	createdBy, ok := value.(string)
+	return createdBy, ok && createdBy != ""
 }

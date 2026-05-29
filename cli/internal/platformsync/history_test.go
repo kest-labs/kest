@@ -40,7 +40,7 @@ func TestQueueRequestHistoryEnqueuesSanitizedEntry(t *testing.T) {
 
 	conf := &config.Config{
 		ProjectID:               "local-project",
-		PlatformProjectID:       "platform-1",
+		PlatformWorkspaceID:     "platform-1",
 		PlatformURL:             "https://api.kest.dev/v1",
 		PlatformToken:           "kest_pat_test",
 		PlatformAutoSyncHistory: true,
@@ -67,7 +67,7 @@ func TestQueueRequestHistoryEnqueuesSanitizedEntry(t *testing.T) {
 		t.Fatalf("QueueRequestHistory returned error: %v", err)
 	}
 
-	items, err := store.ListDueSyncOutbox(HistorySyncKind, conf.ProjectID, conf.PlatformProjectID, 10)
+	items, err := store.ListDueSyncOutbox(HistorySyncKind, conf.ProjectID, conf.PlatformWorkspaceID, 10)
 	if err != nil {
 		t.Fatalf("ListDueSyncOutbox returned error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestQueueRunHistoryEnqueuesAggregateEvent(t *testing.T) {
 
 	conf := &config.Config{
 		ProjectID:               "local-project",
-		PlatformProjectID:       "platform-1",
+		PlatformWorkspaceID:     "platform-1",
 		PlatformURL:             "https://api.kest.dev/v1",
 		PlatformToken:           "kest_pat_test",
 		PlatformAutoSyncHistory: true,
@@ -136,7 +136,7 @@ func TestQueueRunHistoryEnqueuesAggregateEvent(t *testing.T) {
 		t.Fatalf("QueueRunHistory returned error: %v", err)
 	}
 
-	items, err := store.ListDueSyncOutbox(HistorySyncKind, conf.ProjectID, conf.PlatformProjectID, 10)
+	items, err := store.ListDueSyncOutbox(HistorySyncKind, conf.ProjectID, conf.PlatformWorkspaceID, 10)
 	if err != nil {
 		t.Fatalf("ListDueSyncOutbox returned error: %v", err)
 	}

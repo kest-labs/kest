@@ -20,6 +20,7 @@ func (h *Handler) RegisterRoutes(r *router.Router) {
 		// Member management
 		auth.POST("/workspaces/:id/members", h.AddMember).Name("workspaces.members.add").WhereUUIDOrNumber("id")
 		auth.GET("/workspaces/:id/members", h.ListMembers).Name("workspaces.members.list").WhereUUIDOrNumber("id")
+		auth.GET("/workspaces/:id/members/me", h.GetMyRole).Name("workspaces.members.me").WhereUUIDOrNumber("id")
 		auth.PATCH("/workspaces/:id/members/:uid", h.UpdateMemberRole).Name("workspaces.members.update").WhereUUIDOrNumber("id", "uid")
 		auth.DELETE("/workspaces/:id/members/:uid", h.RemoveMember).Name("workspaces.members.remove").WhereUUIDOrNumber("id", "uid")
 

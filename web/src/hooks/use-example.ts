@@ -6,6 +6,7 @@ import { useT } from '@/i18n/client';
 import { exampleService } from '@/services/example';
 import type {
   CreateExampleRequest,
+  GenerateAIExamplesRequest,
   RequestExamplePathParams,
   SaveExampleResponseRequest,
   UpdateExampleRequest,
@@ -13,41 +14,39 @@ import type {
 
 export const exampleKeys = {
   all: ['examples'] as const,
-  project: (projectId: number | string) => [...exampleKeys.all, 'project', projectId] as const,
+  workspace: (workspaceId: number | string) => [...exampleKeys.all, 'workspace', workspaceId] as const,
   request: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string
-  ) => [...exampleKeys.project(projectId), 'collection', collectionId, 'request', requestId] as const,
-  list: (
-    projectId: number | string,
-    collectionId: number | string,
-    requestId: number | string
-  ) => [...exampleKeys.request(projectId, collectionId, requestId), 'list'] as const,
+  ) =>
+    [...exampleKeys.workspace(workspaceId), 'collection', collectionId, 'request', requestId] as const,
+  list: (workspaceId: number | string, collectionId: number | string, requestId: number | string) =>
+    [...exampleKeys.request(workspaceId, collectionId, requestId), 'list'] as const,
   detail: (
-    projectId: number | string,
+    workspaceId: number | string,
     collectionId: number | string,
     requestId: number | string,
     exampleId: number | string
-  ) => [...exampleKeys.request(projectId, collectionId, requestId), 'detail', exampleId] as const,
+  ) => [...exampleKeys.request(workspaceId, collectionId, requestId), 'detail', exampleId] as const,
 };
 
 export function useRequestExamples(params?: Partial<RequestExamplePathParams>) {
   return useQuery({
     queryKey: exampleKeys.list(
-      params?.projectId ?? 'unknown',
+      params?.workspaceId ?? 'unknown',
       params?.collectionId ?? 'unknown',
       params?.requestId ?? 'unknown'
     ),
     queryFn: () =>
       exampleService.list(
-        params?.projectId as number | string,
+        params?.workspaceId as number | string,
         params?.collectionId as number | string,
         params?.requestId as number | string
       ),
     enabled:
-      params?.projectId !== undefined &&
-      params?.projectId !== null &&
+      params?.workspaceId !== undefined &&
+      params?.workspaceId !== null &&
       params?.collectionId !== undefined &&
       params?.collectionId !== null &&
       params?.requestId !== undefined &&
@@ -61,21 +60,21 @@ export function useRequestExample(
 ) {
   return useQuery({
     queryKey: exampleKeys.detail(
-      params?.projectId ?? 'unknown',
+      params?.workspaceId ?? 'unknown',
       params?.collectionId ?? 'unknown',
       params?.requestId ?? 'unknown',
       params?.exampleId ?? 'unknown'
     ),
     queryFn: () =>
       exampleService.getById(
-        params?.projectId as number | string,
+        params?.workspaceId as number | string,
         params?.collectionId as number | string,
         params?.requestId as number | string,
         params?.exampleId as number | string
       ),
     enabled:
-      params?.projectId !== undefined &&
-      params?.projectId !== null &&
+      params?.workspaceId !== undefined &&
+      params?.workspaceId !== null &&
       params?.collectionId !== undefined &&
       params?.collectionId !== null &&
       params?.requestId !== undefined &&
@@ -85,7 +84,7 @@ export function useRequestExample(
   });
 }
 
-export function useCreateRequestExample(projectId: number | string) {
+export function useCreateRequestExample(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -98,21 +97,48 @@ export function useCreateRequestExample(projectId: number | string) {
       collectionId: number | string;
       requestId: number | string;
       data: CreateExampleRequest;
-    }) => exampleService.create(projectId, collectionId, requestId, data),
+    }) => exampleService.create(workspaceId, collectionId, requestId, data),
     onSuccess: (example, variables) => {
       queryClient.invalidateQueries({
-        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
       });
       queryClient.setQueryData(
-        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
         example
       );
-      toast.success(t.project('toasts.exampleCreated', { name: example.name }));
+      toast.success(t.workspace('toasts.exampleCreated', { name: example.name }));
     },
   });
 }
 
-export function useUpdateRequestExample(projectId: number | string) {
+export function useGenerateRequestExamples(workspaceId: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      collectionId,
+      requestId,
+      data,
+    }: {
+      collectionId: number | string;
+      requestId: number | string;
+      data?: GenerateAIExamplesRequest;
+    }) => exampleService.generateAI(workspaceId, collectionId, requestId, data),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
+      });
+      (result.items ?? []).forEach(example => {
+        queryClient.setQueryData(
+          exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
+          example
+        );
+      });
+    },
+  });
+}
+
+export function useUpdateRequestExample(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -127,21 +153,21 @@ export function useUpdateRequestExample(projectId: number | string) {
       requestId: number | string;
       exampleId: number | string;
       data: UpdateExampleRequest;
-    }) => exampleService.update(projectId, collectionId, requestId, exampleId, data),
+    }) => exampleService.update(workspaceId, collectionId, requestId, exampleId, data),
     onSuccess: (example, variables) => {
       queryClient.invalidateQueries({
-        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
       });
       queryClient.setQueryData(
-        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
         example
       );
-      toast.success(t.project('toasts.exampleUpdated', { name: example.name }));
+      toast.success(t.workspace('toasts.exampleUpdated', { name: example.name }));
     },
   });
 }
 
-export function useDeleteRequestExample(projectId: number | string) {
+export function useDeleteRequestExample(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -154,20 +180,25 @@ export function useDeleteRequestExample(projectId: number | string) {
       collectionId: number | string;
       requestId: number | string;
       exampleId: number | string;
-    }) => exampleService.delete(projectId, collectionId, requestId, exampleId),
+    }) => exampleService.delete(workspaceId, collectionId, requestId, exampleId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
       });
       queryClient.removeQueries({
-        queryKey: exampleKeys.detail(projectId, variables.collectionId, variables.requestId, variables.exampleId),
+        queryKey: exampleKeys.detail(
+          workspaceId,
+          variables.collectionId,
+          variables.requestId,
+          variables.exampleId
+        ),
       });
-      toast.success(t.project('toasts.exampleDeleted'));
+      toast.success(t.workspace('toasts.exampleDeleted'));
     },
   });
 }
 
-export function useSaveRequestExampleResponse(projectId: number | string) {
+export function useSaveRequestExampleResponse(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -182,21 +213,21 @@ export function useSaveRequestExampleResponse(projectId: number | string) {
       requestId: number | string;
       exampleId: number | string;
       data: SaveExampleResponseRequest;
-    }) => exampleService.saveResponse(projectId, collectionId, requestId, exampleId, data),
+    }) => exampleService.saveResponse(workspaceId, collectionId, requestId, exampleId, data),
     onSuccess: (example, variables) => {
       queryClient.invalidateQueries({
-        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
       });
       queryClient.setQueryData(
-        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
         example
       );
-      toast.success(t.project('toasts.responseCaptured', { name: example.name }));
+      toast.success(t.workspace('toasts.responseCaptured', { name: example.name }));
     },
   });
 }
 
-export function useSetDefaultRequestExample(projectId: number | string) {
+export function useSetDefaultRequestExample(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -209,16 +240,16 @@ export function useSetDefaultRequestExample(projectId: number | string) {
       collectionId: number | string;
       requestId: number | string;
       exampleId: number | string;
-    }) => exampleService.setDefault(projectId, collectionId, requestId, exampleId),
+    }) => exampleService.setDefault(workspaceId, collectionId, requestId, exampleId),
     onSuccess: (example, variables) => {
       queryClient.invalidateQueries({
-        queryKey: exampleKeys.list(projectId, variables.collectionId, variables.requestId),
+        queryKey: exampleKeys.list(workspaceId, variables.collectionId, variables.requestId),
       });
       queryClient.setQueryData(
-        exampleKeys.detail(projectId, variables.collectionId, variables.requestId, example.id),
+        exampleKeys.detail(workspaceId, variables.collectionId, variables.requestId, example.id),
         example
       );
-      toast.success(t.project('toasts.defaultExampleSet', { name: example.name }));
+      toast.success(t.workspace('toasts.defaultExampleSet', { name: example.name }));
     },
   });
 }

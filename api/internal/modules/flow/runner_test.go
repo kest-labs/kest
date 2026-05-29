@@ -50,8 +50,15 @@ func (r *runnerRepoStub) CreateFlow(context.Context, *FlowPO) error {
 func (r *runnerRepoStub) GetFlowByID(context.Context, string) (*FlowPO, error) {
 	panic("unexpected GetFlowByID call")
 }
-func (r *runnerRepoStub) ListFlowsByProject(context.Context, string) ([]*FlowPO, error) {
-	panic("unexpected ListFlowsByProject call")
+func (r *runnerRepoStub) GetFlowBySource(context.Context, string, string, string, string) (*FlowPO, error) {
+	panic("unexpected GetFlowBySource call")
+}
+func (r *runnerRepoStub) ListFlowsByWorkspace(context.Context, string) ([]*FlowPO, error) {
+	panic("unexpected ListFlowsByWorkspace call")
+}
+
+func (r *runnerRepoStub) ListRunnableFlowsByWorkspace(context.Context, string) ([]*FlowPO, error) {
+	panic("unexpected ListRunnableFlowsByWorkspace call")
 }
 func (r *runnerRepoStub) UpdateFlow(context.Context, *FlowPO) error {
 	panic("unexpected UpdateFlow call")
@@ -104,7 +111,10 @@ func (r *runnerRepoStub) CreateRun(context.Context, *FlowRunPO) error {
 func (r *runnerRepoStub) GetRunByID(context.Context, string) (*FlowRunPO, error) {
 	panic("unexpected GetRunByID call")
 }
-func (r *runnerRepoStub) ListRunsByFlow(context.Context, string) ([]*FlowRunPO, error) {
+func (r *runnerRepoStub) GetRunBySourceEvent(context.Context, string, string) (*FlowRunPO, error) {
+	panic("unexpected GetRunBySourceEvent call")
+}
+func (r *runnerRepoStub) ListRunsByFlow(context.Context, string, FlowRunListFilter) ([]*FlowRunPO, error) {
 	panic("unexpected ListRunsByFlow call")
 }
 func (r *runnerRepoStub) UpdateRun(_ context.Context, run *FlowRunPO) error {

@@ -109,6 +109,7 @@ func TestGenerateCLITokenDefaults(t *testing.T) {
 		CLITokenScopeEnvironmentRead,
 		CLITokenScopeTestCaseRun,
 		CLITokenScopeFlowRun,
+		CLITokenScopeFlowWrite,
 	}
 	if len(resp.TokenInfo.Scopes) != len(expectedScopes) {
 		t.Fatalf("expected %d default scopes, got %#v", len(expectedScopes), resp.TokenInfo.Scopes)

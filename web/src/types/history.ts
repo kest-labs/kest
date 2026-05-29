@@ -1,11 +1,11 @@
 // History 模块类型定义。
-// 作用：统一约束项目历史记录列表、详情和查询参数的数据结构。
+// 作用：统一约束工作区历史记录列表、详情和查询参数的数据结构。
 
-export interface ProjectHistory {
+export interface WorkspaceHistory {
   id: string;
   entity_type: string;
   entity_id: string;
-  project_id: string;
+  workspace_id?: string;
   user_id: string;
   source?: string;
   source_event_id?: string;
@@ -33,7 +33,7 @@ export interface HistoryListMeta {
 }
 
 export interface HistoryListParams {
-  projectId: string;
+  workspaceId: string;
   page?: number;
   pageSize?: number;
   entityType?: string;
@@ -41,6 +41,6 @@ export interface HistoryListParams {
 }
 
 export interface HistoryListResponse {
-  items: ProjectHistory[];
+  items: WorkspaceHistory[];
   meta: HistoryListMeta;
 }

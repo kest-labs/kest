@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/kest-labs/kest/api/internal/modules/apispec"
 	"github.com/kest-labs/kest/api/internal/modules/environment"
@@ -18,6 +19,7 @@ type Service interface {
 	DeleteTestCase(ctx context.Context, id string) error
 	DuplicateTestCase(ctx context.Context, id string, req *DuplicateRequest) (*TestCaseResponse, error)
 	CreateTestCaseFromSpec(ctx context.Context, req *FromSpecRequest) (*TestCaseResponse, error)
+	CreateTestCasesFromSpecs(ctx context.Context, req *BatchFromSpecsRequest) (*BatchFromSpecsResponse, error)
 	RunTestCase(ctx context.Context, id string, req *RunTestCaseRequest) (*RunTestCaseResponse, error)
 	ListRuns(ctx context.Context, filter *ListRunsFilter) ([]*TestRunResponse, *PaginationMeta, error)
 	GetRun(ctx context.Context, runID string) (*TestRunResponse, error)
@@ -259,6 +261,99 @@ func (s *service) CreateTestCaseFromSpec(ctx context.Context, req *FromSpecReque
 	}
 
 	return s.populateResponse(ctx, tc)
+}
+
+func (s *service) CreateTestCasesFromSpecs(ctx context.Context, req *BatchFromSpecsRequest) (*BatchFromSpecsResponse, error) {
+	result := &BatchFromSpecsResponse{
+		Total: len(req.SpecIDs),
+		Items: make([]BatchFromSpecsResultItem, 0, len(req.SpecIDs)),
+	}
+
+	for _, specID := range req.SpecIDs {
+		specID = strings.TrimSpace(specID)
+		if specID == "" {
+			result.Failed++
+			result.Items = append(result.Items, BatchFromSpecsResultItem{
+				SpecID:  specID,
+				Status:  "failed",
+				Message: "empty spec id",
+			})
+			continue
+		}
+
+		existingCount, err := s.repo.CountByAPISpec(ctx, specID)
+		if err != nil {
+			result.Failed++
+			result.Items = append(result.Items, BatchFromSpecsResultItem{
+				SpecID:  specID,
+				Status:  "failed",
+				Message: fmt.Sprintf("failed to count existing test cases: %v", err),
+			})
+			continue
+		}
+
+		if existingCount > 0 {
+			result.Skipped++
+			result.Items = append(result.Items, BatchFromSpecsResultItem{
+				SpecID:        specID,
+				Status:        "skipped",
+				SkippedReason: "test case already exists for this spec",
+			})
+			continue
+		}
+
+		spec, err := s.apiSpecRepo.GetSpecByID(ctx, specID)
+		if err != nil {
+			result.Failed++
+			result.Items = append(result.Items, BatchFromSpecsResultItem{
+				SpecID:  specID,
+				Status:  "failed",
+				Message: fmt.Sprintf("failed to load api spec: %v", err),
+			})
+			continue
+		}
+		if spec == nil {
+			result.Failed++
+			result.Items = append(result.Items, BatchFromSpecsResultItem{
+				SpecID:  specID,
+				Status:  "failed",
+				Message: "api spec not found",
+			})
+			continue
+		}
+
+		name := strings.TrimSpace(req.NamePrefix)
+		if name != "" {
+			name = fmt.Sprintf("%s %s %s", name, spec.Method, spec.Path)
+		} else {
+			name = fmt.Sprintf("%s %s test", spec.Method, spec.Path)
+		}
+
+		testCase, err := s.CreateTestCaseFromSpec(ctx, &FromSpecRequest{
+			APISpecID:  specID,
+			Name:       name,
+			Env:        req.Env,
+			UseExample: req.UseExample,
+		})
+		if err != nil {
+			result.Failed++
+			result.Items = append(result.Items, BatchFromSpecsResultItem{
+				SpecID:  specID,
+				Status:  "failed",
+				Message: err.Error(),
+			})
+			continue
+		}
+
+		result.Created++
+		result.Items = append(result.Items, BatchFromSpecsResultItem{
+			SpecID:   specID,
+			Status:   "created",
+			TestCase: testCase,
+		})
+	}
+
+	return result, nil
 }
 
 // RunTestCase executes a test case

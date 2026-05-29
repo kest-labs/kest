@@ -137,6 +137,41 @@ func (h *Handler) Update(c *gin.Context) {
 	response.Success(c, toResponse(request))
 }
 
+// GenDoc handles POST /workspaces/:id/collections/:cid/requests/:rid/gen-doc
+func (h *Handler) GenDoc(c *gin.Context) {
+	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)
+	if !ok {
+		return
+	}
+
+	collectionID, ok := handler.ParseID(c, "cid")
+	if !ok {
+		return
+	}
+
+	requestID, ok := handler.ParseID(c, "rid")
+	if !ok {
+		return
+	}
+
+	lang := c.DefaultQuery("lang", "en")
+	request, err := h.service.GenDoc(c.Request.Context(), requestID, collectionID, workspaceID, lang)
+	if err != nil {
+		if errors.Is(err, ErrRequestNotFound) {
+			response.NotFound(c, err.Error())
+			return
+		}
+		if errors.Is(err, ErrInvalidCollection) {
+			response.NotFound(c, err.Error())
+			return
+		}
+		response.HandleError(c, "Failed to generate request documentation", err)
+		return
+	}
+
+	response.Success(c, toResponse(request))
+}
+
 // Delete handles DELETE /workspaces/:id/collections/:cid/requests/:rid
 func (h *Handler) Delete(c *gin.Context) {
 	workspaceID, ok := h.authorizeWorkspace(c, workspace.RoleWrite)

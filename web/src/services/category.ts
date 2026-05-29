@@ -2,8 +2,8 @@ import request from '@/http';
 import type {
   CategoryListParams,
   CreateCategoryRequest,
-  ProjectCategory,
-  ProjectCategoryListResponse,
+  WorkspaceCategory,
+  WorkspaceCategoryListResponse,
   SortCategoriesRequest,
   UpdateCategoryRequest,
 } from '@/types/category';
@@ -16,19 +16,19 @@ const normalizePayload = <T extends object>(payload: T) =>
   ) as T;
 
 // Categories 服务层。
-// 作用：集中封装项目分类相关的 HTTP 请求，供 hooks 和页面复用。
+// 作用：集中封装工作区分类相关的 HTTP 请求，供 hooks 和页面复用。
 export const categoryService = {
   // 分类列表查询。
   // 作用：支持树形数据、分页参数和兼容文档中的扩展查询字段。
   list: ({
-    projectId,
+    workspaceId,
     page,
     perPage,
     search,
     includeCount,
     tree = true,
   }: CategoryListParams) =>
-    request.get<ProjectCategoryListResponse>(`/projects/${projectId}/categories`, {
+    request.get<WorkspaceCategoryListResponse>(`/workspaces/${workspaceId}/categories`, {
       params: normalizePayload({
         page,
         per_page: perPage,
@@ -40,31 +40,31 @@ export const categoryService = {
 
   // 单个分类详情查询。
   // 作用：为右侧详情面板或编辑流程拉取最新分类数据。
-  getById: (projectId: number | string, categoryId: number | string) =>
-    request.get<ProjectCategory>(`/projects/${projectId}/categories/${categoryId}`),
+  getById: (workspaceId: number | string, categoryId: number | string) =>
+    request.get<WorkspaceCategory>(`/workspaces/${workspaceId}/categories/${categoryId}`),
 
   // 创建分类。
   // 作用：提交新建分类或子分类表单。
-  create: (projectId: number | string, data: CreateCategoryRequest) =>
-    request.post<ProjectCategory>(`/projects/${projectId}/categories`, normalizePayload(data)),
+  create: (workspaceId: number | string, data: CreateCategoryRequest) =>
+    request.post<WorkspaceCategory>(`/workspaces/${workspaceId}/categories`, normalizePayload(data)),
 
   // 更新分类。
   // 作用：以 PATCH 方式更新已存在分类。
-  update: (projectId: number | string, categoryId: number | string, data: UpdateCategoryRequest) =>
-    request.patch<ProjectCategory>(
-      `/projects/${projectId}/categories/${categoryId}`,
+  update: (workspaceId: number | string, categoryId: number | string, data: UpdateCategoryRequest) =>
+    request.patch<WorkspaceCategory>(
+      `/workspaces/${workspaceId}/categories/${categoryId}`,
       normalizePayload(data)
     ),
 
   // 删除分类。
   // 作用：删除选中的分类节点。
-  delete: (projectId: number | string, categoryId: number | string) =>
-    request.delete<void>(`/projects/${projectId}/categories/${categoryId}`),
+  delete: (workspaceId: number | string, categoryId: number | string) =>
+    request.delete<void>(`/workspaces/${workspaceId}/categories/${categoryId}`),
 
   // 分类排序。
   // 作用：把前端整理后的顺序持久化到后端。
-  sort: (projectId: number | string, data: SortCategoriesRequest) =>
-    request.put<void>(`/projects/${projectId}/categories/sort`, data),
+  sort: (workspaceId: number | string, data: SortCategoriesRequest) =>
+    request.put<void>(`/workspaces/${workspaceId}/categories/sort`, data),
 };
 
 export type CategoryService = typeof categoryService;

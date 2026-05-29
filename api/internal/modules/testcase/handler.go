@@ -16,8 +16,9 @@ import (
 // Handler handles HTTP requests for test cases
 type Handler struct {
 	contracts.BaseModule
-	service       Service
-	memberService member.Service
+	service                  Service
+	memberService            member.Service
+	workspaceBackingResolver middleware.WorkspaceBackingResolver
 }
 
 // Name returns the module name
@@ -30,32 +31,48 @@ func NewHandler(service Service, memberService member.Service) *Handler {
 	return &Handler{service: service, memberService: memberService}
 }
 
+func (h *Handler) SetWorkspaceBackingResolver(resolver middleware.WorkspaceBackingResolver) {
+	h.workspaceBackingResolver = resolver
+}
+
 // RegisterRoutes registers test case routes on the fluent router
 func (h *Handler) RegisterRoutes(r *router.Router) {
-	r.Group("/projects/:id/test-cases", func(tc *router.Router) {
+	h.registerRoutes(r, "/workspaces/:id/test-cases", true)
+	h.registerRoutes(r, "/projects/:id/test-cases", false)
+}
+
+func (h *Handler) registerRoutes(r *router.Router, prefix string, resolveWorkspace bool) {
+	r.Group(prefix, func(tc *router.Router) {
 		tc.WithMiddleware("auth")
+		if resolveWorkspace {
+			tc.Use(middleware.ResolveWorkspaceContext(h.workspaceBackingResolver))
+		} else {
+			tc.Use(middleware.ResolveLegacyWorkspaceContext(h.workspaceBackingResolver))
+		}
 
 		tc.GET("", h.List).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 		tc.POST("", h.Create).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/from-spec", h.FromSpec).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
+		tc.POST("/batch-from-specs", h.BatchFromSpecs).
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 
 		tc.GET("/:tcid", h.Get).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 		tc.PATCH("/:tcid", h.Update).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.DELETE("/:tcid", h.Delete).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/:tcid/duplicate", h.Duplicate).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.POST("/:tcid/run", h.RunTestCase).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleWrite))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleWrite))
 		tc.GET("/:tcid/runs", h.ListRuns).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 		tc.GET("/:tcid/runs/:rid", h.GetRun).
-			Middleware(middleware.RequireProjectRole(h.memberService, member.RoleRead))
+			Middleware(middleware.RequireResolvedWorkspaceRole(h.memberService, member.RoleRead))
 	})
 }
 
@@ -70,6 +87,11 @@ func (h *Handler) ListTestCases(c *gin.Context) {
 	if apiSpecID := c.Query("api_spec_id"); apiSpecID != "" {
 		id := apiSpecID
 		filter.APISpecID = &id
+	}
+	if workspaceID, ok := c.Get("workspaceID"); ok {
+		if id, ok := workspaceID.(string); ok && id != "" {
+			filter.WorkspaceID = &id
+		}
 	}
 
 	if env := c.Query("env"); env != "" {
@@ -263,6 +285,22 @@ func (h *Handler) CreateFromSpec(c *gin.Context) {
 	response.Created(c, testCase)
 }
 
+func (h *Handler) BatchCreateFromSpecs(c *gin.Context) {
+	var req BatchFromSpecsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := h.service.CreateTestCasesFromSpecs(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // ListRuns handles GET /projects/:id/test-cases/:tcid/runs
 func (h *Handler) ListRuns(c *gin.Context) {
 	tcid := c.Param("tcid")
@@ -344,4 +382,8 @@ func (h *Handler) Duplicate(c *gin.Context) {
 
 func (h *Handler) FromSpec(c *gin.Context) {
 	h.CreateFromSpec(c)
+}
+
+func (h *Handler) BatchFromSpecs(c *gin.Context) {
+	h.BatchCreateFromSpecs(c)
 }

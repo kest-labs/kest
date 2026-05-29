@@ -1,40 +1,40 @@
-// 项目成员模块类型定义。
+// 工作区成员模块类型定义。
 // 作用：统一约束成员实体、角色能力和成员管理请求数据结构。
 
-export type ProjectMemberRole = 'owner' | 'admin' | 'write' | 'read';
-export type AssignableProjectMemberRole = 'admin' | 'write' | 'read';
+export type WorkspaceMemberRole = 'owner' | 'admin' | 'write' | 'read';
+export type AssignableWorkspaceMemberRole = 'admin' | 'write' | 'read';
 
-export interface ProjectMember {
+export interface WorkspaceMember {
   id: string;
-  project_id: string;
+  workspace_id: string;
   user_id: string;
   username: string;
   email: string;
-  role: ProjectMemberRole;
+  role: WorkspaceMemberRole;
   created_at: string;
   updated_at: string;
 }
 
-export interface UpdateProjectMemberRequest {
-  role: AssignableProjectMemberRole;
+export interface UpdateWorkspaceMemberRequest {
+  role: AssignableWorkspaceMemberRole;
 }
 
-export const PROJECT_MEMBER_ASSIGNABLE_ROLES: AssignableProjectMemberRole[] = [
+export const WORKSPACE_MEMBER_ASSIGNABLE_ROLES: AssignableWorkspaceMemberRole[] = [
   'admin',
   'write',
   'read',
 ];
-export const PROJECT_MEMBER_WRITE_ROLES: ProjectMemberRole[] = ['write', 'admin', 'owner'];
-export const PROJECT_MEMBER_MANAGE_ROLES: ProjectMemberRole[] = ['admin', 'owner'];
+export const WORKSPACE_MEMBER_WRITE_ROLES: WorkspaceMemberRole[] = ['write', 'admin', 'owner'];
+export const WORKSPACE_MEMBER_MANAGE_ROLES: WorkspaceMemberRole[] = ['admin', 'owner'];
 
-export const PROJECT_MEMBER_ROLE_LEVELS: Record<ProjectMemberRole, number> = {
+export const WORKSPACE_MEMBER_ROLE_LEVELS: Record<WorkspaceMemberRole, number> = {
   owner: 40,
   admin: 30,
   write: 20,
   read: 10,
 };
 
-export const getProjectMemberRoleLabel = (role?: ProjectMemberRole) => {
+export const getWorkspaceMemberRoleLabel = (role?: WorkspaceMemberRole) => {
   if (!role) {
     return 'Unknown';
   }
@@ -42,30 +42,30 @@ export const getProjectMemberRoleLabel = (role?: ProjectMemberRole) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 
-export const canWriteProjectResources = (role?: ProjectMemberRole) =>
-  role ? PROJECT_MEMBER_WRITE_ROLES.includes(role) : false;
+export const canWriteWorkspaceResources = (role?: WorkspaceMemberRole) =>
+  role ? WORKSPACE_MEMBER_WRITE_ROLES.includes(role) : false;
 
-export const canManageProjectMembers = (role?: ProjectMemberRole) =>
-  role ? PROJECT_MEMBER_MANAGE_ROLES.includes(role) : false;
+export const canManageWorkspaceMembers = (role?: WorkspaceMemberRole) =>
+  role ? WORKSPACE_MEMBER_MANAGE_ROLES.includes(role) : false;
 
-export const isProtectedProjectMember = (
-  member: Pick<ProjectMember, 'role' | 'user_id'>,
+export const isProtectedWorkspaceMember = (
+  member: Pick<WorkspaceMember, 'role' | 'user_id'>,
   currentUserId?: string
 ) => member.role === 'owner' || (currentUserId !== undefined && member.user_id === currentUserId);
 
-export const canEditProjectMember = (
-  member: Pick<ProjectMember, 'role' | 'user_id'>,
-  currentUserRole?: ProjectMemberRole,
+export const canEditWorkspaceMember = (
+  member: Pick<WorkspaceMember, 'role' | 'user_id'>,
+  currentUserRole?: WorkspaceMemberRole,
   currentUserId?: string
-) => canManageProjectMembers(currentUserRole) && !isProtectedProjectMember(member, currentUserId);
+) => canManageWorkspaceMembers(currentUserRole) && !isProtectedWorkspaceMember(member, currentUserId);
 
-export const canRemoveProjectMember = canEditProjectMember;
+export const canRemoveWorkspaceMember = canEditWorkspaceMember;
 
-export const sortProjectMembers = <T extends Pick<ProjectMember, 'role' | 'username' | 'user_id'>>(
+export const sortWorkspaceMembers = <T extends Pick<WorkspaceMember, 'role' | 'username' | 'user_id'>>(
   members: T[]
 ) =>
   [...members].sort((left, right) => {
-    const roleDiff = PROJECT_MEMBER_ROLE_LEVELS[right.role] - PROJECT_MEMBER_ROLE_LEVELS[left.role];
+    const roleDiff = WORKSPACE_MEMBER_ROLE_LEVELS[right.role] - WORKSPACE_MEMBER_ROLE_LEVELS[left.role];
 
     if (roleDiff !== 0) {
       return roleDiff;

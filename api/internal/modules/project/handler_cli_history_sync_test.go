@@ -12,25 +12,25 @@ import (
 )
 
 type testCLIHistorySyncer struct {
-	projectID string
+	workspaceID string
 	createdBy string
 	req       *CLIHistorySyncRequest
 }
 
-func (s *testCLIHistorySyncer) SyncHistoryFromCLI(ctx context.Context, projectID string, createdBy string, req *CLIHistorySyncRequest) (*CLIHistorySyncResponseBody, error) {
-	s.projectID = projectID
+func (s *testCLIHistorySyncer) SyncHistoryFromCLI(ctx context.Context, workspaceID string, createdBy string, req *CLIHistorySyncRequest) (*CLIHistorySyncResponseBody, error) {
+	s.workspaceID = workspaceID
 	s.createdBy = createdBy
 	s.req = req
 	return &CLIHistorySyncResponseBody{Created: len(req.Entries)}, nil
 }
 
 type testCLISpecSyncer struct {
-	projectID string
+	workspaceID string
 	req       *CLISpecSyncRequest
 }
 
-func (s *testCLISpecSyncer) SyncSpecsFromCLI(ctx context.Context, projectID string, req *CLISpecSyncRequest) (*CLISpecSyncResponseBody, error) {
-	s.projectID = projectID
+func (s *testCLISpecSyncer) SyncSpecsFromCLI(ctx context.Context, workspaceID string, req *CLISpecSyncRequest) (*CLISpecSyncResponseBody, error) {
+	s.workspaceID = workspaceID
 	s.req = req
 	return &CLISpecSyncResponseBody{Created: len(req.Specs)}, nil
 }
@@ -42,10 +42,10 @@ func TestSyncSpecsFromCLIUsesInjectedSyncer(t *testing.T) {
 	h.SetSpecSyncer(syncer)
 
 	router := gin.New()
-	router.POST("/projects/:id/cli/spec-sync", h.SyncSpecsFromCLI)
+	router.POST("/workspaces/:id/cli/spec-sync", h.SyncSpecsFromCLI)
 
 	body := `{
-		"project_id":"12",
+		"workspace_id":"12",
 		"source":"cli",
 		"specs":[{
 			"method":"GET",
@@ -54,7 +54,7 @@ func TestSyncSpecsFromCLIUsesInjectedSyncer(t *testing.T) {
 			"version":"v1"
 		}]
 	}`
-	req := httptest.NewRequest(http.MethodPost, "/projects/12/cli/spec-sync", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/12/cli/spec-sync", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -63,8 +63,8 @@ func TestSyncSpecsFromCLIUsesInjectedSyncer(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if syncer.projectID != "12" {
-		t.Fatalf("unexpected syncer project id: %q", syncer.projectID)
+	if syncer.workspaceID != "12" {
+		t.Fatalf("unexpected syncer workspace id: %q", syncer.workspaceID)
 	}
 	if syncer.req == nil || len(syncer.req.Specs) != 1 {
 		t.Fatalf("expected one synced spec, got %#v", syncer.req)
@@ -88,13 +88,13 @@ func TestSyncHistoryFromCLIUsesInjectedSyncer(t *testing.T) {
 	h.SetHistorySyncer(syncer)
 
 	router := gin.New()
-	router.POST("/projects/:id/cli/history-sync", func(c *gin.Context) {
+	router.POST("/workspaces/:id/cli/history-sync", func(c *gin.Context) {
 		c.Set("cliTokenCreatedBy", "7")
 		h.SyncHistoryFromCLI(c)
 	})
 
 	body := `{
-		"project_id":"12",
+		"workspace_id":"12",
 		"source":"cli",
 		"entries":[{
 			"source_event_id":"client-1:record:42",
@@ -107,7 +107,7 @@ func TestSyncHistoryFromCLIUsesInjectedSyncer(t *testing.T) {
 			"data":{"request":{"method":"GET"}}
 		}]
 	}`
-	req := httptest.NewRequest(http.MethodPost, "/projects/12/cli/history-sync", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/12/cli/history-sync", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -116,8 +116,8 @@ func TestSyncHistoryFromCLIUsesInjectedSyncer(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if syncer.projectID != "12" || syncer.createdBy != "7" {
-		t.Fatalf("unexpected syncer args: project=%q createdBy=%q", syncer.projectID, syncer.createdBy)
+	if syncer.workspaceID != "12" || syncer.createdBy != "7" {
+		t.Fatalf("unexpected syncer args: workspace=%q createdBy=%q", syncer.workspaceID, syncer.createdBy)
 	}
 	if syncer.req == nil || len(syncer.req.Entries) != 1 {
 		t.Fatalf("expected one synced entry, got %#v", syncer.req)
@@ -140,13 +140,13 @@ func TestSyncHistoryFromCLIRejectsProjectMismatch(t *testing.T) {
 	h.SetHistorySyncer(&testCLIHistorySyncer{})
 
 	router := gin.New()
-	router.POST("/projects/:id/cli/history-sync", func(c *gin.Context) {
+	router.POST("/workspaces/:id/cli/history-sync", func(c *gin.Context) {
 		c.Set("cliTokenCreatedBy", "7")
 		h.SyncHistoryFromCLI(c)
 	})
 
 	body := `{
-		"project_id":"99",
+		"workspace_id":"99",
 		"source":"cli",
 		"entries":[{
 			"source_event_id":"client-1:record:42",
@@ -159,7 +159,7 @@ func TestSyncHistoryFromCLIRejectsProjectMismatch(t *testing.T) {
 			"data":{"request":{"method":"GET"}}
 		}]
 	}`
-	req := httptest.NewRequest(http.MethodPost, "/projects/12/cli/history-sync", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/12/cli/history-sync", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 

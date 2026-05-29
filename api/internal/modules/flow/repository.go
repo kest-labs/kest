@@ -13,7 +13,9 @@ type Repository interface {
 	// Flow CRUD
 	CreateFlow(ctx context.Context, flow *FlowPO) error
 	GetFlowByID(ctx context.Context, id string) (*FlowPO, error)
-	ListFlowsByProject(ctx context.Context, projectID string) ([]*FlowPO, error)
+	GetFlowBySource(ctx context.Context, workspaceID string, source string, sourceID string, sourcePath string) (*FlowPO, error)
+	ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error)
+	ListRunnableFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error)
 	UpdateFlow(ctx context.Context, flow *FlowPO) error
 	DeleteFlow(ctx context.Context, id string) error
 
@@ -36,7 +38,8 @@ type Repository interface {
 	// Run
 	CreateRun(ctx context.Context, run *FlowRunPO) error
 	GetRunByID(ctx context.Context, id string) (*FlowRunPO, error)
-	ListRunsByFlow(ctx context.Context, flowID string) ([]*FlowRunPO, error)
+	GetRunBySourceEvent(ctx context.Context, source string, sourceEventID string) (*FlowRunPO, error)
+	ListRunsByFlow(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*FlowRunPO, error)
 	UpdateRun(ctx context.Context, run *FlowRunPO) error
 
 	// Step Results
@@ -73,11 +76,34 @@ func (r *repository) GetFlowByID(ctx context.Context, id string) (*FlowPO, error
 	return &flow, nil
 }
 
-func (r *repository) ListFlowsByProject(ctx context.Context, projectID string) ([]*FlowPO, error) {
+func (r *repository) GetFlowBySource(ctx context.Context, workspaceID string, source string, sourceID string, sourcePath string) (*FlowPO, error) {
+	var flow FlowPO
+	query := r.db.WithContext(ctx).Where("workspace_id = ? AND source = ?", workspaceID, source)
+	if sourceID != "" {
+		query = query.Where("source_id = ?", sourceID)
+	} else {
+		query = query.Where("source_path = ?", sourcePath)
+	}
+	if err := query.First(&flow).Error; err != nil {
+		return nil, err
+	}
+	return &flow, nil
+}
+
+func (r *repository) ListFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error) {
 	var flows []*FlowPO
 	err := r.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
+		Where("workspace_id = ?", workspaceID).
 		Order("created_at DESC").
+		Find(&flows).Error
+	return flows, err
+}
+
+func (r *repository) ListRunnableFlowsByWorkspace(ctx context.Context, workspaceID string) ([]*FlowPO, error) {
+	var flows []*FlowPO
+	err := r.db.WithContext(ctx).
+		Where("workspace_id = ? AND enabled = ? AND parse_status = ? AND definition <> ?", workspaceID, true, FlowParseStatusParsed, "").
+		Order("updated_at DESC").
 		Find(&flows).Error
 	return flows, err
 }
@@ -173,12 +199,38 @@ func (r *repository) GetRunByID(ctx context.Context, id string) (*FlowRunPO, err
 	return &run, nil
 }
 
-func (r *repository) ListRunsByFlow(ctx context.Context, flowID string) ([]*FlowRunPO, error) {
+func (r *repository) GetRunBySourceEvent(ctx context.Context, source string, sourceEventID string) (*FlowRunPO, error) {
+	var run FlowRunPO
+	if err := r.db.WithContext(ctx).
+		Where("source = ? AND source_event_id = ?", source, sourceEventID).
+		First(&run).Error; err != nil {
+		return nil, err
+	}
+	return &run, nil
+}
+
+func (r *repository) ListRunsByFlow(ctx context.Context, flowID string, filter FlowRunListFilter) ([]*FlowRunPO, error) {
 	var runs []*FlowRunPO
-	err := r.db.WithContext(ctx).
-		Where("flow_id = ?", flowID).
-		Order("created_at DESC").
-		Find(&runs).Error
+	query := r.db.WithContext(ctx).Where("flow_id = ?", flowID)
+	if filter.RunnerType != "" {
+		query = query.Where("runner_type = ?", filter.RunnerType)
+	}
+	if filter.Status != "" {
+		query = query.Where("status = ?", filter.Status)
+	}
+	if filter.Source != "" {
+		query = query.Where("source = ?", filter.Source)
+	}
+	if filter.Profile != "" {
+		query = query.Where("profile = ?", filter.Profile)
+	}
+	if filter.From != nil {
+		query = query.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		query = query.Where("created_at <= ?", *filter.To)
+	}
+	err := query.Order("created_at DESC").Find(&runs).Error
 	return runs, err
 }
 

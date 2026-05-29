@@ -10,6 +10,7 @@ export interface ImportPostmanCollectionResponse {
 export interface ImportMarkdownCollectionRequest {
   file: File;
   parent_id?: number | string;
+  base_url_override?: string;
 }
 
 export interface ImportMarkdownCollectionModuleResult {

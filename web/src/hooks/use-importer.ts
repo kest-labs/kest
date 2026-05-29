@@ -11,32 +11,38 @@ import type {
   ImportPostmanCollectionRequest,
 } from '@/types/importer';
 
-export function useImportPostmanCollection(projectId: number | string) {
+export function useImportPostmanCollection(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: (data: ImportPostmanCollectionRequest) =>
-      importerService.importPostman(projectId, data),
+      importerService.importPostman(workspaceId, data),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: collectionKeys.project(projectId) });
-      queryClient.invalidateQueries({ queryKey: requestKeys.project(projectId) });
-      toast.success(result.message || t.project('toasts.postmanImported'));
+      queryClient.invalidateQueries({ queryKey: collectionKeys.workspace(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: requestKeys.workspace(workspaceId) });
+      toast.success(result.message || t.workspace('toasts.postmanImported'));
     },
   });
 }
 
-export function useImportMarkdownCollection(projectId: number | string) {
+export function useImportMarkdownCollection(workspaceId: number | string) {
   const queryClient = useQueryClient();
   const t = useT();
 
   return useMutation({
     mutationFn: (data: ImportMarkdownCollectionRequest) =>
-      importerService.importMarkdown(projectId, data),
+      importerService.importMarkdown(workspaceId, data),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: collectionKeys.project(projectId) });
-      queryClient.invalidateQueries({ queryKey: requestKeys.project(projectId) });
-      toast.success(t.project('toasts.markdownImported', { count: result.requests_created }));
+      queryClient.invalidateQueries({ queryKey: collectionKeys.workspace(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: requestKeys.workspace(workspaceId) });
+      toast.success(t.workspace('toasts.markdownImported', { count: result.requests_created }), {
+        description: t.workspace('toasts.markdownImportedDetail', {
+          name: result.root_folder_name,
+          modules: result.collections_created,
+          requests: result.requests_created,
+        }),
+      });
     },
   });
 }

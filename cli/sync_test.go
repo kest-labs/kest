@@ -23,19 +23,19 @@ func TestBuildSpecSyncEndpoint(t *testing.T) {
 			name:      "already versioned base path",
 			baseURL:   "https://api.kest.dev/v1",
 			projectID: "12",
-			want:      "https://api.kest.dev/v1/projects/12/cli/spec-sync",
+			want:      "https://api.kest.dev/v1/workspaces/12/cli/spec-sync",
 		},
 		{
 			name:      "already versioned api path",
 			baseURL:   "https://api.kest.dev/api/v1/",
 			projectID: "12",
-			want:      "https://api.kest.dev/api/v1/projects/12/cli/spec-sync",
+			want:      "https://api.kest.dev/api/v1/workspaces/12/cli/spec-sync",
 		},
 		{
 			name:      "plain origin",
 			baseURL:   "https://api.kest.dev",
 			projectID: "12",
-			want:      "https://api.kest.dev/v1/projects/12/cli/spec-sync",
+			want:      "https://api.kest.dev/v1/workspaces/12/cli/spec-sync",
 		},
 	}
 
@@ -160,7 +160,7 @@ func TestRunSyncHistoryDryRunDoesNotUploadOrMutateOutbox(t *testing.T) {
 	conf := &config.Config{
 		PlatformURL:       "http://127.0.0.1:1/v1",
 		PlatformToken:     "kest_pat_test",
-		PlatformProjectID: "12",
+		PlatformWorkspaceID: "12",
 	}
 	if err := config.SaveConfig(conf); err != nil {
 		t.Fatalf("SaveConfig returned error: %v", err)
