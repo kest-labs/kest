@@ -61,7 +61,7 @@ func TestBuildProjectInvitationURLForBasePrefersConfiguredAppURL(t *testing.T) {
 	}
 }
 
-func TestBuildProjectInvitationURLForBaseIgnoresLoopbackRequestBase(t *testing.T) {
+func TestBuildProjectInvitationURLForBaseUsesLoopbackRequestBase(t *testing.T) {
 	previous := config.GlobalConfig
 	config.GlobalConfig = nil
 	defer func() {
@@ -70,7 +70,7 @@ func TestBuildProjectInvitationURLForBaseIgnoresLoopbackRequestBase(t *testing.T
 
 	got := buildProjectInvitationURLForBase("pji_demo", "http://127.0.0.1:3000")
 
-	if got != "/invite/workspace/pji_demo" {
-		t.Fatalf("expected relative path fallback, got %q", got)
+	if got != "http://127.0.0.1:3000/invite/workspace/pji_demo" {
+		t.Fatalf("expected loopback invite URL, got %q", got)
 	}
 }

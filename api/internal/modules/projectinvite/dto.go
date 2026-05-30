@@ -184,7 +184,7 @@ func buildWorkspaceInvitationURLForBase(slug, baseURL string) string {
 	if base != "" {
 		return base + path
 	}
-	base = normalizeInvitationBaseURL(baseURL, false)
+	base = normalizeInvitationBaseURL(baseURL, true)
 	if base != "" {
 		return base + path
 	}

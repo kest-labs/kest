@@ -99,25 +99,8 @@ const EMPTY_MEMBERS: WorkspaceMember[] = [];
 const EMPTY_INVITATIONS: WorkspaceInvitation[] = [];
 const configuredInviteBaseUrl = env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, '') ?? '';
 
-const isLoopbackHostname = (hostname: string) => {
-  const normalized = hostname.trim().toLowerCase();
-
-  return (
-    normalized === 'localhost' ||
-    normalized.endsWith('.localhost') ||
-    normalized === '127.0.0.1' ||
-    normalized === '0.0.0.0' ||
-    normalized === '::1' ||
-    normalized === '[::1]'
-  );
-};
-
 const resolveBrowserInviteBaseUrl = () => {
   if (typeof window === 'undefined') {
-    return '';
-  }
-
-  if (isLoopbackHostname(window.location.hostname)) {
     return '';
   }
 
@@ -441,9 +424,6 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
       const fallbackBaseUrl =
         typeof window !== 'undefined' ? window.location.origin : 'https://kest.run';
       const resolvedInviteUrl = new URL(invitation.invite_url, fallbackBaseUrl);
-      if (isLoopbackHostname(resolvedInviteUrl.hostname)) {
-        return invitePath;
-      }
       return resolvedInviteUrl.toString();
     } catch {
       return invitePath;

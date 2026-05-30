@@ -206,10 +206,11 @@ func (r *repository) GetProjectSummary(ctx context.Context, projectID string) (*
 		WorkspaceName string
 		WorkspaceSlug string
 	}
-	if err := dbutil.ByID(r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Model(&project.ProjectPO{}).
 		Select("projects.*, workspaces.name AS workspace_name, workspaces.slug AS workspace_slug").
-		Joins("LEFT JOIN workspaces ON workspaces.id = projects.workspace_id"), projectID).
+		Joins("LEFT JOIN workspaces ON workspaces.id = projects.workspace_id").
+		Where(clause.Eq{Column: clause.Column{Table: clause.CurrentTable, Name: "id"}, Value: projectID}).
 		First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
