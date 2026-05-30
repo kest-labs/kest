@@ -25,3 +25,13 @@ func dropColumnIfExists(db *gorm.DB, table, column string) error {
 		fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s", table, column),
 	).Error
 }
+
+func createIndexIfMissing(db *gorm.DB, table, index, definition string) error {
+	if !db.Migrator().HasTable(table) || db.Migrator().HasIndex(table, index) {
+		return nil
+	}
+
+	return db.Exec(
+		fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s)", index, table, definition),
+	).Error
+}
