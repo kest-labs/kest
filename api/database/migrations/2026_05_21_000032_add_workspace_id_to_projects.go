@@ -3,6 +3,7 @@ package migrations
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,12 @@ func init() {
 type addWorkspaceIDToProjects struct {
 	migration.BaseMigration
 }
+
+const (
+	workspaceBackfillOwnerIDEnv        = "KEST_WORKSPACE_BACKFILL_OWNER_ID"
+	workspaceBackfillOwnerEmailEnv     = "KEST_WORKSPACE_BACKFILL_OWNER_EMAIL"
+	workspaceBackfillDefaultOwnerEmail = "admin@example.com"
+)
 
 func (m *addWorkspaceIDToProjects) Up(db *gorm.DB) error {
 	if !db.Migrator().HasTable("projects") {
@@ -118,6 +125,7 @@ func (migrationWorkspaceMember) TableName() string {
 type migrationUser struct {
 	ID        string    `gorm:"primaryKey"`
 	CreatedAt time.Time `gorm:"column:created_at"`
+	Email     string    `gorm:"column:email"`
 }
 
 func (migrationUser) TableName() string {
@@ -168,7 +176,7 @@ func loadProjectMembersForWorkspaceBackfill(db *gorm.DB, projectID string) (stri
 	}
 
 	if len(members) == 0 {
-		ownerID, err := soleWorkspaceBackfillUserID(db)
+		ownerID, err := workspaceBackfillFallbackUserID(db)
 		return ownerID, members, err
 	}
 
@@ -181,18 +189,39 @@ func loadProjectMembersForWorkspaceBackfill(db *gorm.DB, projectID string) (stri
 	return members[0].UserID, members, nil
 }
 
-func soleWorkspaceBackfillUserID(db *gorm.DB) (string, error) {
+func workspaceBackfillFallbackUserID(db *gorm.DB) (string, error) {
 	if !db.Migrator().HasTable("users") {
 		return "", fmt.Errorf("workspace ownership cannot be derived because users table is missing")
 	}
 
-	query := db.Model(&migrationUser{})
-	if db.Migrator().HasColumn("users", "deleted_at") {
-		query = query.Where("deleted_at IS NULL")
+	if ownerID := strings.TrimSpace(os.Getenv(workspaceBackfillOwnerIDEnv)); ownerID != "" {
+		userID, err := findWorkspaceBackfillUserID(db, "id", ownerID)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", fmt.Errorf("workspace ownership cannot use %s=%q because no active user matches", workspaceBackfillOwnerIDEnv, ownerID)
+		}
+		return userID, err
+	}
+
+	if ownerEmail := strings.TrimSpace(os.Getenv(workspaceBackfillOwnerEmailEnv)); ownerEmail != "" {
+		userID, err := findWorkspaceBackfillUserID(db, "email", ownerEmail)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", fmt.Errorf("workspace ownership cannot use %s=%q because no active user matches", workspaceBackfillOwnerEmailEnv, ownerEmail)
+		}
+		return userID, err
+	}
+
+	if db.Migrator().HasColumn("users", "email") {
+		ownerID, err := findWorkspaceBackfillUserID(db, "email", workspaceBackfillDefaultOwnerEmail)
+		if err == nil {
+			return ownerID, nil
+		}
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", err
+		}
 	}
 
 	var users []migrationUser
-	if err := query.Order("created_at ASC, id ASC").Limit(2).Find(&users).Error; err != nil {
+	if err := activeWorkspaceBackfillUsersQuery(db).Order("created_at ASC, id ASC").Limit(2).Find(&users).Error; err != nil {
 		return "", err
 	}
 
@@ -202,8 +231,34 @@ func soleWorkspaceBackfillUserID(db *gorm.DB) (string, error) {
 	case 0:
 		return "", fmt.Errorf("workspace ownership cannot be derived because no active users exist")
 	default:
-		return "", fmt.Errorf("workspace ownership cannot be derived automatically because multiple users exist; add an owner membership before rerunning migrations")
+		return "", fmt.Errorf("workspace ownership cannot be derived automatically because multiple active users exist and no default admin user was found; set %s or %s before rerunning migrations", workspaceBackfillOwnerIDEnv, workspaceBackfillOwnerEmailEnv)
 	}
+}
+
+func findWorkspaceBackfillUserID(db *gorm.DB, column string, value string) (string, error) {
+	if !db.Migrator().HasColumn("users", column) {
+		return "", fmt.Errorf("workspace ownership cannot use users.%s because the column is missing", column)
+	}
+
+	var user migrationUser
+	err := activeWorkspaceBackfillUsersQuery(db).
+		Where(column+" = ?", value).
+		Order("created_at ASC, id ASC").
+		First(&user).Error
+	if err != nil {
+		return "", err
+	}
+
+	return user.ID, nil
+}
+
+func activeWorkspaceBackfillUsersQuery(db *gorm.DB) *gorm.DB {
+	query := db.Model(&migrationUser{})
+	if db.Migrator().HasColumn("users", "deleted_at") {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	return query
 }
 
 func resolveWorkspaceForProject(
