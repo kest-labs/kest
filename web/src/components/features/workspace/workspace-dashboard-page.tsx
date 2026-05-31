@@ -45,8 +45,13 @@ import {
 } from '@/hooks/use-workspaces';
 import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
+import { canManageWorkspaceMembers } from '@/types/member';
 import { useOnboardingStore } from '@/store/onboarding-store';
-import type { ApiWorkspace, CreateWorkspaceRequest, UpdateWorkspaceRequest } from '@/types/workspace';
+import type {
+  ApiWorkspace,
+  CreateWorkspaceRequest,
+  UpdateWorkspaceRequest,
+} from '@/types/workspace';
 import type { ReceivedWorkspaceInvitation } from '@/types/workspace-invitation';
 import { cn, formatDate } from '@/utils';
 
@@ -72,7 +77,10 @@ const formatWorkspaceTimestamp = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : formatDate(value, 'YYYY-MM-DD HH:mm');
 };
 
-const getReceivedInvitationRoleLabel = (t: WorkspaceT, role: ReceivedWorkspaceInvitation['role']) => {
+const getReceivedInvitationRoleLabel = (
+  t: WorkspaceT,
+  role: ReceivedWorkspaceInvitation['role']
+) => {
   switch (role) {
     case 'admin':
       return t('roles.admin');
@@ -99,6 +107,8 @@ const getWorkspaceRoleLabel = (t: WorkspaceT, role: ApiWorkspace['role']) => {
       return t('roles.unknown');
   }
 };
+
+const canDeleteWorkspace = (role?: ApiWorkspace['role']) => role === 'owner';
 
 export function WorkspaceDashboardPage() {
   const i18n = useT();
@@ -151,15 +161,23 @@ export function WorkspaceDashboardPage() {
   };
 
   const openEditDialog = (workspace: ApiWorkspace) => {
+    if (!canManageWorkspaceMembers(workspace.role)) {
+      return;
+    }
+
     setFormMode('edit');
     setEditingWorkspace(workspace);
     setIsFormOpen(true);
   };
 
-  const handleWorkspaceSubmit = async (payload: CreateWorkspaceRequest | UpdateWorkspaceRequest) => {
+  const handleWorkspaceSubmit = async (
+    payload: CreateWorkspaceRequest | UpdateWorkspaceRequest
+  ) => {
     try {
       if (formMode === 'create') {
-        const workspace = await createWorkspaceMutation.mutateAsync(payload as CreateWorkspaceRequest);
+        const workspace = await createWorkspaceMutation.mutateAsync(
+          payload as CreateWorkspaceRequest
+        );
         markFirstWorkspaceCreated();
         router.push(buildWorkspaceApiSpecsRoute(workspace.id));
       } else if (editingWorkspace) {
@@ -177,7 +195,7 @@ export function WorkspaceDashboardPage() {
   };
 
   const handleDeleteWorkspace = async () => {
-    if (!deleteTarget) {
+    if (!deleteTarget || !canDeleteWorkspace(deleteTarget.role)) {
       return;
     }
 
@@ -497,9 +515,7 @@ function PendingInvitationsPanel({
                       </Badge>
                     </div>
                     <div>
-                      <p className="text-sm font-medium tracking-normal">
-                        {invitationName}
-                      </p>
+                      <p className="text-sm font-medium tracking-normal">{invitationName}</p>
                       <p className="mt-1 text-xs text-text-muted">
                         {t('invitation.expiresLabel')}:{' '}
                         {invitation.expires_at
@@ -578,25 +594,56 @@ function WorkspaceCard({
   const apiSpecCount = stats?.api_spec_count ?? apiSpecsQuery.data?.items?.length ?? 0;
   const environmentCount = stats?.environment_count ?? 0;
   const memberCount = stats?.member_count ?? null;
+  const canViewMemberMetric = canManageWorkspaceMembers(workspace.role);
+  const metricItems = [
+    {
+      key: 'api-specs',
+      label: t('modules.apiSpecs.shortLabel'),
+      value: apiSpecCount,
+    },
+    {
+      key: 'environments',
+      label: t('modules.environments.shortLabel'),
+      value: environmentCount,
+    },
+    ...(canViewMemberMetric
+      ? [
+          {
+            key: 'members',
+            label: t('modules.members.shortLabel'),
+            value: memberCount,
+          },
+        ]
+      : []),
+  ];
   const createdAtLabel = formatWorkspaceTimestamp(workspace.created_at);
   const isLoadingStats = statsQuery.isLoading || apiSpecsQuery.isLoading;
   const isInactive = workspace.status !== 1;
+  const canEditWorkspace = canManageWorkspaceMembers(workspace.role);
   const menuItems = [
-    {
-      key: `workspace-edit-${workspace.id}`,
-      label: t('workspaceForm.editTitle'),
-      icon: Pencil,
-      onSelect: onEdit,
-    },
-    {
-      key: `workspace-delete-${workspace.id}`,
-      label: t('workspaceForm.deleteButton'),
-      icon: Trash2,
-      destructive: true,
-      separatorBefore: true,
-      disabled: isDeleting,
-      onSelect: onDelete,
-    },
+    ...(canEditWorkspace
+      ? [
+          {
+            key: `workspace-edit-${workspace.id}`,
+            label: t('workspaceForm.editTitle'),
+            icon: Pencil,
+            onSelect: onEdit,
+          },
+        ]
+      : []),
+    ...(canDeleteWorkspace(workspace.role)
+      ? [
+          {
+            key: `workspace-delete-${workspace.id}`,
+            label: t('workspaceForm.deleteButton'),
+            icon: Trash2,
+            destructive: true,
+            separatorBefore: true,
+            disabled: isDeleting,
+            onSelect: onDelete,
+          },
+        ]
+      : []),
   ];
 
   if (viewMode === 'list') {
@@ -621,22 +668,20 @@ function WorkspaceCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <WorkspaceMetric
-              label={t('modules.apiSpecs.shortLabel')}
-              value={apiSpecCount}
-              loading={isLoadingStats}
-            />
-            <WorkspaceMetric
-              label={t('modules.environments.shortLabel')}
-              value={environmentCount}
-              loading={isLoadingStats}
-            />
-            <WorkspaceMetric
-              label={t('modules.members.shortLabel')}
-              value={memberCount}
-              loading={isLoadingStats}
-            />
+          <div
+            className={cn(
+              'grid gap-2 text-xs',
+              metricItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
+            )}
+          >
+            {metricItems.map(item => (
+              <WorkspaceMetric
+                key={item.key}
+                label={item.label}
+                value={item.value}
+                loading={isLoadingStats}
+              />
+            ))}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 md:justify-end">
@@ -654,12 +699,14 @@ function WorkspaceCard({
           </div>
         </Link>
 
-        <ActionMenu
-          items={menuItems}
-          ariaLabel={t('dashboardPage.openWorkspaceActions', { name: workspace.name })}
-          stopPropagation
-          triggerClassName="absolute right-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main [&>svg]:h-3.5 [&>svg]:w-3.5"
-        />
+        {menuItems.length > 0 ? (
+          <ActionMenu
+            items={menuItems}
+            ariaLabel={t('dashboardPage.openWorkspaceActions', { name: workspace.name })}
+            stopPropagation
+            triggerClassName="absolute right-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-bg-canvas text-text-muted hover:bg-bg-subtle hover:text-text-main [&>svg]:h-3.5 [&>svg]:w-3.5"
+          />
+        ) : null}
       </div>
     );
   }
@@ -684,22 +731,20 @@ function WorkspaceCard({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <WorkspaceMetric
-            label={t('modules.apiSpecs.shortLabel')}
-            value={apiSpecCount}
-            loading={isLoadingStats}
-          />
-          <WorkspaceMetric
-            label={t('modules.environments.shortLabel')}
-            value={environmentCount}
-            loading={isLoadingStats}
-          />
-          <WorkspaceMetric
-            label={t('modules.members.shortLabel')}
-            value={memberCount}
-            loading={isLoadingStats}
-          />
+        <div
+          className={cn(
+            'mt-4 grid gap-2',
+            metricItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
+          )}
+        >
+          {metricItems.map(item => (
+            <WorkspaceMetric
+              key={item.key}
+              label={item.label}
+              value={item.value}
+              loading={isLoadingStats}
+            />
+          ))}
         </div>
 
         <div className="mt-auto flex flex-wrap items-end gap-2 pt-3">
@@ -726,12 +771,14 @@ function WorkspaceCard({
         </div>
       </Link>
 
-      <ActionMenu
-        items={menuItems}
-        ariaLabel={t('dashboardPage.openWorkspaceActions', { name: workspace.name })}
-        stopPropagation
-        triggerClassName="absolute right-3 top-3 h-7 w-7 rounded-full bg-bg-canvas text-text-muted opacity-0 transition-opacity hover:bg-bg-subtle hover:text-text-main group-hover:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
-      />
+      {menuItems.length > 0 ? (
+        <ActionMenu
+          items={menuItems}
+          ariaLabel={t('dashboardPage.openWorkspaceActions', { name: workspace.name })}
+          stopPropagation
+          triggerClassName="absolute right-3 top-3 h-7 w-7 rounded-full bg-bg-canvas text-text-muted opacity-0 transition-opacity hover:bg-bg-subtle hover:text-text-main group-hover:opacity-100 data-[state=open]:opacity-100 [&>svg]:h-3.5 [&>svg]:w-3.5"
+        />
+      ) : null}
     </div>
   );
 }
