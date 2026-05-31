@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/select';
 import { StatCard, StatCardSkeleton } from '@/components/features/console/dashboard-stats';
 import { ActionMenu, type ActionMenuItem } from '@/components/features/workspace/action-menu';
+import { WorkspaceRestrictedAccessState } from '@/components/features/workspace/workspace-shared';
 import {
   Table,
   TableBody,
@@ -274,9 +275,12 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
   const deferredInviteCandidateQuery = useDeferredValue(inviteCandidateQuery.trim());
 
   const workspaceQuery = useWorkspace(workspaceId);
-  const workspaceStatsQuery = useWorkspaceStats(workspaceId);
-  const membersQuery = useWorkspaceMembers(workspaceId);
   const memberRoleQuery = useWorkspaceMemberRole(workspaceId);
+  const currentRole = memberRoleQuery.data?.role;
+  const currentUserId = memberRoleQuery.data?.user_id;
+  const canManageMembers = canManageWorkspaceMembers(currentRole);
+  const workspaceStatsQuery = useWorkspaceStats(workspaceId, { enabled: canManageMembers });
+  const membersQuery = useWorkspaceMembers(workspaceId, { enabled: canManageMembers });
   const userSearchQuery = useUserSearch(deferredCandidateQuery, 20);
   const inviteUserSearchQuery = useUserSearch(deferredInviteCandidateQuery, 20);
   const updateMemberMutation = useUpdateWorkspaceMember(workspaceId);
@@ -289,9 +293,6 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
   const deleteInvitationMutation = useDeleteWorkspaceInvitation(workspaceId);
 
   const workspace = workspaceQuery.data;
-  const currentRole = memberRoleQuery.data?.role;
-  const currentUserId = memberRoleQuery.data?.user_id;
-  const canManageMembers = canManageWorkspaceMembers(currentRole);
   const members = useMemo(
     () => sortWorkspaceMembers(membersQuery.data ?? EMPTY_MEMBERS),
     [membersQuery.data]
@@ -300,7 +301,8 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
   const filteredMembers = useMemo(() => {
     return members.filter(member => {
       const matchesRole = roleFilter === 'all' || member.role === roleFilter;
-      const searchableMemberText = `${getMemberDisplayName(member)} ${getMemberEmail(member)}`.toLowerCase();
+      const searchableMemberText =
+        `${getMemberDisplayName(member)} ${getMemberEmail(member)}`.toLowerCase();
       const matchesKeyword =
         !deferredSearchQuery || searchableMemberText.includes(deferredSearchQuery);
 
@@ -338,6 +340,32 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
     !membersQuery.isLoading && (Boolean(membersQuery.error) || Boolean(memberRoleQuery.error));
   const hasInvitationLoadError =
     canManageMembers && !invitationsQuery.isLoading && Boolean(invitationsQuery.error);
+
+  if (memberRoleQuery.isLoading) {
+    return (
+      <main className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto">
+        <div className="space-y-6 p-4 md:p-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
+          <MembersTableSkeleton />
+        </div>
+      </main>
+    );
+  }
+
+  if (memberRoleQuery.isSuccess && !canManageMembers) {
+    return (
+      <WorkspaceRestrictedAccessState
+        workspaceId={workspaceId}
+        title={t('membersPage.restrictedTitle')}
+        description={t('membersPage.restrictedDescription')}
+      />
+    );
+  }
 
   const resetAddDialog = () => {
     setCandidateQuery('');
