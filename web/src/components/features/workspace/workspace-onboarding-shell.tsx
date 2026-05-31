@@ -66,14 +66,8 @@ export function WorkspaceOnboardingShell() {
   }, [pathname]);
 
   const workspaces = workspacesQuery.data?.items ?? [];
-  const currentWorkspace = workspaces.find(
-    workspace =>
-      currentWorkspaceId !== null &&
-      (String(workspace.id) === currentWorkspaceId ||
-        String(workspace.workspace_id) === currentWorkspaceId)
-  );
   const memberRoleQuery = useWorkspaceMemberRole(currentWorkspaceId ?? undefined);
-  const currentWorkspaceRole = memberRoleQuery.data?.role ?? currentWorkspace?.role;
+  const currentWorkspaceRole = memberRoleQuery.data?.role;
 
   const tourSteps = useMemo<TourStep[]>(
     () => [

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { workspaceKeys } from '@/hooks/use-workspaces';
 import { useT } from '@/i18n/client';
 import { memberService } from '@/services/member';
+import { useAuthStore } from '@/store/auth-store';
 import type { UpdateWorkspaceMemberRequest } from '@/types/member';
 
 interface MemberQueryOptions {
@@ -17,8 +18,12 @@ export const memberKeys = {
   all: ['members'] as const,
   workspace: (workspaceId: number | string) =>
     [...memberKeys.all, 'workspace', workspaceId] as const,
-  list: (workspaceId: number | string) => [...memberKeys.workspace(workspaceId), 'list'] as const,
-  role: (workspaceId: number | string) => [...memberKeys.workspace(workspaceId), 'me'] as const,
+  userWorkspace: (workspaceId: number | string, userId: number | string) =>
+    [...memberKeys.workspace(workspaceId), 'user', userId] as const,
+  list: (workspaceId: number | string, userId: number | string) =>
+    [...memberKeys.userWorkspace(workspaceId, userId), 'list'] as const,
+  role: (workspaceId: number | string, userId: number | string) =>
+    [...memberKeys.userWorkspace(workspaceId, userId), 'me'] as const,
 };
 
 // 工作区成员列表查询。
@@ -28,9 +33,10 @@ export function useWorkspaceMembers(
   options: MemberQueryOptions = {}
 ) {
   const isEnabled = options.enabled ?? true;
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
 
   return useQuery({
-    queryKey: memberKeys.list(workspaceId ?? 'unknown'),
+    queryKey: memberKeys.list(workspaceId ?? 'unknown', currentUserId),
     queryFn: () => memberService.list(workspaceId as number | string),
     enabled: isEnabled && workspaceId !== undefined && workspaceId !== null && workspaceId !== '',
   });
@@ -39,8 +45,10 @@ export function useWorkspaceMembers(
 // 当前用户在工作区中的成员角色查询。
 // 作用：统一为工作区工作区各页面提供 read/write/admin/owner 权限判断依据。
 export function useWorkspaceMemberRole(workspaceId?: number | string) {
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
+
   return useQuery({
-    queryKey: memberKeys.role(workspaceId ?? 'unknown'),
+    queryKey: memberKeys.role(workspaceId ?? 'unknown', currentUserId),
     queryFn: () => memberService.getMyRole(workspaceId as number | string),
     enabled: workspaceId !== undefined && workspaceId !== null && workspaceId !== '',
     staleTime: 60_000,
