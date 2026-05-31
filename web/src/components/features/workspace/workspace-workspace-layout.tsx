@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  WORKSPACE_WORKSPACE_MODULES,
   buildWorkspaceWorkspaceRoute,
+  getAccessibleWorkspaceWorkspaceModules,
 } from '@/components/features/workspace/workspace-navigation';
 import { getWorkspaceModuleCopy } from '@/components/features/workspace/workspace-i18n';
 import { buildWorkspaceDetailRoute } from '@/constants/routes';
+import { useWorkspaceMemberRole } from '@/hooks/use-members';
 import { useT } from '@/i18n/client';
 import { cn } from '@/utils';
 
@@ -35,8 +36,10 @@ export function WorkspaceWorkspaceLayout({
 }) {
   const t = useT('workspace');
   const pathname = usePathname();
-  const readyModules = WORKSPACE_WORKSPACE_MODULES.filter(item => item.status !== 'planned');
-  const plannedModules = WORKSPACE_WORKSPACE_MODULES.filter(item => item.status === 'planned');
+  const memberRoleQuery = useWorkspaceMemberRole(workspaceId);
+  const accessibleModules = getAccessibleWorkspaceWorkspaceModules(memberRoleQuery.data?.role);
+  const readyModules = accessibleModules.filter(item => item.status !== 'planned');
+  const plannedModules = accessibleModules.filter(item => item.status === 'planned');
   const [isDesktopNavCollapsed, setIsDesktopNavCollapsed] = useState(getInitialDesktopNavCollapsed);
   const isRouteActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}?`) || pathname.startsWith(`${href}/`);
@@ -91,7 +94,9 @@ export function WorkspaceWorkspaceLayout({
                     <div
                       className={cn(
                         'flex h-5 w-5 shrink-0 items-center justify-center rounded-sm',
-                        isActive ? 'bg-primary text-primary-foreground' : 'bg-bg-surface text-text-main'
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-bg-surface text-text-main'
                       )}
                     >
                       <Icon className="h-3 w-3" />
@@ -191,7 +196,7 @@ export function WorkspaceWorkspaceLayout({
                       key={item.value}
                       href={href}
                       className={cn(
-                    'group relative flex rounded-md border transition-colors',
+                        'group relative flex rounded-md border transition-colors',
                         isDesktopNavCollapsed
                           ? 'items-center justify-center px-2 py-3 text-center'
                           : 'items-center gap-3 px-3 py-3',
@@ -205,7 +210,9 @@ export function WorkspaceWorkspaceLayout({
                         className={cn(
                           'flex shrink-0 items-center justify-center rounded-md',
                           isDesktopNavCollapsed ? 'h-8 w-8' : 'h-8 w-8',
-                          isActive ? 'bg-primary text-primary-foreground' : 'bg-bg-surface text-text-main'
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-bg-surface text-text-main'
                         )}
                       >
                         <Icon className="h-3.5 w-3.5" />
