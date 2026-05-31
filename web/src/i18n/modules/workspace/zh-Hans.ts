@@ -227,7 +227,8 @@ const messages = {
     addSpecManually: '手动添加规格',
     openInFullManager: '在完整管理页打开',
     currentDescriptionWithSelection: '已从当前工作区范围的 API 加载规格详情。',
-    currentDescriptionEmpty: 'API 规格是默认的工作区工作区模块。请选择中间侧边栏中的规格以查看内容。',
+    currentDescriptionEmpty:
+      'API 规格是默认的工作区工作区模块。请选择中间侧边栏中的规格以查看内容。',
     noSpecDescription: '该规格暂无描述。',
     specSummary: '规格摘要',
     specSummaryDescription: '所选 API 规格的核心元数据。',
@@ -516,6 +517,8 @@ const messages = {
     generating: '生成中...',
     workspaceUnavailableTitle: '工作区不可用',
     workspaceUnavailableDescription: '当前工作区还没有加载成功，暂时不能生成密钥。',
+    restrictedTitle: '需要管理员权限',
+    restrictedDescription: '只有 admin 和 owner 成员可以生成工作区连接密钥。',
     platformUrl: '平台 URL',
     workspaceScope: '工作区范围',
     scopes: '权限范围',
@@ -1108,6 +1111,8 @@ const messages = {
     readOnlyTitle: '成员只读访问',
     readOnlyDescription:
       '你当前的角色是 {role}。可以查看成员列表，但只有 admin 和 owner 可以邀请、更新或移除成员。',
+    restrictedTitle: '需要管理员权限',
+    restrictedDescription: '只有 admin 和 owner 成员可以打开工作区成员管理。',
     totalMembers: '成员总数',
     totalMembersDescription: '所有具备工作区访问权限的用户',
     adminsOwners: '管理员与所有者',
@@ -1121,7 +1126,8 @@ const messages = {
       '通过 {path} 管理定向成员邀请和可分享邀请链接，在授权生效前统一控制它们的生命周期。',
     newInviteLink: '新建邀请链接',
     inviteAccessRequiredTitle: '邀请管理需要管理员权限',
-    inviteAccessRequiredDescription: '只有 admin 或 owner 成员才能查看、创建、复制和撤销工作区邀请。',
+    inviteAccessRequiredDescription:
+      '只有 admin 或 owner 成员才能查看、创建、复制和撤销工作区邀请。',
     inviteLoadFailedTitle: '无法加载邀请',
     inviteLoadFailedDescription: '请刷新页面，或确认当前用户仍然有权限管理该工作区的邀请。',
     inviteRole: '角色',
@@ -1420,7 +1426,8 @@ const messages = {
       createWorkspaceDescription:
         '新用户第一次进来时，最短路径不是读长文档，而是先创建一个工作区容器。',
       demoTitle: '不想从零开始就 fork 示例工作区',
-      demoDescription: '示例工作区会自动带上环境、规格、请求和一个测试用例，让用户立即体验核心价值。',
+      demoDescription:
+        '示例工作区会自动带上环境、规格、请求和一个测试用例，让用户立即体验核心价值。',
       helpTitle: '帮助入口不要再藏深',
       helpDescription: '右上角帮助按钮把快捷键、文档和视频集中起来，减少“去哪里找资料”的摩擦。',
       commandTitle: '用 Cmd/Ctrl + K 统一跳转和操作',

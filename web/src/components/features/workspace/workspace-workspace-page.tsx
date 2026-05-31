@@ -99,6 +99,7 @@ import {
 } from '@/components/features/workspace/category-helpers';
 import { CategoryFormDialog } from '@/components/features/workspace/category-shared';
 import { WorkspaceFlowManagementPage } from '@/components/features/workspace/flow-management-page';
+import { WorkspaceRestrictedAccessState } from '@/components/features/workspace/workspace-shared';
 import { getWorkspaceModuleCopy } from '@/components/features/workspace/workspace-i18n';
 import {
   buildWorkspaceWorkspaceRoute,
@@ -174,7 +175,11 @@ import type {
   UpdateEnvironmentRequest,
 } from '@/types/environment';
 import type { WorkspaceHistory } from '@/types/history';
-import { WORKSPACE_MEMBER_WRITE_ROLES, type WorkspaceMemberRole } from '@/types/member';
+import {
+  WORKSPACE_MEMBER_WRITE_ROLES,
+  canManageWorkspaceMembers,
+  type WorkspaceMemberRole,
+} from '@/types/member';
 import type { GenerateWorkspaceCliTokenResponse } from '@/types/workspace';
 import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
@@ -1427,10 +1432,7 @@ export function WorkspaceWorkspacePage({
       );
     case 'keys':
       return (
-        <WorkspaceKeysWorkspaceSection
-          workspaceId={workspaceId}
-          workspaceName={workspaceName}
-        />
+        <WorkspaceKeysWorkspaceSection workspaceId={workspaceId} workspaceName={workspaceName} />
       );
     case 'histories':
       return (
@@ -1443,7 +1445,9 @@ export function WorkspaceWorkspacePage({
         />
       );
     case 'flows':
-      return <WorkspaceFlowManagementPage workspaceId={workspaceId} selectedItemId={selectedItemId} />;
+      return (
+        <WorkspaceFlowManagementPage workspaceId={workspaceId} selectedItemId={selectedItemId} />
+      );
     default:
       return (
         <PlaceholderWorkspaceSection
@@ -1463,7 +1467,9 @@ function WorkspaceKeysWorkspaceSection({
   workspaceName: string;
 }) {
   const t = useT('workspace');
-  const workspaceQuery = useWorkspace(workspaceId);
+  const memberRoleQuery = useWorkspaceMemberRole(workspaceId);
+  const canManageKeys = canManageWorkspaceMembers(memberRoleQuery.data?.role);
+  const workspaceQuery = useWorkspace(workspaceId, { enabled: canManageKeys });
   const generateCliTokenMutation = useGenerateWorkspaceCliToken();
   const [generatedCliToken, setGeneratedCliToken] =
     useState<GenerateWorkspaceCliTokenResponse | null>(null);
@@ -1483,6 +1489,24 @@ function WorkspaceKeysWorkspaceSection({
       : '';
   const cliConfigCommand = cliConnectionKey ? `kest key '${cliConnectionKey}'` : '';
 
+  if (memberRoleQuery.isLoading) {
+    return (
+      <div className="p-6">
+        <DetailSkeleton />
+      </div>
+    );
+  }
+
+  if (memberRoleQuery.isError || (memberRoleQuery.isSuccess && !canManageKeys)) {
+    return (
+      <WorkspaceRestrictedAccessState
+        workspaceId={workspaceId}
+        title={t('keysPage.restrictedTitle')}
+        description={t('keysPage.restrictedDescription')}
+      />
+    );
+  }
+
   const handleCopyText = async (value: string, successMessage: string) => {
     if (!value) {
       return;
@@ -1497,7 +1521,7 @@ function WorkspaceKeysWorkspaceSection({
   };
 
   const handleGenerateCliToken = async () => {
-    if (!workspace || !workspaceId) {
+    if (!workspace || !workspaceId || !canManageKeys) {
       return;
     }
 
@@ -1551,7 +1575,9 @@ function WorkspaceKeysWorkspaceSection({
             <Button
               type="button"
               onClick={() => void handleGenerateCliToken()}
-              disabled={!workspace || !workspaceId || generateCliTokenMutation.isPending}
+              disabled={
+                !canManageKeys || !workspace || !workspaceId || generateCliTokenMutation.isPending
+              }
             >
               <KeyRound className="h-4 w-4" />
               {generateCliTokenMutation.isPending
@@ -2023,10 +2049,7 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
-  const handleImportMarkdownDraft = async (payload: {
-    file: File;
-    base_url_override?: string;
-  }) => {
+  const handleImportMarkdownDraft = async (payload: { file: File; base_url_override?: string }) => {
     try {
       const result = await importMarkdownDraftMutation.mutateAsync(payload);
       setMarkdownDraftPreview(result);
@@ -2035,9 +2058,7 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
-  const handleImportAllMarkdownDrafts = async (
-    drafts: ApiSpecMarkdownDraftPreviewItem[]
-  ) => {
+  const handleImportAllMarkdownDrafts = async (drafts: ApiSpecMarkdownDraftPreviewItem[]) => {
     const specs: CreateApiSpecRequest[] = drafts.map(item =>
       convertMarkdownDraftToCreateSpecRequest(item.draft)
     );
@@ -2405,7 +2426,9 @@ function ApiSpecsWorkspaceSection({
                 selectedSpecId={selectedSpec?.id}
                 canWrite={canWrite}
                 movingSpecId={
-                  updateSpecMutation.isPending ? updateSpecMutation.variables?.specId ?? null : null
+                  updateSpecMutation.isPending
+                    ? (updateSpecMutation.variables?.specId ?? null)
+                    : null
                 }
                 onOpenCreate={openCreateSpecDialog}
                 onOpenEdit={openEditDialog}
@@ -2701,7 +2724,9 @@ function ApiSpecsWorkspaceSection({
           void specsQuery.refetch();
 
           if (continueToTests) {
-            router.replace(`${buildWorkspaceTestCasesRoute(workspaceId)}?fromSpec=${specId}&source=ai`);
+            router.replace(
+              `${buildWorkspaceTestCasesRoute(workspaceId)}?fromSpec=${specId}&source=ai`
+            );
             return;
           }
 
@@ -2798,11 +2823,7 @@ function ApiSpecsWorkspaceSection({
   );
 }
 
-function CollectionsWorkspaceSection({
-  workspaceId,
-}: {
-  workspaceId: number | string;
-}) {
+function CollectionsWorkspaceSection({ workspaceId }: { workspaceId: number | string }) {
   return <ApiRequestWorkbench workspaceId={workspaceId} />;
 }
 
@@ -2831,11 +2852,7 @@ function ApiSpecDirectoryList({
     <div className="space-y-2">
       {groups.map(group => (
         <div key={group.key} className="space-y-1">
-          <ApiSpecCategoryDropZone
-            group={group}
-            canWrite={canWrite}
-            onOpenCreate={onOpenCreate}
-          />
+          <ApiSpecCategoryDropZone group={group} canWrite={canWrite} onOpenCreate={onOpenCreate} />
 
           {group.specs.map(spec => (
             <DraggableApiSpecListItem
@@ -2936,10 +2953,7 @@ function DraggableApiSpecListItem({
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      className={cn((isDragging || isMoving) && 'opacity-55')}
-    >
+    <div ref={setNodeRef} className={cn((isDragging || isMoving) && 'opacity-55')}>
       <ResourceListItem
         href={buildModuleHref(workspaceId, 'api-specs', spec.id)}
         active={active}
@@ -2952,7 +2966,8 @@ function DraggableApiSpecListItem({
               type="button"
               className={cn(
                 'mt-0.5 inline-flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main active:cursor-grabbing',
-                active && 'text-primary-foreground/72 hover:bg-primary-foreground/15 hover:text-primary-foreground'
+                active &&
+                  'text-primary-foreground/72 hover:bg-primary-foreground/15 hover:text-primary-foreground'
               )}
               aria-label={t('apiSpecs.dragSpecHandle')}
               {...listeners}
@@ -3066,7 +3081,10 @@ function EnvironmentsWorkspaceSection({
 
   const memberRoleQuery = useWorkspaceMemberRole(workspaceId);
   const environmentsQuery = useEnvironments(workspaceId);
-  const selectedEnvironmentQuery = useEnvironment(workspaceId, effectiveSelectedItemId ?? undefined);
+  const selectedEnvironmentQuery = useEnvironment(
+    workspaceId,
+    effectiveSelectedItemId ?? undefined
+  );
   const editingEnvironmentQuery = useEnvironment(workspaceId, editingEnvironmentId ?? undefined);
   const createEnvironmentMutation = useCreateEnvironment(workspaceId);
   const updateEnvironmentMutation = useUpdateEnvironment(workspaceId);
@@ -4071,7 +4089,9 @@ function HistoryWorkspaceSection({
           workspaceName={workspaceName}
           module="histories"
           currentTitle={
-            selectedHistory ? getHistoryPrimaryTitle(selectedHistory) : t('history.workspaceHistory')
+            selectedHistory
+              ? getHistoryPrimaryTitle(selectedHistory)
+              : t('history.workspaceHistory')
           }
           description={
             selectedHistory

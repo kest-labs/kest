@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { buildWorkspaceApiSpecsRoute } from '@/constants/routes';
 import { useT } from '@/i18n/client';
 import type {
   ApiWorkspace,
@@ -62,7 +65,40 @@ const getDefaultDraft = (workspace?: ApiWorkspace | null): WorkspaceFormDraft =>
 });
 
 export const resolvePlatformLabel = (platform: string) =>
-  PLATFORM_OPTIONS.find((option) => option.value === platform)?.label || '';
+  PLATFORM_OPTIONS.find(option => option.value === platform)?.label || '';
+
+export function WorkspaceRestrictedAccessState({
+  workspaceId,
+  title,
+  description,
+}: {
+  workspaceId: number | string;
+  title: string;
+  description: string;
+}) {
+  const t = useT('workspace');
+
+  return (
+    <main className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto">
+      <div className="p-4 md:p-6">
+        <Alert className="max-w-2xl">
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>{title}</AlertTitle>
+          <AlertDescription>
+            <p>{description}</p>
+            <div className="mt-4">
+              <Button asChild variant="outline" size="sm">
+                <Link href={buildWorkspaceApiSpecsRoute(workspaceId)}>
+                  {t('modules.apiSpecs.label')}
+                </Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    </main>
+  );
+}
 
 // 工作区状态文案解析器。
 // 作用：把数字状态转换成界面可读的标签文本。
@@ -73,11 +109,7 @@ const resolveStatusLabel = (status: number, activeLabel: string, inactiveLabel: 
  * 工作区状态徽章。
  * 作用：统一展示工作区启用/停用状态，避免多个页面各自维护文案与颜色。
  */
-export function WorkspaceStatusBadge({
-  status,
-}: {
-  status: WorkspaceStatus;
-}) {
+export function WorkspaceStatusBadge({ status }: { status: WorkspaceStatus }) {
   const t = useT('workspace');
   return (
     <Badge variant={status === 1 ? 'default' : 'secondary'}>
@@ -179,7 +211,9 @@ function WorkspaceFormDialogBody({
   return (
     <DialogContent size="default">
       <DialogHeader>
-        <DialogTitle>{mode === 'create' ? t('workspaceForm.createTitle') : t('workspaceForm.editTitle')}</DialogTitle>
+        <DialogTitle>
+          {mode === 'create' ? t('workspaceForm.createTitle') : t('workspaceForm.editTitle')}
+        </DialogTitle>
         <DialogDescription>
           {mode === 'create'
             ? t('workspaceForm.createDescription')
@@ -194,7 +228,7 @@ function WorkspaceFormDialogBody({
             <Input
               id="workspace-name"
               value={draft.name}
-              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+              onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}
               placeholder={t('workspaceForm.namePlaceholder')}
               errorText={errors.name}
               root
@@ -206,7 +240,7 @@ function WorkspaceFormDialogBody({
             <Input
               id="workspace-slug"
               value={draft.slug}
-              onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))}
+              onChange={event => setDraft(current => ({ ...current, slug: event.target.value }))}
               placeholder={mode === 'create' ? t('workspaceForm.slugPlaceholder') : ''}
               readOnly={mode === 'edit'}
               disabled={mode === 'edit'}
@@ -219,8 +253,8 @@ function WorkspaceFormDialogBody({
             <Label htmlFor="workspace-platform">{t('workspaceForm.platformLabel')}</Label>
             <Select
               value={draft.platform || 'none'}
-              onValueChange={(value) =>
-                setDraft((current) => ({ ...current, platform: value === 'none' ? '' : value }))
+              onValueChange={value =>
+                setDraft(current => ({ ...current, platform: value === 'none' ? '' : value }))
               }
             >
               <SelectTrigger id="workspace-platform" className="w-full">
@@ -228,7 +262,7 @@ function WorkspaceFormDialogBody({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t('workspaceForm.notSet')}</SelectItem>
-                {PLATFORM_OPTIONS.map((option) => (
+                {PLATFORM_OPTIONS.map(option => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -242,8 +276,8 @@ function WorkspaceFormDialogBody({
               <Label htmlFor="workspace-status">{t('workspaceForm.statusLabel')}</Label>
               <Select
                 value={draft.status}
-                onValueChange={(value) =>
-                  setDraft((current) => ({ ...current, status: value as `${WorkspaceStatus}` }))
+                onValueChange={value =>
+                  setDraft(current => ({ ...current, status: value as `${WorkspaceStatus}` }))
                 }
               >
                 <SelectTrigger id="workspace-status" className="w-full">
@@ -306,9 +340,7 @@ export function DeleteWorkspaceDialog({
         <DialogBody>
           <Alert variant="destructive">
             <AlertTitle>{t('workspaceForm.deleteWarningTitle')}</AlertTitle>
-            <AlertDescription>
-              {t('workspaceForm.deleteWarningDescription')}
-            </AlertDescription>
+            <AlertDescription>{t('workspaceForm.deleteWarningDescription')}</AlertDescription>
           </Alert>
         </DialogBody>
 
@@ -316,7 +348,12 @@ export function DeleteWorkspaceDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button type="button" variant="destructive" loading={isDeleting} onClick={() => void onConfirm()}>
+          <Button
+            type="button"
+            variant="destructive"
+            loading={isDeleting}
+            onClick={() => void onConfirm()}
+          >
             {t('workspaceForm.deleteButton')}
           </Button>
         </DialogFooter>
