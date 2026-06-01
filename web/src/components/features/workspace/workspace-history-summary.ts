@@ -236,6 +236,25 @@ export const getHistorySidebarDescription = (history: WorkspaceHistory) => {
   return getCompactHistoryMessage(history) || humanizeHistoryLabel(history.action || history.entity_type);
 };
 
+export const getHistoryDisplayMessage = (history: WorkspaceHistory) => {
+  const title = getHistorySidebarTitle(history);
+  const status = getHistorySidebarStatus(history);
+  const duration = getHistorySidebarDuration(history);
+
+  if (REQUEST_HISTORY_ENTITY_TYPES.has(history.entity_type)) {
+    return [title, status ? `HTTP ${status}` : null, duration]
+      .filter((value): value is string => Boolean(value))
+      .join(' · ');
+  }
+
+  if (RUN_HISTORY_ENTITY_TYPES.has(history.entity_type)) {
+    const source = history.source === 'cli' ? 'CLI flow' : 'Flow run';
+    return [source, title, status].filter((value): value is string => Boolean(value)).join(' · ');
+  }
+
+  return getCompactHistoryMessage(history) || title;
+};
+
 export const getHistorySidebarSearchTerms = (history: WorkspaceHistory) =>
   [
     getHistorySidebarTitle(history),
