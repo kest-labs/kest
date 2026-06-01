@@ -578,6 +578,7 @@ const messages = {
     totalSteps: '总步骤数',
     passedSteps: '通过步骤数',
     failedSteps: '失败步骤数',
+    stepsShort: '步',
     logExcerpt: '日志摘录',
     logExcerptDescription: '来自 CLI 会话日志的脱敏摘录。',
     noLogExcerpt: '这次运行没有上传日志摘录。',

@@ -627,6 +627,7 @@ const messages: WorkspaceMessages = {
     totalSteps: 'Total steps',
     passedSteps: 'Passed steps',
     failedSteps: 'Failed steps',
+    stepsShort: 'steps',
     logExcerpt: 'Log excerpt',
     logExcerptDescription: 'Sanitized excerpt from the CLI session log.',
     noLogExcerpt: 'No log excerpt was uploaded for this run.',
