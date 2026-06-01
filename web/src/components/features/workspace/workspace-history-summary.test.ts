@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getHistoryDisplayMessage,
   getHistorySidebarDescription,
   getHistorySidebarDuration,
   getHistorySidebarSearchTerms,
@@ -44,6 +45,7 @@ describe('workspace history sidebar summary', () => {
     expect(getHistorySidebarStatus(history)).toBe('404');
     expect(getHistorySidebarDuration(history)).toBe('31ms');
     expect(getHistorySidebarDescription(history)).toBe('local');
+    expect(getHistoryDisplayMessage(history)).toBe('GET /health · HTTP 404 · 31ms');
     expect(getHistorySidebarSearchTerms(history)).toContain('GET /health');
   });
 
@@ -71,5 +73,6 @@ describe('workspace history sidebar summary', () => {
     expect(getHistorySidebarStepSummary(history)).toBe('2/2');
     expect(getHistorySidebarDuration(history)).toBe('812ms');
     expect(getHistorySidebarDescription(history)).toBe('CLI flow');
+    expect(getHistoryDisplayMessage(history)).toBe('CLI flow · local-smoke.flow.md · passed');
   });
 });
