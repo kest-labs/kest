@@ -99,6 +99,15 @@ import {
 } from '@/components/features/workspace/category-helpers';
 import { CategoryFormDialog } from '@/components/features/workspace/category-shared';
 import { WorkspaceFlowManagementPage } from '@/components/features/workspace/flow-management-page';
+import {
+  getHistorySidebarDescription,
+  getHistorySidebarDuration,
+  getHistorySidebarSearchTerms,
+  getHistorySidebarStatus,
+  getHistorySidebarStepSummary,
+  getHistorySidebarTitle,
+} from '@/components/features/workspace/workspace-history-summary';
+import { WorkspaceRestrictedAccessState } from '@/components/features/workspace/workspace-shared';
 import { getWorkspaceModuleCopy } from '@/components/features/workspace/workspace-i18n';
 import {
   buildWorkspaceWorkspaceRoute,
@@ -174,7 +183,11 @@ import type {
   UpdateEnvironmentRequest,
 } from '@/types/environment';
 import type { WorkspaceHistory } from '@/types/history';
-import { WORKSPACE_MEMBER_WRITE_ROLES, type WorkspaceMemberRole } from '@/types/member';
+import {
+  WORKSPACE_MEMBER_WRITE_ROLES,
+  canManageWorkspaceMembers,
+  type WorkspaceMemberRole,
+} from '@/types/member';
 import type { GenerateWorkspaceCliTokenResponse } from '@/types/workspace';
 import { useT } from '@/i18n/client';
 import type { ScopedTranslations } from '@/i18n/shared';
@@ -350,14 +363,8 @@ const getHistoryRequestTitle = (history?: WorkspaceHistory | null) => {
 const getHistoryRequestStatus = (history?: WorkspaceHistory | null) =>
   getHistoryNumber(getCLIRequestResponseRecord(history)?.status);
 
-const getHistoryRequestDuration = (history?: WorkspaceHistory | null) =>
-  formatHistoryDuration(getCLIRequestResponseRecord(history)?.duration_ms);
-
 const getHistoryRunSourceName = (history?: WorkspaceHistory | null) =>
   getHistoryString(getCLIRunRecord(history)?.source_name);
-
-const getHistoryRunStepCount = (history?: WorkspaceHistory | null) =>
-  getHistoryNumber(getCLIRunRecord(history)?.total_steps);
 
 const getHistoryFlowName = (history?: WorkspaceHistory | null) => {
   const flowRecord = getHistoryNestedRecord(getHistoryDataRecord(history)?.flow);
@@ -371,24 +378,25 @@ const getHistoryRunStatus = (history?: WorkspaceHistory | null) => {
   return typeof status === 'string' && status.trim() ? status.trim() : null;
 };
 
-const getHistoryExecutionMode = (history?: WorkspaceHistory | null) => {
-  const runRecord = getHistoryNestedRecord(getHistoryDataRecord(history)?.run);
-  const executionMode = runRecord?.execution_mode;
-  return typeof executionMode === 'string' && executionMode.trim() ? executionMode.trim() : null;
-};
-
 const getHistoryPrimaryTitle = (history: WorkspaceHistory) =>
   getHistoryRequestTitle(history) ??
   getHistoryRunSourceName(history) ??
   getHistoryFlowName(history) ??
   `${history.entity_type} #${history.entity_id}`;
 
-const getHistoryFallbackDescription = (history: WorkspaceHistory) =>
-  history.entity_type === 'cli_request'
-    ? `${history.action} recorded for CLI request #${history.entity_id}`
-    : history.entity_type === 'cli_run'
-      ? `${history.action} recorded for CLI run ${getHistoryRunSourceName(history) ?? `#${history.entity_id}`}`
-      : `${history.action} recorded for ${history.entity_type} #${history.entity_id}`;
+const getHistorySidebarStatusBadgeVariant = (status: string | null) => {
+  const normalizedStatus = status?.toLowerCase() ?? '';
+
+  if (/^2\d\d$/.test(normalizedStatus) || ['passed', 'success', 'completed'].includes(normalizedStatus)) {
+    return 'success' as const;
+  }
+
+  if (/^[45]\d\d$/.test(normalizedStatus) || normalizedStatus.includes('failed') || normalizedStatus.includes('error')) {
+    return 'destructive' as const;
+  }
+
+  return 'secondary' as const;
+};
 
 type EnvironmentFormMode = 'create' | 'edit';
 
@@ -1427,10 +1435,7 @@ export function WorkspaceWorkspacePage({
       );
     case 'keys':
       return (
-        <WorkspaceKeysWorkspaceSection
-          workspaceId={workspaceId}
-          workspaceName={workspaceName}
-        />
+        <WorkspaceKeysWorkspaceSection workspaceId={workspaceId} workspaceName={workspaceName} />
       );
     case 'histories':
       return (
@@ -1443,7 +1448,9 @@ export function WorkspaceWorkspacePage({
         />
       );
     case 'flows':
-      return <WorkspaceFlowManagementPage workspaceId={workspaceId} selectedItemId={selectedItemId} />;
+      return (
+        <WorkspaceFlowManagementPage workspaceId={workspaceId} selectedItemId={selectedItemId} />
+      );
     default:
       return (
         <PlaceholderWorkspaceSection
@@ -1463,7 +1470,9 @@ function WorkspaceKeysWorkspaceSection({
   workspaceName: string;
 }) {
   const t = useT('workspace');
-  const workspaceQuery = useWorkspace(workspaceId);
+  const memberRoleQuery = useWorkspaceMemberRole(workspaceId);
+  const canManageKeys = canManageWorkspaceMembers(memberRoleQuery.data?.role);
+  const workspaceQuery = useWorkspace(workspaceId, { enabled: canManageKeys });
   const generateCliTokenMutation = useGenerateWorkspaceCliToken();
   const [generatedCliToken, setGeneratedCliToken] =
     useState<GenerateWorkspaceCliTokenResponse | null>(null);
@@ -1483,6 +1492,24 @@ function WorkspaceKeysWorkspaceSection({
       : '';
   const cliConfigCommand = cliConnectionKey ? `kest key '${cliConnectionKey}'` : '';
 
+  if (memberRoleQuery.isLoading) {
+    return (
+      <div className="p-6">
+        <DetailSkeleton />
+      </div>
+    );
+  }
+
+  if (memberRoleQuery.isError || (memberRoleQuery.isSuccess && !canManageKeys)) {
+    return (
+      <WorkspaceRestrictedAccessState
+        workspaceId={workspaceId}
+        title={t('keysPage.restrictedTitle')}
+        description={t('keysPage.restrictedDescription')}
+      />
+    );
+  }
+
   const handleCopyText = async (value: string, successMessage: string) => {
     if (!value) {
       return;
@@ -1497,7 +1524,7 @@ function WorkspaceKeysWorkspaceSection({
   };
 
   const handleGenerateCliToken = async () => {
-    if (!workspace || !workspaceId) {
+    if (!workspace || !workspaceId || !canManageKeys) {
       return;
     }
 
@@ -1551,7 +1578,9 @@ function WorkspaceKeysWorkspaceSection({
             <Button
               type="button"
               onClick={() => void handleGenerateCliToken()}
-              disabled={!workspace || !workspaceId || generateCliTokenMutation.isPending}
+              disabled={
+                !canManageKeys || !workspace || !workspaceId || generateCliTokenMutation.isPending
+              }
             >
               <KeyRound className="h-4 w-4" />
               {generateCliTokenMutation.isPending
@@ -2023,10 +2052,7 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
-  const handleImportMarkdownDraft = async (payload: {
-    file: File;
-    base_url_override?: string;
-  }) => {
+  const handleImportMarkdownDraft = async (payload: { file: File; base_url_override?: string }) => {
     try {
       const result = await importMarkdownDraftMutation.mutateAsync(payload);
       setMarkdownDraftPreview(result);
@@ -2035,9 +2061,7 @@ function ApiSpecsWorkspaceSection({
     }
   };
 
-  const handleImportAllMarkdownDrafts = async (
-    drafts: ApiSpecMarkdownDraftPreviewItem[]
-  ) => {
+  const handleImportAllMarkdownDrafts = async (drafts: ApiSpecMarkdownDraftPreviewItem[]) => {
     const specs: CreateApiSpecRequest[] = drafts.map(item =>
       convertMarkdownDraftToCreateSpecRequest(item.draft)
     );
@@ -2405,7 +2429,9 @@ function ApiSpecsWorkspaceSection({
                 selectedSpecId={selectedSpec?.id}
                 canWrite={canWrite}
                 movingSpecId={
-                  updateSpecMutation.isPending ? updateSpecMutation.variables?.specId ?? null : null
+                  updateSpecMutation.isPending
+                    ? (updateSpecMutation.variables?.specId ?? null)
+                    : null
                 }
                 onOpenCreate={openCreateSpecDialog}
                 onOpenEdit={openEditDialog}
@@ -2701,7 +2727,9 @@ function ApiSpecsWorkspaceSection({
           void specsQuery.refetch();
 
           if (continueToTests) {
-            router.replace(`${buildWorkspaceTestCasesRoute(workspaceId)}?fromSpec=${specId}&source=ai`);
+            router.replace(
+              `${buildWorkspaceTestCasesRoute(workspaceId)}?fromSpec=${specId}&source=ai`
+            );
             return;
           }
 
@@ -2798,11 +2826,7 @@ function ApiSpecsWorkspaceSection({
   );
 }
 
-function CollectionsWorkspaceSection({
-  workspaceId,
-}: {
-  workspaceId: number | string;
-}) {
+function CollectionsWorkspaceSection({ workspaceId }: { workspaceId: number | string }) {
   return <ApiRequestWorkbench workspaceId={workspaceId} />;
 }
 
@@ -2831,11 +2855,7 @@ function ApiSpecDirectoryList({
     <div className="space-y-2">
       {groups.map(group => (
         <div key={group.key} className="space-y-1">
-          <ApiSpecCategoryDropZone
-            group={group}
-            canWrite={canWrite}
-            onOpenCreate={onOpenCreate}
-          />
+          <ApiSpecCategoryDropZone group={group} canWrite={canWrite} onOpenCreate={onOpenCreate} />
 
           {group.specs.map(spec => (
             <DraggableApiSpecListItem
@@ -2936,10 +2956,7 @@ function DraggableApiSpecListItem({
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      className={cn((isDragging || isMoving) && 'opacity-55')}
-    >
+    <div ref={setNodeRef} className={cn((isDragging || isMoving) && 'opacity-55')}>
       <ResourceListItem
         href={buildModuleHref(workspaceId, 'api-specs', spec.id)}
         active={active}
@@ -2952,7 +2969,8 @@ function DraggableApiSpecListItem({
               type="button"
               className={cn(
                 'mt-0.5 inline-flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main active:cursor-grabbing',
-                active && 'text-primary-foreground/72 hover:bg-primary-foreground/15 hover:text-primary-foreground'
+                active &&
+                  'text-primary-foreground/72 hover:bg-primary-foreground/15 hover:text-primary-foreground'
               )}
               aria-label={t('apiSpecs.dragSpecHandle')}
               {...listeners}
@@ -3066,7 +3084,10 @@ function EnvironmentsWorkspaceSection({
 
   const memberRoleQuery = useWorkspaceMemberRole(workspaceId);
   const environmentsQuery = useEnvironments(workspaceId);
-  const selectedEnvironmentQuery = useEnvironment(workspaceId, effectiveSelectedItemId ?? undefined);
+  const selectedEnvironmentQuery = useEnvironment(
+    workspaceId,
+    effectiveSelectedItemId ?? undefined
+  );
   const editingEnvironmentQuery = useEnvironment(workspaceId, editingEnvironmentId ?? undefined);
   const createEnvironmentMutation = useCreateEnvironment(workspaceId);
   const updateEnvironmentMutation = useUpdateEnvironment(workspaceId);
@@ -3946,14 +3967,9 @@ function HistoryWorkspaceSection({
     }
 
     return histories.filter(history =>
-      [
-        history.message || '',
-        history.action,
-        history.entity_type,
-        String(history.id),
-        String(history.entity_id),
-        String(history.user_id),
-      ].some(value => value.toLowerCase().includes(normalizedQuery))
+      getHistorySidebarSearchTerms(history).some(value =>
+        value.toLowerCase().includes(normalizedQuery)
+      )
     );
   }, [deferredSearch, histories]);
 
@@ -4022,47 +4038,37 @@ function HistoryWorkspaceSection({
             />
           }
         >
-          {filteredHistories.map(history => (
-            <ResourceListItem
-              key={history.id}
-              href={buildModuleHref(workspaceId, 'histories', history.id)}
-              active={history.id === selectedHistory?.id}
-              title={getHistoryPrimaryTitle(history)}
-              description={history.message || getHistoryFallbackDescription(history)}
-              meta={
-                <>
-                  <Badge variant="outline">{history.action}</Badge>
-                  {history.entity_type === 'cli_request' &&
-                  getHistoryRequestStatus(history) !== null ? (
-                    <Badge variant="secondary">{getHistoryRequestStatus(history)}</Badge>
-                  ) : null}
-                  {history.entity_type === 'cli_run' && getHistoryRunStatus(history) ? (
-                    <Badge variant="secondary">{getHistoryRunStatus(history)}</Badge>
-                  ) : null}
-                  {history.entity_type !== 'cli_request' &&
-                  history.entity_type !== 'cli_run' &&
-                  getHistoryRunStatus(history) ? (
-                    <Badge variant="secondary">{getHistoryRunStatus(history)}</Badge>
-                  ) : null}
-                  {history.entity_type === 'cli_request' && getHistoryRequestDuration(history) ? (
-                    <span>{getHistoryRequestDuration(history)}</span>
-                  ) : null}
-                  {history.entity_type === 'cli_run' && getHistoryRunStepCount(history) !== null ? (
-                    <span>
-                      {getHistoryRunStepCount(history)} {t('history.totalSteps').toLowerCase()}
-                    </span>
-                  ) : null}
-                  {getHistoryExecutionMode(history) ? (
-                    <span>{getHistoryExecutionMode(history)}</span>
-                  ) : null}
-                  <span>
-                    {t('history.user')} #{history.user_id}
-                  </span>
-                  <span>{formatDate(history.created_at, 'YYYY-MM-DD HH:mm')}</span>
-                </>
-              }
-            />
-          ))}
+          {filteredHistories.map(history => {
+            const sidebarStatus = getHistorySidebarStatus(history);
+            const sidebarDuration = getHistorySidebarDuration(history);
+            const sidebarStepSummary = getHistorySidebarStepSummary(history);
+
+            return (
+              <ResourceListItem
+                key={history.id}
+                href={buildModuleHref(workspaceId, 'histories', history.id)}
+                active={history.id === selectedHistory?.id}
+                title={getHistorySidebarTitle(history)}
+                description={getHistorySidebarDescription(history)}
+                meta={
+                  <>
+                    {sidebarStatus ? (
+                      <Badge variant={getHistorySidebarStatusBadgeVariant(sidebarStatus)}>
+                        {sidebarStatus}
+                      </Badge>
+                    ) : null}
+                    {sidebarDuration ? <span>{sidebarDuration}</span> : null}
+                    {sidebarStepSummary ? (
+                      <span>
+                        {sidebarStepSummary} {t('history.stepsShort')}
+                      </span>
+                    ) : null}
+                    <span>{formatDate(history.created_at, 'MM-DD HH:mm')}</span>
+                  </>
+                }
+              />
+            );
+          })}
         </ResourceSidebar>
       }
       content={
@@ -4071,7 +4077,9 @@ function HistoryWorkspaceSection({
           workspaceName={workspaceName}
           module="histories"
           currentTitle={
-            selectedHistory ? getHistoryPrimaryTitle(selectedHistory) : t('history.workspaceHistory')
+            selectedHistory
+              ? getHistoryPrimaryTitle(selectedHistory)
+              : t('history.workspaceHistory')
           }
           description={
             selectedHistory

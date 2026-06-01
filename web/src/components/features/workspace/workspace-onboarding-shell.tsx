@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
-  WORKSPACE_WORKSPACE_MODULES,
   buildWorkspaceWorkspaceRoute,
+  getAccessibleWorkspaceWorkspaceModules,
 } from '@/components/features/workspace/workspace-navigation';
 import { buildWorkspaceApiSpecsRoute, ROUTES } from '@/constants/routes';
 import { useLocale } from '@/hooks/use-locale';
+import { useWorkspaceMemberRole } from '@/hooks/use-members';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import { useT } from '@/i18n/client';
 import { localeNames } from '@/i18n/config';
@@ -65,6 +66,8 @@ export function WorkspaceOnboardingShell() {
   }, [pathname]);
 
   const workspaces = workspacesQuery.data?.items ?? [];
+  const memberRoleQuery = useWorkspaceMemberRole(currentWorkspaceId ?? undefined);
+  const currentWorkspaceRole = memberRoleQuery.data?.role;
 
   const tourSteps = useMemo<TourStep[]>(
     () => [
@@ -227,16 +230,18 @@ export function WorkspaceOnboardingShell() {
 
   const workspaceModuleCommands =
     currentWorkspaceId !== null
-      ? WORKSPACE_WORKSPACE_MODULES.filter(item => item.status === 'ready').map(item => ({
-          id: `workspace-${item.value}`,
-          title: t(`modules.${item.i18nKey}.label` as never),
-          subtitle: t(`modules.${item.i18nKey}.description` as never),
-          icon: <item.icon className="h-4 w-4" />,
-          onSelect: () => {
-            router.push(buildWorkspaceWorkspaceRoute(currentWorkspaceId, item.value));
-            setIsCommandOpen(false);
-          },
-        }))
+      ? getAccessibleWorkspaceWorkspaceModules(currentWorkspaceRole)
+          .filter(item => item.status === 'ready')
+          .map(item => ({
+            id: `workspace-${item.value}`,
+            title: t(`modules.${item.i18nKey}.label` as never),
+            subtitle: t(`modules.${item.i18nKey}.description` as never),
+            icon: <item.icon className="h-4 w-4" />,
+            onSelect: () => {
+              router.push(buildWorkspaceWorkspaceRoute(currentWorkspaceId, item.value));
+              setIsCommandOpen(false);
+            },
+          }))
       : [];
 
   const utilityCommands = [
@@ -277,15 +282,17 @@ export function WorkspaceOnboardingShell() {
     },
   ];
 
-  const filteredCommands = [...utilityCommands, ...workspaceSearchCommands, ...workspaceModuleCommands].filter(
-    item => {
-      const query = commandQuery.trim().toLowerCase();
-      if (!query) {
-        return true;
-      }
-      return `${item.title} ${item.subtitle}`.toLowerCase().includes(query);
+  const filteredCommands = [
+    ...utilityCommands,
+    ...workspaceSearchCommands,
+    ...workspaceModuleCommands,
+  ].filter(item => {
+    const query = commandQuery.trim().toLowerCase();
+    if (!query) {
+      return true;
     }
-  );
+    return `${item.title} ${item.subtitle}`.toLowerCase().includes(query);
+  });
 
   const closeTour = () => {
     setIsTourOpen(false);
