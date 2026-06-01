@@ -53,7 +53,12 @@ import {
   useUpdateWorkspace,
 } from '@/hooks/use-workspaces';
 import { useT } from '@/i18n/client';
-import type { ApiWorkspace, CreateWorkspaceRequest, UpdateWorkspaceRequest } from '@/types/workspace';
+import { canManageWorkspaceMembers } from '@/types/member';
+import type {
+  ApiWorkspace,
+  CreateWorkspaceRequest,
+  UpdateWorkspaceRequest,
+} from '@/types/workspace';
 import { formatDate } from '@/utils';
 
 const PAGE_SIZE = 12;
@@ -131,6 +136,10 @@ export function WorkspaceManagementPage() {
 
   // 编辑弹窗复用共享表单组件，这里只负责切换到 edit 模式并注入当前工作区。
   const openEditDialog = (workspace: ApiWorkspace) => {
+    if (!canManageWorkspaceMembers(workspace.role)) {
+      return;
+    }
+
     setFormMode('edit');
     setEditingWorkspace(workspace);
     setIsFormOpen(true);
@@ -138,7 +147,9 @@ export function WorkspaceManagementPage() {
 
   // 创建和更新统一走一个提交入口：
   // 根据当前模式决定调用 create 还是 update。
-  const handleWorkspaceSubmit = async (payload: CreateWorkspaceRequest | UpdateWorkspaceRequest) => {
+  const handleWorkspaceSubmit = async (
+    payload: CreateWorkspaceRequest | UpdateWorkspaceRequest
+  ) => {
     try {
       if (formMode === 'create') {
         await createWorkspaceMutation.mutateAsync(payload as CreateWorkspaceRequest);
@@ -159,7 +170,7 @@ export function WorkspaceManagementPage() {
 
   // 删除后如果当前页只剩一条记录，则回退一页，避免停留在空分页。
   const handleDeleteWorkspace = async () => {
-    if (!deleteTarget) {
+    if (!deleteTarget || deleteTarget.role !== 'owner') {
       return;
     }
 
@@ -176,6 +187,65 @@ export function WorkspaceManagementPage() {
       // Global HTTP error handling already surfaces failure feedback.
     }
   };
+
+  const getWorkspaceRowActionItems = (workspace: ApiWorkspace): ActionMenuItem[] => [
+    {
+      key: `overview-${workspace.id}`,
+      label: t('workspacesPage.overview'),
+      icon: BarChart3,
+      href: buildWorkspaceApiSpecsRoute(workspace.id),
+    },
+    {
+      key: `api-specs-${workspace.id}`,
+      label: t('modules.apiSpecs.label'),
+      icon: FileJson2,
+      href: buildWorkspaceApiSpecsRoute(workspace.id),
+    },
+    {
+      key: `environments-${workspace.id}`,
+      label: t('modules.environments.label'),
+      icon: Globe,
+      href: buildWorkspaceEnvironmentsRoute(workspace.id),
+    },
+    ...(canManageWorkspaceMembers(workspace.role)
+      ? [
+          {
+            key: `members-${workspace.id}`,
+            label: t('modules.members.label'),
+            icon: Users,
+            href: buildWorkspaceMembersRoute(workspace.id),
+          },
+        ]
+      : []),
+    {
+      key: `test-cases-${workspace.id}`,
+      label: t('modules.testCases.label'),
+      icon: FlaskConical,
+      href: buildWorkspaceTestCasesRoute(workspace.id),
+    },
+    ...(canManageWorkspaceMembers(workspace.role)
+      ? [
+          {
+            key: `edit-${workspace.id}`,
+            label: i18n.common('edit'),
+            icon: Pencil,
+            separatorBefore: true,
+            onSelect: () => openEditDialog(workspace),
+          },
+        ]
+      : []),
+    ...(workspace.role === 'owner'
+      ? [
+          {
+            key: `delete-${workspace.id}`,
+            label: i18n.common('delete'),
+            icon: Trash2,
+            destructive: true,
+            onSelect: () => setDeleteTarget(workspace),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="flex-1 space-y-8 p-4 pt-5 md:p-6">
@@ -285,7 +355,9 @@ export function WorkspaceManagementPage() {
               placeholder={t('workspacesPage.filterPlaceholder')}
               leftIcon={<Search className="size-4" />}
             />
-            <div className="text-xs text-muted-foreground">{t('workspacesPage.localFilterNote')}</div>
+            <div className="text-xs text-muted-foreground">
+              {t('workspacesPage.localFilterNote')}
+            </div>
           </div>
 
           {workspacesQuery.isLoading ? (
@@ -305,7 +377,9 @@ export function WorkspaceManagementPage() {
                       <TableHead>{t('workspacesPage.tablePlatform')}</TableHead>
                       <TableHead>{t('workspacesPage.tableStatus')}</TableHead>
                       <TableHead>{t('workspacesPage.tableCreated')}</TableHead>
-                      <TableHead className="text-right">{t('workspacesPage.tableActions')}</TableHead>
+                      <TableHead className="text-right">
+                        {t('workspacesPage.tableActions')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -338,52 +412,7 @@ export function WorkspaceManagementPage() {
                         <TableCell>{formatDate(workspace.created_at, 'YYYY-MM-DD')}</TableCell>
                         <TableCell className="text-right">
                           <ActionMenu
-                            items={[
-                              {
-                                key: `overview-${workspace.id}`,
-                                label: t('workspacesPage.overview'),
-                                icon: BarChart3,
-                                href: buildWorkspaceApiSpecsRoute(workspace.id),
-                              },
-                              {
-                                key: `api-specs-${workspace.id}`,
-                                label: t('modules.apiSpecs.label'),
-                                icon: FileJson2,
-                                href: buildWorkspaceApiSpecsRoute(workspace.id),
-                              },
-                              {
-                                key: `environments-${workspace.id}`,
-                                label: t('modules.environments.label'),
-                                icon: Globe,
-                                href: buildWorkspaceEnvironmentsRoute(workspace.id),
-                              },
-                              {
-                                key: `members-${workspace.id}`,
-                                label: t('modules.members.label'),
-                                icon: Users,
-                                href: buildWorkspaceMembersRoute(workspace.id),
-                              },
-                              {
-                                key: `test-cases-${workspace.id}`,
-                                label: t('modules.testCases.label'),
-                                icon: FlaskConical,
-                                href: buildWorkspaceTestCasesRoute(workspace.id),
-                              },
-                              {
-                                key: `edit-${workspace.id}`,
-                                label: i18n.common('edit'),
-                                icon: Pencil,
-                                separatorBefore: true,
-                                onSelect: () => openEditDialog(workspace),
-                              },
-                              {
-                                key: `delete-${workspace.id}`,
-                                label: i18n.common('delete'),
-                                icon: Trash2,
-                                destructive: true,
-                                onSelect: () => setDeleteTarget(workspace),
-                              },
-                            ]}
+                            items={getWorkspaceRowActionItems(workspace)}
                             ariaLabel={i18n.common('openActions')}
                           />
                         </TableCell>

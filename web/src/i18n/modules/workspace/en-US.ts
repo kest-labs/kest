@@ -504,7 +504,8 @@ const messages: WorkspaceMessages = {
     noMatchingEnvironments: 'No matching environments',
     noMatchingDescription: 'Try a broader search term or clear the current filter.',
     apiSurface: 'Environment API surface',
-    apiSurfaceDescription: 'Workspace-scoped endpoints used by this workspace for environment CRUD.',
+    apiSurfaceDescription:
+      'Workspace-scoped endpoints used by this workspace for environment CRUD.',
     baseUrlMissing: 'Base URL is not configured yet.',
     metadata: 'Environment metadata',
     metadataDescription: 'Core identity and timestamps for this environment.',
@@ -560,6 +561,8 @@ const messages: WorkspaceMessages = {
     workspaceUnavailableTitle: 'Workspace unavailable',
     workspaceUnavailableDescription:
       'The workspace could not be loaded, so a key cannot be generated yet.',
+    restrictedTitle: 'Admin access required',
+    restrictedDescription: 'Only admin and owner members can generate workspace connection keys.',
     platformUrl: 'Platform URL',
     workspaceScope: 'Workspace Scope',
     scopes: 'Scopes',
@@ -624,6 +627,7 @@ const messages: WorkspaceMessages = {
     totalSteps: 'Total steps',
     passedSteps: 'Passed steps',
     failedSteps: 'Failed steps',
+    stepsShort: 'steps',
     logExcerpt: 'Log excerpt',
     logExcerptDescription: 'Sanitized excerpt from the CLI session log.',
     noLogExcerpt: 'No log excerpt was uploaded for this run.',
@@ -1188,6 +1192,8 @@ const messages: WorkspaceMessages = {
     readOnlyTitle: 'Read-only member access',
     readOnlyDescription:
       'Your current role is {role}. You can view the member list, but only admin and owner can invite, update, or remove members.',
+    restrictedTitle: 'Admin access required',
+    restrictedDescription: 'Only admin and owner members can open workspace member management.',
     totalMembers: 'Total Members',
     totalMembersDescription: 'All users with workspace access',
     adminsOwners: 'Admins & Owners',
@@ -1411,7 +1417,8 @@ const messages: WorkspaceMessages = {
       'Some workspace signals failed to load. Retry this preview or open the workspace directly.',
     previewSummarySlow:
       'Loading workspace status is taking longer than usual. Use Quick Request or open the workspace while the richer preview catches up.',
-    previewSummaryLoading: 'Loading workspace status so the next step reflects real workspace data.',
+    previewSummaryLoading:
+      'Loading workspace status so the next step reflects real workspace data.',
     slugLabel: 'Slug: {value}',
     teamMembers: '{count} team members',
     editDetails: 'Edit details',
@@ -1484,7 +1491,8 @@ const messages: WorkspaceMessages = {
       'No API spec exists yet, so documentation and tests have nothing stable to build from.',
     runtimeSetupCanWait: 'Environments can wait until the first endpoint is defined.',
     executionTargetMissingDetail: 'No base URL, variables, or shared headers are configured yet.',
-    specBaselineReadyDetail: 'The workspace already has {count} API specs ready for downstream work.',
+    specBaselineReadyDetail:
+      'The workspace already has {count} API specs ready for downstream work.',
     apiSourceReadyDetail: 'API Specs are already in place and can drive generated coverage.',
     runtimeSetupReadyDetail: 'At least {count} environments are configured for execution.',
     notStarted: 'Not started',
@@ -1795,7 +1803,8 @@ const messages: WorkspaceMessages = {
     apiSpecBadge: 'API Spec: {spec}',
     createDialogTitle: 'Create Test Case',
     editDialogTitle: 'Edit Test Case',
-    createDialogDescription: 'Create a workspace test case with POST /v1/workspaces/:id/test-cases.',
+    createDialogDescription:
+      'Create a workspace test case with POST /v1/workspaces/:id/test-cases.',
     editDialogDescription:
       'Update the current test case with PATCH /v1/workspaces/:id/test-cases/:tcid.',
     formLoadFailedTitle: 'Unable to load test case details',
@@ -1900,7 +1909,8 @@ const messages: WorkspaceMessages = {
     readOnlyDescription:
       'Your current role is {role}. You can inspect the category hierarchy, but cannot create, edit, sort, or delete.',
     noWorkspaceAccessTitle: 'No workspace access',
-    noWorkspaceAccessDescription: 'You do not have permission to view categories for this workspace.',
+    noWorkspaceAccessDescription:
+      'You do not have permission to view categories for this workspace.',
     totalCategories: 'Total Categories',
     totalCategoriesDescription: 'Flattened hierarchy size in this workspace',
     rootCategories: 'Root Categories',
@@ -2017,7 +2027,8 @@ const messages: WorkspaceMessages = {
     categories: 'Categories',
     flows: 'Flows',
     organize: 'Organize',
-    loadingWorkspace: 'Workspace signals are still loading, so the safest entry is the API workspace.',
+    loadingWorkspace:
+      'Workspace signals are still loading, so the safest entry is the API workspace.',
     loadingReason:
       'The workspace keeps the core workspace resources in one place while stats finish loading.',
     defineFirstApi: 'Define the first API surface',
@@ -2233,7 +2244,8 @@ const messages: WorkspaceMessages = {
       failedStepsLabel: 'Failed Steps',
       sessionLogTitle: 'Session log',
       sessionLogDescription: 'Sanitized CLI session log uploaded with this run.',
-      sessionLogDescriptionTruncated: 'Sanitized CLI session log uploaded with this run. Long output was truncated.',
+      sessionLogDescriptionTruncated:
+        'Sanitized CLI session log uploaded with this run. Long output was truncated.',
       loadingDetailsTitle: 'Loading run details',
       loadingDetailsDescription: 'Fetching step-level request and response logs for this run.',
       noStepLogsTitle: 'No step logs yet',

@@ -23,6 +23,7 @@ import {
   buildWorkspaceMembersRoute,
   buildWorkspaceTestCasesRoute,
 } from '@/constants/routes';
+import { canManageWorkspaceMembers, type WorkspaceMemberRole } from '@/types/member';
 
 export type WorkspaceWorkspaceModule =
   | 'api-specs'
@@ -113,6 +114,18 @@ const WORKSPACE_WORKSPACE_MODULE_META: WorkspaceWorkspaceModuleMeta[] = [
 export const WORKSPACE_WORKSPACE_MODULES = WORKSPACE_WORKSPACE_MODULE_META.filter(
   item => item.value !== 'categories'
 );
+
+const MANAGED_WORKSPACE_MODULES = new Set<WorkspaceWorkspaceModule>(['members', 'keys']);
+
+export const canAccessWorkspaceWorkspaceModule = (
+  module: WorkspaceWorkspaceModule,
+  role?: WorkspaceMemberRole
+) => !MANAGED_WORKSPACE_MODULES.has(module) || canManageWorkspaceMembers(role);
+
+export const getAccessibleWorkspaceWorkspaceModules = (
+  role?: WorkspaceMemberRole,
+  modules: WorkspaceWorkspaceModuleMeta[] = WORKSPACE_WORKSPACE_MODULES
+) => modules.filter(item => canAccessWorkspaceWorkspaceModule(item.value, role));
 
 export const getWorkspaceWorkspaceModuleMeta = (module: WorkspaceWorkspaceModule) =>
   WORKSPACE_WORKSPACE_MODULE_META.find(item => item.value === module) ??

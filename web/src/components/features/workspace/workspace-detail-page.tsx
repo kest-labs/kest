@@ -68,6 +68,7 @@ import type {
   WorkspaceStats,
   UpdateWorkspaceRequest,
 } from '@/types/workspace';
+import { canManageWorkspaceMembers } from '@/types/member';
 import { formatDate } from '@/utils';
 import { buildKestConnectionKey } from '@/utils/kest-connection-key';
 
@@ -244,12 +245,14 @@ const getWorkspaceModuleCards = ({
   stats,
   collectionCount,
   testCaseCount,
+  canManageWorkspaceAccess,
 }: {
   t: ScopedTranslations<'workspace'>;
   workspaceId: number | string;
   stats?: WorkspaceStats | null;
   collectionCount: number | null;
   testCaseCount: number | null;
+  canManageWorkspaceAccess: boolean;
 }): WorkspaceModuleCard[] => {
   const apiSpecCount = stats?.api_spec_count ?? 0;
   const environmentCount = stats?.environment_count ?? 0;
@@ -262,7 +265,7 @@ const getWorkspaceModuleCards = ({
   const hasTestCases = typeof testCaseCount === 'number' && testCaseCount > 0;
   const hasCollections = typeof collectionCount === 'number' && collectionCount > 0;
 
-  return [
+  const moduleCards: WorkspaceModuleCard[] = [
     {
       key: 'api-specs',
       title: t('modules.apiSpecs.label'),
@@ -365,6 +368,10 @@ const getWorkspaceModuleCards = ({
       primaryLabel: t('common.manage'),
     },
   ];
+
+  return canManageWorkspaceAccess
+    ? moduleCards
+    : moduleCards.filter(module => module.key !== 'members');
 };
 
 function WorkspaceModuleCardTile({
@@ -434,7 +441,9 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
     useState<GenerateWorkspaceCliTokenResponse | null>(null);
 
   const workspaceQuery = useWorkspace(workspaceId, { enabled: !isDeletingCurrentWorkspace });
-  const workspaceStatsQuery = useWorkspaceStats(workspaceId, { enabled: !isDeletingCurrentWorkspace });
+  const workspaceStatsQuery = useWorkspaceStats(workspaceId, {
+    enabled: !isDeletingCurrentWorkspace,
+  });
   const collectionsQuery = useWorkspaceCollections({
     workspaceId,
     page: 1,
@@ -450,6 +459,8 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
   const generateCliTokenMutation = useGenerateWorkspaceCliToken();
 
   const workspace = workspaceQuery.data;
+  const canManageWorkspaceAccess = canManageWorkspaceMembers(workspace?.role);
+  const canDeleteCurrentWorkspace = workspace?.role === 'owner';
   const workspaceStats = workspaceStatsQuery.data;
   const nextAction = getWorkspaceNextAction(t, workspaceId, workspaceStats);
   const workflowSteps = getWorkspaceWorkflowSteps(t, workspaceId, workspaceStats);
@@ -461,6 +472,7 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
     stats: workspaceStats,
     collectionCount,
     testCaseCount,
+    canManageWorkspaceAccess,
   });
   const totalWorkflowSteps = workflowSteps.length;
   const completedWorkflowSteps = workflowSteps.filter(step => step.status === 'ready').length;
@@ -487,7 +499,7 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
   const shouldShowOverview = Boolean(workspace) || isWorkspaceLoading;
 
   const openEditDialog = () => {
-    if (!workspace) {
+    if (!workspace || !canManageWorkspaceAccess) {
       return;
     }
 
@@ -496,7 +508,7 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
   };
 
   const handleWorkspaceSubmit = async (payload: UpdateWorkspaceRequest) => {
-    if (!workspace) {
+    if (!workspace || !canManageWorkspaceAccess) {
       return;
     }
 
@@ -512,7 +524,7 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
   };
 
   const handleDeleteWorkspace = async () => {
-    if (!deleteTarget) {
+    if (!deleteTarget || deleteTarget.role !== 'owner') {
       return;
     }
 
@@ -537,7 +549,7 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
   };
 
   const handleGenerateCliToken = async () => {
-    if (!workspace || !workspaceId) {
+    if (!workspace || !workspaceId || !canManageWorkspaceAccess) {
       return;
     }
 
@@ -556,12 +568,16 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
   };
 
   const pageActionItems: ActionMenuItem[] = [
-    {
-      key: 'members',
-      label: t('workspaceDetail.members'),
-      icon: Users,
-      href: buildWorkspaceMembersRoute(workspaceId),
-    },
+    ...(canManageWorkspaceAccess
+      ? [
+          {
+            key: 'members',
+            label: t('workspaceDetail.members'),
+            icon: Users,
+            href: buildWorkspaceMembersRoute(workspaceId),
+          },
+        ]
+      : []),
     {
       key: 'refresh',
       label:
@@ -577,15 +593,19 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
         void testCasesQuery.refetch();
       },
     },
-    {
-      key: 'delete',
-      label: t('workspaceForm.deleteButton'),
-      icon: Trash2,
-      destructive: true,
-      separatorBefore: true,
-      disabled: !workspace,
-      onSelect: () => setDeleteTarget(workspace || null),
-    },
+    ...(canDeleteCurrentWorkspace
+      ? [
+          {
+            key: 'delete',
+            label: t('workspaceForm.deleteButton'),
+            icon: Trash2,
+            destructive: true,
+            separatorBefore: true,
+            disabled: !workspace,
+            onSelect: () => setDeleteTarget(workspace || null),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -640,17 +660,19 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
                       {t('workspaceDetail.quickRequest')}
                     </Link>
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    isIcon
-                    aria-label={t('workspaceForm.editTitle')}
-                    className="h-10 w-10 rounded-full"
-                    onClick={openEditDialog}
-                    disabled={!workspace}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  {canManageWorkspaceAccess ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      isIcon
+                      aria-label={t('workspaceForm.editTitle')}
+                      className="h-10 w-10 rounded-full"
+                      onClick={openEditDialog}
+                      disabled={!workspace}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  ) : null}
                   <ActionMenu
                     items={pageActionItems}
                     ariaLabel={t('workspaceDetail.openWorkspaceActions')}
@@ -666,7 +688,9 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
           {!workspace && !workspaceQuery.isLoading ? (
             <Alert>
               <AlertTitle>{t('workspaceDetail.workspaceNotFoundTitle')}</AlertTitle>
-              <AlertDescription>{t('workspaceDetail.workspaceNotFoundDescription')}</AlertDescription>
+              <AlertDescription>
+                {t('workspaceDetail.workspaceNotFoundDescription')}
+              </AlertDescription>
             </Alert>
           ) : null}
 
@@ -782,7 +806,9 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
             <Card className="rounded-xl border-border-subtle bg-bg-canvas">
               <CardHeader>
                 <CardTitle>{t('workspaceDetail.workspaceDetails')}</CardTitle>
-                <CardDescription>{t('workspaceDetail.workspaceDetailsDescription')}</CardDescription>
+                <CardDescription>
+                  {t('workspaceDetail.workspaceDetailsDescription')}
+                </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
@@ -816,93 +842,98 @@ export function WorkspaceDetailPage({ workspaceId }: { workspaceId: number | str
               </CardContent>
             </Card>
 
-            <Card id="cli-sync" className="rounded-xl border-border-subtle bg-bg-canvas">
-              <CardHeader>
-                <CardTitle>{t('workspaceDetail.cliSync')}</CardTitle>
-                <CardDescription>{t('workspaceDetail.cliSyncDescription')}</CardDescription>
-              </CardHeader>
+            {canManageWorkspaceAccess ? (
+              <Card id="cli-sync" className="rounded-xl border-border-subtle bg-bg-canvas">
+                <CardHeader>
+                  <CardTitle>{t('workspaceDetail.cliSync')}</CardTitle>
+                  <CardDescription>{t('workspaceDetail.cliSyncDescription')}</CardDescription>
+                </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
-                      {t('workspaceDetail.platformUrl')}
-                    </p>
-                    <p className="mt-2 break-all font-mono text-xs text-text-main">
-                      {cliPlatformUrl}
-                    </p>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
+                      <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
+                        {t('workspaceDetail.platformUrl')}
+                      </p>
+                      <p className="mt-2 break-all font-mono text-xs text-text-main">
+                        {cliPlatformUrl}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
+                      <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
+                        {t('workspaceDetail.workspaceScope')}
+                      </p>
+                      <p className="mt-2 font-mono text-sm text-text-main">
+                        {workspace?.id ?? workspaceId}
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-border-subtle bg-bg-soft p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
-                      {t('workspaceDetail.workspaceScope')}
-                    </p>
-                    <p className="mt-2 font-mono text-sm text-text-main">
-                      {workspace?.id ?? workspaceId}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => void handleGenerateCliToken()}
-                    disabled={!workspace || !workspaceId || generateCliTokenMutation.isPending}
-                  >
-                    <Key className="h-4 w-4" />
-                    {generateCliTokenMutation.isPending
-                      ? t('workspaceDetail.generating')
-                      : t('workspaceDetail.generateToken')}
-                  </Button>
-                  {generatedCliToken ? (
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() =>
-                        void handleCopyText(cliConfigCommand, t('workspaceDetail.copiedSyncCommand'))
-                      }
+                      onClick={() => void handleGenerateCliToken()}
+                      disabled={!workspace || !workspaceId || generateCliTokenMutation.isPending}
                     >
-                      <Terminal className="h-4 w-4" />
-                      {t('workspaceDetail.copyCommand')}
+                      <Key className="h-4 w-4" />
+                      {generateCliTokenMutation.isPending
+                        ? t('workspaceDetail.generating')
+                        : t('workspaceDetail.generateToken')}
                     </Button>
-                  ) : null}
-                </div>
+                    {generatedCliToken ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          void handleCopyText(
+                            cliConfigCommand,
+                            t('workspaceDetail.copiedSyncCommand')
+                          )
+                        }
+                      >
+                        <Terminal className="h-4 w-4" />
+                        {t('workspaceDetail.copyCommand')}
+                      </Button>
+                    ) : null}
+                  </div>
 
-                {generatedCliToken ? (
-                  <Alert>
-                    <ShieldCheck className="h-4 w-4" />
-                    <AlertTitle>{t('workspaceDetail.copyTokenTitle')}</AlertTitle>
-                    <AlertDescription className="space-y-4">
-                      <div className="rounded-xl border border-border-subtle bg-bg-canvas p-4">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
-                            {t('workspaceDetail.cliToken')}
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              void handleCopyText(
-                                generatedCliToken.token,
-                                t('workspaceDetail.copiedCliToken')
-                              )
-                            }
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                            {i18n.common('copy')}
-                          </Button>
+                  {generatedCliToken ? (
+                    <Alert>
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertTitle>{t('workspaceDetail.copyTokenTitle')}</AlertTitle>
+                      <AlertDescription className="space-y-4">
+                        <div className="rounded-xl border border-border-subtle bg-bg-canvas p-4">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <p className="text-xs font-medium uppercase tracking-[0.03125rem] text-text-muted">
+                              {t('workspaceDetail.cliToken')}
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                void handleCopyText(
+                                  generatedCliToken.token,
+                                  t('workspaceDetail.copiedCliToken')
+                                )
+                              }
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              {i18n.common('copy')}
+                            </Button>
+                          </div>
+                          <code className="block break-all text-xs">{generatedCliToken.token}</code>
                         </div>
-                        <code className="block break-all text-xs">{generatedCliToken.token}</code>
-                      </div>
 
-                      <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl border border-border-subtle bg-bg-canvas p-4 text-xs">
-                        {cliConfigCommand}
-                      </pre>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-              </CardContent>
-            </Card>
+                        <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl border border-border-subtle bg-bg-canvas p-4 text-xs">
+                          {cliConfigCommand}
+                        </pre>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         </div>
       </main>
