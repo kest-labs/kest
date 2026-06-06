@@ -100,6 +100,7 @@ import {
 import { CategoryFormDialog } from '@/components/features/workspace/category-shared';
 import { WorkspaceFlowManagementPage } from '@/components/features/workspace/flow-management-page';
 import {
+  getHistoryDisplayMessage,
   getHistorySidebarDescription,
   getHistorySidebarDuration,
   getHistorySidebarSearchTerms,
@@ -315,74 +316,52 @@ const formatHistoryDuration = (value: unknown) => {
   return duration === null ? null : `${duration}ms`;
 };
 
+const getHistoryPathBasename = (value: unknown) => {
+  const raw = getHistoryString(value);
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = raw.replace(/[?#].*$/, '').replace(/\\/g, '/');
+  const segments = normalized.split('/').filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : raw;
+};
+
 const getCLIRequestRecord = (history?: WorkspaceHistory | null) => {
-  if (history?.entity_type !== 'cli_request') {
+  if (history?.entity_type !== 'cli_request' && history?.entity_type !== 'request') {
     return null;
   }
   return getHistoryNestedRecord(getHistoryDataRecord(history)?.request);
 };
 
 const getCLIRequestResponseRecord = (history?: WorkspaceHistory | null) => {
-  if (history?.entity_type !== 'cli_request') {
+  if (history?.entity_type !== 'cli_request' && history?.entity_type !== 'request') {
     return null;
   }
   return getHistoryNestedRecord(getHistoryDataRecord(history)?.response);
 };
 
 const getCLIRunRecord = (history?: WorkspaceHistory | null) => {
-  if (history?.entity_type !== 'cli_run') {
+  if (history?.entity_type !== 'cli_run' && history?.entity_type !== 'flow') {
     return null;
   }
   return getHistoryNestedRecord(getHistoryDataRecord(history)?.run);
 };
 
 const getCLIRunResults = (history?: WorkspaceHistory | null) =>
-  history?.entity_type === 'cli_run'
+  history?.entity_type === 'cli_run' || history?.entity_type === 'flow'
     ? getHistoryNestedList(getHistoryDataRecord(history)?.results)
     : [];
 
 const getCLIRunLogRecord = (history?: WorkspaceHistory | null) =>
-  history?.entity_type === 'cli_run'
+  history?.entity_type === 'cli_run' || history?.entity_type === 'flow'
     ? getHistoryNestedRecord(getHistoryDataRecord(history)?.log)
     : null;
 
-const getHistoryRequestTitle = (history?: WorkspaceHistory | null) => {
-  const requestRecord = getCLIRequestRecord(history);
-  if (!requestRecord) {
-    return null;
-  }
-
-  const method = getHistoryString(requestRecord.method) ?? 'REQUEST';
-  const path = getHistoryString(requestRecord.path);
-  const url = getHistoryString(requestRecord.url);
-  return [method.toUpperCase(), path || url || `record #${history?.entity_id}`]
-    .filter(Boolean)
-    .join(' ');
-};
-
-const getHistoryRequestStatus = (history?: WorkspaceHistory | null) =>
-  getHistoryNumber(getCLIRequestResponseRecord(history)?.status);
-
-const getHistoryRunSourceName = (history?: WorkspaceHistory | null) =>
-  getHistoryString(getCLIRunRecord(history)?.source_name);
-
-const getHistoryFlowName = (history?: WorkspaceHistory | null) => {
-  const flowRecord = getHistoryNestedRecord(getHistoryDataRecord(history)?.flow);
-  const flowName = flowRecord?.name;
-  return typeof flowName === 'string' && flowName.trim() ? flowName.trim() : null;
-};
-
-const getHistoryRunStatus = (history?: WorkspaceHistory | null) => {
-  const runRecord = getHistoryNestedRecord(getHistoryDataRecord(history)?.run);
-  const status = runRecord?.status;
-  return typeof status === 'string' && status.trim() ? status.trim() : null;
-};
-
-const getHistoryPrimaryTitle = (history: WorkspaceHistory) =>
-  getHistoryRequestTitle(history) ??
-  getHistoryRunSourceName(history) ??
-  getHistoryFlowName(history) ??
-  `${history.entity_type} #${history.entity_id}`;
+const getHistoryRunFileDisplayName = (runRecord?: Record<string, unknown> | null) =>
+  getHistoryString(runRecord?.source_name) ??
+  getHistoryPathBasename(runRecord?.source_path) ??
+  getHistoryString(runRecord?.name);
 
 const getHistorySidebarStatusBadgeVariant = (status: string | null) => {
   const normalizedStatus = status?.toLowerCase() ?? '';
@@ -3981,6 +3960,28 @@ function HistoryWorkspaceSection({
   const selectedCLIRunResults = getCLIRunResults(selectedHistory);
   const selectedCLIRunLog = getCLIRunLogRecord(selectedHistory);
   const isFiltered = entityTypeFilter !== 'all' || deferredSearch.trim().length > 0;
+  const selectedHistoryTitle = selectedHistory ? getHistorySidebarTitle(selectedHistory) : null;
+  const selectedHistoryStatus = selectedHistory ? getHistorySidebarStatus(selectedHistory) : null;
+  const selectedHistoryDuration = selectedHistory ? getHistorySidebarDuration(selectedHistory) : null;
+  const selectedHistoryStepSummary = selectedHistory
+    ? getHistorySidebarStepSummary(selectedHistory)
+    : null;
+  const selectedHistoryStatusLabel =
+    selectedHistoryStatus && /^\d+$/.test(selectedHistoryStatus)
+      ? `HTTP ${selectedHistoryStatus}`
+      : selectedHistoryStatus;
+  const selectedHistoryDescription = selectedHistory
+    ? [
+        getHistorySidebarDescription(selectedHistory),
+        selectedHistoryStatusLabel,
+        selectedHistoryStepSummary
+          ? `${selectedHistoryStepSummary} ${t('history.stepsShort')}`
+          : null,
+        selectedHistoryDuration,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .join(' · ')
+    : null;
   const refreshActionItems: ActionMenuItem[] = [
     {
       key: 'histories-refresh',
@@ -4078,7 +4079,7 @@ function HistoryWorkspaceSection({
           module="histories"
           currentTitle={
             selectedHistory
-              ? getHistoryPrimaryTitle(selectedHistory)
+              ? selectedHistoryTitle || t('history.workspaceHistory')
               : t('history.workspaceHistory')
           }
           description={
@@ -4133,32 +4134,23 @@ function HistoryWorkspaceSection({
                           {selectedHistory.entity_type}
                         </Badge>
                         <Badge variant="outline">{selectedHistory.action}</Badge>
-                        {selectedHistory.entity_type === 'cli_request' &&
-                        getHistoryRequestStatus(selectedHistory) !== null ? (
-                          <Badge variant="secondary">
-                            {getHistoryRequestStatus(selectedHistory)}
+                        {selectedHistoryStatus ? (
+                          <Badge variant={getHistorySidebarStatusBadgeVariant(selectedHistoryStatus)}>
+                            {selectedHistoryStatus}
                           </Badge>
                         ) : null}
-                        {selectedHistory.entity_type !== 'cli_request' &&
-                        getHistoryRunStatus(selectedHistory) ? (
-                          <Badge variant="secondary">{getHistoryRunStatus(selectedHistory)}</Badge>
-                        ) : null}
-                        <Badge variant="secondary">
-                          {t('history.recordNumber', { id: selectedHistory.id })}
-                        </Badge>
                       </div>
                       <div>
                         <CardTitle className="text-2xl tracking-normal">
-                          {getHistoryPrimaryTitle(selectedHistory)}
+                          {selectedHistoryTitle}
                         </CardTitle>
                         <CardDescription className="mt-2 max-w-4xl leading-6">
-                          {selectedHistory.message || t('history.noMessageForEntry')}
+                          {selectedHistoryDescription || t('history.noMessageForEntry')}
                         </CardDescription>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <InfoBadge label={t('history.user')} value={`#${selectedHistory.user_id}`} />
                       {selectedHistory.source ? (
                         <InfoBadge label={t('history.syncSource')} value={selectedHistory.source} />
                       ) : null}
@@ -4178,24 +4170,29 @@ function HistoryWorkspaceSection({
                     <CardDescription>{t('history.metadataDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
-                    <DetailField label={t('history.recordId')}>{selectedHistory.id}</DetailField>
-                    <DetailField label={t('common.workspaceId')}>
-                      {selectedHistory.workspace_id}
-                    </DetailField>
                     <DetailField label={t('history.entityType')}>
                       {selectedHistory.entity_type}
                     </DetailField>
-                    <DetailField label={t('history.entityId')}>
-                      {selectedHistory.entity_id}
-                    </DetailField>
                     <DetailField label={t('history.action')}>{selectedHistory.action}</DetailField>
-                    <DetailField label={t('history.userId')}>{selectedHistory.user_id}</DetailField>
-                    <DetailField label={t('history.syncSource')}>
-                      {selectedHistory.source || t('common.unknown')}
+                    {selectedHistoryStatus ? (
+                      <DetailField label={t('common.status')}>{selectedHistoryStatus}</DetailField>
+                    ) : null}
+                    {selectedHistoryDuration ? (
+                      <DetailField label={t('common.duration')}>{selectedHistoryDuration}</DetailField>
+                    ) : null}
+                    {selectedHistoryStepSummary ? (
+                      <DetailField label={t('history.stepProgress')}>
+                        {selectedHistoryStepSummary}
+                      </DetailField>
+                    ) : null}
+                    <DetailField label={t('common.created')}>
+                      {formatDate(selectedHistory.created_at, 'YYYY-MM-DD HH:mm')}
                     </DetailField>
-                    <DetailField label={t('history.sourceEventId')}>
-                      {selectedHistory.source_event_id || t('common.unknown')}
-                    </DetailField>
+                    {selectedHistory.source ? (
+                      <DetailField label={t('history.syncSource')}>
+                        {selectedHistory.source}
+                      </DetailField>
+                    ) : null}
                   </CardContent>
                 </Card>
 
@@ -4206,7 +4203,7 @@ function HistoryWorkspaceSection({
                   </CardHeader>
                   <CardContent>
                     <div className="rounded-md border border-border-subtle bg-bg-canvas p-4 text-sm leading-6 text-text-muted">
-                      {selectedHistory.message || t('history.noMessageRecorded')}
+                      {getHistoryDisplayMessage(selectedHistory) || t('history.noMessageRecorded')}
                     </div>
                   </CardContent>
                 </Card>
@@ -4284,7 +4281,7 @@ function HistoryWorkspaceSection({
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2">
                         <DetailField label={t('history.runFile')}>
-                          {getHistoryString(selectedCLIRun.source_name) || t('common.unknown')}
+                          {getHistoryRunFileDisplayName(selectedCLIRun) || t('common.unknown')}
                         </DetailField>
                         <DetailField label={t('common.status')}>
                           {getHistoryString(selectedCLIRun.status) || t('common.unknown')}
@@ -4300,6 +4297,7 @@ function HistoryWorkspaceSection({
                         </DetailField>
                         <DetailField label={t('common.duration')}>
                           {formatHistoryDuration(selectedCLIRun.total_duration_ms) ||
+                            formatHistoryDuration(selectedCLIRun.duration_ms) ||
                             t('common.unknown')}
                         </DetailField>
                       </CardContent>
@@ -4373,10 +4371,6 @@ function HistoryWorkspaceSection({
                 </>
               ) : null}
 
-              <div className="grid gap-6 xl:grid-cols-2">
-                <JsonCard title={t('history.snapshotData')} value={selectedHistory.data} />
-                <JsonCard title={t('history.diff')} value={selectedHistory.diff} />
-              </div>
             </div>
           )}
         </ResourceContent>
