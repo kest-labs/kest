@@ -3,6 +3,7 @@ package migrations
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,12 @@ func init() {
 type addWorkspaceIDToProjects struct {
 	migration.BaseMigration
 }
+
+const (
+	workspaceBackfillOwnerIDEnv        = "KEST_WORKSPACE_BACKFILL_OWNER_ID"
+	workspaceBackfillOwnerEmailEnv     = "KEST_WORKSPACE_BACKFILL_OWNER_EMAIL"
+	workspaceBackfillDefaultOwnerEmail = "admin@example.com"
+)
 
 func (m *addWorkspaceIDToProjects) Up(db *gorm.DB) error {
 	if !db.Migrator().HasTable("projects") {
@@ -115,6 +122,16 @@ func (migrationWorkspaceMember) TableName() string {
 	return "workspace_members"
 }
 
+type migrationUser struct {
+	ID        string    `gorm:"primaryKey"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	Email     string    `gorm:"column:email"`
+}
+
+func (migrationUser) TableName() string {
+	return "users"
+}
+
 func backfillProjectWorkspaceIDs(db *gorm.DB) error {
 	var projects []migrationProject
 	if err := db.Where("workspace_id IS NULL OR workspace_id = ''").Find(&projects).Error; err != nil {
@@ -159,7 +176,8 @@ func loadProjectMembersForWorkspaceBackfill(db *gorm.DB, projectID string) (stri
 	}
 
 	if len(members) == 0 {
-		return "", nil, nil
+		ownerID, err := workspaceBackfillFallbackUserID(db)
+		return ownerID, members, err
 	}
 
 	for _, member := range members {
@@ -169,6 +187,78 @@ func loadProjectMembersForWorkspaceBackfill(db *gorm.DB, projectID string) (stri
 	}
 
 	return members[0].UserID, members, nil
+}
+
+func workspaceBackfillFallbackUserID(db *gorm.DB) (string, error) {
+	if !db.Migrator().HasTable("users") {
+		return "", fmt.Errorf("workspace ownership cannot be derived because users table is missing")
+	}
+
+	if ownerID := strings.TrimSpace(os.Getenv(workspaceBackfillOwnerIDEnv)); ownerID != "" {
+		userID, err := findWorkspaceBackfillUserID(db, "id", ownerID)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", fmt.Errorf("workspace ownership cannot use %s=%q because no active user matches", workspaceBackfillOwnerIDEnv, ownerID)
+		}
+		return userID, err
+	}
+
+	if ownerEmail := strings.TrimSpace(os.Getenv(workspaceBackfillOwnerEmailEnv)); ownerEmail != "" {
+		userID, err := findWorkspaceBackfillUserID(db, "email", ownerEmail)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", fmt.Errorf("workspace ownership cannot use %s=%q because no active user matches", workspaceBackfillOwnerEmailEnv, ownerEmail)
+		}
+		return userID, err
+	}
+
+	if db.Migrator().HasColumn("users", "email") {
+		ownerID, err := findWorkspaceBackfillUserID(db, "email", workspaceBackfillDefaultOwnerEmail)
+		if err == nil {
+			return ownerID, nil
+		}
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", err
+		}
+	}
+
+	var users []migrationUser
+	if err := activeWorkspaceBackfillUsersQuery(db).Order("created_at ASC, id ASC").Limit(2).Find(&users).Error; err != nil {
+		return "", err
+	}
+
+	switch len(users) {
+	case 1:
+		return users[0].ID, nil
+	case 0:
+		return "", fmt.Errorf("workspace ownership cannot be derived because no active users exist")
+	default:
+		return "", fmt.Errorf("workspace ownership cannot be derived automatically because multiple active users exist and no default admin user was found; set %s or %s before rerunning migrations", workspaceBackfillOwnerIDEnv, workspaceBackfillOwnerEmailEnv)
+	}
+}
+
+func findWorkspaceBackfillUserID(db *gorm.DB, column string, value string) (string, error) {
+	if !db.Migrator().HasColumn("users", column) {
+		return "", fmt.Errorf("workspace ownership cannot use users.%s because the column is missing", column)
+	}
+
+	var user migrationUser
+	err := activeWorkspaceBackfillUsersQuery(db).
+		Where(column+" = ?", value).
+		Order("created_at ASC, id ASC").
+		First(&user).Error
+	if err != nil {
+		return "", err
+	}
+
+	return user.ID, nil
+}
+
+func activeWorkspaceBackfillUsersQuery(db *gorm.DB) *gorm.DB {
+	query := db.Model(&migrationUser{})
+	if db.Migrator().HasColumn("users", "deleted_at") {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	return query
 }
 
 func resolveWorkspaceForProject(
@@ -309,7 +399,9 @@ func syncWorkspaceMembersFromProject(
 	}
 
 	now := time.Now()
+	hasMembers := false
 	for _, projectMember := range projectMembers {
+		hasMembers = true
 		var workspaceMember migrationWorkspaceMember
 		err := db.Unscoped().
 			Where("workspace_id = ? AND user_id = ?", workspaceID, projectMember.UserID).
@@ -353,5 +445,48 @@ func syncWorkspaceMembersFromProject(
 		}
 	}
 
+	if !hasMembers && ownerID != "" {
+		return ensureWorkspaceOwnerMember(db, workspaceID, ownerID)
+	}
+
 	return nil
+}
+
+func ensureWorkspaceOwnerMember(db *gorm.DB, workspaceID string, ownerID string) error {
+	now := time.Now()
+	var workspaceMember migrationWorkspaceMember
+	err := db.Unscoped().
+		Where("workspace_id = ? AND user_id = ?", workspaceID, ownerID).
+		First(&workspaceMember).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return db.Create(&migrationWorkspaceMember{
+			WorkspaceID: workspaceID,
+			UserID:      ownerID,
+			Role:        "owner",
+			InvitedBy:   ownerID,
+			JoinedAt:    now,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}).Error
+	}
+	if err != nil {
+		return err
+	}
+
+	updates := map[string]any{
+		"role":       "owner",
+		"invited_by": ownerID,
+		"updated_at": now,
+	}
+	if workspaceMember.JoinedAt.IsZero() {
+		updates["joined_at"] = now
+	}
+	if workspaceMember.DeletedAt.Valid {
+		updates["deleted_at"] = nil
+	}
+
+	return db.Unscoped().
+		Model(&migrationWorkspaceMember{}).
+		Where("id = ?", workspaceMember.ID).
+		Updates(updates).Error
 }

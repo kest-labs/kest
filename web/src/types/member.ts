@@ -71,7 +71,9 @@ export const sortWorkspaceMembers = <T extends Pick<WorkspaceMember, 'role' | 'u
       return roleDiff;
     }
 
-    const usernameDiff = left.username.localeCompare(right.username, undefined, {
+    const leftUsername = left.username?.trim() || left.user_id;
+    const rightUsername = right.username?.trim() || right.user_id;
+    const usernameDiff = leftUsername.localeCompare(rightUsername, undefined, {
       sensitivity: 'base',
     });
 

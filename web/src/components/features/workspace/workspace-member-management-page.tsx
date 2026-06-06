@@ -142,8 +142,13 @@ const getRoleBadgeVariant = (role: WorkspaceMemberRole) => {
   return 'outline';
 };
 
-const getMemberInitials = (member: Pick<WorkspaceMember, 'username' | 'email'>) => {
-  const source = member.username.trim() || member.email.trim();
+const getMemberDisplayName = (member: Pick<WorkspaceMember, 'username' | 'email' | 'user_id'>) =>
+  member.username?.trim() || member.email?.trim() || String(member.user_id).trim();
+
+const getMemberEmail = (member: Pick<WorkspaceMember, 'email'>) => member.email?.trim() || '-';
+
+const getMemberInitials = (member: Pick<WorkspaceMember, 'username' | 'email' | 'user_id'>) => {
+  const source = getMemberDisplayName(member);
   const parts = source.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
@@ -313,10 +318,10 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
   const filteredMembers = useMemo(() => {
     return members.filter(member => {
       const matchesRole = roleFilter === 'all' || member.role === roleFilter;
+      const searchableMemberText =
+        `${getMemberDisplayName(member)} ${getMemberEmail(member)}`.toLowerCase();
       const matchesKeyword =
-        !deferredSearchQuery ||
-        member.username.toLowerCase().includes(deferredSearchQuery) ||
-        member.email.toLowerCase().includes(deferredSearchQuery);
+        !deferredSearchQuery || searchableMemberText.includes(deferredSearchQuery);
 
       return matchesRole && matchesKeyword;
     });
@@ -940,7 +945,9 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
                                 </Avatar>
                                 <div className="space-y-1">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-medium">{member.username}</span>
+                                    <span className="font-medium">
+                                      {getMemberDisplayName(member)}
+                                    </span>
                                     {isCurrentUser ? (
                                       <Badge variant="outline">{t('membersPage.you')}</Badge>
                                     ) : null}
@@ -953,7 +960,7 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
                                   </div>
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Mail className="h-3.5 w-3.5" />
-                                    <span>{member.email}</span>
+                                    <span>{getMemberEmail(member)}</span>
                                   </div>
                                 </div>
                               </div>
@@ -1358,15 +1365,19 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
             <DialogTitle>{t('membersPage.editMemberDialogTitle')}</DialogTitle>
             <DialogDescription>
               {t('membersPage.editMemberDialogDescription', {
-                username: editingMember?.username || '',
+                username: editingMember ? getMemberDisplayName(editingMember) : '',
               })}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <div className="space-y-4">
               <div className="rounded-md border border-border-subtle bg-bg-canvas p-4">
-                <div className="font-medium">{editingMember?.username}</div>
-                <div className="text-sm text-muted-foreground">{editingMember?.email}</div>
+                <div className="font-medium">
+                  {editingMember ? getMemberDisplayName(editingMember) : ''}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {editingMember ? getMemberEmail(editingMember) : ''}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -1412,7 +1423,7 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
             <DialogTitle>{t('membersPage.removeMemberDialogTitle')}</DialogTitle>
             <DialogDescription>
               {t('membersPage.removeMemberDialogDescription', {
-                username: deleteTarget?.username || '',
+                username: deleteTarget ? getMemberDisplayName(deleteTarget) : '',
               })}
             </DialogDescription>
           </DialogHeader>
@@ -1421,14 +1432,14 @@ export function WorkspaceMemberManagementPage({ workspaceId }: { workspaceId: nu
               <AlertTitle>{t('membersPage.revokeAccessTitle')}</AlertTitle>
               <AlertDescription>
                 {t('membersPage.revokeAccessDescription', {
-                  username: deleteTarget?.username || '',
+                  username: deleteTarget ? getMemberDisplayName(deleteTarget) : '',
                 })}
               </AlertDescription>
             </Alert>
             {deleteTarget ? (
               <div className="mt-4 rounded-md border border-border-subtle bg-bg-canvas p-4">
-                <div className="font-medium">{deleteTarget.username}</div>
-                <div className="text-sm text-muted-foreground">{deleteTarget.email}</div>
+                <div className="font-medium">{getMemberDisplayName(deleteTarget)}</div>
+                <div className="text-sm text-muted-foreground">{getMemberEmail(deleteTarget)}</div>
               </div>
             ) : null}
           </DialogBody>
