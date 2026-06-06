@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useT } from '@/i18n/client';
 import { workspaceService } from '@/services/workspace';
+import { useAuthStore } from '@/store/auth-store';
 import type {
   CreateWorkspaceRequest,
   GenerateWorkspaceCliTokenRequest,
@@ -18,7 +19,9 @@ interface WorkspaceQueryOptions {
 }
 
 interface DeleteWorkspaceMutationContext {
-  previousWorkspaceLists: Array<readonly [ReadonlyArray<unknown>, WorkspaceListResponse | undefined]>;
+  previousWorkspaceLists: Array<
+    readonly [ReadonlyArray<unknown>, WorkspaceListResponse | undefined]
+  >;
 }
 
 const removeWorkspaceFromListCache = (
@@ -30,7 +33,9 @@ const removeWorkspaceFromListCache = (
   }
 
   const normalizedWorkspaceId = String(workspaceId);
-  const nextItems = workspaceList.items.filter((workspace) => String(workspace.id) !== normalizedWorkspaceId);
+  const nextItems = workspaceList.items.filter(
+    workspace => String(workspace.id) !== normalizedWorkspaceId
+  );
   const nextTotal = Math.max(0, workspaceList.meta.total - 1);
   const perPage = Math.max(1, workspaceList.meta.per_page || nextItems.length || 1);
   const nextPages = Math.max(1, Math.ceil(nextTotal / perPage));
@@ -62,20 +67,28 @@ const removeWorkspaceFromListCache = (
 export const workspaceKeys = {
   all: ['workspaces'] as const,
   lists: () => [...workspaceKeys.all, 'list'] as const,
-  list: (params: WorkspaceListParams) => [...workspaceKeys.lists(), params] as const,
+  list: (params: WorkspaceListParams, userId: number | string) =>
+    [...workspaceKeys.lists(), params, 'user', userId] as const,
   details: () => [...workspaceKeys.all, 'detail'] as const,
-  detail: (id: number | string) => [...workspaceKeys.details(), id] as const,
+  detail: (id: number | string, userId?: number | string) =>
+    userId === undefined
+      ? ([...workspaceKeys.details(), id] as const)
+      : ([...workspaceKeys.details(), id, 'user', userId] as const),
   stats: () => [...workspaceKeys.all, 'stats'] as const,
-  workspaceStats: (id: number | string) => [...workspaceKeys.stats(), id] as const,
+  workspaceStats: (id: number | string, userId?: number | string) =>
+    userId === undefined
+      ? ([...workspaceKeys.stats(), id] as const)
+      : ([...workspaceKeys.stats(), id, 'user', userId] as const),
 };
 
 // 工作区列表查询。
-// 作用：拉取当前登录用户可见的工作区分页列表，并在翻页时保留上一页数据减少闪烁。
+// 作用：拉取当前登录用户可见的工作区分页列表，缓存按用户隔离以避免切换账号后复用旧角色。
 export function useWorkspaces(params: WorkspaceListParams = {}) {
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
+
   return useQuery({
-    queryKey: workspaceKeys.list(params),
+    queryKey: workspaceKeys.list(params, currentUserId),
     queryFn: () => workspaceService.list(params),
-    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -83,10 +96,11 @@ export function useWorkspaces(params: WorkspaceListParams = {}) {
 // 作用：按工作区 ID 获取详情数据，供右侧详情面板或其他页面复用。
 export function useWorkspace(id?: number | string, options: WorkspaceQueryOptions = {}) {
   const isEnabled = options.enabled ?? true;
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
+
   return useQuery({
-    queryKey: workspaceKeys.detail(id ?? 'unknown'),
-    queryFn: ({ signal }) =>
-      workspaceService.getById(id as number | string, { signal }),
+    queryKey: workspaceKeys.detail(id ?? 'unknown', currentUserId),
+    queryFn: ({ signal }) => workspaceService.getById(id as number | string, { signal }),
     enabled: isEnabled && id !== undefined && id !== null && id !== '',
   });
 }
@@ -95,10 +109,11 @@ export function useWorkspace(id?: number | string, options: WorkspaceQueryOption
 // 作用：读取 `/workspaces/:id/stats`，展示 API specs、flows、members 等聚合信息。
 export function useWorkspaceStats(id?: number | string, options: WorkspaceQueryOptions = {}) {
   const isEnabled = options.enabled ?? true;
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
+
   return useQuery<WorkspaceStats>({
-    queryKey: workspaceKeys.workspaceStats(id ?? 'unknown'),
-    queryFn: ({ signal }) =>
-      workspaceService.getStats(id as number | string, { signal }),
+    queryKey: workspaceKeys.workspaceStats(id ?? 'unknown', currentUserId),
+    queryFn: ({ signal }) => workspaceService.getStats(id as number | string, { signal }),
     enabled: isEnabled && id !== undefined && id !== null && id !== '',
   });
 }
@@ -108,12 +123,13 @@ export function useWorkspaceStats(id?: number | string, options: WorkspaceQueryO
 export function useCreateWorkspace() {
   const queryClient = useQueryClient();
   const t = useT();
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
 
   return useMutation({
     mutationFn: (data: CreateWorkspaceRequest) => workspaceService.create(data),
-    onSuccess: (workspace) => {
+    onSuccess: workspace => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
-      queryClient.setQueryData(workspaceKeys.detail(workspace.id), workspace);
+      queryClient.setQueryData(workspaceKeys.detail(workspace.id, currentUserId), workspace);
       toast.success(t.workspace('toasts.workspaceCreated', { name: workspace.name }));
     },
   });
@@ -124,13 +140,14 @@ export function useCreateWorkspace() {
 export function useUpdateWorkspace() {
   const queryClient = useQueryClient();
   const t = useT();
+  const currentUserId = useAuthStore.use.user()?.id ?? 'anonymous';
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number | string; data: UpdateWorkspaceRequest }) =>
       workspaceService.update(id, data),
-    onSuccess: (workspace) => {
+    onSuccess: workspace => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
-      queryClient.setQueryData(workspaceKeys.detail(workspace.id), workspace);
+      queryClient.setQueryData(workspaceKeys.detail(workspace.id, currentUserId), workspace);
       queryClient.invalidateQueries({ queryKey: workspaceKeys.workspaceStats(workspace.id) });
       toast.success(t.workspace('toasts.workspaceUpdated', { name: workspace.name }));
     },
@@ -151,12 +168,13 @@ export function useDeleteWorkspace() {
         queryClient.cancelQueries({ queryKey: workspaceKeys.workspaceStats(id) }),
       ]);
 
-      const previousWorkspaceLists =
-        queryClient.getQueriesData<WorkspaceListResponse>({ queryKey: workspaceKeys.lists() });
+      const previousWorkspaceLists = queryClient.getQueriesData<WorkspaceListResponse>({
+        queryKey: workspaceKeys.lists(),
+      });
 
       queryClient.setQueriesData<WorkspaceListResponse>(
         { queryKey: workspaceKeys.lists() },
-        (workspaceList) => removeWorkspaceFromListCache(workspaceList, id)
+        workspaceList => removeWorkspaceFromListCache(workspaceList, id)
       );
 
       return {
@@ -189,13 +207,8 @@ export function useGenerateWorkspaceCliToken() {
   const t = useT();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: number | string;
-      data?: GenerateWorkspaceCliTokenRequest;
-    }) => workspaceService.generateCliToken(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data?: GenerateWorkspaceCliTokenRequest }) =>
+      workspaceService.generateCliToken(id, data),
     onSuccess: () => {
       toast.success(t.workspace('toasts.cliTokenGenerated'));
     },
