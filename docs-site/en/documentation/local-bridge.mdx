@@ -1,0 +1,89 @@
+---
+title: Local Bridge
+description: Use kest bridge to let Kest Web run requests against local and private APIs through a loopback runner.
+---
+
+# Local Bridge
+
+`kest bridge` starts a local runner that lets Kest Web send requests from your machine. This is useful when the target API is on localhost, inside a private network, or blocked by browser CORS.
+
+## Start the Bridge
+
+```bash
+kest bridge
+```
+
+Default address:
+
+```text
+http://127.0.0.1:8788
+```
+
+Health check:
+
+```text
+GET http://127.0.0.1:8788/health
+```
+
+Request execution endpoint:
+
+```text
+POST http://127.0.0.1:8788/run
+```
+
+## Web Request Workbench
+
+When the bridge is running, the Web request workbench can execute requests through your local machine. The request can still use workspace environments, headers, variables, and examples.
+
+Results are saved back into workspace history, including:
+
+- Request method and URL.
+- Headers and body after variable resolution.
+- Response status, headers, and body.
+- Duration and error details.
+
+## Why the Bridge Exists
+
+Browsers cannot safely call every local or private API directly. The bridge keeps request execution on your machine while still letting Web manage the request model and history.
+
+Common use cases:
+
+- Test `localhost` services from Web.
+- Call staging services available only on a private network.
+- Avoid browser CORS limits during manual API debugging.
+- Reuse workspace environments while running requests locally.
+
+## Security Boundary
+
+The bridge listens on loopback by default:
+
+```text
+127.0.0.1
+```
+
+Run it only on machines where you trust the active Web session. Treat bridge access like local command execution, because it can send requests from your network context.
+
+## CORS
+
+The bridge supports CORS so Kest Web can communicate with it from the browser. If your environment needs stricter origin control, start the bridge with an explicit origin policy:
+
+```bash
+kest bridge --cors strict --allow-origin https://kest.dev
+```
+
+Use the default mode for local development. Use strict mode for shared test machines.
+
+## Troubleshooting
+
+If Web cannot find the bridge:
+
+```bash
+curl http://127.0.0.1:8788/health
+```
+
+If the target API fails but the bridge health check passes, verify:
+
+- The target API is reachable from the same machine.
+- The selected environment has the correct base URL.
+- Required variables are present.
+- Local firewall or VPN rules allow the request.

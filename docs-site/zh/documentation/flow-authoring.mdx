@@ -1,0 +1,209 @@
+---
+title: Flow 编写参考
+description: 使用 Markdown 编写 Kest flows，包括 setup、step、captures、assertions、edges、teardown 和 profiles。
+---
+
+# Flow 编写参考
+
+Kest flow 是以 `.flow.md` 结尾的 Markdown 文件。它用文本描述 API workflow，既适合人工 review，也可以由 CLI 执行并同步到 Kest Cloud。
+
+## 文件结构
+
+一个 flow 文件可以包含：
+
+- `flow` 元数据。
+- `setup` blocks。
+- `step` blocks。
+- `edge` blocks。
+- `teardown` blocks。
+
+````md
+# Auth smoke test
+
+```flow
+@flow id=auth-smoke
+@name Auth smoke test
+@version 1.0.0
+@env staging
+@tags smoke,auth
+```
+
+```step
+@id login
+@name Login
+@type http
+@retry 2
+
+POST {{base_url}}/v1/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+[Captures]
+token = body.access_token
+
+[Asserts]
+status == 200
+body.access_token exists
+```
+
+```step
+@id profile
+@name Fetch profile
+@type http
+
+GET {{base_url}}/v1/users/profile
+Authorization: Bearer {{token}}
+
+[Asserts]
+status == 200
+```
+
+```edge
+login -> profile
+```
+````
+
+## Flow 元数据
+
+用 `flow` block 定义稳定身份和标签：
+
+~~~md
+```flow
+@flow id=checkout-smoke
+@name Checkout smoke
+@version 1.0.0
+@env staging
+@tags checkout,smoke
+```
+~~~
+
+`id` 应该保持稳定。这样即使文件移动，Cloud 也能追踪修订和运行历史。
+
+## HTTP Steps
+
+HTTP step 描述一次请求，以及可选的 captures 和 assertions：
+
+~~~md
+```step
+@id create-user
+@name Create user
+@type http
+@retry 2
+@retry-wait 500ms
+@timeout 10s
+
+POST {{base_url}}/v1/users
+Content-Type: application/json
+
+{
+  "email": "{{$randomEmail}}"
+}
+
+[Captures]
+user_id = body.id
+
+[Asserts]
+status == 201
+duration < 1000
+```
+~~~
+
+常用 step directives：
+
+- `@id`：稳定 step ID。
+- `@name`：显示名。
+- `@type`：`http` 或 `exec`。
+- `@retry`：重试次数。
+- `@retry-wait`：重试间隔。
+- `@timeout` 或 `@max-duration`：执行超时。
+- `@wait`：执行前等待。
+
+## Exec Steps
+
+Exec step 运行本地 shell 命令：
+
+~~~md
+```step
+@id seed-user
+@name Seed user
+@type exec
+@timeout 30s
+
+echo '{"email":"seed@example.com"}'
+
+[Captures]
+seed_email = stdout.email
+```
+~~~
+
+Exec step 适合本地准备、fixture 创建，或调用 CI 环境中已有的工具。
+
+## Edges
+
+Edges 定义执行顺序：
+
+~~~md
+```edge
+login -> profile
+profile -> logout
+```
+~~~
+
+有 edges 时，Kest 按图执行 flow。没有 edges 时，steps 按文件顺序执行。
+
+## Setup 和 Teardown
+
+用 setup 准备前置条件，用 teardown 清理资源：
+
+~~~md
+```setup
+@id prepare
+@type exec
+
+echo "prepare test data"
+```
+
+```teardown
+@id cleanup
+@type exec
+
+echo "cleanup test data"
+```
+~~~
+
+## Profiles
+
+`.kest/flow.config.yaml` 控制默认 targets 和运行行为：
+
+```yaml
+profiles:
+  local:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: local
+    strict: true
+    fail_fast: false
+
+  ci:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: staging
+    strict: true
+    sync: true
+```
+
+运行 profile：
+
+```bash
+kest run --profile ci
+```
+
+单次覆盖 base URL：
+
+```bash
+kest run --profile ci --base-url https://staging.example.com
+```

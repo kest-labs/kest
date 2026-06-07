@@ -51,10 +51,20 @@
                   "en/documentation/quickstart",
                   "en/documentation/kest-web-cloud",
                   "en/documentation/kest-cli",
+                  "en/documentation/kest-ci",
                   "en/documentation/authentication",
                   "en/documentation/errors",
                   "en/documentation/rate-limits",
-                  "en/documentation/cli-sync"
+                  "en/documentation/cli-sync",
+                  "en/documentation/troubleshooting"
+                ]
+              },
+              {
+                "group": "Reference",
+                "pages": [
+                  "en/documentation/flow-authoring",
+                  "en/documentation/assertions-variables",
+                  "en/documentation/local-bridge"
                 ]
               },
               {
@@ -104,10 +114,20 @@
                   "zh/documentation/quickstart",
                   "zh/documentation/kest-web-cloud",
                   "zh/documentation/kest-cli",
+                  "zh/documentation/kest-ci",
                   "zh/documentation/authentication",
                   "zh/documentation/errors",
                   "zh/documentation/rate-limits",
-                  "zh/documentation/cli-sync"
+                  "zh/documentation/cli-sync",
+                  "zh/documentation/troubleshooting"
+                ]
+              },
+              {
+                "group": "参考",
+                "pages": [
+                  "zh/documentation/flow-authoring",
+                  "zh/documentation/assertions-variables",
+                  "zh/documentation/local-bridge"
                 ]
               },
               {
