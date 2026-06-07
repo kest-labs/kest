@@ -1,6 +1,6 @@
 ---
 title: 认证
-description: JWT 认证与项目级 CLI Token 的使用方式。
+description: JWT 认证与 workspace-scoped CLI Token 的使用方式。
 ---
 
 # 认证
@@ -9,7 +9,7 @@ Kest 当前对外暴露两种认证方式。
 
 ## Bearer JWT
 
-大多数用户、项目与协作接口都要求在 `Authorization` 头中携带 JWT：
+大多数用户、workspace 与协作接口都要求在 `Authorization` 头中携带 JWT：
 
 ```http
 Authorization: Bearer <jwt-token>
@@ -17,19 +17,19 @@ Authorization: Bearer <jwt-token>
 
 该 token 通过 `POST /login` 获取。
 
-## 项目级 CLI Token
+## Workspace CLI Token
 
-CLI Sync 接口使用项目级 token，而不是用户 JWT：
+Kest Cloud Sync 接口使用 workspace CLI token，而不是用户 JWT：
 
 ```http
 Authorization: Bearer <kest_pat_...>
 ```
 
-这种 token 通过 `POST /projects/{id}/cli-tokens` 创建，并且只对单个项目生效。
+这种 token 通过 `POST /workspaces/{id}/cli-tokens` 创建，并且只对单个 workspace 生效。
 
 ## 实务规则
 
 - 浏览器或用户驱动的操作使用 JWT。
 - 自动化同步流程使用 CLI Token。
 - 不要拿 CLI Token 调用 `/users/profile` 这类用户接口。
-- 如果请求体里带了 `project_id`，它必须和 URL 中的项目 ID 一致。
+- 如果请求体里带了 workspace ID，它必须和 URL 中的 workspace ID 一致。
