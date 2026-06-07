@@ -71,7 +71,7 @@
                 "group": "Workflows",
                 "pages": [
                   "en/workflows/api-spec-lifecycle",
-                  "en/workflows/project-collaboration",
+                  "en/workflows/workspace-collaboration",
                   "en/workflows/testing-requests"
                 ]
               }
@@ -134,7 +134,7 @@
                 "group": "工作流",
                 "pages": [
                   "zh/workflows/api-spec-lifecycle",
-                  "zh/workflows/project-collaboration",
+                  "zh/workflows/workspace-collaboration",
                   "zh/workflows/testing-requests"
                 ]
               }
