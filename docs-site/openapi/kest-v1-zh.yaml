@@ -31,32 +31,24 @@
       "description": "认证、账户与用户信息接口。"
     },
     {
-      "name": "Projects",
-      "description": "项目创建、查询与管理接口。"
-    },
-    {
-      "name": "CLI Sync",
-      "description": "CLI 产物同步与项目级 token 接口。"
+      "name": "Kest Cloud Sync",
+      "description": "Kest Cloud Sync 产物同步与工作区 CLI token 接口。"
     },
     {
       "name": "API Specs",
-      "description": "API 规格、示例与导入导出接口。"
+      "description": "工作区 API 规格、示例与导入导出接口。"
     },
     {
       "name": "Environments",
-      "description": "环境与变量管理接口。"
+      "description": "工作区环境与变量管理接口。"
     },
     {
       "name": "Categories",
-      "description": "分类与目录组织接口。"
+      "description": "工作区分类与目录组织接口。"
     },
     {
       "name": "Test Cases",
-      "description": "测试用例生成、执行与运行记录接口。"
-    },
-    {
-      "name": "Members",
-      "description": "项目成员协作接口。"
+      "description": "工作区测试用例生成、执行与运行记录接口。"
     },
     {
       "name": "Permissions",
@@ -64,15 +56,15 @@
     },
     {
       "name": "Collections",
-      "description": "请求集合管理接口。"
+      "description": "工作区请求集合管理接口。"
     },
     {
       "name": "Requests",
-      "description": "请求模型与版本操作接口。"
+      "description": "工作区请求模型与版本操作接口。"
     },
     {
       "name": "History",
-      "description": "历史记录接口。"
+      "description": "工作区历史记录接口。"
     },
     {
       "name": "Workspaces",
@@ -90,10 +82,10 @@
         "scheme": "bearer",
         "bearerFormat": "JWT"
       },
-      "ProjectCLIToken": {
+      "WorkspaceCLIToken": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "Kest project CLI token"
+        "bearerFormat": "Kest workspace CLI token"
       }
     },
     "schemas": {
@@ -430,192 +422,7 @@
           "data"
         ]
       },
-      "ProjectCreateRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string",
-            "enum": [
-              "go",
-              "javascript",
-              "python",
-              "java",
-              "ruby",
-              "php",
-              "csharp"
-            ]
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "ProjectUpdateRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string",
-            "enum": [
-              "go",
-              "javascript",
-              "python",
-              "java",
-              "ruby",
-              "php",
-              "csharp"
-            ]
-          },
-          "status": {
-            "type": "integer",
-            "enum": [
-              0,
-              1
-            ]
-          }
-        }
-      },
-      "Project": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "platform",
-          "status",
-          "created_at"
-        ]
-      },
-      "ProjectEnvelope": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/Project"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data"
-        ]
-      },
-      "ProjectListItem": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "platform",
-          "status"
-        ]
-      },
-      "ProjectListEnvelope": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "items": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ProjectListItem"
-                }
-              },
-              "meta": {
-                "$ref": "#/components/schemas/MetaEnvelope"
-              }
-            },
-            "required": [
-              "items",
-              "meta"
-            ]
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data"
-        ]
-      },
-      "ProjectStatsEnvelope": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data"
-        ]
-      },
-      "GenerateProjectCLITokenRequest": {
+      "GenerateWorkspaceCLITokenRequest": {
         "type": "object",
         "properties": {
           "name": {
@@ -626,8 +433,12 @@
             "items": {
               "type": "string",
               "enum": [
-                "spec:write",
-                "run:write"
+                "collection:read",
+                "collection:run",
+                "environment:read",
+                "test_case:run",
+                "flow:run",
+                "flow:write"
               ]
             }
           },
@@ -637,13 +448,13 @@
           }
         }
       },
-      "ProjectCLITokenInfo": {
+      "WorkspaceCLITokenInfo": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "name": {
@@ -673,14 +484,14 @@
         },
         "required": [
           "id",
-          "project_id",
+          "workspace_id",
           "name",
           "token_prefix",
           "scopes",
           "created_at"
         ]
       },
-      "GenerateProjectCLITokenResponse": {
+      "GenerateWorkspaceCLITokenResponse": {
         "type": "object",
         "properties": {
           "token": {
@@ -689,21 +500,21 @@
           "token_type": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "token_info": {
-            "$ref": "#/components/schemas/ProjectCLITokenInfo"
+            "$ref": "#/components/schemas/WorkspaceCLITokenInfo"
           }
         },
         "required": [
           "token",
           "token_type",
-          "project_id",
+          "workspace_id",
           "token_info"
         ]
       },
-      "GenerateProjectCLITokenEnvelope": {
+      "GenerateWorkspaceCLITokenEnvelope": {
         "type": "object",
         "properties": {
           "code": {
@@ -713,7 +524,29 @@
             "type": "string"
           },
           "data": {
-            "$ref": "#/components/schemas/GenerateProjectCLITokenResponse"
+            "$ref": "#/components/schemas/GenerateWorkspaceCLITokenResponse"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "WorkspaceCLITokenArrayEnvelope": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceCLITokenInfo"
+            }
           }
         },
         "required": [
@@ -881,7 +714,7 @@
       "CLISpecSyncRequest": {
         "type": "object",
         "properties": {
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "source": {
@@ -990,7 +823,7 @@
       "CLIHistorySyncRequest": {
         "type": "object",
         "properties": {
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "source": {
@@ -1083,7 +916,7 @@
           "id": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "category_id": {
@@ -1151,7 +984,7 @@
         },
         "required": [
           "id",
-          "project_id",
+          "workspace_id",
           "method",
           "path",
           "summary",
@@ -1479,7 +1312,7 @@
           "id": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "name": {
@@ -1512,7 +1345,7 @@
         },
         "required": [
           "id",
-          "project_id",
+          "workspace_id",
           "name",
           "created_at",
           "updated_at"
@@ -1631,7 +1464,7 @@
           "id": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "name": {
@@ -1663,7 +1496,7 @@
         },
         "required": [
           "id",
-          "project_id",
+          "workspace_id",
           "name",
           "sort_order",
           "created_at",
@@ -2377,132 +2210,6 @@
           "data"
         ]
       },
-      "Member": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "project_id": {
-            "type": "string"
-          },
-          "user_id": {
-            "type": "string"
-          },
-          "username": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "owner",
-              "admin",
-              "write",
-              "read"
-            ]
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "project_id",
-          "user_id",
-          "username",
-          "email",
-          "role",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "AddMemberRequest": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "owner",
-              "admin",
-              "write",
-              "read"
-            ]
-          }
-        },
-        "required": [
-          "user_id",
-          "role"
-        ]
-      },
-      "UpdateMemberRequest": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string",
-            "enum": [
-              "owner",
-              "admin",
-              "write",
-              "read"
-            ]
-          }
-        },
-        "required": [
-          "role"
-        ]
-      },
-      "MemberEnvelope": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/Member"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data"
-        ]
-      },
-      "MemberArrayEnvelope": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Member"
-            }
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data"
-        ]
-      },
       "Role": {
         "type": "object",
         "properties": {
@@ -2683,7 +2390,7 @@
           "description": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "parent_id": {
@@ -2708,7 +2415,7 @@
           "id",
           "name",
           "description",
-          "project_id",
+          "workspace_id",
           "is_folder",
           "sort_order",
           "created_at",
@@ -2727,7 +2434,7 @@
           "description": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "parent_id": {
@@ -2753,7 +2460,7 @@
           "id",
           "name",
           "description",
-          "project_id",
+          "workspace_id",
           "is_folder",
           "sort_order"
         ]
@@ -3286,7 +2993,7 @@
           "entity_id": {
             "type": "string"
           },
-          "project_id": {
+          "workspace_id": {
             "type": "string"
           },
           "user_id": {
@@ -3321,7 +3028,7 @@
           "id",
           "entity_type",
           "entity_id",
-          "project_id",
+          "workspace_id",
           "user_id",
           "action",
           "data",
@@ -3501,8 +3208,8 @@
             "enum": [
               "owner",
               "admin",
-              "editor",
-              "viewer"
+              "write",
+              "read"
             ]
           },
           "invited_by": {
@@ -3587,8 +3294,8 @@
             "enum": [
               "owner",
               "admin",
-              "editor",
-              "viewer"
+              "write",
+              "read"
             ]
           }
         },
@@ -3605,8 +3312,8 @@
             "enum": [
               "owner",
               "admin",
-              "editor",
-              "viewer"
+              "write",
+              "read"
             ]
           }
         },
@@ -4489,13 +4196,13 @@
         }
       }
     },
-    "/v1/projects": {
+    "/v1/workspaces/{id}/cli-tokens": {
       "get": {
-        "summary": "列出项目",
+        "summary": "列出工作区 CLI Tokens",
         "tags": [
-          "Projects"
+          "Kest Cloud Sync"
         ],
-        "operationId": "listProjects",
+        "operationId": "listWorkspaceCliTokens",
         "security": [
           {
             "BearerAuth": []
@@ -4503,24 +4210,13 @@
         ],
         "parameters": [
           {
-            "name": "page",
-            "in": "query",
+            "name": "id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": "integer",
-              "default": 1,
-              "minimum": 1
+              "type": "string"
             },
-            "description": "Page number"
-          },
-          {
-            "name": "per_page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 20,
-              "minimum": 1
-            },
-            "description": "Items per page"
+            "description": "工作区 ID"
           }
         ],
         "responses": {
@@ -4529,7 +4225,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectListEnvelope"
+                  "$ref": "#/components/schemas/WorkspaceCLITokenArrayEnvelope"
                 }
               }
             }
@@ -4543,18 +4239,39 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         }
       },
       "post": {
-        "summary": "创建项目",
+        "summary": "生成工作区 CLI Token",
         "tags": [
-          "Projects"
+          "Kest Cloud Sync"
         ],
-        "operationId": "createProject",
+        "operationId": "createWorkspaceCliToken",
         "security": [
           {
             "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -4562,7 +4279,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProjectCreateRequest"
+                "$ref": "#/components/schemas/GenerateWorkspaceCLITokenRequest"
               }
             }
           }
@@ -4573,139 +4290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{id}": {
-      "get": {
-        "summary": "获取项目",
-        "tags": [
-          "Projects"
-        ],
-        "operationId": "getProject",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "更新项目",
-        "tags": [
-          "Projects"
-        ],
-        "operationId": "updateProject",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProjectUpdateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectEnvelope"
+                  "$ref": "#/components/schemas/GenerateWorkspaceCLITokenEnvelope"
                 }
               }
             }
@@ -4741,195 +4326,18 @@
             }
           }
         }
-      },
-      "patch": {
-        "summary": "更新项目",
-        "tags": [
-          "Projects"
-        ],
-        "operationId": "patchProject",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProjectUpdateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "删除项目",
-        "tags": [
-          "Projects"
-        ],
-        "operationId": "deleteProject",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
       }
     },
-    "/v1/projects/{id}/stats": {
-      "get": {
-        "summary": "获取项目统计",
-        "tags": [
-          "Projects"
-        ],
-        "operationId": "getProjectStats",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectStatsEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{id}/cli-tokens": {
+    "/v1/workspaces/{id}/cli/spec-sync": {
       "post": {
-        "summary": "生成项目 CLI Token",
+        "summary": "通过 Kest Cloud Sync 同步 API Specs",
         "tags": [
-          "CLI Sync"
+          "Kest Cloud Sync"
         ],
-        "operationId": "createProjectCliToken",
+        "operationId": "syncWorkspaceSpecsFromCli",
         "security": [
           {
-            "BearerAuth": []
+            "WorkspaceCLIToken": []
           }
         ],
         "parameters": [
@@ -4940,84 +4348,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerateProjectCLITokenRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GenerateProjectCLITokenEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{id}/cli/spec-sync": {
-      "post": {
-        "summary": "从 CLI 同步 API Specs",
-        "tags": [
-          "CLI Sync"
-        ],
-        "operationId": "syncProjectSpecsFromCli",
-        "security": [
-          {
-            "ProjectCLIToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -5074,16 +4405,16 @@
         }
       }
     },
-    "/v1/projects/{id}/cli/history-sync": {
+    "/v1/workspaces/{id}/cli/history-sync": {
       "post": {
-        "summary": "从 CLI 同步历史记录",
+        "summary": "通过 Kest Cloud Sync 同步历史记录",
         "tags": [
-          "CLI Sync"
+          "Kest Cloud Sync"
         ],
-        "operationId": "syncProjectHistoryFromCli",
+        "operationId": "syncWorkspaceHistoryFromCli",
         "security": [
           {
-            "ProjectCLIToken": []
+            "WorkspaceCLIToken": []
           }
         ],
         "parameters": [
@@ -5094,7 +4425,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -5151,7 +4482,7 @@
         }
       }
     },
-    "/v1/projects/{id}/api-specs": {
+    "/v1/workspaces/{id}/api-specs": {
       "get": {
         "summary": "列出 API Specs",
         "tags": [
@@ -5171,7 +4502,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "page",
@@ -5264,7 +4595,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -5321,7 +4652,7 @@
         }
       }
     },
-    "/v1/projects/{id}/api-specs/import": {
+    "/v1/workspaces/{id}/api-specs/import": {
       "post": {
         "summary": "导入多个 API Specs",
         "tags": [
@@ -5341,7 +4672,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -5388,7 +4719,7 @@
         }
       }
     },
-    "/v1/projects/{id}/api-specs/export": {
+    "/v1/workspaces/{id}/api-specs/export": {
       "get": {
         "summary": "导出 API Specs",
         "tags": [
@@ -5408,7 +4739,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "format",
@@ -5449,7 +4780,7 @@
         }
       }
     },
-    "/v1/projects/{id}/api-specs/{sid}": {
+    "/v1/workspaces/{id}/api-specs/{sid}": {
       "get": {
         "summary": "获取 API Spec",
         "tags": [
@@ -5469,7 +4800,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "sid",
@@ -5533,7 +4864,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "sid",
@@ -5617,7 +4948,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "sid",
@@ -5656,7 +4987,7 @@
         }
       }
     },
-    "/v1/projects/{id}/api-specs/{sid}/full": {
+    "/v1/workspaces/{id}/api-specs/{sid}/full": {
       "get": {
         "summary": "获取带示例的 API Spec",
         "tags": [
@@ -5676,7 +5007,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "sid",
@@ -5722,7 +5053,7 @@
         }
       }
     },
-    "/v1/projects/{id}/api-specs/{sid}/examples": {
+    "/v1/workspaces/{id}/api-specs/{sid}/examples": {
       "get": {
         "summary": "列出 API Spec 示例",
         "tags": [
@@ -5742,7 +5073,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "sid",
@@ -5806,7 +5137,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "sid",
@@ -5872,7 +5203,7 @@
         }
       }
     },
-    "/v1/projects/{id}/environments": {
+    "/v1/workspaces/{id}/environments": {
       "get": {
         "summary": "列出环境",
         "tags": [
@@ -5892,7 +5223,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "responses": {
@@ -5937,7 +5268,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -5984,7 +5315,7 @@
         }
       }
     },
-    "/v1/projects/{id}/environments/{eid}": {
+    "/v1/workspaces/{id}/environments/{eid}": {
       "get": {
         "summary": "获取环境",
         "tags": [
@@ -6004,7 +5335,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "eid",
@@ -6068,7 +5399,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "eid",
@@ -6152,7 +5483,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "eid",
@@ -6191,7 +5522,7 @@
         }
       }
     },
-    "/v1/projects/{id}/environments/{eid}/duplicate": {
+    "/v1/workspaces/{id}/environments/{eid}/duplicate": {
       "post": {
         "summary": "复制环境",
         "tags": [
@@ -6211,7 +5542,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "eid",
@@ -6277,7 +5608,7 @@
         }
       }
     },
-    "/v1/projects/{id}/categories": {
+    "/v1/workspaces/{id}/categories": {
       "get": {
         "summary": "列出分类",
         "tags": [
@@ -6297,7 +5628,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "page",
@@ -6360,7 +5691,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -6407,7 +5738,7 @@
         }
       }
     },
-    "/v1/projects/{id}/categories/sort": {
+    "/v1/workspaces/{id}/categories/sort": {
       "put": {
         "summary": "排序分类",
         "tags": [
@@ -6427,7 +5758,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -6474,7 +5805,7 @@
         }
       }
     },
-    "/v1/projects/{id}/categories/{cid}": {
+    "/v1/workspaces/{id}/categories/{cid}": {
       "get": {
         "summary": "获取分类",
         "tags": [
@@ -6494,7 +5825,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -6558,7 +5889,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -6642,7 +5973,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -6681,7 +6012,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases": {
+    "/v1/workspaces/{id}/test-cases": {
       "get": {
         "summary": "列出测试用例",
         "tags": [
@@ -6701,7 +6032,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "api_spec_id",
@@ -6785,7 +6116,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -6832,7 +6163,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases/from-spec": {
+    "/v1/workspaces/{id}/test-cases/from-spec": {
       "post": {
         "summary": "从 API Spec 生成测试用例",
         "tags": [
@@ -6852,7 +6183,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -6909,7 +6240,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases/{tcid}": {
+    "/v1/workspaces/{id}/test-cases/{tcid}": {
       "get": {
         "summary": "获取测试用例",
         "tags": [
@@ -6929,7 +6260,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -6993,7 +6324,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -7077,7 +6408,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -7116,7 +6447,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases/{tcid}/duplicate": {
+    "/v1/workspaces/{id}/test-cases/{tcid}/duplicate": {
       "post": {
         "summary": "复制测试用例",
         "tags": [
@@ -7136,7 +6467,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -7202,7 +6533,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases/{tcid}/run": {
+    "/v1/workspaces/{id}/test-cases/{tcid}/run": {
       "post": {
         "summary": "运行测试用例",
         "tags": [
@@ -7222,7 +6553,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -7278,7 +6609,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases/{tcid}/runs": {
+    "/v1/workspaces/{id}/test-cases/{tcid}/runs": {
       "get": {
         "summary": "列出测试运行记录",
         "tags": [
@@ -7298,7 +6629,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -7359,7 +6690,7 @@
         }
       }
     },
-    "/v1/projects/{id}/test-cases/{tcid}/runs/{rid}": {
+    "/v1/workspaces/{id}/test-cases/{tcid}/runs/{rid}": {
       "get": {
         "summary": "获取测试运行记录",
         "tags": [
@@ -7379,7 +6710,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "tcid",
@@ -7423,298 +6754,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{id}/members": {
-      "get": {
-        "summary": "列出项目成员",
-        "tags": [
-          "Members"
-        ],
-        "operationId": "listProjectMembers",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemberArrayEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "添加项目成员",
-        "tags": [
-          "Members"
-        ],
-        "operationId": "addProjectMember",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddMemberRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemberEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{id}/members/me": {
-      "get": {
-        "summary": "获取我的项目角色",
-        "tags": [
-          "Members"
-        ],
-        "operationId": "getMyProjectRole",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemberEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{id}/members/{uid}": {
-      "patch": {
-        "summary": "更新项目成员角色",
-        "tags": [
-          "Members"
-        ],
-        "operationId": "updateProjectMember",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          },
-          {
-            "name": "uid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "用户 ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateMemberRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemberEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "移除项目成员",
-        "tags": [
-          "Members"
-        ],
-        "operationId": "removeProjectMember",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "项目 ID"
-          },
-          {
-            "name": "uid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "用户 ID"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -8157,7 +7196,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections": {
+    "/v1/workspaces/{id}/collections": {
       "get": {
         "summary": "列出集合",
         "tags": [
@@ -8177,7 +7216,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "page",
@@ -8240,7 +7279,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -8287,7 +7326,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/tree": {
+    "/v1/workspaces/{id}/collections/tree": {
       "get": {
         "summary": "获取集合树",
         "tags": [
@@ -8307,7 +7346,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "responses": {
@@ -8334,7 +7373,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/{cid}": {
+    "/v1/workspaces/{id}/collections/{cid}": {
       "get": {
         "summary": "获取集合",
         "tags": [
@@ -8354,7 +7393,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8418,7 +7457,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8502,7 +7541,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8548,7 +7587,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/{cid}/move": {
+    "/v1/workspaces/{id}/collections/{cid}/move": {
       "patch": {
         "summary": "移动集合",
         "tags": [
@@ -8568,7 +7607,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8634,7 +7673,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/{cid}/requests": {
+    "/v1/workspaces/{id}/collections/{cid}/requests": {
       "get": {
         "summary": "列出请求",
         "tags": [
@@ -8654,7 +7693,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8736,7 +7775,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8802,7 +7841,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/{cid}/requests/{rid}": {
+    "/v1/workspaces/{id}/collections/{cid}/requests/{rid}": {
       "get": {
         "summary": "获取请求",
         "tags": [
@@ -8822,7 +7861,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8895,7 +7934,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -8988,7 +8027,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -9043,7 +8082,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/{cid}/requests/{rid}/move": {
+    "/v1/workspaces/{id}/collections/{cid}/requests/{rid}/move": {
       "patch": {
         "summary": "移动请求",
         "tags": [
@@ -9063,7 +8102,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -9138,7 +8177,7 @@
         }
       }
     },
-    "/v1/projects/{id}/collections/{cid}/requests/{rid}/rollback": {
+    "/v1/workspaces/{id}/collections/{cid}/requests/{rid}/rollback": {
       "post": {
         "summary": "回滚请求版本",
         "tags": [
@@ -9158,7 +8197,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "cid",
@@ -9233,7 +8272,7 @@
         }
       }
     },
-    "/v1/projects/{id}/history": {
+    "/v1/workspaces/{id}/history": {
       "get": {
         "summary": "列出历史记录",
         "tags": [
@@ -9253,7 +8292,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "entity_type",
@@ -9330,7 +8369,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           }
         ],
         "requestBody": {
@@ -9377,7 +8416,7 @@
         }
       }
     },
-    "/v1/projects/{id}/history/{hid}": {
+    "/v1/workspaces/{id}/history/{hid}": {
       "get": {
         "summary": "获取历史记录",
         "tags": [
@@ -9397,7 +8436,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目 ID"
+            "description": "工作区 ID"
           },
           {
             "name": "hid",
