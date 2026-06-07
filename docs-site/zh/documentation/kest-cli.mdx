@@ -1,0 +1,394 @@
+---
+title: Kest CLI
+description: 在本地使用 Kest CLI 发起 API 请求、运行 Markdown flow、查看历史、使用 AI 辅助、生成文档、mock、snapshot 和 gRPC 请求。
+---
+
+# Kest CLI
+
+Kest CLI 是面向本地开发的命令行工具，用于发起 API 请求、运行 Markdown 原生测试 flow、记录请求历史、调试接口、用 AI 辅助编写测试，并从代码或 OpenAPI 生成本地文档和测试草稿。
+
+本文只介绍本地 CLI 用法。workspace 同步请阅读现有的 [CLI 同步](/zh/documentation/cli-sync) 文档。CI 自动化可以复用同一组 `kest run` 命令，但本文不展开 CI 配置。
+
+## 安装与初始化
+
+使用安装脚本安装 CLI：
+
+```bash
+curl -fsSL https://kest.dev/install.sh | sh
+```
+
+初始化本地 Kest 工作目录：
+
+```bash
+kest init
+```
+
+`kest init` 会创建本地 `.kest` 目录结构：
+
+```text
+.kest/
+  config.yaml
+  flow.config.yaml
+  flow/
+  logs/
+```
+
+- `.kest/config.yaml` 保存本地 CLI 设置、环境、AI 配置，以及可选的平台连接设置。
+- `.kest/flow.config.yaml` 定义 `local`、`ci` 等 flow 运行 profile。
+- `.kest/flow/` 是默认的 `.flow.md` 文件目录。
+- `.kest/logs/` 保存本地会话日志。
+
+## 发起单次 API 请求
+
+使用 HTTP method 命令直接调用 API：
+
+```bash
+kest get http://localhost:8025/v1/health
+```
+
+传入 query 参数和 headers：
+
+```bash
+kest get http://localhost:8025/v1/users \
+  -q page=1 \
+  -q limit=20 \
+  -H "Authorization: Bearer {{token}}"
+```
+
+发送 JSON：
+
+```bash
+kest post http://localhost:8025/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "demo@example.com",
+    "name": "Demo User"
+  }'
+```
+
+发送 form-data：
+
+```bash
+kest post http://localhost:8025/v1/uploads \
+  -F "name=avatar" \
+  -F "file=@./avatar.png"
+```
+
+使用超时、重试、流式响应，或关闭本地记录：
+
+```bash
+kest get http://localhost:8025/v1/events --stream
+kest get http://localhost:8025/v1/slow --max-time 10000 --retry 3
+kest post http://localhost:8025/v1/debug --no-record -d '{"debug": true}'
+```
+
+`--max-time` 的单位是毫秒。
+
+Kest 默认会记录请求历史，方便后续查看、重放、对比和复用。
+
+## 环境与变量
+
+查看并切换环境：
+
+```bash
+kest env list
+kest env use staging
+```
+
+查看和更新 CLI 配置：
+
+```bash
+kest config list
+kest config set ai_model qwen-max
+kest config set ai_base_url https://dashscope.aliyuncs.com/compatible-mode/v1/
+```
+
+运行时传入变量：
+
+```bash
+kest run auth.flow.md --var email=demo@example.com --var password=secret123
+```
+
+在 URL、headers、body、capture 和 assertion 中使用变量：
+
+```bash
+kest post "{{base_url}}/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "{{email | default: \"demo@example.com\"}}",
+    "request_id": "{{$uuid}}",
+    "sent_at": "{{$timestamp}}",
+    "api_token": "{{$env.API_TOKEN}}"
+  }'
+```
+
+常用动态值包括 `{{$uuid}}`、`{{$timestamp}}`、`{{$randomEmail}}`、`{{$randomString}}`、`{{$isoDate}}` 和 `{{$env.NAME}}`。
+
+## Markdown Flow
+
+运行单个 flow 文件：
+
+```bash
+kest run auth.flow.md
+```
+
+运行配置好的本地 profile：
+
+```bash
+kest run --profile local
+```
+
+一个 `.flow.md` 文件可以定义 flow 元数据、步骤、捕获和断言：
+
+````md
+# Auth smoke test
+
+```flow
+@flow id=auth-smoke
+@name Auth smoke test
+@version 1.0.0
+@tags smoke,auth
+```
+
+```step
+@id login
+@name Login
+@type http
+@retry 2
+
+POST {{base_url}}/v1/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+[Captures]
+token = body.access_token
+
+[Asserts]
+status == 200
+body.access_token exists
+duration < 1000
+```
+
+```step
+@id profile
+@name Fetch profile
+@type http
+
+GET {{base_url}}/v1/users/profile
+Authorization: Bearer {{token}}
+
+[Asserts]
+status == 200
+body.email contains "@"
+```
+
+```edge
+login -> profile
+```
+````
+
+Flow 支持 `setup`、`step`、`teardown` 和 `edge` block。HTTP step 用来发起 API 请求。Exec step 用来执行本地 shell 命令，并可以捕获输出。Edge 用来定义多步骤 workflow 的执行顺序。
+
+常用运行选项：
+
+```bash
+kest run auth.flow.md --strict
+kest run auth.flow.md --fail-fast
+kest run .kest/flow/**/*.flow.md --parallel --jobs 4
+kest run auth.flow.md --exec-timeout 30
+```
+
+`--exec-timeout` 的单位是秒。
+
+## 捕获与断言
+
+从一个响应里捕获值，并在后续步骤复用：
+
+```md
+[Captures]
+user_id = body.data.id
+auth_token = body.data.access_token
+```
+
+在后续请求里使用捕获到的变量：
+
+```md
+GET {{base_url}}/v1/users/{{user_id}}
+Authorization: Bearer {{auth_token}}
+```
+
+常见断言写法：
+
+```md
+[Asserts]
+status == 200
+duration < 500
+body.data.id exists
+body.data.email contains "@"
+body.data.role matches "admin|member"
+body.data.items length > 0
+```
+
+如果希望记录检查失败，但不立刻中断整个 flow，可以使用 soft assertion：
+
+```md
+[Soft Asserts]
+body.warnings not exists
+duration < 1000
+```
+
+## 历史、重放与调试
+
+查看最近的本地记录：
+
+```bash
+kest history
+kest history -n 20 --status 500
+kest history --method POST --since 24h
+```
+
+查看最近一次请求：
+
+```bash
+kest show last
+```
+
+重放并对比响应：
+
+```bash
+kest replay last --diff
+kest diff 12 19
+```
+
+查看当前本地上下文中的捕获变量：
+
+```bash
+kest vars
+```
+
+这些命令适合用来复盘 API 响应变化、复现失败请求，或确认变量是否被正确捕获。
+
+## AI 辅助命令
+
+使用 AI 辅助命令前，先配置 AI：
+
+```bash
+kest config set ai_key sk-...
+kest config set ai_model qwen-max
+kest config set ai_base_url https://dashscope.aliyuncs.com/compatible-mode/v1/
+```
+
+诊断、解释、审查和生成 flow：
+
+```bash
+kest why
+kest suggest
+kest explain last
+kest review auth.flow.md
+kest gen "test user login and profile loading" -o auth.flow.md
+```
+
+- `kest why` 解释失败请求或失败 flow 的可能原因。
+- `kest suggest` 根据最近历史和变量推荐下一步命令。
+- `kest explain` 把已记录的交互解释成可读说明。
+- `kest review` 检查 flow 的覆盖率、安全性和可维护性问题。
+- `kest gen` 从自然语言场景生成 `.flow.md` 草稿。
+
+## 本地文档与生成
+
+扫描源码并生成 API 文档：
+
+```bash
+kest doc ./api
+```
+
+在本地预览生成的文档：
+
+```bash
+kest doc ./api --serve
+```
+
+检查文档是否和代码发生漂移：
+
+```bash
+kest doc ./api --verify
+```
+
+从 OpenAPI 或 Swagger 生成 flow：
+
+```bash
+kest generate -f openapi.json -o api.flow.md
+```
+
+当 API 路由以代码为事实来源时，`kest doc` 可以生成本地 Markdown 快照。当 OpenAPI 文件是测试覆盖起点时，`kest generate` 可以生成 flow 草稿。
+
+## 本地辅助工具
+
+启动本地 bridge，让浏览器侧工具可以访问本机 API：
+
+```bash
+kest bridge
+```
+
+从本地历史记录启动 mock server：
+
+```bash
+kest mock --port 8787
+```
+
+创建或校验响应 snapshot：
+
+```bash
+kest snap http://localhost:8025/v1/health --verify
+kest snap http://localhost:8025/v1/health --update
+```
+
+保存文件后自动重跑 flow：
+
+```bash
+kest watch auth.flow.md
+```
+
+查看 flow 中的变量依赖：
+
+```bash
+kest chain auth.flow.md
+```
+
+调用 gRPC 方法：
+
+```bash
+kest grpc localhost:50051 users.UserService/GetUser \
+  --proto ./users.proto \
+  -d '{"id": "u_123"}'
+```
+
+安装 shell completion：
+
+```bash
+kest completion zsh
+```
+
+## 输出与退出码
+
+在脚本里使用 quiet 或 JSON 输出：
+
+```bash
+kest run auth.flow.md --quiet
+kest run auth.flow.md --output json
+```
+
+Kest 使用稳定的退出码：
+
+```text
+0  success
+1  assertion failure
+2  runtime error
+3  usage or configuration error
+```
+
+这些输出形式适合本地自动化脚本、编辑器任务和其他开发者工作流。

@@ -1,0 +1,394 @@
+---
+title: Kest CLI
+description: Use Kest CLI locally for API requests, Markdown flows, history, AI assistance, docs generation, mocks, snapshots, and gRPC.
+---
+
+# Kest CLI
+
+Kest CLI is the local command-line tool for API requests, Markdown-native test flows, request history, local debugging, AI-assisted workflow authoring, and API documentation generation.
+
+This page focuses on local CLI usage. For workspace sync, use the existing [CLI Sync](/en/documentation/cli-sync) guide. CI automation can build on the same `kest run` commands, but CI setup is intentionally not covered here.
+
+## Install and initialize
+
+Install the CLI with the installer:
+
+```bash
+curl -fsSL https://kest.dev/install.sh | sh
+```
+
+Create the local Kest workspace files:
+
+```bash
+kest init
+```
+
+`kest init` creates the local `.kest` directory structure:
+
+```text
+.kest/
+  config.yaml
+  flow.config.yaml
+  flow/
+  logs/
+```
+
+- `.kest/config.yaml` stores local CLI settings, environments, AI configuration, and optional platform connection settings.
+- `.kest/flow.config.yaml` defines flow run profiles such as `local` and `ci`.
+- `.kest/flow/` is the default place for `.flow.md` files.
+- `.kest/logs/` stores local session logs.
+
+## Send one-off API requests
+
+Use HTTP method commands for direct API calls:
+
+```bash
+kest get http://localhost:8025/v1/health
+```
+
+Send query parameters and headers:
+
+```bash
+kest get http://localhost:8025/v1/users \
+  -q page=1 \
+  -q limit=20 \
+  -H "Authorization: Bearer {{token}}"
+```
+
+Send JSON:
+
+```bash
+kest post http://localhost:8025/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "demo@example.com",
+    "name": "Demo User"
+  }'
+```
+
+Send form data:
+
+```bash
+kest post http://localhost:8025/v1/uploads \
+  -F "name=avatar" \
+  -F "file=@./avatar.png"
+```
+
+Use timeout, retry, streaming, or disable local recording:
+
+```bash
+kest get http://localhost:8025/v1/events --stream
+kest get http://localhost:8025/v1/slow --max-time 10000 --retry 3
+kest post http://localhost:8025/v1/debug --no-record -d '{"debug": true}'
+```
+
+`--max-time` is measured in milliseconds.
+
+Kest records request history by default so you can inspect, replay, diff, and reuse previous calls.
+
+## Environments and variables
+
+List and switch environments:
+
+```bash
+kest env list
+kest env use staging
+```
+
+Inspect and update CLI configuration:
+
+```bash
+kest config list
+kest config set ai_model qwen-max
+kest config set ai_base_url https://dashscope.aliyuncs.com/compatible-mode/v1/
+```
+
+Pass variables at runtime:
+
+```bash
+kest run auth.flow.md --var email=demo@example.com --var password=secret123
+```
+
+Use variables in URLs, headers, bodies, captures, and assertions:
+
+```bash
+kest post "{{base_url}}/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "{{email | default: \"demo@example.com\"}}",
+    "request_id": "{{$uuid}}",
+    "sent_at": "{{$timestamp}}",
+    "api_token": "{{$env.API_TOKEN}}"
+  }'
+```
+
+Common dynamic values include `{{$uuid}}`, `{{$timestamp}}`, `{{$randomEmail}}`, `{{$randomString}}`, `{{$isoDate}}`, and `{{$env.NAME}}`.
+
+## Markdown flows
+
+Run a single flow file:
+
+```bash
+kest run auth.flow.md
+```
+
+Run the configured local profile:
+
+```bash
+kest run --profile local
+```
+
+A `.flow.md` file can define flow metadata, steps, captures, and assertions:
+
+````md
+# Auth smoke test
+
+```flow
+@flow id=auth-smoke
+@name Auth smoke test
+@version 1.0.0
+@tags smoke,auth
+```
+
+```step
+@id login
+@name Login
+@type http
+@retry 2
+
+POST {{base_url}}/v1/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+[Captures]
+token = body.access_token
+
+[Asserts]
+status == 200
+body.access_token exists
+duration < 1000
+```
+
+```step
+@id profile
+@name Fetch profile
+@type http
+
+GET {{base_url}}/v1/users/profile
+Authorization: Bearer {{token}}
+
+[Asserts]
+status == 200
+body.email contains "@"
+```
+
+```edge
+login -> profile
+```
+````
+
+Flows support `setup`, `step`, `teardown`, and `edge` blocks. HTTP steps run API calls. Exec steps run local shell commands and can capture output. Edges define execution order for multi-step workflows.
+
+Useful run options:
+
+```bash
+kest run auth.flow.md --strict
+kest run auth.flow.md --fail-fast
+kest run .kest/flow/**/*.flow.md --parallel --jobs 4
+kest run auth.flow.md --exec-timeout 30
+```
+
+`--exec-timeout` is measured in seconds.
+
+## Captures and assertions
+
+Capture values from one response and reuse them later:
+
+```md
+[Captures]
+user_id = body.data.id
+auth_token = body.data.access_token
+```
+
+Use captured values in later requests:
+
+```md
+GET {{base_url}}/v1/users/{{user_id}}
+Authorization: Bearer {{auth_token}}
+```
+
+Common assertion patterns:
+
+```md
+[Asserts]
+status == 200
+duration < 500
+body.data.id exists
+body.data.email contains "@"
+body.data.role matches "admin|member"
+body.data.items length > 0
+```
+
+Use soft assertions when you want the step to report a failed check without immediately stopping the flow:
+
+```md
+[Soft Asserts]
+body.warnings not exists
+duration < 1000
+```
+
+## History, replay, and debugging
+
+List recent local records:
+
+```bash
+kest history
+kest history -n 20 --status 500
+kest history --method POST --since 24h
+```
+
+Inspect the latest request:
+
+```bash
+kest show last
+```
+
+Replay and compare responses:
+
+```bash
+kest replay last --diff
+kest diff 12 19
+```
+
+List captured variables for the active local context:
+
+```bash
+kest vars
+```
+
+These commands are useful when you need to understand what changed between API responses, reproduce a failed call, or verify which variables were captured.
+
+## AI-assisted commands
+
+Configure AI before using AI-assisted commands:
+
+```bash
+kest config set ai_key sk-...
+kest config set ai_model qwen-max
+kest config set ai_base_url https://dashscope.aliyuncs.com/compatible-mode/v1/
+```
+
+Diagnose, explain, review, and generate flows:
+
+```bash
+kest why
+kest suggest
+kest explain last
+kest review auth.flow.md
+kest gen "test user login and profile loading" -o auth.flow.md
+```
+
+- `kest why` explains likely causes for a failed request or flow.
+- `kest suggest` recommends useful next commands from recent history and variables.
+- `kest explain` turns a recorded interaction into a readable explanation.
+- `kest review` checks a flow for coverage, security, and maintainability issues.
+- `kest gen` creates a `.flow.md` draft from a natural-language scenario.
+
+## Local documentation and generation
+
+Scan source code and generate API documentation:
+
+```bash
+kest doc ./api
+```
+
+Serve generated documentation locally:
+
+```bash
+kest doc ./api --serve
+```
+
+Verify documentation drift:
+
+```bash
+kest doc ./api --verify
+```
+
+Generate a flow from OpenAPI or Swagger:
+
+```bash
+kest generate -f openapi.json -o api.flow.md
+```
+
+`kest doc` is useful when your API routes live in code and you want a local Markdown snapshot. `kest generate` is useful when an OpenAPI file is the starting point for test coverage.
+
+## Local helpers
+
+Start the local bridge used by browser-based tools to reach local APIs:
+
+```bash
+kest bridge
+```
+
+Serve mock responses from local history:
+
+```bash
+kest mock --port 8787
+```
+
+Create or verify a response snapshot:
+
+```bash
+kest snap http://localhost:8025/v1/health --verify
+kest snap http://localhost:8025/v1/health --update
+```
+
+Rerun a flow when the file changes:
+
+```bash
+kest watch auth.flow.md
+```
+
+Show variable dependencies in a flow:
+
+```bash
+kest chain auth.flow.md
+```
+
+Call a gRPC method:
+
+```bash
+kest grpc localhost:50051 users.UserService/GetUser \
+  --proto ./users.proto \
+  -d '{"id": "u_123"}'
+```
+
+Install shell completion:
+
+```bash
+kest completion zsh
+```
+
+## Output and exit codes
+
+Use quiet or JSON output when scripting:
+
+```bash
+kest run auth.flow.md --quiet
+kest run auth.flow.md --output json
+```
+
+Kest uses predictable exit codes:
+
+```text
+0  success
+1  assertion failure
+2  runtime error
+3  usage or configuration error
+```
+
+These outputs make the CLI suitable for local automation scripts, editor tasks, and other developer workflows.
