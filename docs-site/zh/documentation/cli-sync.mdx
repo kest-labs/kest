@@ -1,30 +1,343 @@
 ---
-title: CLI Sync
-description: 把本地 Kest CLI 活动同步回平台 API。
+title: Kest Cloud Sync
+description: 把本地 Kest CLI、Web workspace 和 CI 运行结果同步到 Kest Cloud。
 ---
 
-# CLI Sync
+# Kest Cloud Sync
 
-Kest 支持把本地 CLI 的产出同步回平台项目。
+Kest Cloud Sync 把本地 CLI、Web workspace 和 CI 连接到同一个 Cloud workspace。同步后，团队可以在 Kest Web 中查看 API specs、请求历史、flow 定义、flow run 结果和 CI 状态。
 
-## 流程
+本文介绍 Cloud Sync 的完整工作方式。Kest Web 的整体功能请阅读 [Kest Web / Cloud](/zh/documentation/kest-web-cloud)。本地命令行用法请阅读 [Kest CLI](/zh/documentation/kest-cli)。
 
-1. 在平台中创建项目
-2. 通过 `POST /projects/{id}/cli-tokens` 生成项目级 CLI Token
-3. 在本地 CLI 中配置平台地址、token 和目标项目 ID
-4. 把本地 API specs 推送到 `POST /projects/{id}/cli/spec-sync`
-5. 如有需要，把请求历史推送到 `POST /projects/{id}/cli/history-sync`
+## 同步内容
 
-## 关键约束
+Cloud Sync 覆盖四类数据：
 
-- CLI Token 是项目级的
-- 如果请求体里提供了 `project_id`，它必须与 URL 中的项目 ID 一致
-- 这些同步接口用于自动化流程，不应复用浏览器 JWT
+- API specs：CLI 从本地请求历史推导 API specs，并上传到 workspace。
+- Request history：CLI 把本地请求、响应、耗时、状态和错误同步到 workspace history。
+- Flows：CLI 把本地 `.flow.md` 定义同步到 workspace flows，也可以从 Cloud 拉取 runnable flows 到本地执行。
+- Flow runs / CI runs：CLI 或 CI 把 flow run 结果、step 结果、日志摘要和 runner 类型同步到 Cloud。
 
-## 配置示例
+## 前置条件
+
+你需要：
+
+- 一个 Kest Cloud 账号。
+- 一个 Cloud workspace。
+- 本地已安装 Kest CLI。
+- workspace 的 CLI key 或 workspace-scoped CLI token。
+
+安装 CLI：
+
+```bash
+curl -fsSL https://kest.dev/install.sh | sh
+```
+
+初始化本地目录：
+
+```bash
+kest init
+```
+
+## 推荐连接方式
+
+最简单的连接方式是在 Web 的 workspace Keys 页面复制一行连接命令。
+
+```bash
+kest key kest_key_...
+```
+
+`kest key` 会把连接信息写入 `.kest/config.yaml`：
 
 ```yaml
 platform_url: https://api.kest.dev/v1
 platform_token: kest_pat_...
-platform_project_id: "12"
+platform_workspace_id: "workspace-id"
+platform_auto_sync_history: true
 ```
+
+连接 key 是 Web 生成的一次性配置载体。它不是 raw CLI token。raw CLI token 通常以 `kest_pat_` 开头，只应该作为自动化环境变量或配置值使用。
+
+## 手动配置
+
+如果不使用一行连接 key，也可以手动配置：
+
+```bash
+kest sync config \
+  --platform-url https://api.kest.dev/v1 \
+  --platform-token kest_pat_... \
+  --workspace-id <workspace-id> \
+  --auto-sync-history
+```
+
+也可以用 `kest config set` 写入单个配置项：
+
+```bash
+kest config set platform_url https://api.kest.dev/v1
+kest config set platform_token kest_pat_...
+kest config set platform_workspace_id <workspace-id>
+kest config set platform_auto_sync_history true
+```
+
+查看当前配置：
+
+```bash
+kest config list
+```
+
+## CLI Token Scopes
+
+Workspace CLI token 支持这些 scopes：
+
+- `collection:read`：上传从本地历史推导出的 API specs。
+- `collection:run`：上传 CLI request history。
+- `environment:read`：读取 workspace 环境数据。
+- `test_case:run`：运行 test cases。
+- `flow:run`：拉取 runnable flows、上传 flow run 结果、发送 CI webhook。
+- `flow:write`：上传或更新 flow 定义。
+
+如果 Web 中生成 token 时没有显式选择 scopes，Kest 会使用默认 scopes，覆盖上述常用同步能力。
+
+## 同步 API Specs
+
+`kest sync push` 会分析本地请求历史，把实际调用过的 method、path、headers、request body、responses 和 examples 转成 API specs。
+
+先预览将要同步的内容：
+
+```bash
+kest sync push --dry-run
+```
+
+确认后上传：
+
+```bash
+kest sync push
+```
+
+指定 workspace：
+
+```bash
+kest sync push --workspace-id <workspace-id>
+```
+
+临时覆盖 Cloud 地址或 token：
+
+```bash
+kest sync push \
+  --api-url https://api.kest.dev/v1 \
+  --token kest_pat_...
+```
+
+对应 Cloud 端点：
+
+```text
+POST /workspaces/{workspaceId}/cli/spec-sync
+```
+
+## 同步请求历史
+
+手动上传当前本地范围内的 CLI 请求历史：
+
+```bash
+kest sync history
+```
+
+限制数量：
+
+```bash
+kest sync history --limit 1000
+```
+
+只同步最近 24 小时：
+
+```bash
+kest sync history --since 24h
+```
+
+预览但不上传：
+
+```bash
+kest sync history --dry-run
+```
+
+跨所有本地 Kest 工作目录同步：
+
+```bash
+kest sync history --all
+```
+
+对应 Cloud 端点：
+
+```text
+POST /workspaces/{workspaceId}/cli/history-sync
+```
+
+如果 `platform_auto_sync_history` 为 `true`，CLI 在运行请求和 flow 时会尝试自动 flush 本地 outbox。网络不可用时，记录会留在本地，后续命令再继续同步。
+
+## 同步 Flow 定义和运行结果
+
+本地运行 flow 并同步定义和结果：
+
+```bash
+kest run auth.flow.md --sync
+```
+
+使用 profile：
+
+```bash
+kest run --profile local --sync
+```
+
+指定 runner 类型：
+
+```bash
+kest run --profile ci --sync --runner-type server_ci
+```
+
+常见 runner 类型：
+
+- `test_machine`：开发者本机或测试机器运行。
+- `server_ci`：CI 或服务端自动化运行。
+
+Cloud 端点：
+
+```text
+POST /workspaces/{workspaceId}/cli/flows/sync
+POST /workspaces/{workspaceId}/cli/flow-runs/sync
+```
+
+## 从 Cloud 拉取 runnable flows
+
+Web 中启用并解析成功的 flow 可以由 CLI 拉取到本地执行。
+
+运行所有 runnable flows：
+
+```bash
+kest run --workspace-flow all --sync
+```
+
+运行单个 flow，可以传 flow ID、source ID 或 source path：
+
+```bash
+kest run --workspace-flow <flow-id> --sync
+kest run --workspace-flow .kest/flow/auth/login.flow.md --sync
+```
+
+对应 Cloud 端点：
+
+```text
+GET /workspaces/{workspaceId}/cli/flows/runnable
+```
+
+这个模式适合团队把 flow 内容集中维护在 Web 中，然后让本地机器或 CI 拉取执行。
+
+## CI 同步
+
+CI 可以使用同一组 `.flow.md` 文件，并把结果同步回 Cloud。
+
+推荐命令：
+
+```bash
+kest run --profile ci --sync --quiet --output json
+```
+
+生成 JSON 和 JUnit 报告：
+
+```bash
+kest run --profile ci \
+  --sync \
+  --runner-type server_ci \
+  --report-json .kest/reports/flow-results.json \
+  --report-junit .kest/reports/flow-results.xml
+```
+
+常用 CI 环境变量：
+
+```bash
+export KEST_BASE_URL="https://staging.example.com"
+export KEST_PROFILE="ci"
+export KEST_SYNC_FLOWS="1"
+export KEST_CLI_BIN="./.bin/kest"
+```
+
+Cloud 还提供 CI webhook 端点：
+
+```text
+POST /workspaces/{workspaceId}/cli/ci/webhook
+```
+
+Web 可以根据这个端点生成适合 CI 的 `kest run --workspace-flow all --runner-type server_ci --sync` 命令。
+
+## Flow Profile 配置
+
+`kest init` 会创建 `.kest/flow.config.yaml`。典型 CI profile 会启用 strict、sync 和报告输出：
+
+```yaml
+profiles:
+  ci:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: staging
+    strict: true
+    fail_fast: false
+    sync: true
+    reports:
+      json: ".kest/reports/flow-results.json"
+      junit: ".kest/reports/flow-results.xml"
+```
+
+运行：
+
+```bash
+kest run --profile ci
+```
+
+也可以用环境变量选择 profile：
+
+```bash
+KEST_PROFILE=ci kest run
+```
+
+## 安全处理
+
+Cloud Sync 会尽量避免把敏感数据直接写入 Cloud：
+
+- CLI token 只保存 hash，创建后不会再次显示 raw token。
+- 同步请求历史和 examples 时会清理常见 secret headers 和 body 字段。
+- 过长的 body、response 和 logs 会被截断。
+- 同步端点使用 workspace-scoped CLI token，不应使用浏览器登录 JWT。
+- token scopes 应按自动化任务最小化授权。
+
+## 故障排查
+
+查看配置是否完整：
+
+```bash
+kest config list
+```
+
+确认 workspace ID：
+
+```bash
+kest sync push --workspace-id <workspace-id> --dry-run
+```
+
+如果 token scope 不足，重新在 Web 的 Keys 页面生成包含所需 scopes 的 key，然后重新运行：
+
+```bash
+kest key kest_key_...
+```
+
+如果自动历史同步失败，可以手动重试：
+
+```bash
+kest sync history --since 24h
+```
+
+如果 CI 可以运行但 Cloud 没有结果，确认命令包含：
+
+```bash
+--sync --runner-type server_ci
+```
+
+并确认 CI 环境中存在有效的 Cloud token 和 workspace ID 配置。
