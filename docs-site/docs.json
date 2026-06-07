@@ -49,6 +49,7 @@
                 "pages": [
                   "en/introduction",
                   "en/documentation/quickstart",
+                  "en/documentation/kest-web-cloud",
                   "en/documentation/kest-cli",
                   "en/documentation/authentication",
                   "en/documentation/errors",
@@ -101,6 +102,7 @@
                 "pages": [
                   "zh/introduction",
                   "zh/documentation/quickstart",
+                  "zh/documentation/kest-web-cloud",
                   "zh/documentation/kest-cli",
                   "zh/documentation/authentication",
                   "zh/documentation/errors",

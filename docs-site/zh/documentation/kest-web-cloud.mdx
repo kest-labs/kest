@@ -1,0 +1,333 @@
+---
+title: Kest Web / Cloud
+description: 使用 Kest Web 和 Kest Cloud 管理 workspace、API specs、请求集合、环境、测试用例、flows、历史记录、成员、邀请、分享和 CLI/CI 同步。
+---
+
+# Kest Web / Cloud
+
+Kest Web 是 Kest 的浏览器控制台。Kest Cloud 是托管的 workspace 后端，用来把本地 CLI 活动、团队协作、API 文档、测试用例和 CI 运行结果连接到同一个工作区。
+
+如果你只需要本地命令行能力，请阅读 [Kest CLI](/zh/documentation/kest-cli)。如果你要把本地 CLI 连接到 Cloud，请阅读 [CLI 同步](/zh/documentation/cli-sync)。
+
+## 入口
+
+打开 Kest：
+
+```text
+https://kest.dev
+```
+
+进入控制台后，主要路径从 workspace 开始：
+
+```text
+/workspace
+/workspace/{workspaceId}/api-specs
+/workspace/{workspaceId}/collections
+/workspace/{workspaceId}/environments
+/workspace/{workspaceId}/test-cases
+/workspace/{workspaceId}/flows
+/workspace/{workspaceId}/histories
+/workspace/{workspaceId}/members
+/workspace/{workspaceId}/keys
+```
+
+## Workspace
+
+Workspace 是 Kest Cloud 中的协作边界。一个 workspace 通常对应一组 API、环境、测试用例、flows、请求历史和团队成员。
+
+你可以在 workspace 首页完成这些操作：
+
+- 创建、查看、搜索、排序和删除 workspace。
+- 查看 workspace 的 API specs、环境、测试、flow 和成员统计。
+- 从 workspace 卡片直接进入 API Specs、Collections、Environments、Test Cases、Flows、History、Members 和 Keys。
+- 查看收到的 workspace 邀请，并接受或拒绝。
+- 复制 workspace 连接信息，用于后续 CLI 或 CI 连接。
+
+## API Specs
+
+API Specs 用来维护 workspace 内的 API 契约、文档、示例和测试来源。
+
+常用能力：
+
+- 创建、编辑、删除 API spec。
+- 按分类组织 API spec。
+- 导入 API specs。
+- 导出为 JSON、OpenAPI、Swagger 或 Markdown。
+- 查看 API 详情、生成文档、示例和生成的测试内容。
+- 对单个 spec 生成文档或 flow 测试。
+- 对多个 spec 批量生成文档。
+- 发布公开分享链接，或取消公开分享。
+
+## AI API Draft
+
+AI API Draft 用来从自然语言生成结构化 API spec。
+
+可用能力：
+
+- 输入接口意图、method、path、分类和语言。
+- 选择是否沿用 workspace 中已有 API 约定。
+- 通过流式生成查看生成状态、token 和耗时。
+- 编辑草稿中的 method、path、summary、version、category、tags、description、request body、parameters 和 responses。
+- 针对某个字段继续 refine。
+- 接受草稿并保存为正式 API spec。
+- 接受草稿后继续生成文档或测试用例。
+
+## Collections / Requests
+
+Collections 是 workspace 内的请求集合。Requests 是可保存、复用和运行的 API 请求。
+
+请求工作台支持：
+
+- 创建 collection、folder 和 request。
+- 使用 scratchpad 临时调试请求。
+- 保存、复制、移动、重命名和删除请求。
+- 从 Postman collection 导入请求。
+- 从 Markdown API 文档导入请求。
+- 使用环境变量和 base URL 运行请求。
+- 把请求运行结果保存到 workspace history。
+
+请求编辑器支持：
+
+- Query params、headers 和 authorization。
+- JSON、raw、form-data、x-www-form-urlencoded、binary 和 GraphQL body。
+- Bearer、Basic、API key 和 no auth。
+- API key 放在 header、query 或 cookie。
+- 请求文档生成、预览、编辑和复制。
+
+## Examples
+
+Examples 用来保存请求的典型输入、响应和断言。
+
+可用能力：
+
+- 手动创建、编辑、删除 request example。
+- 把最新响应保存为 example。
+- 设置默认 example。
+- 把 example 应用回请求编辑器。
+- 使用 AI 生成正向、负向、边界和安全类 examples。
+- 批量运行 examples，并查看通过、失败或错误结果。
+
+## Environments
+
+Environments 保存不同运行目标的 base URL、变量和共享 headers。
+
+你可以：
+
+- 创建、编辑、删除和复制环境。
+- 为 local、staging、production 等环境配置不同 base URL。
+- 保存 workspace 变量和共享 headers。
+- 在请求、test case 和 flow 运行时选择环境。
+
+## Test Cases
+
+Test Cases 是可重复执行的接口验证用例。
+
+支持能力：
+
+- 创建、编辑、删除和复制 test case。
+- 从 API spec 生成 test case。
+- 从 API example 生成 test case。
+- 选择环境运行 test case。
+- 传入全局变量或变量 key。
+- 查看运行历史、请求、响应、断言结果和提取变量。
+
+Test case 适合验证单个 API 或一组紧密相关的请求。多步骤业务路径更适合使用 Flow。
+
+## Flows
+
+Flows 用来编排多步骤 API workflow。它可以由 Web 可视化编辑，也可以从 Markdown `.flow.md` 导入。
+
+Web Flow 支持：
+
+- 创建、编辑、删除 flow。
+- 导入 Markdown flow。
+- 直接编辑 Web 管理的 Markdown flow。
+- 使用画布管理 nodes 和 edges。
+- 为节点配置 method、URL、headers、body、assertions 和 captures。
+- 为 edge 配置变量映射。
+- 检查缺失 endpoint、空映射、自连接和循环依赖。
+- 保存 flow 定义。
+- 运行 flow 并查看状态。
+
+Flow run 状态包括：
+
+- `pending`
+- `running`
+- `passed`
+- `failed`
+- `canceled`
+
+Flow runner 类型包括：
+
+- `test_machine`：通过本机 `kest bridge` 或本地 CLI 执行。
+- `server_ci`：由 CI 或服务端自动化执行，并把结果同步回 Cloud。
+
+## History
+
+History 汇总 workspace 中的请求和运行记录。
+
+记录来源包括：
+
+- Web 请求工作台。
+- 本机 `kest bridge`。
+- CLI history sync。
+- Flow run sync。
+- CI run sync。
+
+History 可查看：
+
+- 请求 method、URL、headers 和 body。
+- 响应 status、headers、body 和耗时。
+- 执行状态、错误信息和同步来源。
+- 与 workspace、collection、request、flow 或 run 相关的上下文。
+
+## Members
+
+Members 用来管理 workspace 成员和访问级别。
+
+角色包括：
+
+- `owner`：workspace 所有者。
+- `admin`：管理成员、邀请和关键 workspace 设置。
+- `write`：创建和编辑 API specs、requests、examples、environments、test cases 和 flows。
+- `read`：查看 workspace 内容和运行历史。
+
+成员管理支持：
+
+- 搜索用户并添加到 workspace。
+- 修改成员角色。
+- 移除成员。
+- 查看成员数量和角色分布。
+
+## Invitations
+
+Workspace invitations 用来邀请团队成员加入 workspace。
+
+支持：
+
+- 创建邀请链接。
+- 创建定向邀请。
+- 设置邀请角色。
+- 设置过期时间。
+- 设置最大使用次数。
+- 查看剩余使用次数。
+- 撤销邀请。
+- 通过 `/invite/workspace/{slug}` 打开公开邀请页。
+- 接受或拒绝收到的邀请。
+
+邀请状态包括 active、expired、revoked、used up 和 rejected。
+
+## Keys
+
+Keys 页面用于生成 workspace-scoped CLI token 和连接命令。
+
+典型流程：
+
+1. 在 workspace 的 Keys 页面生成 CLI key。
+2. 复制 Web 提供的一行连接命令。
+3. 在本地运行：
+
+```bash
+kest key kest_key_...
+```
+
+这个命令会写入：
+
+- Kest Cloud API URL。
+- workspace CLI token。
+- workspace ID。
+- history auto-sync 设置。
+
+之后你可以使用：
+
+```bash
+kest sync push
+kest sync history
+kest run --sync
+```
+
+## Public Share
+
+API Specs 可以发布公开分享页，用于给团队外部成员查看接口文档。
+
+分享路径：
+
+```text
+/share/api-spec/{slug}
+```
+
+发布后，任何拿到链接的人都可以查看公开 API spec 内容。取消发布后，公开链接失效。
+
+## Local Runner Bridge
+
+浏览器不能直接访问很多本地或内网 API。Kest 使用本机 bridge 解决这个问题。
+
+启动 bridge：
+
+```bash
+kest bridge
+```
+
+默认地址：
+
+```text
+http://127.0.0.1:8788
+```
+
+Web 请求工作台和本地 flow runner 可以通过 bridge 发送请求。这样你可以在 Web 中调试本机 API，同时把结果保存回 workspace history。
+
+## CLI 与 Cloud 同步
+
+Kest Cloud 和 CLI 可以同步这些内容：
+
+- CLI 请求历史同步到 workspace history。
+- CLI 从请求历史推导 API specs，并上传到 workspace。
+- CLI 本地 `.flow.md` 定义同步到 workspace flows。
+- CLI flow run 结果同步到 workspace flow runs。
+- Web 中启用的 runnable flows 可以被 CLI 拉取到本地执行。
+
+常用命令：
+
+```bash
+kest sync push --dry-run
+kest sync push
+kest sync history
+kest run --sync
+kest run --workspace-flow all --sync
+```
+
+## CI 可见性
+
+CI 可以复用同一套 `.flow.md` 文件和 workspace sync。
+
+推荐命令：
+
+```bash
+kest run --profile ci --sync --quiet --output json
+```
+
+常用报告输出：
+
+```bash
+kest run --profile ci \
+  --sync \
+  --report-json .kest/reports/flow-results.json \
+  --report-junit .kest/reports/flow-results.xml
+```
+
+Cloud 可以接收 CI run webhook 和 flow run sync，把 `server_ci` runner 的执行结果展示在 workspace 的 Flows 和 History 中。
+
+## 推荐使用路径
+
+新团队通常可以按这个顺序使用 Kest Web / Cloud：
+
+1. 创建 workspace。
+2. 配置 environments。
+3. 导入或创建 API specs。
+4. 在 Collections 中调试请求。
+5. 把常用请求保存为 examples。
+6. 从 API specs 或 examples 生成 test cases。
+7. 用 flows 编排多步骤业务场景。
+8. 生成 workspace key，并连接本地 CLI。
+9. 在 CI 中运行 `kest run --profile ci --sync`。
+10. 在 Web 中查看 history、flow runs、失败原因和共享文档。

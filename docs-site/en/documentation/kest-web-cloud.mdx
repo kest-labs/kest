@@ -1,0 +1,333 @@
+---
+title: Kest Web / Cloud
+description: Use Kest Web and Kest Cloud to manage workspaces, API specs, request collections, environments, test cases, flows, history, members, invitations, sharing, and CLI/CI sync.
+---
+
+# Kest Web / Cloud
+
+Kest Web is the browser console for Kest. Kest Cloud is the hosted workspace backend that connects local CLI activity, team collaboration, API documentation, test cases, and CI results into one shared workspace.
+
+For local command-line workflows, see [Kest CLI](/en/documentation/kest-cli). To connect a local CLI to Cloud, see [CLI Sync](/en/documentation/cli-sync).
+
+## Entry Points
+
+Open Kest:
+
+```text
+https://kest.dev
+```
+
+After sign-in, the main console paths start from the workspace area:
+
+```text
+/workspace
+/workspace/{workspaceId}/api-specs
+/workspace/{workspaceId}/collections
+/workspace/{workspaceId}/environments
+/workspace/{workspaceId}/test-cases
+/workspace/{workspaceId}/flows
+/workspace/{workspaceId}/histories
+/workspace/{workspaceId}/members
+/workspace/{workspaceId}/keys
+```
+
+## Workspace
+
+A workspace is the collaboration boundary in Kest Cloud. It usually contains a set of APIs, environments, test cases, flows, request history, and team members.
+
+From the workspace home page, you can:
+
+- Create, view, search, sort, and delete workspaces.
+- Review workspace stats for API specs, environments, tests, flows, and members.
+- Jump into API Specs, Collections, Environments, Test Cases, Flows, History, Members, and Keys.
+- Review received workspace invitations and accept or reject them.
+- Copy workspace connection details for CLI or CI setup.
+
+## API Specs
+
+API Specs store the API contract, generated documentation, examples, and test sources inside a workspace.
+
+Common actions:
+
+- Create, edit, and delete API specs.
+- Organize specs with categories.
+- Import API specs.
+- Export JSON, OpenAPI, Swagger, or Markdown.
+- Review API details, docs, examples, and generated tests.
+- Generate documentation or a flow test from a single spec.
+- Batch-generate documentation for multiple specs.
+- Publish or remove a public share link.
+
+## AI API Draft
+
+AI API Draft turns natural language into a structured API spec.
+
+You can:
+
+- Provide an API intent, method, path, category, and language.
+- Reuse conventions already present in the workspace.
+- Watch streaming generation status, tokens, and elapsed time.
+- Edit method, path, summary, version, category, tags, description, request body, parameters, and responses.
+- Refine a specific field with an instruction.
+- Accept the draft as a saved API spec.
+- Continue from an accepted draft into documentation or test generation.
+
+## Collections / Requests
+
+Collections hold reusable request groups inside a workspace. Requests are saved API calls that can be edited, reused, and executed.
+
+The request workbench supports:
+
+- Creating collections, folders, and requests.
+- Using scratchpad tabs for temporary debugging.
+- Saving, duplicating, moving, renaming, and deleting requests.
+- Importing requests from Postman collections.
+- Importing requests from Markdown API documentation.
+- Running requests with environment variables and base URLs.
+- Saving run results to workspace history.
+
+The request editor supports:
+
+- Query params, headers, and authorization.
+- JSON, raw, form-data, x-www-form-urlencoded, binary, and GraphQL bodies.
+- Bearer, Basic, API key, and no-auth modes.
+- API keys in headers, query params, or cookies.
+- Request documentation generation, preview, editing, and copying.
+
+## Examples
+
+Examples store representative request inputs, responses, and assertions.
+
+You can:
+
+- Create, edit, and delete request examples manually.
+- Save the latest response as an example.
+- Mark an example as the default.
+- Apply an example back into the request editor.
+- Generate positive, negative, boundary, and security examples with AI.
+- Run examples in batches and review passed, failed, or errored results.
+
+## Environments
+
+Environments store target-specific base URLs, variables, and shared headers.
+
+You can:
+
+- Create, edit, delete, and duplicate environments.
+- Configure different base URLs for local, staging, production, or any custom target.
+- Store workspace variables and shared headers.
+- Select an environment when running requests, test cases, and flows.
+
+## Test Cases
+
+Test Cases are repeatable API validations.
+
+Supported actions:
+
+- Create, edit, delete, and duplicate test cases.
+- Generate a test case from an API spec.
+- Generate a test case from an API example.
+- Run a test case against a selected environment.
+- Pass global variables or variable keys.
+- Review run history, request details, response details, assertion results, and extracted variables.
+
+Test cases work well for a single API or a small set of tightly related requests. Use Flows for multi-step business paths.
+
+## Flows
+
+Flows orchestrate multi-step API workflows. They can be edited visually in Web or imported from Markdown `.flow.md` files.
+
+Web Flow supports:
+
+- Creating, editing, and deleting flows.
+- Importing Markdown flows.
+- Editing Web-managed Markdown flow content.
+- Managing nodes and edges on a canvas.
+- Configuring method, URL, headers, body, assertions, and captures on nodes.
+- Configuring variable mapping on edges.
+- Validating missing endpoints, empty mappings, self-connections, and cycles.
+- Saving flow definitions.
+- Running flows and reviewing status.
+
+Flow run statuses include:
+
+- `pending`
+- `running`
+- `passed`
+- `failed`
+- `canceled`
+
+Flow runner types include:
+
+- `test_machine`: run through local `kest bridge` or the local CLI.
+- `server_ci`: run from CI or server automation and sync results back to Cloud.
+
+## History
+
+History aggregates request and run records in the workspace.
+
+Record sources include:
+
+- The Web request workbench.
+- Local `kest bridge`.
+- CLI history sync.
+- Flow run sync.
+- CI run sync.
+
+History can show:
+
+- Request method, URL, headers, and body.
+- Response status, headers, body, and duration.
+- Execution status, errors, and sync source.
+- Context linked to the workspace, collection, request, flow, or run.
+
+## Members
+
+Members manages workspace access.
+
+Roles include:
+
+- `owner`: workspace owner.
+- `admin`: can manage members, invitations, and key workspace settings.
+- `write`: can create and edit API specs, requests, examples, environments, test cases, and flows.
+- `read`: can view workspace content and run history.
+
+Member management supports:
+
+- Searching for users and adding them to the workspace.
+- Updating member roles.
+- Removing members.
+- Reviewing member counts and role distribution.
+
+## Invitations
+
+Workspace invitations bring teammates into a workspace.
+
+Supported actions:
+
+- Create invitation links.
+- Create direct invitations.
+- Set the invited role.
+- Set an expiration time.
+- Set a maximum use count.
+- Review remaining uses.
+- Revoke invitations.
+- Open public invitation pages at `/invite/workspace/{slug}`.
+- Accept or reject received invitations.
+
+Invitation states include active, expired, revoked, used up, and rejected.
+
+## Keys
+
+The Keys page generates workspace-scoped CLI tokens and connection commands.
+
+Typical flow:
+
+1. Generate a CLI key from the workspace Keys page.
+2. Copy the one-line connection command from Web.
+3. Run it locally:
+
+```bash
+kest key kest_key_...
+```
+
+The command writes:
+
+- Kest Cloud API URL.
+- Workspace CLI token.
+- Workspace ID.
+- History auto-sync setting.
+
+After that, you can use:
+
+```bash
+kest sync push
+kest sync history
+kest run --sync
+```
+
+## Public Share
+
+API Specs can be published as public share pages for external documentation review.
+
+Share path:
+
+```text
+/share/api-spec/{slug}
+```
+
+After publishing, anyone with the link can view the public API spec content. Removing the share disables the public link.
+
+## Local Runner Bridge
+
+Browsers cannot directly reach many local or private-network APIs. Kest uses a local bridge for those runs.
+
+Start the bridge:
+
+```bash
+kest bridge
+```
+
+Default address:
+
+```text
+http://127.0.0.1:8788
+```
+
+The Web request workbench and local flow runner can send requests through the bridge. This lets you debug local APIs from Web while saving results back to workspace history.
+
+## CLI and Cloud Sync
+
+Kest Cloud and the CLI can sync:
+
+- CLI request history into workspace history.
+- API specs inferred from local CLI request history into the workspace.
+- Local `.flow.md` definitions into workspace flows.
+- CLI flow run results into workspace flow runs.
+- Runnable flows from Web down to the local CLI for execution.
+
+Common commands:
+
+```bash
+kest sync push --dry-run
+kest sync push
+kest sync history
+kest run --sync
+kest run --workspace-flow all --sync
+```
+
+## CI Visibility
+
+CI can reuse the same `.flow.md` files and workspace sync.
+
+Recommended command:
+
+```bash
+kest run --profile ci --sync --quiet --output json
+```
+
+Common report outputs:
+
+```bash
+kest run --profile ci \
+  --sync \
+  --report-json .kest/reports/flow-results.json \
+  --report-junit .kest/reports/flow-results.xml
+```
+
+Cloud can receive CI run webhooks and flow run sync payloads, then display `server_ci` runner results in workspace Flows and History.
+
+## Recommended Adoption Path
+
+New teams usually start in this order:
+
+1. Create a workspace.
+2. Configure environments.
+3. Import or create API specs.
+4. Debug requests in Collections.
+5. Save important requests as examples.
+6. Generate test cases from API specs or examples.
+7. Use flows for multi-step business scenarios.
+8. Generate a workspace key and connect the local CLI.
+9. Run `kest run --profile ci --sync` in CI.
+10. Use Web to review history, flow runs, failures, and shared docs.
