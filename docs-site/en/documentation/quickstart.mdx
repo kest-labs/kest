@@ -43,38 +43,39 @@ curl -X POST "http://localhost:8025/v1/login" \
   }'
 ```
 
-## 3. Create a project
+## 3. Create a workspace
 
 ```bash
-curl -X POST "http://localhost:8025/v1/projects" \
+curl -X POST "http://localhost:8025/v1/workspaces" \
   -H "Authorization: Bearer <jwt>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Demo Project",
-    "slug": "demo-project",
-    "platform": "javascript"
+    "name": "Demo Workspace",
+    "slug": "demoworkspace",
+    "type": "team",
+    "visibility": "private"
   }'
 ```
 
 ## 4. Generate a CLI token
 
-Generate a project-scoped token for syncing local specs.
+Generate a workspace-scoped token for syncing local specs.
 
 ```bash
-curl -X POST "http://localhost:8025/v1/projects/<project-id>/cli-tokens" \
+curl -X POST "http://localhost:8025/v1/workspaces/<workspace-id>/cli-tokens" \
   -H "Authorization: Bearer <jwt>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "local-dev",
-    "scopes": ["spec:write"]
+    "scopes": ["collection:read", "collection:run"]
   }'
 ```
 
 ## 5. Upload specs from the CLI
 
 ```bash
-curl -X POST "http://localhost:8025/v1/projects/<project-id>/cli/spec-sync" \
-  -H "Authorization: Bearer <project-cli-token>" \
+curl -X POST "http://localhost:8025/v1/workspaces/<workspace-id>/cli/spec-sync" \
+  -H "Authorization: Bearer <workspace-cli-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "source": "kest-cli",

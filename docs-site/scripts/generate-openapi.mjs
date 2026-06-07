@@ -85,15 +85,10 @@ function buildSpec(locale) {
     listUsers: isZh ? "分页列出用户" : "List users",
     searchUsers: isZh ? "搜索用户" : "Search users",
     getUser: isZh ? "获取用户" : "Get a user",
-    createProject: isZh ? "创建项目" : "Create a project",
-    listProjects: isZh ? "列出项目" : "List projects",
-    getProject: isZh ? "获取项目" : "Get a project",
-    updateProject: isZh ? "更新项目" : "Update a project",
-    deleteProject: isZh ? "删除项目" : "Delete a project",
-    projectStats: isZh ? "获取项目统计" : "Get project stats",
-    createCliToken: isZh ? "生成项目 CLI Token" : "Generate a project CLI token",
-    syncSpecs: isZh ? "从 CLI 同步 API Specs" : "Sync API specs from the CLI",
-    syncHistory: isZh ? "从 CLI 同步历史记录" : "Sync history from the CLI",
+    createCliToken: isZh ? "生成工作区 CLI Token" : "Generate a workspace CLI token",
+    listCliTokens: isZh ? "列出工作区 CLI Tokens" : "List workspace CLI tokens",
+    syncSpecs: isZh ? "通过 Kest Cloud Sync 同步 API Specs" : "Sync API specs with Kest Cloud Sync",
+    syncHistory: isZh ? "通过 Kest Cloud Sync 同步历史记录" : "Sync history with Kest Cloud Sync",
     listApiSpecs: isZh ? "列出 API Specs" : "List API specs",
     createApiSpec: isZh ? "创建 API Spec" : "Create an API spec",
     importApiSpecs: isZh ? "导入多个 API Specs" : "Import multiple API specs",
@@ -126,11 +121,6 @@ function buildSpec(locale) {
     runTestCase: isZh ? "运行测试用例" : "Run a test case",
     listTestRuns: isZh ? "列出测试运行记录" : "List test runs",
     getTestRun: isZh ? "获取测试运行记录" : "Get a test run",
-    listMembers: isZh ? "列出项目成员" : "List project members",
-    getMyMemberRole: isZh ? "获取我的项目角色" : "Get my project role",
-    addMember: isZh ? "添加项目成员" : "Add a project member",
-    updateMember: isZh ? "更新项目成员角色" : "Update a project member role",
-    removeMember: isZh ? "移除项目成员" : "Remove a project member",
     listPermissions: isZh ? "列出权限" : "List permissions",
     listRoles: isZh ? "列出角色" : "List roles",
     createRole: isZh ? "创建角色" : "Create a role",
@@ -175,17 +165,15 @@ function buildSpec(locale) {
 
   const tagDescriptions = {
     "Auth & Users": isZh ? "认证、账户与用户信息接口。" : "Authentication, account, and user profile endpoints.",
-    Projects: isZh ? "项目创建、查询与管理接口。" : "Project creation, retrieval, and management endpoints.",
-    "CLI Sync": isZh ? "CLI 产物同步与项目级 token 接口。" : "CLI sync endpoints and project-scoped token workflows.",
-    "API Specs": isZh ? "API 规格、示例与导入导出接口。" : "API specification, examples, import, and export endpoints.",
-    Environments: isZh ? "环境与变量管理接口。" : "Environment and variable management endpoints.",
-    Categories: isZh ? "分类与目录组织接口。" : "Category and tree organization endpoints.",
-    "Test Cases": isZh ? "测试用例生成、执行与运行记录接口。" : "Test case generation, execution, and run record endpoints.",
-    Members: isZh ? "项目成员协作接口。" : "Project member collaboration endpoints.",
+    "Kest Cloud Sync": isZh ? "Kest Cloud Sync 产物同步与工作区 CLI token 接口。" : "Kest Cloud Sync endpoints and workspace-scoped CLI token workflows.",
+    "API Specs": isZh ? "工作区 API 规格、示例与导入导出接口。" : "Workspace-scoped API specification, examples, import, and export endpoints.",
+    Environments: isZh ? "工作区环境与变量管理接口。" : "Workspace environment and variable management endpoints.",
+    Categories: isZh ? "工作区分类与目录组织接口。" : "Workspace category and tree organization endpoints.",
+    "Test Cases": isZh ? "工作区测试用例生成、执行与运行记录接口。" : "Workspace test case generation, execution, and run record endpoints.",
     Permissions: isZh ? "角色与权限管理接口。" : "Role and permission management endpoints.",
-    Collections: isZh ? "请求集合管理接口。" : "Request collection management endpoints.",
-    Requests: isZh ? "请求模型与版本操作接口。" : "Request model and version operation endpoints.",
-    History: isZh ? "历史记录接口。" : "History and activity record endpoints.",
+    Collections: isZh ? "工作区请求集合管理接口。" : "Workspace request collection management endpoints.",
+    Requests: isZh ? "工作区请求模型与版本操作接口。" : "Workspace request model and version operation endpoints.",
+    History: isZh ? "工作区历史记录接口。" : "Workspace history and activity record endpoints.",
     Workspaces: isZh ? "工作区与成员管理接口。" : "Workspace and workspace member management endpoints.",
     System: isZh ? "健康检查与系统元数据接口。" : "Health checks and system metadata endpoints.",
   };
@@ -212,13 +200,11 @@ function buildSpec(locale) {
     ],
     tags: [
       "Auth & Users",
-      "Projects",
-      "CLI Sync",
+      "Kest Cloud Sync",
       "API Specs",
       "Environments",
       "Categories",
       "Test Cases",
-      "Members",
       "Permissions",
       "Collections",
       "Requests",
@@ -236,10 +222,10 @@ function buildSpec(locale) {
           scheme: "bearer",
           bearerFormat: "JWT",
         },
-        ProjectCLIToken: {
+        WorkspaceCLIToken: {
           type: "http",
           scheme: "bearer",
-          bearerFormat: "Kest project CLI token",
+          bearerFormat: "Kest workspace CLI token",
         },
       },
       schemas: {
@@ -380,85 +366,19 @@ function buildSpec(locale) {
           },
           required: ["code", "message", "data"],
         }),
-        ProjectCreateRequest: schema("object", {
-          properties: {
-            name: schema("string"),
-            slug: schema("string"),
-            platform: schema("string", { enum: ["go", "javascript", "python", "java", "ruby", "php", "csharp"] }),
-          },
-          required: ["name"],
-        }),
-        ProjectUpdateRequest: schema("object", {
-          properties: {
-            name: schema("string"),
-            platform: schema("string", { enum: ["go", "javascript", "python", "java", "ruby", "php", "csharp"] }),
-            status: schema("integer", { enum: [0, 1] }),
-          },
-        }),
-        Project: schema("object", {
-          properties: {
-            id: schema("string"),
-            name: schema("string"),
-            slug: schema("string"),
-            platform: schema("string"),
-            status: schema("integer"),
-            created_at: schema("string", { format: "date-time" }),
-          },
-          required: ["id", "name", "slug", "platform", "status", "created_at"],
-        }),
-        ProjectEnvelope: schema("object", {
-          properties: {
-            code: schema("integer"),
-            message: schema("string"),
-            data: ref("Project"),
-          },
-          required: ["code", "message", "data"],
-        }),
-        ProjectListItem: schema("object", {
-          properties: {
-            id: schema("string"),
-            name: schema("string"),
-            slug: schema("string"),
-            platform: schema("string"),
-            status: schema("integer"),
-          },
-          required: ["id", "name", "slug", "platform", "status"],
-        }),
-        ProjectListEnvelope: schema("object", {
-          properties: {
-            code: schema("integer"),
-            message: schema("string"),
-            data: schema("object", {
-              properties: {
-                items: schema("array", { items: ref("ProjectListItem") }),
-                meta: ref("MetaEnvelope"),
-              },
-              required: ["items", "meta"],
-            }),
-          },
-          required: ["code", "message", "data"],
-        }),
-        ProjectStatsEnvelope: schema("object", {
-          properties: {
-            code: schema("integer"),
-            message: schema("string"),
-            data: schema("object", { additionalProperties: true }),
-          },
-          required: ["code", "message", "data"],
-        }),
-        GenerateProjectCLITokenRequest: schema("object", {
+        GenerateWorkspaceCLITokenRequest: schema("object", {
           properties: {
             name: schema("string"),
             scopes: schema("array", {
-              items: schema("string", { enum: ["spec:write", "run:write"] }),
+              items: schema("string", { enum: ["collection:read", "collection:run", "environment:read", "test_case:run", "flow:run", "flow:write"] }),
             }),
             expires_at: schema("string", { format: "date-time" }),
           },
         }),
-        ProjectCLITokenInfo: schema("object", {
+        WorkspaceCLITokenInfo: schema("object", {
           properties: {
             id: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             name: schema("string"),
             token_prefix: schema("string"),
             scopes: schema("array", { items: schema("string") }),
@@ -466,22 +386,30 @@ function buildSpec(locale) {
             expires_at: schema("string", { format: "date-time" }),
             created_at: schema("string", { format: "date-time" }),
           },
-          required: ["id", "project_id", "name", "token_prefix", "scopes", "created_at"],
+          required: ["id", "workspace_id", "name", "token_prefix", "scopes", "created_at"],
         }),
-        GenerateProjectCLITokenResponse: schema("object", {
+        GenerateWorkspaceCLITokenResponse: schema("object", {
           properties: {
             token: schema("string"),
             token_type: schema("string"),
-            project_id: schema("string"),
-            token_info: ref("ProjectCLITokenInfo"),
+            workspace_id: schema("string"),
+            token_info: ref("WorkspaceCLITokenInfo"),
           },
-          required: ["token", "token_type", "project_id", "token_info"],
+          required: ["token", "token_type", "workspace_id", "token_info"],
         }),
-        GenerateProjectCLITokenEnvelope: schema("object", {
+        GenerateWorkspaceCLITokenEnvelope: schema("object", {
           properties: {
             code: schema("integer"),
             message: schema("string"),
-            data: ref("GenerateProjectCLITokenResponse"),
+            data: ref("GenerateWorkspaceCLITokenResponse"),
+          },
+          required: ["code", "message", "data"],
+        }),
+        WorkspaceCLITokenArrayEnvelope: schema("object", {
+          properties: {
+            code: schema("integer"),
+            message: schema("string"),
+            data: schema("array", { items: ref("WorkspaceCLITokenInfo") }),
           },
           required: ["code", "message", "data"],
         }),
@@ -541,7 +469,7 @@ function buildSpec(locale) {
         }),
         CLISpecSyncRequest: schema("object", {
           properties: {
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             source: schema("string"),
             metadata: schema("object", { additionalProperties: true }),
             specs: schema("array", { items: ref("CLISpecSyncSpec") }),
@@ -580,7 +508,7 @@ function buildSpec(locale) {
         }),
         CLIHistorySyncRequest: schema("object", {
           properties: {
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             source: schema("string"),
             metadata: schema("object", { additionalProperties: true }),
             entries: schema("array", { items: ref("CLIHistorySyncEntry") }),
@@ -618,7 +546,7 @@ function buildSpec(locale) {
         APISpec: schema("object", {
           properties: {
             id: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             category_id: schema("string"),
             method: schema("string"),
             path: schema("string"),
@@ -637,7 +565,7 @@ function buildSpec(locale) {
             created_at: schema("string", { format: "date-time" }),
             updated_at: schema("string", { format: "date-time" }),
           },
-          required: ["id", "project_id", "method", "path", "summary", "description", "tags", "version", "is_public", "created_at", "updated_at"],
+          required: ["id", "workspace_id", "method", "path", "summary", "description", "tags", "version", "is_public", "created_at", "updated_at"],
         }),
         APISpecExample: schema("object", {
           properties: {
@@ -745,7 +673,7 @@ function buildSpec(locale) {
         Environment: schema("object", {
           properties: {
             id: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             name: schema("string"),
             display_name: schema("string"),
             base_url: schema("string"),
@@ -754,7 +682,7 @@ function buildSpec(locale) {
             created_at: schema("string", { format: "date-time" }),
             updated_at: schema("string", { format: "date-time" }),
           },
-          required: ["id", "project_id", "name", "created_at", "updated_at"],
+          required: ["id", "workspace_id", "name", "created_at", "updated_at"],
         }),
         CreateEnvironmentRequest: schema("object", {
           properties: {
@@ -801,7 +729,7 @@ function buildSpec(locale) {
         Category: schema("object", {
           properties: {
             id: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             name: schema("string"),
             parent_id: schema("string"),
             description: schema("string"),
@@ -810,7 +738,7 @@ function buildSpec(locale) {
             created_at: schema("string", { format: "date-time" }),
             updated_at: schema("string", { format: "date-time" }),
           },
-          required: ["id", "project_id", "name", "sort_order", "created_at", "updated_at"],
+          required: ["id", "workspace_id", "name", "sort_order", "created_at", "updated_at"],
         }),
         CreateCategoryRequest: schema("object", {
           properties: {
@@ -1070,48 +998,6 @@ function buildSpec(locale) {
           },
           required: ["code", "message", "data"],
         }),
-        Member: schema("object", {
-          properties: {
-            id: schema("string"),
-            project_id: schema("string"),
-            user_id: schema("string"),
-            username: schema("string"),
-            email: schema("string"),
-            role: schema("string", { enum: ["owner", "admin", "write", "read"] }),
-            created_at: schema("string", { format: "date-time" }),
-            updated_at: schema("string", { format: "date-time" }),
-          },
-          required: ["id", "project_id", "user_id", "username", "email", "role", "created_at", "updated_at"],
-        }),
-        AddMemberRequest: schema("object", {
-          properties: {
-            user_id: schema("string"),
-            role: schema("string", { enum: ["owner", "admin", "write", "read"] }),
-          },
-          required: ["user_id", "role"],
-        }),
-        UpdateMemberRequest: schema("object", {
-          properties: {
-            role: schema("string", { enum: ["owner", "admin", "write", "read"] }),
-          },
-          required: ["role"],
-        }),
-        MemberEnvelope: schema("object", {
-          properties: {
-            code: schema("integer"),
-            message: schema("string"),
-            data: ref("Member"),
-          },
-          required: ["code", "message", "data"],
-        }),
-        MemberArrayEnvelope: schema("object", {
-          properties: {
-            code: schema("integer"),
-            message: schema("string"),
-            data: schema("array", { items: ref("Member") }),
-          },
-          required: ["code", "message", "data"],
-        }),
         Role: schema("object", {
           properties: {
             id: schema("string"),
@@ -1181,28 +1067,28 @@ function buildSpec(locale) {
             id: schema("string"),
             name: schema("string"),
             description: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             parent_id: schema("string"),
             is_folder: schema("boolean"),
             sort_order: schema("integer"),
             created_at: schema("string", { format: "date-time" }),
             updated_at: schema("string", { format: "date-time" }),
           },
-          required: ["id", "name", "description", "project_id", "is_folder", "sort_order", "created_at", "updated_at"],
+          required: ["id", "name", "description", "workspace_id", "is_folder", "sort_order", "created_at", "updated_at"],
         }),
         CollectionTreeNode: schema("object", {
           properties: {
             id: schema("string"),
             name: schema("string"),
             description: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             parent_id: schema("string"),
             is_folder: schema("boolean"),
             sort_order: schema("integer"),
             children: schema("array", { items: ref("CollectionTreeNode") }),
             request_count: schema("integer"),
           },
-          required: ["id", "name", "description", "project_id", "is_folder", "sort_order"],
+          required: ["id", "name", "description", "workspace_id", "is_folder", "sort_order"],
         }),
         CreateCollectionRequest: schema("object", {
           properties: {
@@ -1399,7 +1285,7 @@ function buildSpec(locale) {
             id: schema("string"),
             entity_type: schema("string"),
             entity_id: schema("string"),
-            project_id: schema("string"),
+            workspace_id: schema("string"),
             user_id: schema("string"),
             source: schema("string"),
             source_event_id: schema("string"),
@@ -1409,7 +1295,7 @@ function buildSpec(locale) {
             message: schema("string"),
             created_at: schema("string", { format: "date-time" }),
           },
-          required: ["id", "entity_type", "entity_id", "project_id", "user_id", "action", "data", "message", "created_at"],
+          required: ["id", "entity_type", "entity_id", "workspace_id", "user_id", "action", "data", "message", "created_at"],
         }),
         RecordHistoryRequest: schema("object", {
           properties: {
@@ -1468,7 +1354,7 @@ function buildSpec(locale) {
             user_id: schema("string"),
             username: schema("string"),
             email: schema("string"),
-            role: schema("string", { enum: ["owner", "admin", "editor", "viewer"] }),
+            role: schema("string", { enum: ["owner", "admin", "write", "read"] }),
             invited_by: schema("string"),
             joined_at: schema("string", { format: "date-time" }),
           },
@@ -1494,13 +1380,13 @@ function buildSpec(locale) {
         AddWorkspaceMemberRequest: schema("object", {
           properties: {
             user_id: schema("string"),
-            role: schema("string", { enum: ["owner", "admin", "editor", "viewer"] }),
+            role: schema("string", { enum: ["owner", "admin", "write", "read"] }),
           },
           required: ["user_id", "role"],
         }),
         UpdateWorkspaceMemberRoleRequest: schema("object", {
           properties: {
-            role: schema("string", { enum: ["owner", "admin", "editor", "viewer"] }),
+            role: schema("string", { enum: ["owner", "admin", "write", "read"] }),
           },
           required: ["role"],
         }),
@@ -1785,113 +1671,38 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects": {
-        get: op(t.listProjects, {
-          tags: ["Projects"],
-          operationId: "listProjects",
+      "/v1/workspaces/{id}/cli-tokens": {
+        get: op(t.listCliTokens, {
+          tags: ["Kest Cloud Sync"],
+          operationId: "listWorkspaceCliTokens",
           security: [{ BearerAuth: [] }],
-          parameters: [queryInt("page", "Page number", 1), queryInt("per_page", "Items per page", 20)],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           responses: {
-            200: responseRef("ProjectListEnvelope", "OK"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-          },
-        }),
-        post: op(t.createProject, {
-          tags: ["Projects"],
-          operationId: "createProject",
-          security: [{ BearerAuth: [] }],
-          requestBody: body("project", ref("ProjectCreateRequest")),
-          responses: {
-            201: responseRef("ProjectEnvelope", "Created"),
-            400: responseRef("ErrorEnvelope", "Bad Request"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-            409: responseRef("ErrorEnvelope", "Conflict"),
-          },
-        }),
-      },
-      "/v1/projects/{id}": {
-        get: op(t.getProject, {
-          tags: ["Projects"],
-          operationId: "getProject",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          responses: {
-            200: responseRef("ProjectEnvelope", "OK"),
+            200: responseRef("WorkspaceCLITokenArrayEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
             404: responseRef("ErrorEnvelope", "Not Found"),
           },
         }),
-        put: op(t.updateProject, {
-          tags: ["Projects"],
-          operationId: "updateProject",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          requestBody: body("project", ref("ProjectUpdateRequest")),
-          responses: {
-            200: responseRef("ProjectEnvelope", "OK"),
-            400: responseRef("ErrorEnvelope", "Bad Request"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-            404: responseRef("ErrorEnvelope", "Not Found"),
-          },
-        }),
-        patch: op(t.updateProject, {
-          tags: ["Projects"],
-          operationId: "patchProject",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          requestBody: body("project", ref("ProjectUpdateRequest")),
-          responses: {
-            200: responseRef("ProjectEnvelope", "OK"),
-            400: responseRef("ErrorEnvelope", "Bad Request"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-            404: responseRef("ErrorEnvelope", "Not Found"),
-          },
-        }),
-        delete: op(t.deleteProject, {
-          tags: ["Projects"],
-          operationId: "deleteProject",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          responses: {
-            200: responseRef("SuccessEnvelope", "OK"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-            404: responseRef("ErrorEnvelope", "Not Found"),
-          },
-        }),
-      },
-      "/v1/projects/{id}/stats": {
-        get: op(t.projectStats, {
-          tags: ["Projects"],
-          operationId: "getProjectStats",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          responses: {
-            200: responseRef("ProjectStatsEnvelope", "OK"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-          },
-        }),
-      },
-      "/v1/projects/{id}/cli-tokens": {
         post: op(t.createCliToken, {
-          tags: ["CLI Sync"],
-          operationId: "createProjectCliToken",
+          tags: ["Kest Cloud Sync"],
+          operationId: "createWorkspaceCliToken",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          requestBody: body("cliToken", ref("GenerateProjectCLITokenRequest")),
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
+          requestBody: body("cliToken", ref("GenerateWorkspaceCLITokenRequest")),
           responses: {
-            201: responseRef("GenerateProjectCLITokenEnvelope", "Created"),
+            201: responseRef("GenerateWorkspaceCLITokenEnvelope", "Created"),
             400: responseRef("ErrorEnvelope", "Bad Request"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
             404: responseRef("ErrorEnvelope", "Not Found"),
           },
         }),
       },
-      "/v1/projects/{id}/cli/spec-sync": {
+      "/v1/workspaces/{id}/cli/spec-sync": {
         post: op(t.syncSpecs, {
-          tags: ["CLI Sync"],
-          operationId: "syncProjectSpecsFromCli",
-          security: [{ ProjectCLIToken: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          tags: ["Kest Cloud Sync"],
+          operationId: "syncWorkspaceSpecsFromCli",
+          security: [{ WorkspaceCLIToken: [] }],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("syncSpecs", ref("CLISpecSyncRequest")),
           responses: {
             200: responseRef("SyncSummaryEnvelope", "OK"),
@@ -1901,12 +1712,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/cli/history-sync": {
+      "/v1/workspaces/{id}/cli/history-sync": {
         post: op(t.syncHistory, {
-          tags: ["CLI Sync"],
-          operationId: "syncProjectHistoryFromCli",
-          security: [{ ProjectCLIToken: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          tags: ["Kest Cloud Sync"],
+          operationId: "syncWorkspaceHistoryFromCli",
+          security: [{ WorkspaceCLIToken: [] }],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("syncHistory", ref("CLIHistorySyncRequest")),
           responses: {
             200: responseRef("SyncSummaryEnvelope", "OK"),
@@ -1916,13 +1727,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/api-specs": {
+      "/v1/workspaces/{id}/api-specs": {
         get: op(t.listApiSpecs, {
           tags: ["API Specs"],
           operationId: "listApiSpecs",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             queryInt("page", "Page number", 1),
             { name: "page_size", in: "query", schema: { type: "integer", default: 20, minimum: 1 }, description: isZh ? "每页数量" : "Page size" },
             { name: "version", in: "query", schema: { type: "string" } },
@@ -1939,7 +1750,7 @@ function buildSpec(locale) {
           tags: ["API Specs"],
           operationId: "createApiSpec",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("apiSpec", ref("CreateAPISpecRequest")),
           responses: {
             201: responseRef("APISpecEnvelope", "Created"),
@@ -1949,12 +1760,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/api-specs/import": {
+      "/v1/workspaces/{id}/api-specs/import": {
         post: op(t.importApiSpecs, {
           tags: ["API Specs"],
           operationId: "importApiSpecs",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("importApiSpecs", ref("ImportAPISpecsRequest")),
           responses: {
             200: responseRef("SuccessEnvelope", "OK"),
@@ -1963,13 +1774,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/api-specs/export": {
+      "/v1/workspaces/{id}/api-specs/export": {
         get: op(t.exportApiSpecs, {
           tags: ["API Specs"],
           operationId: "exportApiSpecs",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             { name: "format", in: "query", schema: { type: "string", enum: ["json", "openapi", "swagger", "markdown"], default: "json" } },
           ],
           responses: {
@@ -1978,12 +1789,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/api-specs/{sid}": {
+      "/v1/workspaces/{id}/api-specs/{sid}": {
         get: op(t.getApiSpec, {
           tags: ["API Specs"],
           operationId: "getApiSpec",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
           responses: {
             200: responseRef("APISpecEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -1994,7 +1805,7 @@ function buildSpec(locale) {
           tags: ["API Specs"],
           operationId: "updateApiSpec",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
           requestBody: body("apiSpec", ref("UpdateAPISpecRequest")),
           responses: {
             200: responseRef("APISpecEnvelope", "OK"),
@@ -2007,7 +1818,7 @@ function buildSpec(locale) {
           tags: ["API Specs"],
           operationId: "deleteApiSpec",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
           responses: {
             204: noContent(),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2015,12 +1826,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/api-specs/{sid}/full": {
+      "/v1/workspaces/{id}/api-specs/{sid}/full": {
         get: op(t.getApiSpecFull, {
           tags: ["API Specs"],
           operationId: "getApiSpecWithExamples",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
           responses: {
             200: responseRef("APISpecEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2028,12 +1839,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/api-specs/{sid}/examples": {
+      "/v1/workspaces/{id}/api-specs/{sid}/examples": {
         get: op(t.listApiSpecExamples, {
           tags: ["API Specs"],
           operationId: "listApiSpecExamples",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
           responses: {
             200: responseRef("APISpecExamplesEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2044,7 +1855,7 @@ function buildSpec(locale) {
           tags: ["API Specs"],
           operationId: "createApiSpecExample",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("sid", isZh ? "Spec ID" : "Spec ID")],
           requestBody: body("apiSpecExample", ref("CreateAPIExampleRequest")),
           responses: {
             201: responseRef("SuccessEnvelope", "Created"),
@@ -2054,12 +1865,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/environments": {
+      "/v1/workspaces/{id}/environments": {
         get: op(t.listEnvironments, {
           tags: ["Environments"],
           operationId: "listEnvironments",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           responses: {
             200: responseRef("EnvironmentArrayEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2069,7 +1880,7 @@ function buildSpec(locale) {
           tags: ["Environments"],
           operationId: "createEnvironment",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("environment", ref("CreateEnvironmentRequest")),
           responses: {
             201: responseRef("EnvironmentEnvelope", "Created"),
@@ -2078,12 +1889,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/environments/{eid}": {
+      "/v1/workspaces/{id}/environments/{eid}": {
         get: op(t.getEnvironment, {
           tags: ["Environments"],
           operationId: "getEnvironment",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
           responses: {
             200: responseRef("EnvironmentEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2094,7 +1905,7 @@ function buildSpec(locale) {
           tags: ["Environments"],
           operationId: "updateEnvironment",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
           requestBody: body("environment", ref("UpdateEnvironmentRequest")),
           responses: {
             200: responseRef("EnvironmentEnvelope", "OK"),
@@ -2107,7 +1918,7 @@ function buildSpec(locale) {
           tags: ["Environments"],
           operationId: "deleteEnvironment",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
           responses: {
             204: noContent(),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2115,12 +1926,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/environments/{eid}/duplicate": {
+      "/v1/workspaces/{id}/environments/{eid}/duplicate": {
         post: op(t.duplicateEnvironment, {
           tags: ["Environments"],
           operationId: "duplicateEnvironment",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("eid", isZh ? "环境 ID" : "Environment ID")],
           requestBody: body("duplicateEnvironment", ref("DuplicateEnvironmentRequest")),
           responses: {
             200: responseRef("EnvironmentEnvelope", "OK"),
@@ -2130,12 +1941,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/categories": {
+      "/v1/workspaces/{id}/categories": {
         get: op(t.listCategories, {
           tags: ["Categories"],
           operationId: "listCategories",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), queryInt("page", "Page number", 1), { name: "per_page", in: "query", schema: { type: "integer", default: 20 } }],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), queryInt("page", "Page number", 1), { name: "per_page", in: "query", schema: { type: "integer", default: 20 } }],
           responses: {
             200: responseRef("CategoryListEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2145,7 +1956,7 @@ function buildSpec(locale) {
           tags: ["Categories"],
           operationId: "createCategory",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("category", ref("CreateCategoryRequest")),
           responses: {
             201: responseRef("CategoryEnvelope", "Created"),
@@ -2154,12 +1965,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/categories/sort": {
+      "/v1/workspaces/{id}/categories/sort": {
         put: op(t.sortCategories, {
           tags: ["Categories"],
           operationId: "sortCategories",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("sortCategories", ref("SortCategoriesRequest")),
           responses: {
             200: responseRef("SuccessEnvelope", "OK"),
@@ -2168,12 +1979,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/categories/{cid}": {
+      "/v1/workspaces/{id}/categories/{cid}": {
         get: op(t.getCategory, {
           tags: ["Categories"],
           operationId: "getCategory",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "分类 ID" : "Category ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "分类 ID" : "Category ID")],
           responses: {
             200: responseRef("CategoryEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2184,7 +1995,7 @@ function buildSpec(locale) {
           tags: ["Categories"],
           operationId: "updateCategory",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "分类 ID" : "Category ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "分类 ID" : "Category ID")],
           requestBody: body("category", ref("UpdateCategoryRequest")),
           responses: {
             200: responseRef("CategoryEnvelope", "OK"),
@@ -2197,7 +2008,7 @@ function buildSpec(locale) {
           tags: ["Categories"],
           operationId: "deleteCategory",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "分类 ID" : "Category ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "分类 ID" : "Category ID")],
           responses: {
             204: noContent(),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2205,13 +2016,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases": {
+      "/v1/workspaces/{id}/test-cases": {
         get: op(t.listTestCases, {
           tags: ["Test Cases"],
           operationId: "listTestCases",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             { name: "api_spec_id", in: "query", schema: { type: "string" } },
             { name: "env", in: "query", schema: { type: "string" } },
             { name: "keyword", in: "query", schema: { type: "string" } },
@@ -2227,7 +2038,7 @@ function buildSpec(locale) {
           tags: ["Test Cases"],
           operationId: "createTestCase",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("testCase", ref("CreateTestCaseRequest")),
           responses: {
             201: responseRef("TestCaseEnvelope", "Created"),
@@ -2236,12 +2047,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases/from-spec": {
+      "/v1/workspaces/{id}/test-cases/from-spec": {
         post: op(t.createTestCaseFromSpec, {
           tags: ["Test Cases"],
           operationId: "createTestCaseFromSpec",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("fromSpec", ref("FromSpecRequest")),
           responses: {
             201: responseRef("TestCaseEnvelope", "Created"),
@@ -2251,12 +2062,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases/{tcid}": {
+      "/v1/workspaces/{id}/test-cases/{tcid}": {
         get: op(t.getTestCase, {
           tags: ["Test Cases"],
           operationId: "getTestCase",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
           responses: {
             200: responseRef("TestCaseEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2267,7 +2078,7 @@ function buildSpec(locale) {
           tags: ["Test Cases"],
           operationId: "updateTestCase",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
           requestBody: body("testCase", ref("UpdateTestCaseRequest")),
           responses: {
             200: responseRef("TestCaseEnvelope", "OK"),
@@ -2280,7 +2091,7 @@ function buildSpec(locale) {
           tags: ["Test Cases"],
           operationId: "deleteTestCase",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
           responses: {
             204: noContent(),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2288,12 +2099,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases/{tcid}/duplicate": {
+      "/v1/workspaces/{id}/test-cases/{tcid}/duplicate": {
         post: op(t.duplicateTestCase, {
           tags: ["Test Cases"],
           operationId: "duplicateTestCase",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
           requestBody: body("duplicate", ref("DuplicateTestCaseRequest")),
           responses: {
             201: responseRef("TestCaseEnvelope", "Created"),
@@ -2303,12 +2114,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases/{tcid}/run": {
+      "/v1/workspaces/{id}/test-cases/{tcid}/run": {
         post: op(t.runTestCase, {
           tags: ["Test Cases"],
           operationId: "runTestCase",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("tcid", isZh ? "测试用例 ID" : "Test case ID")],
           requestBody: body("run", ref("RunTestCaseRequest"), false),
           responses: {
             200: responseRef("RunResultEnvelope", "OK"),
@@ -2317,13 +2128,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases/{tcid}/runs": {
+      "/v1/workspaces/{id}/test-cases/{tcid}/runs": {
         get: op(t.listTestRuns, {
           tags: ["Test Cases"],
           operationId: "listTestRuns",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("tcid", isZh ? "测试用例 ID" : "Test case ID"),
             { name: "status", in: "query", schema: { type: "string" } },
             queryInt("page", "Page number", 1),
@@ -2335,13 +2146,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/test-cases/{tcid}/runs/{rid}": {
+      "/v1/workspaces/{id}/test-cases/{tcid}/runs/{rid}": {
         get: op(t.getTestRun, {
           tags: ["Test Cases"],
           operationId: "getTestRun",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("tcid", isZh ? "测试用例 ID" : "Test case ID"),
             pathId("rid", isZh ? "运行 ID" : "Run ID"),
           ],
@@ -2349,67 +2160,6 @@ function buildSpec(locale) {
             200: responseRef("TestRunEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
             404: responseRef("ErrorEnvelope", "Not Found"),
-          },
-        }),
-      },
-      "/v1/projects/{id}/members": {
-        get: op(t.listMembers, {
-          tags: ["Members"],
-          operationId: "listProjectMembers",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          responses: {
-            200: responseRef("MemberArrayEnvelope", "OK"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-          },
-        }),
-        post: op(t.addMember, {
-          tags: ["Members"],
-          operationId: "addProjectMember",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          requestBody: body("member", ref("AddMemberRequest")),
-          responses: {
-            201: responseRef("MemberEnvelope", "Created"),
-            400: responseRef("ErrorEnvelope", "Bad Request"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-          },
-        }),
-      },
-      "/v1/projects/{id}/members/me": {
-        get: op(t.getMyMemberRole, {
-          tags: ["Members"],
-          operationId: "getMyProjectRole",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
-          responses: {
-            200: responseRef("MemberEnvelope", "OK"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-            404: responseRef("ErrorEnvelope", "Not Found"),
-          },
-        }),
-      },
-      "/v1/projects/{id}/members/{uid}": {
-        patch: op(t.updateMember, {
-          tags: ["Members"],
-          operationId: "updateProjectMember",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("uid", isZh ? "用户 ID" : "User ID")],
-          requestBody: body("member", ref("UpdateMemberRequest")),
-          responses: {
-            200: responseRef("MemberEnvelope", "OK"),
-            400: responseRef("ErrorEnvelope", "Bad Request"),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
-          },
-        }),
-        delete: op(t.removeMember, {
-          tags: ["Members"],
-          operationId: "removeProjectMember",
-          security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("uid", isZh ? "用户 ID" : "User ID")],
-          responses: {
-            204: noContent(),
-            401: responseRef("ErrorEnvelope", "Unauthorized"),
           },
         }),
       },
@@ -2537,12 +2287,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections": {
+      "/v1/workspaces/{id}/collections": {
         get: op(t.listCollections, {
           tags: ["Collections"],
           operationId: "listCollections",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), queryInt("page", "Page number", 1), { name: "per_page", in: "query", schema: { type: "integer", default: 20 } }],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), queryInt("page", "Page number", 1), { name: "per_page", in: "query", schema: { type: "integer", default: 20 } }],
           responses: {
             200: responseRef("CollectionListEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2552,7 +2302,7 @@ function buildSpec(locale) {
           tags: ["Collections"],
           operationId: "createCollection",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("collection", ref("CreateCollectionRequest")),
           responses: {
             201: responseRef("CollectionEnvelope", "Created"),
@@ -2561,24 +2311,24 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections/tree": {
+      "/v1/workspaces/{id}/collections/tree": {
         get: op(t.getCollectionTree, {
           tags: ["Collections"],
           operationId: "getCollectionTree",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           responses: {
             200: responseRef("CollectionTreeEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
           },
         }),
       },
-      "/v1/projects/{id}/collections/{cid}": {
+      "/v1/workspaces/{id}/collections/{cid}": {
         get: op(t.getCollection, {
           tags: ["Collections"],
           operationId: "getCollection",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
           responses: {
             200: responseRef("CollectionEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2589,7 +2339,7 @@ function buildSpec(locale) {
           tags: ["Collections"],
           operationId: "updateCollection",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
           requestBody: body("collection", ref("UpdateCollectionRequest")),
           responses: {
             200: responseRef("CollectionEnvelope", "OK"),
@@ -2602,7 +2352,7 @@ function buildSpec(locale) {
           tags: ["Collections"],
           operationId: "deleteCollection",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
           responses: {
             200: responseRef("SuccessEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),
@@ -2610,12 +2360,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections/{cid}/move": {
+      "/v1/workspaces/{id}/collections/{cid}/move": {
         patch: op(t.moveCollection, {
           tags: ["Collections"],
           operationId: "moveCollection",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
           requestBody: body("collectionMove", ref("MoveCollectionRequest")),
           responses: {
             200: responseRef("CollectionEnvelope", "OK"),
@@ -2625,13 +2375,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections/{cid}/requests": {
+      "/v1/workspaces/{id}/collections/{cid}/requests": {
         get: op(t.listRequests, {
           tags: ["Requests"],
           operationId: "listRequests",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("cid", isZh ? "集合 ID" : "Collection ID"),
             queryInt("page", "Page number", 1),
             { name: "per_page", in: "query", schema: { type: "integer", default: 20 } },
@@ -2646,7 +2396,7 @@ function buildSpec(locale) {
           tags: ["Requests"],
           operationId: "createRequest",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("cid", isZh ? "集合 ID" : "Collection ID")],
           requestBody: body("request", ref("CreateRequestRequest")),
           responses: {
             201: responseRef("RequestEnvelope", "Created"),
@@ -2656,13 +2406,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections/{cid}/requests/{rid}": {
+      "/v1/workspaces/{id}/collections/{cid}/requests/{rid}": {
         get: op(t.getRequest, {
           tags: ["Requests"],
           operationId: "getRequest",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("cid", isZh ? "集合 ID" : "Collection ID"),
             pathId("rid", isZh ? "请求 ID" : "Request ID"),
           ],
@@ -2677,7 +2427,7 @@ function buildSpec(locale) {
           operationId: "updateRequest",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("cid", isZh ? "集合 ID" : "Collection ID"),
             pathId("rid", isZh ? "请求 ID" : "Request ID"),
           ],
@@ -2694,7 +2444,7 @@ function buildSpec(locale) {
           operationId: "deleteRequest",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("cid", isZh ? "集合 ID" : "Collection ID"),
             pathId("rid", isZh ? "请求 ID" : "Request ID"),
           ],
@@ -2705,13 +2455,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections/{cid}/requests/{rid}/move": {
+      "/v1/workspaces/{id}/collections/{cid}/requests/{rid}/move": {
         patch: op(t.moveRequest, {
           tags: ["Requests"],
           operationId: "moveRequest",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("cid", isZh ? "集合 ID" : "Collection ID"),
             pathId("rid", isZh ? "请求 ID" : "Request ID"),
           ],
@@ -2724,13 +2474,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/collections/{cid}/requests/{rid}/rollback": {
+      "/v1/workspaces/{id}/collections/{cid}/requests/{rid}/rollback": {
         post: op(t.rollbackRequest, {
           tags: ["Requests"],
           operationId: "rollbackRequest",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             pathId("cid", isZh ? "集合 ID" : "Collection ID"),
             pathId("rid", isZh ? "请求 ID" : "Request ID"),
           ],
@@ -2743,13 +2493,13 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/history": {
+      "/v1/workspaces/{id}/history": {
         get: op(t.listHistory, {
           tags: ["History"],
           operationId: "listHistory",
           security: [{ BearerAuth: [] }],
           parameters: [
-            pathId("id", isZh ? "项目 ID" : "Project ID"),
+            pathId("id", isZh ? "工作区 ID" : "Workspace ID"),
             { name: "entity_type", in: "query", schema: { type: "string" } },
             { name: "entity_id", in: "query", schema: { type: "string" } },
             queryInt("page", "Page number", 1),
@@ -2764,7 +2514,7 @@ function buildSpec(locale) {
           tags: ["History"],
           operationId: "createHistory",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID")],
           requestBody: body("history", ref("RecordHistoryRequest")),
           responses: {
             201: responseRef("HistoryEnvelope", "Created"),
@@ -2773,12 +2523,12 @@ function buildSpec(locale) {
           },
         }),
       },
-      "/v1/projects/{id}/history/{hid}": {
+      "/v1/workspaces/{id}/history/{hid}": {
         get: op(t.getHistory, {
           tags: ["History"],
           operationId: "getHistory",
           security: [{ BearerAuth: [] }],
-          parameters: [pathId("id", isZh ? "项目 ID" : "Project ID"), pathId("hid", isZh ? "历史记录 ID" : "History ID")],
+          parameters: [pathId("id", isZh ? "工作区 ID" : "Workspace ID"), pathId("hid", isZh ? "历史记录 ID" : "History ID")],
           responses: {
             200: responseRef("HistoryEnvelope", "OK"),
             401: responseRef("ErrorEnvelope", "Unauthorized"),

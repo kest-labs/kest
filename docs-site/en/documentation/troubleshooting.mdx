@@ -1,0 +1,134 @@
+---
+title: Troubleshooting
+description: Fix common Kest CLI, Cloud Sync, flow, CI, bridge, and docs deployment issues.
+---
+
+# Troubleshooting
+
+Use this page when a Kest command, sync flow, CI run, local bridge, or docs deployment does not behave as expected.
+
+## CLI Install
+
+Check the installed version:
+
+```bash
+kest --version
+```
+
+If the command is missing, reinstall:
+
+```bash
+curl -fsSL https://kest.dev/install.sh | sh
+```
+
+If the binary is installed but not found, check your shell `PATH`.
+
+## Cloud Sync Config
+
+Show current Cloud config:
+
+```bash
+kest config list
+```
+
+Reconnect with a Web connection key:
+
+```bash
+kest key kest_key_...
+```
+
+Or configure manually:
+
+```bash
+kest sync config \
+  --platform-url https://api.kest.dev/v1 \
+  --platform-token kest_pat_... \
+  --workspace-id <workspace-id> \
+  --auto-sync-history
+```
+
+## Missing Token Scope
+
+If sync returns a scope error, generate a new key in the workspace Keys page with the required scope:
+
+- `collection:read` for API spec sync.
+- `collection:run` for request history sync.
+- `flow:run` for runnable flows and run result sync.
+- `flow:write` for flow definition sync.
+
+Then reconnect:
+
+```bash
+kest key kest_key_...
+```
+
+## Flow Variables
+
+Run in strict mode to catch missing variables:
+
+```bash
+kest run auth.flow.md --strict
+```
+
+Show variable resolution:
+
+```bash
+kest run auth.flow.md --debug-vars
+```
+
+Pass a value for one run:
+
+```bash
+kest run auth.flow.md --var email=demo@example.com
+```
+
+## CI Results Not Showing in Cloud
+
+Confirm the CI command includes sync and a CI runner type:
+
+```bash
+kest run --profile ci --sync --runner-type server_ci
+```
+
+Confirm the CI environment has:
+
+- A valid Cloud token.
+- The target workspace ID.
+- Network access to `https://api.kest.dev/v1`.
+- A reachable `KEST_BASE_URL`.
+
+## Bridge Not Found
+
+Start the bridge:
+
+```bash
+kest bridge
+```
+
+Check health:
+
+```bash
+curl http://127.0.0.1:8788/health
+```
+
+If Web still cannot use it, confirm browser origin settings and local firewall rules.
+
+## Docs Not Updating
+
+`docs.kest.dev` is powered by Mintlify from `docs-site/`. A merge to `main` is not enough unless Mintlify is configured correctly.
+
+Check:
+
+- Mintlify project repository is `kest-labs/kest`.
+- Deployment branch is `main`.
+- Root directory is `docs-site`.
+- GitHub secrets `MINTLIFY_API_KEY` and `MINTLIFY_PROJECT_ID` exist if using the deploy workflow.
+
+Validate locally:
+
+```bash
+cd docs-site
+mint validate
+```
+
+If the site still shows old content, trigger a manual deployment in the Mintlify dashboard.

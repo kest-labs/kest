@@ -11,12 +11,12 @@ description: 当前版本对客户端限流策略的建议。
 
 - 客户端应能处理 `429 Too Many Requests`
 - 对同步和轮询类流程应使用退避重试
-- 不要让多个并行 worker 高频写入同一个项目
+- 不要让多个并行 worker 高频写入同一个 workspace
 
 ## 推荐客户端行为
 
 - 使用指数退避
-- 对 CLI Sync 流程尽量做幂等设计
+- 对 Kest Cloud Sync 流程尽量做幂等设计
 - 尽量批量上传 spec，而不是每个端点发一条请求
 
 后续如果后端公开稳定的 rate-limit header 或额度规则，这一页应与契约同步更新。

@@ -1,0 +1,27 @@
+---
+title: Workspace 协作
+description: Kest 中的 workspace 角色、成员关系与协作边界。
+---
+
+# Workspace 协作
+
+Workspace 是 Kest 的协作边界。API specs、collections、environments、test cases、flows、history、keys 和 members 都属于某个 workspace。
+
+## 角色
+
+Workspace roles：
+
+- `owner`：拥有 workspace，并可以管理所有 workspace 设置。
+- `admin`：管理成员、邀请、CLI keys 和大部分 workspace 设置。
+- `write`：创建和编辑 API specs、requests、examples、environments、test cases 和 flows。
+- `read`：查看 workspace 内容和运行历史。
+
+## 邀请
+
+Admins 可以在 Members 区域邀请团队成员。邀请可以是定向邀请，也可以是链接邀请，并支持过期时间和最大使用次数。
+
+## CLI 和 CI 访问
+
+机器访问使用 Keys 页面生成的 workspace-scoped CLI tokens。Kest Cloud Sync 和 CI 自动化应使用这些 tokens，而不是浏览器 JWT。
+
+Legacy project routes may exist for backward compatibility, but new product documentation and workflows should use workspace terminology and workspace routes.
