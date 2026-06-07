@@ -59,6 +59,6 @@ func TestParseConnectionKeyRequiresFields(t *testing.T) {
 
 	_, err = parseConnectionKey(connectionKeyPrefix + base64.RawURLEncoding.EncodeToString(raw))
 	if err == nil {
-		t.Fatalf("expected missing project id error")
+		t.Fatalf("expected missing workspace id error")
 	}
 }
