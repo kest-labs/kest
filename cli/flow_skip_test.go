@@ -306,7 +306,7 @@ func TestConsoleSummaryNamesRootCause(t *testing.T) {
 		runBaseURL = server.URL
 		_, _ = runSuite([]string{"flow.flow.md"}, func(name string) bool { return name == "base-url" })
 	})
-	for _, want := range []string{"1 failed", "4 skipped", "caused by Create item (4)", "Root cause:", "Create item - assertion failed", "skipped: depends on Create item which failed"} {
+	for _, want := range []string{"1 failed", "4 skipped", "caused by Create item)", "Root cause:", "Create item - assertion failed", "skipped: depends on Create item which failed"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("console output missing %q:\n%s", want, out)
 		}

@@ -227,7 +227,11 @@ func (s *Summary) verdict() string {
 		if roots, counts := s.skipRoots(); len(roots) > 0 {
 			parts := make([]string, 0, len(roots))
 			for _, root := range roots {
-				parts = append(parts, fmt.Sprintf("%s (%d)", root, counts[root]))
+				if len(roots) == 1 {
+					parts = append(parts, root)
+				} else {
+					parts = append(parts, fmt.Sprintf("%s (%d)", root, counts[root]))
+				}
 			}
 			fmt.Fprintf(&b, " (caused by %s)", strings.Join(parts, ", "))
 		}
@@ -243,7 +247,7 @@ func (s *Summary) verdict() string {
 		if r.Phase == "teardown" && !r.Success && !r.Skipped {
 			msg := "failed"
 			if r.Error != nil {
-				msg = strings.SplitN(strings.TrimSpace(r.Error.Error()), "\n", 2)[0]
+				msg = firstLine(r.Error.Error())
 			}
 			fmt.Fprintf(&b, "  \033[31mTeardown failed:\033[0m %s - %s (cleanup may be incomplete)\n", r.Name, msg)
 		}
@@ -256,7 +260,7 @@ func (s *Summary) verdict() string {
 				}
 				msg := "failed"
 				if r.Error != nil {
-					msg = strings.SplitN(strings.TrimSpace(r.Error.Error()), "\n", 2)[0]
+					msg = firstLine(r.Error.Error())
 				}
 				fmt.Fprintf(&b, "  \033[31mRoot cause:\033[0m %s - %s\n", root, msg)
 				break
@@ -346,6 +350,16 @@ func (s *Summary) WriteJSON(w io.Writer, sourcePath, logPath string) error {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(payload)
+}
+
+// firstLine returns the first line of an error message, closing a
+// parenthesis the cut left open.
+func firstLine(msg string) string {
+	line := strings.SplitN(strings.TrimSpace(msg), "\n", 2)[0]
+	if strings.Count(line, "(") > strings.Count(line, ")") {
+		line += " ...)"
+	}
+	return line
 }
 
 func truncate(s string, maxLen int) string {

@@ -66,7 +66,7 @@ func TestSkippedResultsAreNotFailures(t *testing.T) {
 		t.Fatalf("RecordedSkips = %d", s.RecordedSkips())
 	}
 	verdict := s.verdict()
-	for _, want := range []string{"1 failed", "2 skipped", "caused by Create (2)", "Root cause:"} {
+	for _, want := range []string{"1 failed", "2 skipped", "caused by Create)", "Root cause:"} {
 		if !strings.Contains(verdict, want) {
 			t.Fatalf("verdict missing %q:\n%s", want, verdict)
 		}

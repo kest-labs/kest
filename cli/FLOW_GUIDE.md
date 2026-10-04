@@ -176,7 +176,7 @@ their own; the exit code is driven by the real failures. Steps that do not
 depend on the failed step still run (unless `--fail-fast` is set).
 
 ```
-✗ 1 failed, 4 skipped (caused by Create item (4))
+✗ 1 failed, 4 skipped (caused by Create item)
   Root cause: Create item - assertion failed: status == 201 ...
 ```
 
