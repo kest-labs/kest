@@ -205,6 +205,17 @@ kest run auth.flow.md --exec-timeout 30
 
 `--exec-timeout` is measured in seconds.
 
+Select what runs:
+
+```bash
+kest run tests/ --tag smoke,auth            # only flow files tagged smoke or auth
+kest run checkout.flow.md --list            # list step ids, lines and captures; runs nothing
+kest run checkout.flow.md --only pay,confirm
+kest run checkout.flow.md --from pay --skip send-email
+```
+
+`--only`, `--from` and `--skip` work on one flow file. By default setup, teardown and the earlier steps that capture variables the selected steps need still run; add `--no-deps` to run exactly the selected steps. Unknown step ids fail before anything runs and list close matches.
+
 ## Captures and assertions
 
 Capture values from one response and reuse them later:

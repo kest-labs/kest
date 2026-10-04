@@ -200,9 +200,15 @@ kest run auth.flow.md --strict
 kest run auth.flow.md --fail-fast
 kest run .kest/flow/**/*.flow.md --parallel --jobs 4
 kest run auth.flow.md --exec-timeout 30
+kest run tests/ --tag smoke,auth            # 只运行带 smoke 或 auth 标签的 flow 文件
+kest run checkout.flow.md --list            # 列出 step id、行号和 captures，不执行
+kest run checkout.flow.md --only pay,confirm
+kest run checkout.flow.md --from pay --skip send-email
 ```
 
 `--exec-timeout` 的单位是秒。
+
+`--only`、`--from` 和 `--skip` 只能用于单个 flow 文件。默认情况下，setup、teardown 以及所选 step 需要的变量所在的前置 step 仍会运行；加 `--no-deps` 则只运行所选 step。未知的 step id 会在执行前报错并列出相近的 id。
 
 ## 捕获与断言
 

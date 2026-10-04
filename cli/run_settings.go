@@ -22,6 +22,7 @@ type runSettings struct {
 	open          bool
 	workspaceFlow string
 	runnerType    string
+	selection     runSelection
 }
 
 func captureRunSettings() runSettings {
@@ -44,6 +45,7 @@ func captureRunSettings() runSettings {
 		open:          runOpen,
 		workspaceFlow: runWorkspaceFlow,
 		runnerType:    runRunnerType,
+		selection:     runSel.clone(),
 	}
 }
 
@@ -66,6 +68,7 @@ func (s runSettings) apply() {
 	runOpen = s.open
 	runWorkspaceFlow = s.workspaceFlow
 	runRunnerType = s.runnerType
+	runSel = s.selection.clone()
 }
 
 // defaultRunSettings mirrors the flag defaults of `kest run`.

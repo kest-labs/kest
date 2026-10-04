@@ -10,6 +10,8 @@
 
 - **`teardown` is a real `finally` block** — teardown steps now always run after setup and the main steps, including after failures, with `--fail-fast`, and after Ctrl-C / SIGTERM (the in-flight request is cancelled, teardown gets up to 10s, and the run exits 130 / 143; a second signal quits immediately). Teardown steps that need a variable the run never captured are skipped with the reason instead of failing or using a stale value. A failing teardown step is reported with `phase: "teardown"` / `kind: "teardown"` (exit code 2 if nothing else failed) and never hides the original failure. You no longer need a hand-written trailing DELETE step.
 
+- **Select flows and steps with `kest run`** — `--tag a,b` runs only flow files whose `@tags` include any given tag; `--only id,id`, `--from id` and `--skip id` run part of a single flow (setup, teardown and the earlier steps that capture variables the selected steps need run automatically, `--no-deps` turns that off and errors on missing variables); unknown step ids fail fast with close matches; `--list` (with `--json`) prints step ids, names, line numbers, captures and the resolved plan without executing anything.
+
 ### Changes
 
 - **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.

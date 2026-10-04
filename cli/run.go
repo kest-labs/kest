@@ -67,6 +67,17 @@ Kest Flow (.flow.md) allows you to use standard Markdown to document and test yo
   # Machine-readable result for agents and CI, plus a JUnit report
   kest run tests/ --json --junit .kest/reports/junit.xml
 
+  # Run only the flow files tagged smoke or auth
+  kest run tests/ --tag smoke,auth
+
+  # List the steps of a flow (ids, lines, captures) without running anything
+  kest run checkout.flow.md --list
+
+  # Re-run part of a long flow: setup, teardown and the earlier steps that
+  # capture the variables these steps need run automatically
+  kest run checkout.flow.md --only pay,confirm
+  kest run checkout.flow.md --from pay --skip send-email
+
   # Generate an HTML report
   kest run login.flow.md --html
 
@@ -184,6 +195,19 @@ func executeRunSuite(args []string, flagChanged func(string) bool) (*output.Resu
 	// cancelled, teardown runs and results are still reported.
 	stopSignals := installRunSignals()
 	defer stopSignals()
+
+	if len(runSel.tags) > 0 {
+		var err error
+		if targets, err = filterTargetsByTag(targets, runSel.tags); err != nil {
+			return nil, &ExitError{Code: ExitConfigError, Err: err}
+		}
+	}
+	if err := validateStepSelection(targets, runSel, currentCLIVars()); err != nil {
+		return nil, &ExitError{Code: ExitConfigError, Err: err}
+	}
+	if runSel.list {
+		return listFlows(targets, runSel, currentCLIVars())
+	}
 
 	startedAt := time.Now().UTC()
 	results := make([]runExecutionResult, 0, len(targets))
@@ -635,7 +659,13 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 		defer func() { runEnv = "" }()
 	}
 
-	steps := orderFlowSteps(doc)
+	cliVars := currentCLIVars()
+	plan, err := resolveSelection(doc, orderFlowSteps(doc), runSel, cliVars)
+	if err != nil {
+		return nil, &ExitError{Code: ExitConfigError, Err: err}
+	}
+	doc = plan.doc
+	steps := plan.steps
 
 	totalSteps := len(doc.Setup) + len(steps) + len(doc.Teardown)
 	fmt.Printf("\n🚀 Running %d step(s) from %s\n", totalSteps, filePath)
@@ -650,7 +680,7 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 	}
 
 	summ := summary.NewSummary()
-	runner := newFlowRunner(doc, steps, summ, currentCLIVars())
+	runner := newFlowRunner(doc, steps, plan.roles, summ, cliVars)
 	runner.runAll()
 	if unrun := len(runner.steps) - summ.TotalTests; unrun > 0 {
 		summ.SkippedTests += unrun

@@ -371,6 +371,39 @@ kest run tests/ --parallel --jobs 4
 kest run hmac.flow.md --exec-timeout 10
 ```
 
+### Selecting flows and steps
+
+```bash
+# Only flow files whose @tags include any of these (directories / many targets)
+kest run tests/ --tag smoke,auth
+
+# See step ids, line numbers, captures and variables without executing anything
+kest run checkout.flow.md --list            # add --json for machines
+
+# Run part of ONE file
+kest run checkout.flow.md --only pay,confirm
+kest run checkout.flow.md --from pay
+kest run checkout.flow.md --skip send-email
+```
+
+- `--tag` matches `@tags` case-insensitively. If nothing matches (also for a
+  single file) the run stops with a usage error listing the tags in use.
+- `--only`, `--from` and `--skip` take step ids (`@id`, or the step name) and
+  need exactly one flow file. An unknown id fails before anything runs and
+  lists close matches. They combine: `--from` then `--only` narrows, `--skip`
+  removes.
+- By default a partial run still runs the `setup` block, the `teardown` block
+  and, transitively, the earlier steps that **capture** variables the selected
+  steps use (marked `dependency` in `--list`). `--no-deps` runs exactly the
+  selected steps instead (no setup, no teardown); it stops with a usage error
+  if a selected step needs a `{{variable}}` that nothing provides, so pass it
+  with `--var name=value` or a value saved by a previous run.
+- A step excluded with `--skip` is reported as skipped (`skipped by --skip`);
+  steps that need its captures are skipped too. This never fails the run.
+- `--list` honors `--tag`, `--only`, `--from`, `--skip` and `--no-deps`; with
+  `--json` the plan is in `data.flows[].steps[]` (`id`, `phase`, `line`,
+  `method`, `url`, `captures`, `needs`, `selection`).
+
 ---
 
 ## 🛠 Advanced Tips

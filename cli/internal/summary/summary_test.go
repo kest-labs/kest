@@ -3,6 +3,8 @@ package summary
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -47,5 +49,26 @@ func TestWriteJSONIncludesRunAndStepDetails(t *testing.T) {
 	}
 	if result.Captures["user_id"] != "u1" {
 		t.Fatalf("missing captures: %#v", result.Captures)
+	}
+}
+
+func TestSkippedResultsAreNotFailures(t *testing.T) {
+	s := NewSummary()
+	s.AddResult(TestResult{Name: "Create", Success: false, Error: errors.New("assertion failed: status == 201")})
+	s.AddResult(TestResult{Name: "Read", Skipped: true, SkipReason: "depends on Create which failed", SkippedBecause: "Create"})
+	s.AddResult(TestResult{Name: "Update", Skipped: true, SkipReason: "depends on Create which failed", SkippedBecause: "Create"})
+	s.AddResult(TestResult{Name: "Health", Success: true})
+
+	if s.FailedTests != 1 || s.SkippedTests != 2 || s.PassedTests != 1 || s.TotalTests != 4 {
+		t.Fatalf("unexpected counters: %+v", s)
+	}
+	if s.RecordedSkips() != 2 {
+		t.Fatalf("RecordedSkips = %d", s.RecordedSkips())
+	}
+	verdict := s.verdict()
+	for _, want := range []string{"1 failed", "2 skipped", "caused by Create (2)", "Root cause:"} {
+		if !strings.Contains(verdict, want) {
+			t.Fatalf("verdict missing %q:\n%s", want, verdict)
+		}
 	}
 }

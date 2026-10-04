@@ -65,6 +65,7 @@ type flowRunner struct {
 	origins  map[string][]string
 	state    map[string]*stepOutcome
 	captured map[string]bool
+	userSkip map[string]bool // keys of steps excluded with --skip
 
 	firstFailed *flowStepRef
 	// stopReason is set when the remaining steps are not run: "--fail-fast"
@@ -76,7 +77,9 @@ type flowRunner struct {
 	stepCtx context.Context
 }
 
-func newFlowRunner(doc FlowDoc, steps []FlowStep, summ *summary.Summary, cliVars map[string]string) *flowRunner {
+// newFlowRunner prepares a run of doc. roles marks, per entry of steps, the
+// ones the user excluded with --skip (roleSkip); nil runs everything.
+func newFlowRunner(doc FlowDoc, steps []FlowStep, roles []string, summ *summary.Summary, cliVars map[string]string) *flowRunner {
 	r := &flowRunner{
 		doc:      doc,
 		summ:     summ,
@@ -86,6 +89,7 @@ func newFlowRunner(doc FlowDoc, steps []FlowStep, summ *summary.Summary, cliVars
 		origins:  map[string][]string{},
 		state:    map[string]*stepOutcome{},
 		captured: map[string]bool{},
+		userSkip: map[string]bool{},
 		ctx:      currentRunCtx(),
 	}
 	r.stepCtx = r.ctx
@@ -93,6 +97,9 @@ func newFlowRunner(doc FlowDoc, steps []FlowStep, summ *summary.Summary, cliVars
 		for i, step := range list {
 			key := fmt.Sprintf("%s:%d", phase, i)
 			r.steps = append(r.steps, flowStepRef{key: key, phase: phase, step: step})
+			if phase == phaseStep && i < len(roles) && roles[i] == roleSkip {
+				r.userSkip[key] = true
+			}
 			if phase == phaseStep && step.ID != "" {
 				if _, dup := r.idToKey[step.ID]; !dup {
 					r.idToKey[step.ID] = key
@@ -158,18 +165,7 @@ func stepPlaceholders(step FlowStep) []string {
 // providedExplicitly reports whether a variable comes from --var or the
 // active environment config, which a failed capture cannot invalidate.
 func (r *flowRunner) providedExplicitly(name string) bool {
-	if _, ok := r.cliVars[name]; ok {
-		return true
-	}
-	conf := loadConfigWarn()
-	if conf != nil {
-		if env := conf.GetActiveEnv(); env.Variables != nil {
-			if _, ok := env.Variables[name]; ok {
-				return true
-			}
-		}
-	}
-	return false
+	return varProvidedExplicitly(r.cliVars, name)
 }
 
 // rootOf resolves the root-cause step for a step that failed or was skipped.
@@ -291,22 +287,27 @@ func (r *flowRunner) missingVariableError(ref flowStepRef) error {
 }
 
 func (r *flowRunner) recordSkip(ref flowStepRef, d *skipDecision) {
+	// A step skipped by the user (--skip) has no failed root cause; it is
+	// its own root for the steps that depend on it.
 	root := d.root
 	if root == nil {
-		root = &ref
+		root = r.byKey[ref.key]
 	}
 	r.state[ref.key] = &stepOutcome{state: stateSkipped, root: root}
-	r.summ.AddResult(summary.TestResult{
-		StepID:           ref.step.ID,
-		Name:             ref.name(),
-		Phase:            ref.phase,
-		Method:           strings.ToUpper(ref.step.Request.Method),
-		URL:              ref.step.Request.URL,
-		Skipped:          true,
-		SkipReason:       d.reason,
-		SkippedBecause:   root.name(),
-		SkippedBecauseID: root.step.ID,
-	})
+	result := summary.TestResult{
+		StepID:     ref.step.ID,
+		Name:       ref.name(),
+		Phase:      ref.phase,
+		Method:     strings.ToUpper(ref.step.Request.Method),
+		URL:        ref.step.Request.URL,
+		Skipped:    true,
+		SkipReason: d.reason,
+	}
+	if d.root != nil {
+		result.SkippedBecause = d.root.name()
+		result.SkippedBecauseID = d.root.step.ID
+	}
+	r.summ.AddResult(result)
 	fmt.Printf("\n  ○ %s (line %d)\n", ref.name(), ref.step.LineNum)
 	fmt.Printf("    ⏭  skipped: %s\n", d.reason)
 }
@@ -370,6 +371,10 @@ func (r *flowRunner) runAll() {
 // stop because of --fail-fast.
 func (r *flowRunner) runStep(ref flowStepRef) bool {
 	step := ref.step
+	if r.userSkip[ref.key] {
+		r.recordSkip(ref, &skipDecision{reason: "skipped by --skip"})
+		return true
+	}
 	if d := r.decideSkip(ref); d != nil {
 		r.recordSkip(ref, d)
 		return true

@@ -89,6 +89,10 @@ Notes:
   skipped. It carries `skipped_because` (the `step_id` of the root-cause
   failed step) and `skip_reason` instead of an `error`, is counted in
   `summary.skipped`, and never changes `ok` or `exit_code` on its own.
+- `kest run --list --json` executes nothing: `steps` is empty and the plan is
+  in `data.flows[]` (`source`, `flow_id`, `name`, `tags`, and `steps[]` with
+  `id`, `name`, `phase`, `line`, `type`, `method`, `url`, `captures`, `needs`
+  and `selection`: `run`, `dependency` or `skip`).
 - `steps` and `assertions` are always arrays (possibly empty).
 - `request` / `response` are always included for single requests
   (`get`/`post`/…, `replay`). For `run` they are included only for **failed**
