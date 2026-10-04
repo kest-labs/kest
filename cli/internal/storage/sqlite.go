@@ -40,10 +40,13 @@ func NewStore() (*Store, error) {
 		return nil, err
 	}
 	dbPath := filepath.Join(home, ".kest", "records.db")
-	err = os.MkdirAll(filepath.Dir(dbPath), 0755)
+	err = os.MkdirAll(filepath.Dir(dbPath), 0700)
 	if err != nil {
 		return nil, err
 	}
+	// MkdirAll leaves an existing directory untouched; history holds request
+	// headers and bodies, so tighten dirs created by older versions too.
+	_ = os.Chmod(filepath.Dir(dbPath), 0700)
 
 	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&parseTime=true")
 	if err != nil {
@@ -54,8 +57,17 @@ func NewStore() (*Store, error) {
 	if err := s.Init(); err != nil {
 		return nil, err
 	}
+	restrictDBFiles(dbPath)
 
 	return s, nil
+}
+
+// restrictDBFiles limits the SQLite database and its WAL/SHM sidecars to the
+// current user, since they contain request headers (tokens, cookies) and bodies.
+func restrictDBFiles(dbPath string) {
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		_ = os.Chmod(dbPath+suffix, 0600)
+	}
 }
 
 type Variable struct {

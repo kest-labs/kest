@@ -99,7 +99,11 @@ func SaveToPath(conf *Config, configPath string) error {
 	v.Set("ai_model", conf.AIModel)
 	v.Set("ai_base_url", conf.AIBaseURL)
 
-	return v.WriteConfigAs(configPath)
+	if err := v.WriteConfigAs(configPath); err != nil {
+		return err
+	}
+	// The config holds platform and AI tokens; keep it owner-only.
+	return os.Chmod(configPath, 0600)
 }
 
 func findProjectRoot() (string, error) {

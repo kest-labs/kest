@@ -62,7 +62,7 @@ func StartSession(name string) (*SessionLogger, error) {
 		return nil, err
 	}
 
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0700); err != nil {
 		return nil, err
 	}
 
@@ -74,11 +74,11 @@ func StartSession(name string) (*SessionLogger, error) {
 		sanitizeFilename(name),
 	))
 
-	stableFile, err := os.OpenFile(stablePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	stableFile, err := os.OpenFile(stablePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
 	}
-	sessionFile, err := os.OpenFile(sessionPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	sessionFile, err := os.OpenFile(sessionPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		stableFile.Close()
 		return nil, err
@@ -175,9 +175,9 @@ func LogRequest(method, url string, headers map[string]string, body string, stat
 	if len(logFiles) == 0 {
 		logDir, err := getLogDir()
 		if err == nil {
-			os.MkdirAll(logDir, 0755)
+			os.MkdirAll(logDir, 0700)
 			logPath := filepath.Join(logDir, "kest.log")
-			f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+			f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 			if err == nil {
 				logFiles = []*os.File{f}
 				shouldClose = true
