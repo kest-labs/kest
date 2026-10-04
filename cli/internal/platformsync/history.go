@@ -396,6 +396,7 @@ func buildRunHistoryData(sourcePath, sourceName string, summ *summary.Summary, l
 			"url":              result.URL,
 			"status":           result.Status,
 			"success":          result.Success,
+			"skipped":          result.Skipped,
 			"duration_ms":      result.Duration.Milliseconds(),
 			"started_at":       normalizedEventTime(result.StartTime).Format(time.RFC3339),
 			"record_id":        result.RecordID,
@@ -405,7 +406,9 @@ func buildRunHistoryData(sourcePath, sourceName string, summ *summary.Summary, l
 			"response_body":    responseBody,
 			"command":          command,
 		}
-		if result.Error != nil {
+		if result.Skipped {
+			item["error"] = sanitizeLooseText(result.SkipReason)
+		} else if result.Error != nil {
 			item["error"] = sanitizeLooseText(result.Error.Error())
 		}
 		if len(truncated) > 0 {
@@ -422,6 +425,7 @@ func buildRunHistoryData(sourcePath, sourceName string, summ *summary.Summary, l
 			"total_steps":       summ.TotalTests,
 			"passed_steps":      summ.PassedTests,
 			"failed_steps":      summ.FailedTests,
+			"skipped_steps":     summ.SkippedTests,
 			"total_duration_ms": summ.TotalTime.Milliseconds(),
 			"started_at":        normalizedEventTime(summ.StartTime).Format(time.RFC3339),
 			"finished_at":       normalizedEventTime(summ.StartTime.Add(summ.TotalTime)).Format(time.RFC3339),

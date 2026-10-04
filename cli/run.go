@@ -23,7 +23,6 @@ import (
 	"github.com/kest-labs/kest/cli/internal/variable"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/tidwall/gjson"
 )
 
 var (
@@ -626,10 +625,8 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 	}
 
 	steps := orderFlowSteps(doc)
-	setupSteps := doc.Setup
-	teardownSteps := doc.Teardown
 
-	totalSteps := len(setupSteps) + len(steps) + len(teardownSteps)
+	totalSteps := len(doc.Setup) + len(steps) + len(doc.Teardown)
 	fmt.Printf("\n🚀 Running %d step(s) from %s\n", totalSteps, filePath)
 	if runParallel {
 		fmt.Printf("⚠️  Parallel mode is ignored for flow steps; running sequentially.\n\n")
@@ -642,196 +639,10 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 	}
 
 	summ := summary.NewSummary()
-	captureOrigins := make(map[string]string)
-	failedSteps := make(map[string]bool)
-
-	registerCaptureOrigins := func(step FlowStep) {
-		for _, capExpr := range step.Request.Captures {
-			varName, _, ok := ParseCaptureExpr(capExpr)
-			if ok && varName != "" {
-				captureOrigins[varName] = stepName(step)
-			}
-		}
-		for _, capExpr := range step.Exec.Captures {
-			varName, _, ok := ParseCaptureExpr(capExpr)
-			if ok && varName != "" {
-				captureOrigins[varName] = stepName(step)
-			}
-		}
-	}
-
-	for _, step := range append(append([]FlowStep{}, setupSteps...), append(steps, teardownSteps...)...) {
-		registerCaptureOrigins(step)
-	}
-
-	runStep := func(step FlowStep, i int, total int) bool {
-		if step.WaitMs > 0 {
-			fmt.Printf("\n  ⏳ %s waiting %dms before execution\n", stepName(step), step.WaitMs)
-			time.Sleep(time.Duration(step.WaitMs) * time.Millisecond)
-		}
-
-		if err := validateFlowStepVariables(step, captureOrigins, failedSteps); err != nil {
-			result := summary.TestResult{
-				StepID:    step.ID,
-				Name:      stepName(step),
-				Method:    strings.ToUpper(step.Request.Method),
-				URL:       step.Request.URL,
-				Success:   false,
-				Error:     err,
-				ErrorKind: output.ErrorKindVariable,
-			}
-			summ.AddResult(result)
-			failedSteps[stepName(step)] = true
-			fmt.Printf("\n  ▶ %s (line %d)\n", stepName(step), step.LineNum)
-			fmt.Printf("    ❌ %v\n", err)
-			return !runFailFast
-		}
-
-		// Handle @type exec steps
-		if step.Type == "exec" {
-			fmt.Printf("\n  ▶ %s (exec, line %d)\n", stepName(step), step.LineNum)
-			result := executeExecStep(step)
-			result.StepID = step.ID
-			summ.AddResult(result)
-			if !result.Success {
-				failedSteps[stepName(step)] = true
-				fmt.Printf("❌ Failed at exec step %s\n\n", stepName(step))
-				if runFailFast {
-					fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
-					fmt.Printf("   Failed step: %s\n", stepName(step))
-					if i+1 < total {
-						fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
-					}
-					return false
-				}
-			}
-			return true
-		}
-
-		if step.Request.Method == "" || step.Request.URL == "" {
-			result := summary.TestResult{
-				StepID:    step.ID,
-				Name:      stepName(step),
-				Success:   false,
-				Error:     fmt.Errorf("invalid step (missing METHOD/URL) at line %d", step.LineNum),
-				ErrorKind: output.ErrorKindConfig,
-			}
-			summ.AddResult(result)
-			failedSteps[stepName(step)] = true
-			if runFailFast {
-				fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
-				fmt.Printf("   Failed step: %s (invalid step)\n", stepName(step))
-				if i+1 < total {
-					fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
-				}
-				return false
-			}
-			return true
-		}
-		fmt.Printf("\n  ▶ %s %s %s (line %d)\n", stepName(step), step.Request.Method, step.Request.URL, step.LineNum)
-
-		opts := step.Request
-		opts.Verbose = runVerbose
-		opts.DebugVars = runDebugVars
-		opts.StrictVars = runStrict
-		opts.SilentOutput = true
-		opts.SkipHistorySync = true
-		if step.Retry > 0 {
-			opts.Retry = step.Retry
-		}
-		if step.RetryWait > 0 {
-			opts.RetryWait = step.RetryWait
-		}
-		if step.MaxDuration > 0 {
-			opts.MaxDuration = step.MaxDuration
-		}
-
-		res, err := executeFlowStepWithPoll(step, opts)
-		result := res
-		result.StepID = step.ID
-		result.Name = stepName(step)
-		result.StepID = step.ID
-		result.Success = (err == nil)
-		result.Error = err
-		if err == nil {
-			result.ErrorKind = ""
-		}
-
-		// Process captures after successful request
-		if err == nil && len(step.Request.Captures) > 0 {
-			if result.Captures == nil {
-				result.Captures = make(map[string]string)
-			}
-			store, _ := storage.NewStore() //nolint: we need a fresh store per capture block
-			conf := loadConfigWarn()
-			for _, capExpr := range step.Request.Captures {
-				sep := "="
-				if !strings.Contains(capExpr, "=") && strings.Contains(capExpr, ":") {
-					sep = ":"
-				}
-				parts := strings.SplitN(capExpr, sep, 2)
-				if len(parts) == 2 {
-					varName := strings.TrimSpace(parts[0])
-					query := strings.TrimSpace(parts[1])
-
-					captureResult := gjson.Get(string(res.ResponseBody), query)
-					if captureResult.Exists() {
-						value := captureResult.String()
-						// Save to ActiveRunCtx
-						if ActiveRunCtx != nil {
-							ActiveRunCtx.Set(varName, value)
-						}
-						result.Captures[varName] = value
-						// Also save to storage for persistence
-						if store != nil && conf != nil {
-							store.SaveVariable(&storage.Variable{
-								Name:        varName,
-								Value:       value,
-								Environment: conf.ActiveEnv,
-								Project:     conf.ProjectID,
-							})
-						}
-						fmt.Printf("    Captured: %s = %s\n", varName, value)
-						logger.LogToSession("Captured: %s = %s", varName, value)
-					}
-				}
-			}
-			if store != nil {
-				store.Close()
-			}
-		}
-
-		if err != nil {
-			if result.FailedAssertion == "" && strings.Contains(err.Error(), "assertion failed:") {
-				result.FailedAssertion = strings.TrimSpace(strings.TrimPrefix(err.Error(), "assertion failed:"))
-			}
-			failedSteps[stepName(step)] = true
-			fmt.Printf("    ❌ Failed at step %s\n", stepName(step))
-			if runFailFast {
-				fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
-				fmt.Printf("   Failed step: %s\n", stepName(step))
-				fmt.Printf("   Reason: %v\n", err)
-				if i+1 < total {
-					fmt.Printf("   Skipped %d remaining step(s)\n", total-i-1)
-				}
-				summ.AddResult(result)
-				return false
-			}
-		} else {
-			fmt.Printf("    ✅ %s %s → %d (%s)\n", res.Method, step.Request.URL, res.Status, res.Duration.Round(time.Millisecond))
-		}
-		summ.AddResult(result)
-		return true
-	}
-
-	combined := append(append([]FlowStep{}, setupSteps...), append(steps, teardownSteps...)...)
-	for i, step := range combined {
-		if !runStep(step, i, len(combined)) {
-			break
-		}
-	}
-	if skipped := len(combined) - summ.TotalTests; skipped > 0 {
-		summ.SkippedTests = skipped
+	runner := newFlowRunner(doc, steps, summ, currentCLIVars())
+	runner.runAll()
+	if unrun := len(runner.steps) - summ.TotalTests; unrun > 0 {
+		summ.SkippedTests += unrun
 	}
 
 	logPath := logger.GetSessionPath()
@@ -874,6 +685,18 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 		return result, reportErr
 	}
 	return result, nil
+}
+
+// currentCLIVars returns the --var values of the active run.
+func currentCLIVars() map[string]string {
+	vars := map[string]string{}
+	for _, v := range runVars {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) == 2 {
+			vars[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		}
+	}
+	return vars
 }
 
 func orderFlowSteps(doc FlowDoc) []FlowStep {
@@ -1084,55 +907,6 @@ func maybeQueueRunHistory(filePath string, summ *summary.Summary, logPath string
 	platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
 }
 
-func validateFlowStepVariables(step FlowStep, captureOrigins map[string]string, failedSteps map[string]bool) error {
-	vars := buildVarChain()
-	missing := make(map[string]struct{})
-
-	collect := func(text string) {
-		for _, name := range variable.ExtractPlaceholders(text) {
-			if _, ok := vars[name]; !ok {
-				missing[name] = struct{}{}
-			}
-		}
-	}
-
-	collect(step.Request.URL)
-	collect(step.Request.Data)
-	for _, h := range step.Request.Headers {
-		collect(h)
-	}
-	for _, q := range step.Request.Queries {
-		collect(q)
-	}
-	for _, a := range step.Request.Asserts {
-		collect(a)
-	}
-	for _, a := range step.Request.SoftAsserts {
-		collect(a)
-	}
-	collect(step.Exec.Command)
-
-	if len(missing) == 0 {
-		return nil
-	}
-
-	names := make([]string, 0, len(missing))
-	for name := range missing {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	name := names[0]
-	origin, hasOrigin := captureOrigins[name]
-	if hasOrigin {
-		if failedSteps[origin] {
-			return fmt.Errorf("variable '%s' was not captured (%s failed)", name, origin)
-		}
-		return fmt.Errorf("variable '%s' was not captured (expected from %s)", name, origin)
-	}
-	return fmt.Errorf("required variable '%s' not provided", name)
-}
-
 func executeFlowStepWithPoll(step FlowStep, opts RequestOptions) (summary.TestResult, error) {
 	hardAsserts := append([]string{}, opts.Asserts...)
 	pollOpts := opts
@@ -1311,7 +1085,7 @@ func printFailedStepHint(summ *summary.Summary) {
 		return
 	}
 	for _, r := range summ.Results {
-		if r.Success || r.RecordID == 0 {
+		if r.Success || r.Skipped || r.RecordID == 0 {
 			continue
 		}
 		name := strings.TrimSpace(r.Name)
@@ -1324,4 +1098,19 @@ func printFailedStepHint(summ *summary.Summary) {
 		fmt.Printf("   kest replay %d    # re-send after fixing your code\n", r.RecordID)
 		return
 	}
+}
+
+// persistCapturedVariable saves a captured value to local storage so it
+// survives the run.
+func persistCapturedVariable(store *storage.Store, name, value string) {
+	conf := loadConfigWarn()
+	if store == nil || conf == nil {
+		return
+	}
+	store.SaveVariable(&storage.Variable{
+		Name:        name,
+		Value:       value,
+		Environment: conf.ActiveEnv,
+		Project:     conf.ProjectID,
+	})
 }

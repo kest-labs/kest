@@ -165,6 +165,26 @@ nonce = nonce
 @on success
 ```
 
+### Failed and skipped steps
+
+When a step fails, steps that need something it was supposed to produce are
+**skipped**, not failed. A step is skipped when it uses a `{{variable}}` that a
+failed (or already skipped) step was supposed to capture, or when it has an
+incoming `@on success` edge from a failed or skipped step. Skipped steps are
+not executed, are not counted as failures and never change the exit code on
+their own; the exit code is driven by the real failures. Steps that do not
+depend on the failed step still run (unless `--fail-fast` is set).
+
+```
+✗ 1 failed, 4 skipped (caused by Create item (4))
+  Root cause: Create item - assertion failed: status == 201 ...
+```
+
+A variable passed with `--var` or defined in the active environment is never
+considered missing, so it does not cause a skip. The same information is in
+`--json` (`outcome: "skipped"`, `skipped_because`, `skip_reason` on each step,
+`summary.skipped`), JUnit (`<skipped/>`), the HTML report and `--report-json`.
+
 ### Mermaid Preview (in `-v` mode)
 Kest prints a Mermaid flowchart for the parsed Flow document when you run with `-v`:
 ```bash

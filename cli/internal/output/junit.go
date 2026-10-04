@@ -37,6 +37,11 @@ type junitTestCase struct {
 	Time      string        `xml:"time,attr"`
 	Failure   *junitProblem `xml:"failure,omitempty"`
 	Error     *junitProblem `xml:"error,omitempty"`
+	Skipped   *junitSkipped `xml:"skipped,omitempty"`
+}
+
+type junitSkipped struct {
+	Message string `xml:"message,attr,omitempty"`
 }
 
 type junitProblem struct {
@@ -48,14 +53,15 @@ type junitProblem struct {
 // WriteJUnit renders the result as JUnit XML. Steps are grouped into one
 // test suite per source file. Assertion and snapshot failures become
 // <failure> elements; every other error kind becomes an <error> element.
-// Skipped steps are reported as a count on the suite elements.
+// Skipped steps are reported as <skipped/> test cases; steps that were never
+// reached (--fail-fast, interrupts) only add to the skipped count.
 func WriteJUnit(w io.Writer, r *Result) error {
 	report := junitTestSuites{
-		Name:    "kest " + r.Command,
-		Skipped: r.Summary.Skipped,
-		Time:    millisToSeconds(r.Summary.DurationMs),
+		Name: "kest " + r.Command,
+		Time: millisToSeconds(r.Summary.DurationMs),
 	}
 
+	stepSkips := 0
 	suiteIndex := map[string]int{}
 	suiteMs := map[int]int64{}
 	var totalMs int64
@@ -79,7 +85,11 @@ func WriteJUnit(w io.Writer, r *Result) error {
 			Name:      junitCaseName(step),
 			Time:      millisToSeconds(step.DurationMs),
 		}
-		if !step.OK {
+		if step.Outcome == OutcomeSkipped {
+			tc.Skipped = &junitSkipped{Message: step.SkipReason}
+			suite.Skipped++
+			stepSkips++
+		} else if !step.OK {
 			problem := &junitProblem{Message: "step failed", Text: junitFailureText(step)}
 			kind := ErrorKindInternal
 			if step.Error != nil {
@@ -124,8 +134,14 @@ func WriteJUnit(w io.Writer, r *Result) error {
 	if r.Summary.DurationMs == 0 {
 		report.Time = millisToSeconds(totalMs)
 	}
-	if report.Skipped > 0 && len(report.Suites) == 1 {
-		report.Suites[0].Skipped = report.Skipped
+	// Skipped steps that were never reported as test cases (never reached
+	// after --fail-fast or an interrupt) are only counted.
+	report.Skipped = stepSkips
+	if unreported := r.Summary.Skipped - stepSkips; unreported > 0 {
+		report.Skipped += unreported
+		if len(report.Suites) == 1 {
+			report.Suites[0].Skipped += unreported
+		}
 	}
 
 	if _, err := io.WriteString(w, xml.Header); err != nil {
@@ -160,7 +176,7 @@ func WriteJUnitFile(path string, r *Result) error {
 
 func hasFailedStep(r *Result) bool {
 	for _, step := range r.Steps {
-		if !step.OK {
+		if !step.OK && step.Outcome != OutcomeSkipped {
 			return true
 		}
 	}

@@ -315,7 +315,10 @@ func loadFlowRunLog(logPath string) (string, string, bool) {
 
 func buildFlowRunResultSync(result summary.TestResult) platformsync.FlowRunResultSync {
 	status := "passed"
-	if !result.Success {
+	switch {
+	case result.Skipped:
+		status = "skipped"
+	case !result.Success:
 		status = "failed"
 	}
 	requestBody, _ := platformsync.SanitizeBody(result.RequestBody)
@@ -344,8 +347,15 @@ func buildFlowRunResultSync(result summary.TestResult) platformsync.FlowRunResul
 		Response:     string(responsePayload),
 		DurationMs:   result.Duration.Milliseconds(),
 		StartedAt:    result.StartTime.UTC(),
-		Error:        errorString(result.Error),
+		Error:        skipAwareError(result),
 	}
+}
+
+func skipAwareError(result summary.TestResult) string {
+	if result.Skipped {
+		return result.SkipReason
+	}
+	return errorString(result.Error)
 }
 
 func printFlowSyncSummary(label string, resp platformsync.FlowSyncResponse) {

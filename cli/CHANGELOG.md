@@ -4,6 +4,7 @@
 
 ### New Features
 
+- **Dependency-aware skipping in flows** — when a step fails, later steps that use a variable it was supposed to capture (or that have an incoming `@on success` edge from it) are reported as **skipped** instead of failing with "variable was not captured". The console summary reads `1 failed, 3 skipped (caused by Create item)` with a `Root cause:` line; skipped steps are not failures and never change the exit code. `--json` steps gain `outcome` (`passed`/`failed`/`skipped`), `step_id`, `phase`, `skipped_because` and `skip_reason`; JUnit emits `<skipped/>`; the HTML report and `--report-json` show them too. Steps that do not depend on the failed step still run.
 - **`{{$basicAuth(user, pass)}}` built-in** — base64-encodes two variables for an HTTP Basic `Authorization` header. `kest import` now emits it for Basic auth, so you pass the username and password with `--var` instead of precomputing an encoded value.
 - **Default success check for imported Postman requests** — requests with no Postman test script get `status >= 200` / `status < 300`, like curl and OpenAPI imports.
 

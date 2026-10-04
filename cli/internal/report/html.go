@@ -90,6 +90,7 @@ type runResultView struct {
 	Duration        string
 	StartedAt       string
 	Error           string
+	SkipReason      string
 	RecordID        int64
 	CommandSection  codeSectionView
 	RequestHeaders  headerTableView
@@ -211,6 +212,7 @@ func buildRunPageView(summ *summary.Summary, opts RunHTMLOptions, generatedAt ti
 		{Label: "Total Steps", Value: fmt.Sprintf("%d", summ.TotalTests)},
 		{Label: "Passed", Value: fmt.Sprintf("%d", summ.PassedTests)},
 		{Label: "Failed", Value: fmt.Sprintf("%d", summ.FailedTests)},
+		{Label: "Skipped", Value: fmt.Sprintf("%d", summ.SkippedTests)},
 		{Label: "Total Time", Value: summ.TotalTime.Round(time.Millisecond).String()},
 	}
 	if slowest > 0 {
@@ -226,6 +228,9 @@ func buildRunPageView(summ *summary.Summary, opts RunHTMLOptions, generatedAt ti
 		anchorID := fmt.Sprintf("result-%d", index+1)
 		statusText := runStatusText(result)
 		statusTone := statusClass(result.Status, result.Success, result.Method)
+		if result.Skipped {
+			statusTone = "badge badge-status-neutral"
+		}
 		results = append(results, runResultView{
 			AnchorID:    anchorID,
 			Name:        fallback(result.Name, fmt.Sprintf("Step %d", index+1)),
@@ -237,6 +242,7 @@ func buildRunPageView(summ *summary.Summary, opts RunHTMLOptions, generatedAt ti
 			Duration:    formatDuration(result.Duration),
 			StartedAt:   formatTimestamp(result.StartTime),
 			Error:       errorString(result.Error),
+			SkipReason:  strings.TrimSpace(result.SkipReason),
 			RecordID:    result.RecordID,
 			CommandSection: codeSectionView{
 				ID:           fmt.Sprintf("%s-command", anchorID),
@@ -500,6 +506,9 @@ func fallback(value, fallbackValue string) string {
 }
 
 func runStatusText(result summary.TestResult) string {
+	if result.Skipped {
+		return "Skipped"
+	}
 	if strings.EqualFold(result.Method, "EXEC") {
 		if result.Success {
 			return "Completed"
@@ -1073,6 +1082,12 @@ const runPageBodyTemplate = `
           <div class="card" style="margin-top: 14px; padding: 14px 16px; border-radius: 18px; background: rgba(185, 28, 28, 0.08); border-color: rgba(185, 28, 28, 0.15); box-shadow: none;">
             <strong style="display: block; margin-bottom: 6px; color: #991b1b;">Failure Reason</strong>
             <span>{{.Error}}</span>
+          </div>
+        {{end}}
+        {{if .SkipReason}}
+          <div class="card" style="margin-top: 14px; padding: 14px 16px; border-radius: 18px; background: rgba(100, 116, 139, 0.08); border-color: rgba(100, 116, 139, 0.18); box-shadow: none;">
+            <strong style="display: block; margin-bottom: 6px; color: #475569;">Skipped</strong>
+            <span>{{.SkipReason}}</span>
           </div>
         {{end}}
         {{if .CommandSection.Content}}

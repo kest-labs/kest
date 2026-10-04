@@ -22,9 +22,12 @@
       "method": "GET",
       "name": "Health check",
       "ok": true,
+      "outcome": "passed",
+      "phase": "step",
       "record_id": "<record_id>",
       "source": "health.flow.md",
       "status": 200,
+      "step_id": "health",
       "url": "http://SERVER/health"
     }
   ],

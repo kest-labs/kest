@@ -15,9 +15,12 @@
       "method": "GET",
       "name": "Health check",
       "ok": true,
+      "outcome": "passed",
+      "phase": "step",
       "record_id": "<record_id>",
       "source": "items.flow.md",
       "status": 200,
+      "step_id": "health",
       "url": "http://SERVER/health"
     },
     {
@@ -40,6 +43,8 @@
       "method": "POST",
       "name": "Create item",
       "ok": false,
+      "outcome": "failed",
+      "phase": "step",
       "record_id": "<record_id>",
       "request": {
         "body": {
@@ -61,6 +66,7 @@
       },
       "source": "items.flow.md",
       "status": 400,
+      "step_id": "create",
       "url": "http://SERVER/items"
     }
   ],

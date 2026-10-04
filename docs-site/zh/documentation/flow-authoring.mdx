@@ -175,6 +175,17 @@ echo "cleanup test data"
 ```
 ~~~
 
+## 失败与跳过的步骤
+
+某个 step 失败后，依赖它应捕获的 `{{variable}}`（或带有来自它的 `@on success` edge）的后续 step 会被标记为 **skipped**，而不是报 "variable was not captured" 失败：
+
+```text
+✗ 1 failed, 3 skipped (caused by Create order)
+  Root cause: Create order - assertion failed: status == 201 ...
+```
+
+被跳过的 step 不会执行，不算失败，也不会改变退出码；不依赖失败 step 的 step 仍会运行。`--json` 用 `outcome: "skipped"`、`skipped_because` 和 `skip_reason` 表示，JUnit 输出 `<skipped/>`。
+
 ## Profiles
 
 `.kest/flow.config.yaml` 控制默认 targets 和运行行为：

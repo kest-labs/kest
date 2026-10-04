@@ -40,12 +40,15 @@ Supported commands: `run`, `get`, `post`, `put`, `patch`, `delete`, `replay`,
   "exit_code": 1,               // same as the process exit code
   "summary": {
     "total": 2, "passed": 1, "failed": 1,
-    "skipped": 0,               // steps not executed (e.g. --fail-fast)
+    "skipped": 0,               // steps skipped (a dependency failed) or never reached (--fail-fast)
     "duration_ms": 41           // wall-clock time of the command
   },
   "steps": [
     {
       "name": "Create item",
+      "step_id": "create",                 // flow step @id (flows only)
+      "phase": "step",                     // setup | step | teardown (flows only)
+      "outcome": "failed",                 // passed | failed | skipped
       "source": "items.flow.md",          // flow file (run only)
       "method": "POST",
       "url": "http://127.0.0.1:8080/items",
@@ -80,6 +83,12 @@ Supported commands: `run`, `get`, `post`, `put`, `patch`, `delete`, `replay`,
 
 Notes:
 
+- `outcome` is `passed`, `failed` or `skipped`; `ok` is true only for `passed`.
+  A **skipped** step was not executed because a step it depends on (through a
+  captured `{{variable}}` or an `@on success` edge) failed or was itself
+  skipped. It carries `skipped_because` (the `step_id` of the root-cause
+  failed step) and `skip_reason` instead of an `error`, is counted in
+  `summary.skipped`, and never changes `ok` or `exit_code` on its own.
 - `steps` and `assertions` are always arrays (possibly empty).
 - `request` / `response` are always included for single requests
   (`get`/`post`/…, `replay`). For `run` they are included only for **failed**

@@ -148,7 +148,11 @@ func buildRunResult(files []runExecutionResult, startedAt, finishedAt time.Time)
 				IncludeBodiesOnFailure: true,
 			}))
 		}
-		res.Summary.Skipped += file.Summary.SkippedTests
+		// Dependency skips were already counted by AddStep; add the steps that
+		// were never reached (--fail-fast, interrupts).
+		if unreached := file.Summary.SkippedTests - file.Summary.RecordedSkips(); unreached > 0 {
+			res.Summary.Skipped += unreached
+		}
 		if file.Err != nil && file.Summary.FailedTests == 0 && res.Error == nil {
 			res.SetError(output.ErrorKindInternal, file.Err.Error())
 		}

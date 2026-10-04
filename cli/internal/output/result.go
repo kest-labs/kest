@@ -54,9 +54,28 @@ type Summary struct {
 	DurationMs int64 `json:"duration_ms"`
 }
 
-// Step is one executed request (or exec/snapshot step).
+// Step outcomes reported in Step.Outcome.
+const (
+	OutcomePassed  = "passed"
+	OutcomeFailed  = "failed"
+	OutcomeSkipped = "skipped"
+)
+
+// Step is one executed request (or exec/snapshot step). A skipped step was
+// not executed because a step it depends on failed or was skipped; it is not
+// a failure and does not affect the exit code.
 type Step struct {
-	Name       string            `json:"name"`
+	Name string `json:"name"`
+	// StepID is the flow step id (the @id directive or a generated step-N).
+	StepID string `json:"step_id,omitempty"`
+	// Phase is the flow block the step belongs to: setup, step or teardown.
+	Phase string `json:"phase,omitempty"`
+	// Outcome is passed, failed or skipped. OK is true only for passed.
+	Outcome string `json:"outcome"`
+	// SkippedBecause is the id (or name) of the root-cause step that failed.
+	SkippedBecause string `json:"skipped_because,omitempty"`
+	// SkipReason explains why the step was skipped.
+	SkipReason string            `json:"skip_reason,omitempty"`
 	Source     string            `json:"source,omitempty"`
 	Method     string            `json:"method,omitempty"`
 	URL        string            `json:"url,omitempty"`
@@ -126,6 +145,8 @@ type StepOptions struct {
 func StepFromTestResult(tr summary.TestResult, opts StepOptions) Step {
 	step := Step{
 		Name:       tr.Name,
+		StepID:     tr.StepID,
+		Phase:      tr.Phase,
 		Source:     opts.Source,
 		Method:     tr.Method,
 		URL:        platformsync.SanitizeURL(tr.URL),
@@ -149,6 +170,20 @@ func StepFromTestResult(tr summary.TestResult, opts StepOptions) Step {
 	}
 	if len(tr.Captures) > 0 {
 		step.Captures = platformsync.SanitizeStringMap(tr.Captures)
+	}
+	switch {
+	case tr.Skipped:
+		step.Outcome = OutcomeSkipped
+		step.SkipReason = tr.SkipReason
+		step.SkippedBecause = tr.SkippedBecauseID
+		if step.SkippedBecause == "" {
+			step.SkippedBecause = tr.SkippedBecause
+		}
+		return step
+	case tr.Success:
+		step.Outcome = OutcomePassed
+	default:
+		step.Outcome = OutcomeFailed
 	}
 	if !tr.Success {
 		kind := tr.ErrorKind
@@ -203,11 +238,21 @@ func flattenHeaders(headers map[string][]string) map[string]string {
 
 // AddStep appends a step and updates the summary counters.
 func (r *Result) AddStep(step Step) {
+	if step.Outcome == "" {
+		if step.OK {
+			step.Outcome = OutcomePassed
+		} else {
+			step.Outcome = OutcomeFailed
+		}
+	}
 	r.Steps = append(r.Steps, step)
 	r.Summary.Total++
-	if step.OK {
+	switch step.Outcome {
+	case OutcomeSkipped:
+		r.Summary.Skipped++
+	case OutcomePassed:
 		r.Summary.Passed++
-	} else {
+	default:
 		r.Summary.Failed++
 	}
 }

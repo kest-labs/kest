@@ -175,6 +175,17 @@ echo "cleanup test data"
 ```
 ~~~
 
+## Failed and skipped steps
+
+When a step fails, later steps that use a `{{variable}}` it was supposed to capture (or that have an incoming `@on success` edge from it) are reported as **skipped** instead of failing with "variable was not captured":
+
+```text
+✗ 1 failed, 3 skipped (caused by Create order)
+  Root cause: Create order - assertion failed: status == 201 ...
+```
+
+Skipped steps are not executed, are not failures and never change the exit code; steps that do not depend on the failed step still run. `--json` reports them with `outcome: "skipped"`, `skipped_because` and `skip_reason`, and JUnit emits `<skipped/>`.
+
 ## Profiles
 
 `.kest/flow.config.yaml` controls default targets and run behavior:
