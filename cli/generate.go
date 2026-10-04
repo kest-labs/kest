@@ -19,6 +19,8 @@ var (
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate a .kest scenario file from external sources",
+	// Kept working for existing scripts; cobra prints this notice and hides the command from help.
+	Deprecated: "use `kest import openapi <spec>` instead; it also handles Swagger 2.0, security schemes and example bodies.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if genFromOpenAPI != "" {
 			return generateFromOpenAPI(genFromOpenAPI, genOutFile)

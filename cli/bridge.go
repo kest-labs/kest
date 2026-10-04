@@ -153,6 +153,33 @@ only to the local bridge, and the bridge performs the real HTTP request locally.
 	},
 }
 
+// Bridge transports are shared so keep-alive connections are reused across
+// requests instead of leaking one idle pool per call.
+var (
+	bridgeStrictTransport   = newBridgeTransport(true)
+	bridgeInsecureTransport = newBridgeTransport(false)
+)
+
+func newBridgeTransport(strictTLS bool) *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if !strictTLS {
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		} else {
+			transport.TLSClientConfig = transport.TLSClientConfig.Clone()
+			transport.TLSClientConfig.InsecureSkipVerify = true
+		}
+	}
+	return transport
+}
+
+func bridgeTransport(strictTLS bool) *http.Transport {
+	if strictTLS {
+		return bridgeStrictTransport
+	}
+	return bridgeInsecureTransport
+}
+
 func init() {
 	bridgeCmd.Flags().StringVar(&bridgeHost, "host", defaultBridgeHost, "Host interface to bind")
 	bridgeCmd.Flags().IntVar(&bridgePort, "port", defaultBridgePort, "Port to listen on")
@@ -313,15 +340,7 @@ func executeBridgeRequest(req bridgeRunRequest) (*bridgeRunResponse, error) {
 		strictTLS = *req.StrictTLS
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	if !strictTLS {
-		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		} else {
-			transport.TLSClientConfig = transport.TLSClientConfig.Clone()
-			transport.TLSClientConfig.InsecureSkipVerify = true
-		}
-	}
+	transport := bridgeTransport(strictTLS)
 
 	httpClient := &http.Client{
 		Timeout:   timeout,

@@ -461,3 +461,22 @@ func BenchmarkSecureRandomInt(b *testing.B) {
 		secureRandomInt(10000)
 	}
 }
+
+func TestBasicAuthBuiltin(t *testing.T) {
+	vars := map[string]string{"user": "alice", "pass": "s3cret"}
+	got := Interpolate("Basic {{$basicAuth(user, pass)}}", vars)
+	if want := "Basic YWxpY2U6czNjcmV0"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	if _, err := InterpolateStrict("{{$basicAuth(user, missing)}}", vars); err == nil || !strings.Contains(err.Error(), "missing") {
+		t.Fatalf("expected missing-variable error, got %v", err)
+	}
+}
+
+func TestExtractPlaceholdersSkipsBuiltinsAndExpandsBasicAuth(t *testing.T) {
+	got := ExtractPlaceholders("{{$uuid}} {{$env.HOME}} {{token}} {{$basicAuth(user, pass)}} {{user}}")
+	want := []string{"token", "user", "pass"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}

@@ -1,5 +1,29 @@
 # Kest CLI Changelog
 
+## Unreleased
+
+### New Features
+
+- **`{{$basicAuth(user, pass)}}` built-in** — base64-encodes two variables for an HTTP Basic `Authorization` header. `kest import` now emits it for Basic auth, so you pass the username and password with `--var` instead of precomputing an encoded value.
+- **Default success check for imported Postman requests** — requests with no Postman test script get `status >= 200` / `status < 300`, like curl and OpenAPI imports.
+
+### Changes
+
+- **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.
+- **`kest run` uses your configured base URL by default** — the built-in `local` profile no longer forces `env: local` and `base_url: http://127.0.0.1:5119`; flows now hit the active environment's `base_url` from `.kest/config.yaml`, like `kest get`. Set `env`/`base_url` in `.kest/flow.config.yaml` to override.
+- **Failed flow runs print the next step** — the record ID of the first failed step with ready-to-run `kest show` / `kest why` / `kest replay` commands. Flow steps no longer dump `--- Debug Info ---` for 4xx responses unless `--verbose`.
+- **`kest history` and `kest show` print local time** instead of UTC.
+- **`kest generate` is deprecated** — it still works but prints a notice; use `kest import openapi`.
+
+### Fixes
+
+- **`kest why` can now see failed requests** — requests and flow steps that fail an assertion are saved to history (with the failure reason) instead of being dropped, and `kest why` includes that reason in its analysis. Existing history databases get the new column automatically.
+- **Network errors and timeouts are saved to history** — a request that gets no response (connection refused, DNS, TLS, timeout) or exceeds `--max-time` is recorded with the error as its failure reason (status `0`, shown as `ERR` in `kest history`), so `kest why` can explain it and `kest replay` can retry it. `--no-record` is respected. `kest mock` skips these records.
+- **No more "failed to load config" warning when there is no config file** — a `.kest` directory without `config.yaml` now silently uses defaults; only unreadable or invalid config files warn, and only once per command. `~/.kest` (the history directory) is no longer mistaken for a workspace root, so directories under `$HOME` without their own `.kest` are not lumped into one workspace (set `KEST_WORKSPACE_ROOT=$HOME` to opt in).
+- **`{{var}}/path` URLs no longer get `base_url` prepended when the variable is an absolute URL** — e.g. `GET {{api_root}}/users` with `api_root=https://x.test` now calls `https://x.test/users`. The base URL is applied only when the URL is still relative after interpolation (requests, flow steps and the MCP `kest_request` tool). `kest import postman` no longer warns about such URLs.
+- **`kest why` no longer sends credentials to the AI provider** — headers such as Authorization, Cookie and X-Api-Key, and secret body fields, are redacted from the prompt.
+- **Built-in variables in flows** — steps using `{{$uuid}}`, `{{$timestamp}}`, `{{$env.NAME}}` and other built-ins no longer fail with "required variable not provided".
+
 ## v0.7.5 (2026-04-30)
 
 ### New Features

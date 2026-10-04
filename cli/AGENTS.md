@@ -15,9 +15,9 @@ Website: https://kest.dev
 ## Command Reference
 
 ### Setup
-- `curl -fsSL https://kest.dev/install.sh | sh` — one-line install
-- `go install github.com/kest-labs/kest/cmd/kest@latest` — install via Go
-- `kest init` — initialize project (creates `.kest/config.yaml`)
+- `curl -fsSL https://kest.dev/install.sh | bash` — one-line install (latest release)
+- `git clone https://github.com/kest-labs/kest.git && cd kest/cli && go build -o ~/.local/bin/kest .` — build from source
+- `kest init --base-url http://localhost:8080` — initialize a workspace (creates `.kest/config.yaml` and a sample `.kest/flow/smoke.flow.md`)
 - `kest guide` — show Flow (.flow.md) tutorial and best practices
 
 ### REST Testing
@@ -73,8 +73,12 @@ Website: https://kest.dev
 - `kest grpc host:443 service/Method --tls --cert ca.pem`
 
 ### CI/CD
-- `kest run tests/ --quiet --output json` — structured output, no decoration
-- Exit codes: 0=success, 1=assertion fail, 2=runtime error
+- `kest run tests/ --json` — exactly one versioned JSON result on stdout (see `docs/json-output.md`)
+- Exit codes: 0=success, 1=assertion/snapshot failure, 2=runtime error (network, timeout, exec), 3=usage/config error
+
+### MCP (AI agents)
+- `kest mcp` — stdio MCP server exposing kest_request, kest_run_flow, kest_replay, kest_snapshot_verify, kest_history, kest_why
+- `claude mcp add kest -- kest mcp` — register with Claude Code (see `docs/mcp.md`)
 
 ### Configuration
 - `kest config set ai_key <key>` — set AI API key

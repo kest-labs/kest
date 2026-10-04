@@ -2,6 +2,7 @@ package platformsync
 
 import (
 	"encoding/json"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -73,6 +74,41 @@ func SanitizeStringSliceMap(input map[string][]string) map[string][]string {
 		output[key] = next
 	}
 	return output
+}
+
+// SanitizeURL redacts the values of sensitive query parameters
+// (e.g. token, api_key) and any userinfo password embedded in the URL.
+func SanitizeURL(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return raw
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	changed := false
+	if parsed.User != nil {
+		if _, hasPassword := parsed.User.Password(); hasPassword {
+			parsed.User = url.UserPassword(parsed.User.Username(), "REDACTED")
+			changed = true
+		}
+	}
+	if parsed.RawQuery != "" {
+		query := parsed.Query()
+		for key := range query {
+			if isSensitiveKey(key) {
+				query[key] = []string{"[REDACTED]"}
+				changed = true
+			}
+		}
+		if changed {
+			parsed.RawQuery = query.Encode()
+		}
+	}
+	if !changed {
+		return raw
+	}
+	return parsed.String()
 }
 
 func SanitizeBody(value string) (string, bool) {

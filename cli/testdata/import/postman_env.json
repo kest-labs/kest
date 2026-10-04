@@ -1,0 +1,13 @@
+{
+  "id": "0f6a3c2e-1b8b-4c55-8b7e-2b2f1f0a9c11",
+  "name": "Acme Staging",
+  "values": [
+    { "key": "baseUrl", "value": "https://staging.acme.test/v1", "type": "default", "enabled": true },
+    { "key": "userEmail", "value": "qa@acme.test", "type": "default", "enabled": true },
+    { "key": "userPassword", "value": "Sup3rS3cret!", "type": "secret", "enabled": true },
+    { "key": "partnerKey", "value": "pk_staging_abc", "type": "default", "enabled": true },
+    { "key": "searchTerm", "value": "anvil", "type": "default", "enabled": true },
+    { "key": "legacyFlag", "value": "on", "type": "default", "enabled": false }
+  ],
+  "_postman_variable_scope": "environment"
+}

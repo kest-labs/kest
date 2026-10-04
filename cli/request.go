@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/kest-labs/kest/cli/internal/client"
+	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/output"
 	"github.com/kest-labs/kest/cli/internal/platformsync"
@@ -101,7 +104,8 @@ func createRequestCmd(method string) *cobra.Command {
 				defer func() { ActiveRunCtx = nil }()
 			}
 
-			_, err := ExecuteRequest(RequestOptions{
+			startedAt := time.Now()
+			res, err := ExecuteRequest(RequestOptions{
 				Method:      method,
 				URL:         args[0],
 				Data:        reqData,
@@ -118,9 +122,13 @@ func createRequestCmd(method string) *cobra.Command {
 				RetryWait:   reqRetryWait,
 				Forms:       reqForms,
 			})
+			if output.JSONOutput {
+				return finishJSON("request", buildRequestResult(res, startedAt, time.Now()), err)
+			}
 			return err
 		},
 	}
+	markJSONCapable(cmd)
 
 	cmd.Flags().StringVarP(&reqData, "data", "d", "", "Request body data")
 	cmd.Flags().StringSliceVarP(&reqHeaders, "header", "H", []string{}, "Request headers")
@@ -219,31 +227,35 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		fmt.Println()
 	}
 
-	// Handle base URL
-	processedURL := targetURL
-	if !strings.HasPrefix(targetURL, "http") && env.BaseURL != "" {
-		processedURL = strings.TrimSuffix(env.BaseURL, "/") + "/" + strings.TrimPrefix(targetURL, "/")
-	}
-
-	// Interpolate URL with warnings in verbose mode
-	var finalURL string
-	if opts.Verbose {
-		var warnings []string
-		finalURL, warnings = variable.InterpolateWithWarning(processedURL, vars, true)
-		if len(warnings) > 0 {
-			fmt.Printf("⚠️  Warning: Undefined variables in URL: %v\n", warnings)
+	// Interpolate first, then apply the base URL only if the result is still
+	// relative: `{{api_root}}/users` with api_root=https://x.test must not
+	// get base_url prepended.
+	var urlWarnings []string
+	interpolateURL := func(raw string) (string, error) {
+		if opts.StrictVars {
+			return variable.InterpolateStrict(raw, vars)
 		}
-	} else {
-		finalURL = variable.Interpolate(processedURL, vars)
-	}
-	if opts.StrictVars {
-		strictURL, err := variable.InterpolateStrict(processedURL, vars)
-		if err != nil {
-			result.Error = err
-			result.Success = false
-			return result, &ExitError{Code: ExitRuntimeError, Err: err}
+		if opts.Verbose {
+			out, warnings := variable.InterpolateWithWarning(raw, vars, true)
+			urlWarnings = append(urlWarnings, warnings...)
+			return out, nil
 		}
-		finalURL = strictURL
+		return variable.Interpolate(raw, vars), nil
+	}
+	finalURL, err := interpolateURL(targetURL)
+	if err == nil && !isAbsoluteHTTPURL(finalURL) && env.BaseURL != "" {
+		var base string
+		base, err = interpolateURL(env.BaseURL)
+		finalURL = joinBaseURL(base, finalURL)
+	}
+	if err != nil {
+		result.Error = err
+		result.ErrorKind = output.ErrorKindVariable
+		result.Success = false
+		return result, &ExitError{Code: ExitRuntimeError, Err: err}
+	}
+	if len(urlWarnings) > 0 {
+		fmt.Printf("⚠️  Warning: Undefined variables in URL: %v\n", urlWarnings)
 	}
 	// Update result.URL to the interpolated value so logs always show the real URL
 	result.URL = finalURL
@@ -253,8 +265,9 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		u, err := url.Parse(finalURL)
 		if err != nil {
 			result.Error = err
+			result.ErrorKind = output.ErrorKindConfig
 			result.Success = false
-			return result, err
+			return result, &ExitError{Code: ExitConfigError, Err: err}
 		}
 		q := u.Query()
 		for _, param := range opts.Queries {
@@ -263,6 +276,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				strictParam, err := variable.InterpolateStrict(param, vars)
 				if err != nil {
 					result.Error = err
+					result.ErrorKind = output.ErrorKindVariable
 					result.Success = false
 					return result, &ExitError{Code: ExitRuntimeError, Err: err}
 				}
@@ -293,6 +307,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			strictHeader, err := variable.InterpolateStrict(h, vars)
 			if err != nil {
 				result.Error = err
+				result.ErrorKind = output.ErrorKindVariable
 				result.Success = false
 				return result, &ExitError{Code: ExitRuntimeError, Err: err}
 			}
@@ -313,6 +328,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			strictData, err := variable.InterpolateStrict(opts.Data, vars)
 			if err != nil {
 				result.Error = err
+				result.ErrorKind = output.ErrorKindVariable
 				result.Success = false
 				return result, &ExitError{Code: ExitRuntimeError, Err: err}
 			}
@@ -322,8 +338,9 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			content, err := os.ReadFile(processedData[1:])
 			if err != nil {
 				result.Error = err
+				result.ErrorKind = output.ErrorKindConfig
 				result.Success = false
-				return result, err
+				return result, &ExitError{Code: ExitConfigError, Err: err}
 			}
 			body = content
 		} else {
@@ -351,13 +368,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				file, err := os.Open(filePath)
 				if err != nil {
 					result.Error = err
+					result.ErrorKind = output.ErrorKindConfig
 					result.Success = false
-					return result, err
+					return result, &ExitError{Code: ExitConfigError, Err: err}
 				}
 				defer file.Close()
 				part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
 				if err != nil {
 					result.Error = err
+					result.ErrorKind = output.ErrorKindInternal
 					result.Success = false
 					return result, err
 				}
@@ -379,7 +398,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 
 	// Execute request with retry logic
 	var resp *client.Response
-	var err error
+	errKind := output.ErrorKindNetwork
 	maxRetries := opts.Retry
 	if maxRetries < 0 {
 		maxRetries = 0
@@ -404,11 +423,13 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			Stream:  opts.Stream,
 		})
 
+		errKind = classifyRequestError(err)
 		// Check duration assertion
 		if err == nil && opts.MaxDuration > 0 {
 			durationMs := resp.Duration.Milliseconds()
 			if durationMs > int64(opts.MaxDuration) {
 				err = fmt.Errorf("duration assertion failed: %dms > %dms", durationMs, opts.MaxDuration)
+				errKind = output.ErrorKindTimeout
 			}
 		}
 
@@ -423,16 +444,38 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		// If last attempt, show error
 		if attempt == maxRetries {
 			fmt.Printf("❌ Request Failed after %d attempts: %v\n", attempt+1, err)
-			result.Error = err
-			result.Success = false
-			return result, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
+	}
+
+	if err != nil {
+		// A transport error (connection refused, DNS, TLS, timeout) leaves
+		// resp nil; a --max-time violation keeps the slow response. Either
+		// way the attempt is saved so `kest why` and `kest replay` can use it.
+		result.Error = err
+		result.ErrorKind = errKind
+		result.Success = false
+		if resp != nil {
+			result.Status = resp.Status
+			result.Duration = resp.Duration
+			result.ResponseHeaders = cloneHeaderMap(resp.Headers)
+			result.ResponseBody = string(resp.Body)
+			result.RequestID = extractRequestID(resp.Headers, resp.Body)
+		}
+		if !opts.NoRecord {
+			result.RecordID = saveRequestRecord(store, conf, env.BaseURL, opts, finalURL, headers, body, resp, err.Error(), startTime)
+		}
+		if result.RecordID > 0 && !opts.SilentOutput {
+			fmt.Printf("💡 Saved as record #%d. Run `kest why` to diagnose.\n", result.RecordID)
+		}
+		return result, &ExitError{Code: ExitRuntimeError, Err: err}
 	}
 
 	// Logging
 	logger.LogRequest(method, finalURL, headers, string(body), resp.Status, resp.Headers, string(resp.Body), resp.Duration)
 
-	if opts.Verbose || resp.Status >= 400 {
+	// Flow steps (SilentOutput) report failures in the run summary; only
+	// dump debug info for them in verbose mode.
+	if opts.Verbose || (resp.Status >= 400 && !opts.SilentOutput) {
 		fmt.Printf("\n--- Debug Info ---\n")
 		fmt.Printf("Note: Headers are canonicalized per HTTP spec (e.g. X-Tenant-ID => X-Tenant-Id).\n")
 		fmt.Printf("Request: %s %s\n", method, finalURL)
@@ -498,6 +541,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		var firstErr string
 		for _, assertion := range opts.Asserts {
 			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
+			result.Assertions = append(result.Assertions, summary.AssertionResult{Expr: assertion, Passed: passed, Message: msg})
 			if passed {
 				fmt.Printf("  ✅ %s\n", assertion)
 				logger.LogToSession("Assertion Passed: %s", assertion)
@@ -525,15 +569,19 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 
 		result.Success = allPassed
 		if !allPassed {
+			// Keep going so the failed request is still saved to history,
+			// where `kest why` and `kest replay` can find it.
 			result.Error = fmt.Errorf("%s", firstErr)
-			return result, &ExitError{Code: ExitAssertionFailed, Err: result.Error}
+			result.ErrorKind = output.ErrorKindAssertion
 		}
 	}
+	assertFailed := result.Error != nil
 
-	if len(opts.SoftAsserts) > 0 {
+	if len(opts.SoftAsserts) > 0 && !assertFailed {
 		fmt.Println("\nSoft Assertions:")
 		for _, assertion := range opts.SoftAsserts {
 			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
+			result.Assertions = append(result.Assertions, summary.AssertionResult{Expr: assertion, Passed: passed, Message: msg, Soft: true})
 			if passed {
 				fmt.Printf("  ✅ %s\n", assertion)
 				continue
@@ -544,38 +592,20 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		}
 	}
 
-	if !opts.NoRecord && store != nil {
-		headerJSON, _ := json.Marshal(headers)
-		respHeaderJSON, _ := json.Marshal(resp.Headers)
-
-		u, _ := url.Parse(finalURL)
-		queryJSON, _ := json.Marshal(u.Query())
-
-		record := &storage.Record{
-			Method:          strings.ToUpper(method),
-			URL:             finalURL,
-			BaseURL:         env.BaseURL,
-			Path:            u.Path,
-			QueryParams:     queryJSON,
-			RequestHeaders:  headerJSON,
-			RequestBody:     string(body),
-			ResponseStatus:  resp.Status,
-			ResponseHeaders: respHeaderJSON,
-			ResponseBody:    string(resp.Body),
-			DurationMs:      resp.Duration.Milliseconds(),
-			Environment:     conf.ActiveEnv,
-			Project:         conf.ProjectID,
-			CreatedAt:       startTime.UTC(),
+	if !opts.NoRecord {
+		failure := ""
+		if assertFailed {
+			failure = result.Error.Error()
 		}
-		recordID, _ = store.SaveRecord(record)
-		record.ID = recordID
-		if recordID > 0 && !opts.SkipHistorySync {
-			if err := platformsync.QueueRequestHistory(conf, store, record, method); err != nil {
-				logger.LogToSession("history auto-sync enqueue failed for record %d: %v", recordID, err)
-			} else {
-				platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
-			}
+		recordID = saveRequestRecord(store, conf, env.BaseURL, opts, finalURL, headers, body, resp, failure, startTime)
+	}
+
+	result.RecordID = recordID
+	if assertFailed {
+		if recordID > 0 && !opts.SilentOutput {
+			fmt.Printf("\n💡 Saved as record #%d. Run `kest why` to diagnose.\n", recordID)
 		}
+		return result, &ExitError{Code: ExitAssertionFailed, Err: result.Error}
 	}
 
 	result.Success = true
@@ -585,6 +615,90 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	}
 	result.RecordID = recordID
 	return result, nil
+}
+
+// saveRequestRecord writes one request attempt to the local history and
+// queues it for platform sync. resp may be nil when no HTTP response was
+// received (network error); the record then has ResponseStatus 0 and the
+// error in Failure. It returns the new record ID, or 0 when nothing was saved.
+func saveRequestRecord(store *storage.Store, conf *config.Config, baseURL string, opts RequestOptions, finalURL string, headers map[string]string, body []byte, resp *client.Response, failure string, startTime time.Time) int64 {
+	if store == nil || conf == nil {
+		return 0
+	}
+	headerJSON, _ := json.Marshal(headers)
+
+	record := &storage.Record{
+		Method:          strings.ToUpper(opts.Method),
+		URL:             finalURL,
+		BaseURL:         baseURL,
+		RequestHeaders:  headerJSON,
+		RequestBody:     string(body),
+		ResponseHeaders: json.RawMessage("{}"),
+		Environment:     conf.ActiveEnv,
+		Project:         conf.ProjectID,
+		Failure:         failure,
+		CreatedAt:       startTime.UTC(),
+	}
+	if u, err := url.Parse(finalURL); err == nil {
+		record.Path = u.Path
+		record.QueryParams, _ = json.Marshal(u.Query())
+	} else {
+		record.QueryParams = json.RawMessage("{}")
+	}
+	if resp != nil {
+		record.ResponseStatus = resp.Status
+		record.ResponseHeaders, _ = json.Marshal(resp.Headers)
+		record.ResponseBody = string(resp.Body)
+		record.DurationMs = resp.Duration.Milliseconds()
+	} else {
+		record.DurationMs = time.Since(startTime).Milliseconds()
+	}
+
+	recordID, saveErr := store.SaveRecord(record)
+	if saveErr != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  Failed to save request history: %v\n", saveErr)
+		logger.LogToSession("save history failed: %v", saveErr)
+		return 0
+	}
+	record.ID = recordID
+	if recordID > 0 && !opts.SkipHistorySync {
+		if err := platformsync.QueueRequestHistory(conf, store, record, opts.Method); err != nil {
+			logger.LogToSession("history auto-sync enqueue failed for record %d: %v", recordID, err)
+		} else {
+			platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
+		}
+	}
+	return recordID
+}
+
+// isAbsoluteHTTPURL reports whether u already names a scheme and host
+// (http:// or https://, case-insensitive), so no base URL applies.
+func isAbsoluteHTTPURL(u string) bool {
+	lower := strings.ToLower(strings.TrimSpace(u))
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
+}
+
+// joinBaseURL joins a base URL and a relative path with exactly one slash.
+func joinBaseURL(base, path string) string {
+	return strings.TrimSuffix(base, "/") + "/" + strings.TrimPrefix(path, "/")
+}
+
+// buildRequestResult wraps a single request outcome, including redacted
+// request/response headers and bodies, in the versioned result.
+func buildRequestResult(tr summary.TestResult, startedAt, finishedAt time.Time) *output.Result {
+	res := output.NewResult("request")
+	res.AddStep(output.StepFromTestResult(tr, output.StepOptions{IncludeBodies: true}))
+	res.SetDuration(startedAt, finishedAt)
+	return res
+}
+
+// classifyRequestError maps a transport error to a machine-readable kind.
+func classifyRequestError(err error) string {
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return output.ErrorKindTimeout
+	}
+	return output.ErrorKindNetwork
 }
 
 func cloneStringMap(input map[string]string) map[string]string {

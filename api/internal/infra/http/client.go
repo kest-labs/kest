@@ -21,12 +21,14 @@ type Client struct {
 	retries     int
 	retryDelay  time.Duration
 	httpClient  *http.Client
+	maxBody     int64
 }
 
 // Response wraps an HTTP response with convenience methods
 type Response struct {
 	*http.Response
-	body []byte
+	body      []byte
+	truncated bool
 }
 
 // New creates a new HTTP client
@@ -38,7 +40,15 @@ func New() *Client {
 		retries:     0,
 		retryDelay:  100 * time.Millisecond,
 		httpClient:  &http.Client{},
+		maxBody:     DefaultRunnerMaxResponseBytes,
 	}
+}
+
+// MaxResponseBytes caps how much of the response body is read; the rest is
+// discarded and Response.Truncated reports it. n <= 0 disables the limit.
+func (c *Client) MaxResponseBytes(n int64) *Client {
+	c.maxBody = n
+	return c
 }
 
 // BaseURL sets the base URL for all requests
@@ -73,13 +83,30 @@ func (c *Client) WithToken(token string) *Client {
 	return c
 }
 
+// WithHTTPClient sets the underlying *http.Client (e.g. SharedOutboundClient
+// for user-supplied URLs). The client is never mutated by this builder.
+func (c *Client) WithHTTPClient(hc *http.Client) *Client {
+	if hc != nil {
+		c.httpClient = hc
+	}
+	return c
+}
+
 // WithBasicAuth adds Basic authentication
 func (c *Client) WithBasicAuth(username, password string) *Client {
-	c.httpClient.Transport = &basicAuthTransport{
+	// Copy the client so a shared *http.Client is never mutated, and keep its
+	// transport (which may enforce outbound restrictions).
+	base := c.httpClient.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	hc := *c.httpClient
+	hc.Transport = &basicAuthTransport{
 		username: username,
 		password: password,
-		base:     http.DefaultTransport,
+		base:     base,
 	}
+	c.httpClient = &hc
 	return c
 }
 
@@ -246,7 +273,7 @@ func (c *Client) requestRaw(ctx context.Context, method, path string, body io.Re
 		}
 
 		// Read body
-		respBody, err := io.ReadAll(httpResp.Body)
+		respBody, truncated, err := ReadLimited(httpResp.Body, c.maxBody)
 		httpResp.Body.Close()
 		if err != nil {
 			lastErr = err
@@ -254,8 +281,9 @@ func (c *Client) requestRaw(ctx context.Context, method, path string, body io.Re
 		}
 
 		resp = &Response{
-			Response: httpResp,
-			body:     respBody,
+			Response:  httpResp,
+			body:      respBody,
+			truncated: truncated,
 		}
 
 		// Don't retry on success or client errors
@@ -277,6 +305,11 @@ func (c *Client) requestRaw(ctx context.Context, method, path string, body io.Re
 // Body returns the response body as bytes
 func (r *Response) Body() []byte {
 	return r.body
+}
+
+// Truncated reports whether the body was cut at the client's MaxResponseBytes.
+func (r *Response) Truncated() bool {
+	return r.truncated
 }
 
 // String returns the response body as string

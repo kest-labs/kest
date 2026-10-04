@@ -2,6 +2,7 @@ package variable
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -90,6 +91,26 @@ func interpolateWithMode(text string, vars map[string]string, mode Interpolation
 			defaultValue = strings.ReplaceAll(defaultValue, "\\\\", "\\")
 		}
 
+		// Built-in functions that read other variables, e.g. {{$basicAuth(user, pass)}}
+		if args, ok := parseBasicAuthCall(varName); ok {
+			var absent []string
+			for _, a := range args {
+				if _, ok := vars[a]; !ok {
+					absent = append(absent, a)
+				}
+			}
+			if len(absent) == 0 {
+				return base64.StdEncoding.EncodeToString([]byte(vars[args[0]] + ":" + vars[args[1]]))
+			}
+			switch mode {
+			case ModeWarning:
+				warnings = append(warnings, absent...)
+			case ModeStrict:
+				missing = append(missing, absent...)
+			}
+			return match
+		}
+
 		// Built-in dynamic variables
 		if isBuiltinVar(varName) {
 			return resolveBuiltin(varName)
@@ -148,7 +169,8 @@ func InterpolateStrict(text string, vars map[string]string) (string, error) {
 	return result, err
 }
 
-// ExtractPlaceholders returns all variable names found in {{var}} placeholders.
+// ExtractPlaceholders returns the user variable names referenced by {{var}}
+// placeholders, skipping built-ins and expanding $basicAuth arguments.
 // Duplicates are removed while preserving first-seen order.
 func ExtractPlaceholders(text string) []string {
 	matches := combinedRegex.FindAllStringSubmatch(text, -1)
@@ -166,13 +188,36 @@ func ExtractPlaceholders(text string) []string {
 		if name == "" {
 			continue
 		}
-		if _, ok := seen[name]; ok {
+		names := []string{name}
+		if args, ok := parseBasicAuthCall(name); ok {
+			names = args
+		} else if isBuiltinVar(name) {
+			// Built-ins resolve at interpolation time; they are never "missing".
 			continue
 		}
-		seen[name] = struct{}{}
-		vars = append(vars, name)
+		for _, n := range names {
+			if _, ok := seen[n]; ok {
+				continue
+			}
+			seen[n] = struct{}{}
+			vars = append(vars, n)
+		}
 	}
 	return vars
+}
+
+// basicAuthCallRe matches {{$basicAuth(user_var, pass_var)}}.
+var basicAuthCallRe = regexp.MustCompile(`^\$basicAuth\(\s*([A-Za-z_][\w.-]*)\s*,\s*([A-Za-z_][\w.-]*)\s*\)$`)
+
+// parseBasicAuthCall returns the two variable names passed to $basicAuth,
+// whose values are joined as "user:pass" and base64-encoded for a Basic
+// Authorization header.
+func parseBasicAuthCall(name string) ([]string, bool) {
+	m := basicAuthCallRe.FindStringSubmatch(name)
+	if m == nil {
+		return nil, false
+	}
+	return []string{m[1], m[2]}, true
 }
 
 // parseVarWithDefault is deprecated - kept for backward compatibility

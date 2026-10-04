@@ -1,0 +1,74 @@
+{
+  "command": "run",
+  "exit_code": 1,
+  "ok": false,
+  "schema_version": 1,
+  "steps": [
+    {
+      "assertions": [
+        {
+          "expr": "status == 200",
+          "ok": true
+        }
+      ],
+      "duration_ms": 0,
+      "method": "GET",
+      "name": "Health check",
+      "ok": true,
+      "record_id": "<record_id>",
+      "source": "items.flow.md",
+      "status": 200,
+      "url": "http://SERVER/health"
+    },
+    {
+      "assertions": [
+        {
+          "expr": "status == 201",
+          "message": "status mismatch\n  Expected: == 201\n  Actual:   400",
+          "ok": false
+        },
+        {
+          "expr": "body.error == \"name is required\"",
+          "ok": true
+        }
+      ],
+      "duration_ms": 0,
+      "error": {
+        "kind": "assertion",
+        "message": "assertion failed: status == 201 (status mismatch\n  Expected: == 201\n  Actual:   400)"
+      },
+      "method": "POST",
+      "name": "Create item",
+      "ok": false,
+      "record_id": "<record_id>",
+      "request": {
+        "body": {
+          "name": ""
+        },
+        "headers": {
+          "Authorization": "[REDACTED]",
+          "Content-Type": "application/json"
+        }
+      },
+      "response": {
+        "body": {
+          "access_token": "[REDACTED]",
+          "error": "name is required"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "source": "items.flow.md",
+      "status": 400,
+      "url": "http://SERVER/items"
+    }
+  ],
+  "summary": {
+    "duration_ms": 0,
+    "failed": 1,
+    "passed": 1,
+    "skipped": 0,
+    "total": 2
+  }
+}

@@ -1,8 +1,11 @@
 package config
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -41,7 +44,7 @@ func LoadConfig() (*Config, error) {
 	v.SetConfigType("yaml")
 
 	// Project detection
-	projectRoot, _ := findProjectRoot()
+	projectRoot, _ := FindWorkspaceRoot()
 	if projectRoot != "" {
 		v.SetConfigFile(filepath.Join(projectRoot, ".kest", "config.yaml"))
 	} else {
@@ -50,7 +53,11 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// A missing config file just means defaults. With SetConfigFile,
+		// viper reports it as an fs error rather than
+		// ConfigFileNotFoundError, so check both.
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) && !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
 	}
@@ -99,11 +106,23 @@ func SaveToPath(conf *Config, configPath string) error {
 	v.Set("ai_model", conf.AIModel)
 	v.Set("ai_base_url", conf.AIBaseURL)
 
-	return v.WriteConfigAs(configPath)
+	if err := v.WriteConfigAs(configPath); err != nil {
+		return err
+	}
+	// The config holds platform and AI tokens; keep it owner-only.
+	return os.Chmod(configPath, 0600)
 }
 
-func findProjectRoot() (string, error) {
-	if root := os.Getenv("KEST_WORKSPACE_ROOT"); root != "" {
+// FindWorkspaceRoot returns the nearest directory (cwd or an ancestor) that
+// contains a .kest directory, or "" when there is none. KEST_WORKSPACE_ROOT
+// overrides the search.
+//
+// The home directory is never auto-detected as a workspace: ~/.kest is the
+// global directory (history database, logs, global config), so treating it as
+// a workspace marker would turn every directory under $HOME into one big
+// workspace. Set KEST_WORKSPACE_ROOT=$HOME to opt in explicitly.
+func FindWorkspaceRoot() (string, error) {
+	if root := strings.TrimSpace(os.Getenv("KEST_WORKSPACE_ROOT")); root != "" {
 		abs, err := filepath.Abs(root)
 		if err != nil {
 			return "", err
@@ -118,10 +137,13 @@ func findProjectRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	home := homeDir()
 
 	for {
-		if _, err := os.Stat(filepath.Join(curr, ".kest")); err == nil {
-			return curr, nil
+		if home == "" || !sameDir(curr, home) {
+			if info, err := os.Stat(filepath.Join(curr, ".kest")); err == nil && info.IsDir() {
+				return curr, nil
+			}
 		}
 
 		parent := filepath.Dir(curr)
@@ -133,8 +155,30 @@ func findProjectRoot() (string, error) {
 	return "", nil
 }
 
+func homeDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(home); err == nil {
+		return resolved
+	}
+	return home
+}
+
+// sameDir compares two directories, resolving symlinks (e.g. /var vs
+// /private/var on macOS).
+func sameDir(a, b string) bool {
+	if a == b {
+		return true
+	}
+	ra, errA := filepath.EvalSymlinks(a)
+	rb, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && ra == rb
+}
+
 func ResolveConfigPath() (string, error) {
-	projectRoot, err := findProjectRoot()
+	projectRoot, err := FindWorkspaceRoot()
 	if err != nil {
 		return "", err
 	}

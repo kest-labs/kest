@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
@@ -77,11 +79,11 @@ func init() {
 	// Sync push flags
 	syncPushCmd.Flags().StringVarP(&syncPushProjectID, "workspace-id", "w", "", "Platform workspace ID")
 	syncPushCmd.Flags().StringVar(&syncPushAPIURL, "api-url", "", "Platform API URL (override config)")
-	syncPushCmd.Flags().StringVar(&syncPushToken, "token", "", "Platform API token (override config)")
+	syncPushCmd.Flags().StringVar(&syncPushToken, "token", "", "Platform API token (deprecated: visible in shell history and ps; use KEST_PLATFORM_TOKEN)")
 	syncPushCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "Preview what would be synced without actually syncing")
 
 	syncConfigCmd.Flags().StringVar(&syncConfigAPIURL, "platform-url", "", "Platform API URL (for example: https://api.kest.dev/v1)")
-	syncConfigCmd.Flags().StringVar(&syncConfigToken, "platform-token", "", "Project-scoped CLI token")
+	syncConfigCmd.Flags().StringVar(&syncConfigToken, "platform-token", "", "Project-scoped CLI token (deprecated: visible in shell history and ps; omit to be prompted)")
 	syncConfigCmd.Flags().StringVar(&syncConfigProject, "workspace-id", "", "Default platform workspace ID")
 	syncConfigCmd.Flags().BoolVar(&syncConfigAutoHistory, "auto-sync-history", false, "Enable automatic CLI history sync to the platform")
 
@@ -170,6 +172,12 @@ func runSyncPush() error {
 	}
 
 	platformToken := syncPushToken
+	if platformToken != "" {
+		fmt.Fprintln(os.Stderr, "⚠️  --token is visible in shell history and process lists; prefer KEST_PLATFORM_TOKEN or 'kest sync config'.")
+	}
+	if platformToken == "" {
+		platformToken = os.Getenv("KEST_PLATFORM_TOKEN")
+	}
 	if platformToken == "" {
 		platformToken = conf.PlatformToken
 	}
@@ -594,6 +602,23 @@ func pushHistoryEntriesToPlatform(conf *config.Config, clientID string, entries 
 	return nil
 }
 
+// readSecret reads a token without echoing it when stdin is a terminal, and
+// falls back to a plain line read for piped input.
+func readSecret() string {
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		b, err := term.ReadPassword(fd)
+		fmt.Println()
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(b))
+	}
+	var s string
+	fmt.Scanln(&s)
+	return strings.TrimSpace(s)
+}
+
 func runSyncConfig(cmd *cobra.Command) error {
 	conf, err := config.LoadConfig()
 	if err != nil {
@@ -605,6 +630,7 @@ func runSyncConfig(cmd *cobra.Command) error {
 			conf.PlatformURL = syncConfigAPIURL
 		}
 		if syncConfigToken != "" {
+			fmt.Fprintln(os.Stderr, "⚠️  --platform-token is visible in shell history; omit it to be prompted without echo.")
 			conf.PlatformToken = syncConfigToken
 		}
 		if syncConfigProject != "" {
@@ -626,8 +652,7 @@ func runSyncConfig(cmd *cobra.Command) error {
 		}
 
 		fmt.Print("CLI Token: ")
-		var token string
-		fmt.Scanln(&token)
+		token := readSecret()
 		if token != "" {
 			conf.PlatformToken = token
 		}

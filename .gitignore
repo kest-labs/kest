@@ -187,3 +187,8 @@ api/storage/
 web/storage/
 !cli/internal/storage/
 !cli/internal/storage/*.go
+
+# Prebuilt CLI binaries
+/cli/cli
+/cli/kest_pure
+/cli/kest_slim

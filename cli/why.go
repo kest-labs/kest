@@ -3,8 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/kest-labs/kest/cli/internal/ai"
+	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -21,42 +26,83 @@ explain root causes, and suggest fixes. Requires ai_key to be configured.`,
   kest why 42`,
 	Args:         cobra.MaximumNArgs(1),
 	SilenceUsage: true,
+	Annotations:  map[string]string{jsonCapableAnnotation: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		store, err := storage.NewStore()
+		ref := ""
+		if len(args) > 0 {
+			ref = args[0]
+		}
+		res, err := diagnoseRecord(ref)
+		if output.JSONOutput {
+			return finishJSON("why", res, err)
+		}
 		if err != nil {
 			return err
 		}
-		defer store.Close()
-
-		var record *storage.Record
-		if len(args) == 0 {
-			record, err = store.GetLastRecord()
-		} else {
-			var id int64
-			fmt.Sscanf(args[0], "%d", &id)
-			record, err = store.GetRecord(id)
+		if data, ok := res.Data.(whyData); ok {
+			fmt.Println(data.Diagnosis)
 		}
-		if err != nil {
-			return fmt.Errorf("no record found: %w", err)
-		}
-
-		// Get recent history for context
-		history, _ := store.GetHistory(10, record.Project)
-
-		conf := loadConfigWarn()
-		client := ai.NewClient(conf.AIKey, conf.AIBaseURL, conf.AIModel)
-
-		fmt.Printf("🧠 Analyzing record #%d: %s %s → %d ...\n\n", record.ID, record.Method, record.URL, record.ResponseStatus)
-
-		prompt := buildWhyPrompt(record, history)
-		result, err := client.Chat(whySystemPrompt, prompt)
-		if err != nil {
-			return fmt.Errorf("AI analysis failed: %w", err)
-		}
-
-		fmt.Println(result)
 		return nil
 	},
+}
+
+// whyData is the command-specific payload of a `why` result.
+type whyData struct {
+	RecordID  int64  `json:"record_id"`
+	Model     string `json:"model"`
+	Diagnosis string `json:"diagnosis"`
+}
+
+// diagnoseRecord asks the configured AI model to diagnose a recorded request
+// ("" or "last" for the latest record, otherwise a record ID).
+func diagnoseRecord(ref string) (*output.Result, error) {
+	res := output.NewResult("why")
+
+	conf := loadConfigWarn()
+	if strings.TrimSpace(conf.AIKey) == "" {
+		err := fmt.Errorf("AI is not configured: set an OpenAI-compatible key with 'kest config set ai_key <key>', or inspect the record yourself with 'kest show %s'", showRef(ref))
+		res.SetError(output.ErrorKindAINotConfigured, err.Error())
+		return res, &ExitError{Code: ExitConfigError, Err: err}
+	}
+
+	store, err := storage.NewStore()
+	if err != nil {
+		return res, &ExitError{Code: ExitRuntimeError, Err: err}
+	}
+	defer store.Close()
+
+	var record *storage.Record
+	if ref == "" || ref == "last" {
+		record, err = store.GetLastRecord()
+	} else {
+		var id int64
+		id, err = strconv.ParseInt(ref, 10, 64)
+		if err != nil {
+			return res, &ExitError{Code: ExitConfigError, Err: fmt.Errorf("invalid record ID: %s", ref)}
+		}
+		record, err = store.GetRecord(id)
+	}
+	if err != nil {
+		err = fmt.Errorf("no record found: %w", err)
+		res.SetError(output.ErrorKindNotFound, err.Error())
+		return res, &ExitError{Code: ExitConfigError, Err: err}
+	}
+
+	// Get recent history for context
+	history, _ := store.GetHistory(10, record.Project)
+
+	client := ai.NewClient(conf.AIKey, conf.AIBaseURL, conf.AIModel)
+
+	fmt.Printf("🧠 Analyzing record #%d: %s %s → %s ...\n\n", record.ID, record.Method, record.URL, statusLabel(record.ResponseStatus))
+
+	prompt := buildWhyPrompt(record, history)
+	diagnosis, err := client.Chat(whySystemPrompt, prompt)
+	if err != nil {
+		return res, &ExitError{Code: ExitRuntimeError, Err: fmt.Errorf("AI analysis failed: %w", err)}
+	}
+
+	res.Data = whyData{RecordID: record.ID, Model: client.Model, Diagnosis: diagnosis}
+	return res, nil
 }
 
 func init() {
@@ -87,10 +133,10 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 	prompt := fmt.Sprintf(`## Target Request (Record #%d)
 - Method: %s
 - URL: %s
-- Status: %d
+- Status: %s
 - Duration: %dms
 - Time: %s
-
+%s
 ### Request Headers:
 %s
 
@@ -102,13 +148,14 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 `,
 		record.ID,
 		record.Method,
-		record.URL,
-		record.ResponseStatus,
+		platformsync.SanitizeURL(record.URL),
+		promptStatus(record.ResponseStatus),
 		record.DurationMs,
 		record.CreatedAt.Format("2006-01-02 15:04:05"),
+		failureLine(record.Failure),
 		formatHeadersForPrompt(reqHeaders),
-		truncateForPrompt(record.RequestBody, 2000),
-		truncateForPrompt(record.ResponseBody, 3000),
+		truncateForPrompt(sanitizedBody(record.RequestBody), 2000),
+		truncateForPrompt(sanitizedBody(record.ResponseBody), 3000),
 	)
 
 	if len(history) > 1 {
@@ -117,8 +164,8 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 			if h.ID == record.ID {
 				continue
 			}
-			prompt += fmt.Sprintf("- #%d: %s %s → %d (%dms) at %s\n",
-				h.ID, h.Method, h.URL, h.ResponseStatus, h.DurationMs,
+			prompt += fmt.Sprintf("- #%d: %s %s → %s (%dms) at %s\n",
+				h.ID, h.Method, platformsync.SanitizeURL(h.URL), statusLabel(h.ResponseStatus), h.DurationMs,
 				h.CreatedAt.Format("15:04:05"))
 		}
 	}
@@ -130,20 +177,58 @@ func formatHeadersForPrompt(headers map[string]string) string {
 	if len(headers) == 0 {
 		return "(none)"
 	}
+	// The prompt goes to a third-party AI provider: redact credentials
+	// (Authorization, cookies, API keys) the same way platform sync does.
+	safe := platformsync.SanitizeStringMap(headers)
+	keys := make([]string, 0, len(safe))
+	for k := range safe {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	result := ""
-	for k, v := range headers {
-		// Mask authorization tokens for safety
-		if k == "Authorization" || k == "authorization" {
-			if len(v) > 20 {
-				result += fmt.Sprintf("  %s: %s...%s\n", k, v[:15], v[len(v)-4:])
-			} else {
-				result += fmt.Sprintf("  %s: ***\n", k)
-			}
-		} else {
-			result += fmt.Sprintf("  %s: %s\n", k, v)
-		}
+	for _, k := range keys {
+		result += fmt.Sprintf("  %s: %s\n", k, safe[k])
 	}
 	return result
+}
+
+func showRef(ref string) string {
+	if ref == "" {
+		return "last"
+	}
+	return ref
+}
+
+// statusLabel renders a recorded status; 0 means no HTTP response arrived.
+func statusLabel(status int) string {
+	if status == 0 {
+		return "no response"
+	}
+	return fmt.Sprintf("%d", status)
+}
+
+// promptStatus tells the model explicitly when the request never got an
+// HTTP response, so it diagnoses the transport error instead of a "status 0".
+func promptStatus(status int) string {
+	if status == 0 {
+		return "none (no HTTP response was received; see Kest failure for the network/transport error)"
+	}
+	return fmt.Sprintf("%d", status)
+}
+
+// failureLine reports why Kest marked the request as failed, so the model
+// can explain e.g. a 200 response that broke an assertion.
+func failureLine(failure string) string {
+	if strings.TrimSpace(failure) == "" {
+		return ""
+	}
+	return fmt.Sprintf("- Kest failure: %s\n", platformsync.SanitizeLog(failure))
+}
+
+// sanitizedBody redacts secret fields (passwords, tokens) from a body.
+func sanitizedBody(body string) string {
+	safe, _ := platformsync.SanitizeBody(body)
+	return safe
 }
 
 func truncateForPrompt(s string, maxLen int) string {

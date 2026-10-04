@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,7 +28,10 @@ type Record struct {
 	DurationMs      int64           `json:"duration_ms"`
 	Environment     string          `json:"environment"`
 	Project         string          `json:"project"`
-	CreatedAt       time.Time       `json:"created_at"`
+	// Failure is why Kest treated the request as failed (e.g. the first
+	// failed assertion); empty for passing requests.
+	Failure   string    `json:"failure,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Store struct {
@@ -40,10 +44,13 @@ func NewStore() (*Store, error) {
 		return nil, err
 	}
 	dbPath := filepath.Join(home, ".kest", "records.db")
-	err = os.MkdirAll(filepath.Dir(dbPath), 0755)
+	err = os.MkdirAll(filepath.Dir(dbPath), 0700)
 	if err != nil {
 		return nil, err
 	}
+	// MkdirAll leaves an existing directory untouched; history holds request
+	// headers and bodies, so tighten dirs created by older versions too.
+	_ = os.Chmod(filepath.Dir(dbPath), 0700)
 
 	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&parseTime=true")
 	if err != nil {
@@ -54,8 +61,17 @@ func NewStore() (*Store, error) {
 	if err := s.Init(); err != nil {
 		return nil, err
 	}
+	restrictDBFiles(dbPath)
 
 	return s, nil
+}
+
+// restrictDBFiles limits the SQLite database and its WAL/SHM sidecars to the
+// current user, since they contain request headers (tokens, cookies) and bodies.
+func restrictDBFiles(dbPath string) {
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		_ = os.Chmod(dbPath+suffix, 0600)
+	}
 }
 
 type Variable struct {
@@ -132,7 +148,32 @@ func (s *Store) Init() error {
 	CREATE INDEX IF NOT EXISTS idx_sync_outbox_due
 		ON sync_outbox(sync_kind, project, platform_project_id, next_attempt_at, id);
 	`
-	_, err := s.db.Exec(query)
+	if _, err := s.db.Exec(query); err != nil {
+		return err
+	}
+	return s.ensureColumn("records", "failure", "TEXT NOT NULL DEFAULT ''")
+}
+
+// ensureColumn adds a column to databases created by older versions.
+func (s *Store) ensureColumn(table, column, definition string) error {
+	rows, err := s.db.Query(`SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition))
 	return err
 }
 
@@ -271,12 +312,12 @@ func (s *Store) SaveRecord(r *Record) (int64, error) {
 	query := `
 	INSERT INTO records (
 		method, url, base_url, path, query_params, request_headers, request_body,
-		response_status, response_headers, response_body, duration_ms, environment, project
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		response_status, response_headers, response_body, duration_ms, environment, project, failure
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := s.db.Exec(query,
 		r.Method, r.URL, r.BaseURL, r.Path, r.QueryParams, r.RequestHeaders, r.RequestBody,
-		r.ResponseStatus, r.ResponseHeaders, r.ResponseBody, r.DurationMs, r.Environment, r.Project,
+		r.ResponseStatus, r.ResponseHeaders, r.ResponseBody, r.DurationMs, r.Environment, r.Project, r.Failure,
 	)
 	if err != nil {
 		return 0, err
@@ -312,7 +353,7 @@ func (s *Store) GetHistory(limit int, project string) ([]Record, error) {
 func (s *Store) GetRecord(id int64) (*Record, error) {
 	query := `
 	SELECT id, method, url, base_url, path, query_params, request_headers, request_body,
-	       response_status, response_headers, response_body, duration_ms, environment, project, created_at
+	       response_status, response_headers, response_body, duration_ms, environment, project, failure, created_at
 	FROM records WHERE id = ?
 	`
 	row := s.db.QueryRow(query, id)
@@ -320,7 +361,7 @@ func (s *Store) GetRecord(id int64) (*Record, error) {
 	var queryParams, requestHeaders, responseHeaders []byte
 	err := row.Scan(
 		&r.ID, &r.Method, &r.URL, &r.BaseURL, &r.Path, &queryParams, &requestHeaders, &r.RequestBody,
-		&r.ResponseStatus, &responseHeaders, &r.ResponseBody, &r.DurationMs, &r.Environment, &r.Project, &r.CreatedAt,
+		&r.ResponseStatus, &responseHeaders, &r.ResponseBody, &r.DurationMs, &r.Environment, &r.Project, &r.Failure, &r.CreatedAt,
 	)
 	if err != nil {
 		return nil, err

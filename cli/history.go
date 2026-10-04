@@ -6,6 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kest-labs/kest/cli/internal/config"
+	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +51,18 @@ var historyCmd = &cobra.Command{
 
   # Show history from all projects
   kest history --global`,
+	Annotations: map[string]string{jsonCapableAnnotation: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if output.JSONOutput {
+			res, err := listHistory(historyLimit, globalHistory, historyFilter{
+				Status: historyStatusFilter,
+				Method: historyMethodFilter,
+				URL:    historyURLFilter,
+				Since:  historySince,
+			})
+			return finishJSON("history", res, err)
+		}
+
 		conf := loadConfigWarn()
 
 		store, err := storage.NewStore()
@@ -57,12 +71,7 @@ var historyCmd = &cobra.Command{
 		}
 		defer store.Close()
 
-		projectID := ""
-		if !globalHistory && conf != nil {
-			projectID = conf.ProjectID
-		}
-
-		records, err := store.GetHistory(historyLimit, projectID)
+		records, err := store.GetHistory(historyLimit, historyScope(conf, globalHistory))
 		if err != nil {
 			return err
 		}
@@ -79,7 +88,7 @@ var historyCmd = &cobra.Command{
 				formatTime(r.CreatedAt),
 				r.Method,
 				truncate(r.URL, 40),
-				strconv.Itoa(r.ResponseStatus),
+				historyStatusCell(r.ResponseStatus),
 				fmt.Sprintf("%dms", r.DurationMs),
 			)
 		}
@@ -99,12 +108,96 @@ func init() {
 	rootCmd.AddCommand(historyCmd)
 }
 
+// historyEntry is the redacted, machine-readable form of a history record.
+type historyEntry struct {
+	ID          int64  `json:"id"`
+	Method      string `json:"method"`
+	URL         string `json:"url"`
+	Status      int    `json:"status"`
+	DurationMs  int64  `json:"duration_ms"`
+	Environment string `json:"environment,omitempty"`
+	CreatedAt   string `json:"created_at"`
+	// Failure is why Kest marked the request as failed (assertion,
+	// --max-time, or a network error when Status is 0).
+	Failure string `json:"failure,omitempty"`
+}
+
+// historyScope returns the storage scope for history queries: the current
+// workspace, or "" for every workspace.
+func historyScope(conf *config.Config, global bool) string {
+	if global || conf == nil {
+		return ""
+	}
+	return conf.ProjectID
+}
+
+// listHistory loads recent records for the current workspace (or all
+// workspaces when global is set) and returns them as a redacted result.
+func listHistory(limit int, global bool, f historyFilter) (*output.Result, error) {
+	conf := loadConfigWarn()
+	store, err := storage.NewStore()
+	if err != nil {
+		return nil, &ExitError{Code: ExitRuntimeError, Err: err}
+	}
+	defer store.Close()
+
+	if limit <= 0 {
+		limit = 20
+	}
+	records, err := store.GetHistory(limit, historyScope(conf, global))
+	if err != nil {
+		return nil, &ExitError{Code: ExitRuntimeError, Err: err}
+	}
+	return buildHistoryResult(filterHistoryRecords(records, f)), nil
+}
+
+// buildHistoryResult lists records without headers or bodies; sensitive
+// query parameters in URLs are redacted.
+func buildHistoryResult(records []storage.Record) *output.Result {
+	res := output.NewResult("history")
+	entries := make([]historyEntry, 0, len(records))
+	for _, r := range records {
+		entries = append(entries, historyEntry{
+			ID:          r.ID,
+			Method:      r.Method,
+			URL:         platformsync.SanitizeURL(r.URL),
+			Status:      r.ResponseStatus,
+			DurationMs:  r.DurationMs,
+			Environment: r.Environment,
+			CreatedAt:   r.CreatedAt.UTC().Format(time.RFC3339),
+			Failure:     platformsync.SanitizeLog(r.Failure),
+		})
+	}
+	res.Summary.Total = len(entries)
+	res.Data = map[string]any{"records": entries}
+	return res
+}
+
+// historyFilter holds optional record filters.
+type historyFilter struct {
+	Status string
+	Method string
+	URL    string
+	Since  string
+}
+
 // applyHistoryFilters filters the record slice based on CLI flag values.
 func applyHistoryFilters(records []storage.Record) []storage.Record {
+	return filterHistoryRecords(records, historyFilter{
+		Status: historyStatusFilter,
+		Method: historyMethodFilter,
+		URL:    historyURLFilter,
+		Since:  historySince,
+	})
+}
+
+// filterHistoryRecords filters records in place by method, URL substring,
+// status (exact or class like 4xx) and age.
+func filterHistoryRecords(records []storage.Record, f historyFilter) []storage.Record {
 	// Parse --since duration once
 	var sinceTime time.Time
-	if historySince != "" {
-		if d, err := time.ParseDuration(historySince); err == nil {
+	if f.Since != "" {
+		if d, err := time.ParseDuration(f.Since); err == nil {
 			sinceTime = time.Now().Add(-d)
 		}
 	}
@@ -112,16 +205,16 @@ func applyHistoryFilters(records []storage.Record) []storage.Record {
 	out := records[:0]
 	for _, r := range records {
 		// --method filter
-		if historyMethodFilter != "" && !strings.EqualFold(r.Method, historyMethodFilter) {
+		if f.Method != "" && !strings.EqualFold(r.Method, f.Method) {
 			continue
 		}
 		// --url filter
-		if historyURLFilter != "" && !strings.Contains(r.URL, historyURLFilter) {
+		if f.URL != "" && !strings.Contains(r.URL, f.URL) {
 			continue
 		}
 		// --status filter (exact "200" or class "4xx", "5xx", "2xx")
-		if historyStatusFilter != "" {
-			if !matchStatusFilter(r.ResponseStatus, historyStatusFilter) {
+		if f.Status != "" {
+			if !matchStatusFilter(r.ResponseStatus, f.Status) {
 				continue
 			}
 		}
@@ -148,7 +241,17 @@ func matchStatusFilter(status int, filter string) bool {
 	return status == code
 }
 
+// historyStatusCell shows "ERR" for records that never got an HTTP response.
+func historyStatusCell(status int) string {
+	if status == 0 {
+		return "ERR"
+	}
+	return strconv.Itoa(status)
+}
+
 func formatTime(t time.Time) string {
+	// Records are stored in UTC; show them in the user's local time.
+	t = t.Local()
 	now := time.Now()
 	if t.Year() == now.Year() && t.YearDay() == now.YearDay() {
 		return t.Format("15:04:05") + " today"

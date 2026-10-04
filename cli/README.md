@@ -18,25 +18,43 @@
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (60 seconds)
+
+Kest is the API verification layer for AI coding agents: Claude Code or Cursor
+call Kest, read structured results, and fix the code until the API really works.
 
 ```bash
-curl -fsSL https://kest.dev/install.sh | sh
+# 1. Install
+curl -fsSL https://kest.dev/install.sh | bash
+
+# 2. In your API repo (with your server running)
+kest init --base-url http://localhost:8080   # creates .kest/ and a sample flow
+kest get / -a "status < 500"                 # first request, recorded to history
+kest run .kest/flow/smoke.flow.md            # run the sample flow
+
+# 3. Let your coding agent verify its own changes
+claude mcp add kest -- kest mcp
 ```
 
-For the latest released CLI, use the install script above. If you need the current repo source instead of the latest release:
+Then ask the agent to "verify the API with kest" after a change. It gets the
+`kest_request`, `kest_run_flow`, `kest_replay`, `kest_history` and `kest_why`
+tools ([docs/mcp.md](docs/mcp.md)); scripts and CI can use `--json` instead
+([docs/json-output.md](docs/json-output.md)).
+
+> **Note:** `kest mcp`, `--json` and `kest import` are newer than the latest
+> release (v0.7.7). Until the next release, build from source:
+>
+> ```bash
+> git clone https://github.com/kest-labs/kest.git
+> cd kest/cli && GOWORK=off go build -o ~/.local/bin/kest .
+> ```
+
+Manual use works the same way:
 
 ```bash
-git clone https://github.com/kest-labs/kest.git
-cd kest/cli
-go build -o ~/.local/bin/kest .
-```
-
-```bash
-kest init                                                    # Initialize project
-kest get /api/users -a "status==200"                         # Test an endpoint
 kest post /api/login -d '{"user":"admin"}' -c "token=data.token"  # Capture token
 kest get /api/profile -H "Authorization: Bearer {{token}}"   # Use it instantly
+kest why                                                     # Diagnose the last failure
 ```
 
 > Every request is auto-recorded. Variables chain automatically. No copy-paste.
@@ -47,19 +65,17 @@ kest get /api/profile -H "Authorization: Bearer {{token}}"   # Use it instantly
 
 Kest CLI can upload local API history back to the Kest Web Console. The recommended flow is:
 
-1. Open the project in the Web Console.
-2. Open the project detail page.
-3. In the `CLI Sync` card, click `Generate CLI Token`.
-4. Copy the one-line setup command or run:
+1. Open the workspace in the Web Console.
+2. In the `CLI Sync` card, click `Generate CLI Token`.
+3. Copy the one-line `kest key ...` setup command, or run (the token is prompted for):
 
 ```bash
 kest sync config \
   --platform-url "https://api.kest.dev/v1" \
-  --platform-token "kest_pat_..." \
-  --project-id "12"
+  --workspace-id "12"
 ```
 
-This writes `platform_url`, `platform_token`, and `platform_project_id` into `.kest/config.yaml` when run inside a Kest project.
+This writes `platform_url`, `platform_token`, and `platform_workspace_id` into `.kest/config.yaml` when run inside a Kest workspace.
 
 You can verify the saved config:
 
@@ -79,7 +95,7 @@ Then upload your local history-derived specs:
 kest sync push
 ```
 
-CLI uploads use a project-scoped token, not your OpenAI `sk-...` key.
+CLI uploads use a workspace-scoped token, not your OpenAI `sk-...` key.
 
 What gets uploaded:
 
@@ -203,6 +219,20 @@ $ kest run login.flow.md
 ---
 
 ## 🔥 More Features
+
+### Import — bring your Postman collections, curl commands and OpenAPI specs
+
+```bash
+kest import postman acme.postman_collection.json --env staging.postman_environment.json
+kest import curl "curl -X POST https://api.example.com/users -d '{\"name\":\"kest\"}'"
+kest import openapi openapi.yaml          # one smoke flow per tag
+```
+
+Folders become `.flow.md` files, `{{variables}}` keep working, simple `pm.test`
+status/JSON checks become `[Asserts]`, `pm.environment.set(...)` becomes
+`[Captures]`, and secrets are never copied — they turn into variables you pass
+with `--var`. Anything that cannot be translated safely is kept as a
+"Manual review" note and listed at the end. See [docs/import.md](docs/import.md).
 
 ### Mock Server — zero config, from your history
 
@@ -340,10 +370,23 @@ kest mock --port 8080                   # Mock server from history
 </details>
 
 <details>
+<summary><b>Import</b></summary>
+
+```bash
+kest import postman coll.json --env env.json -o .kest/flow/acme   # Postman v2.0/v2.1
+kest import postman coll.json --env env.json --write-config       # also update .kest/config.yaml
+kest import curl "curl https://api.example.com/health"            # print a step block
+pbpaste | kest import curl -o smoke.flow.md --append              # build a flow from curls
+kest import openapi https://example.com/openapi.json              # smoke flow per tag
+```
+
+</details>
+
+<details>
 <summary><b>Configuration</b></summary>
 
 ```bash
-kest init                   # Initialize project
+kest init --base-url http://localhost:8080   # Initialize workspace
 kest config set ai_key sk-xxx
 kest config set ai_model gpt-4o
 kest env set staging        # Switch environment

@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/kest-labs/kest/cli/internal/output"
 	"github.com/kest-labs/kest/cli/internal/summary"
 )
 
@@ -61,34 +61,6 @@ type flowJSONStepReport struct {
 	DurationMs int64  `json:"duration_ms"`
 	StartedAt  string `json:"started_at,omitempty"`
 	Error      string `json:"error,omitempty"`
-}
-
-type junitTestSuites struct {
-	XMLName  xml.Name         `xml:"testsuites"`
-	Tests    int              `xml:"tests,attr"`
-	Failures int              `xml:"failures,attr"`
-	Time     string           `xml:"time,attr"`
-	Suites   []junitTestSuite `xml:"testsuite"`
-}
-
-type junitTestSuite struct {
-	Name      string          `xml:"name,attr"`
-	Tests     int             `xml:"tests,attr"`
-	Failures  int             `xml:"failures,attr"`
-	Time      string          `xml:"time,attr"`
-	TestCases []junitTestCase `xml:"testcase"`
-}
-
-type junitTestCase struct {
-	ClassName string        `xml:"classname,attr"`
-	Name      string        `xml:"name,attr"`
-	Time      string        `xml:"time,attr"`
-	Failure   *junitFailure `xml:"failure,omitempty"`
-}
-
-type junitFailure struct {
-	Message string `xml:"message,attr"`
-	Text    string `xml:",chardata"`
 }
 
 func writeFlowReports(suite flowSuiteResult, targets flowReportTargets) error {
@@ -190,61 +162,10 @@ func buildFlowJSONStepReport(result summary.TestResult) flowJSONStepReport {
 	return item
 }
 
+// writeFlowJUnitReport renders the suite through the versioned result so
+// --junit / --report-junit and --json always agree.
 func writeFlowJUnitReport(suite flowSuiteResult, path string) error {
-	report := junitTestSuites{}
-	duration := suite.FinishedAt.Sub(suite.StartedAt)
-	if duration < 0 {
-		duration = 0
-	}
-	report.Time = secondsString(duration)
-
-	for _, file := range suite.Files {
-		testSuite := junitTestSuite{
-			Name: filepath.Base(file.SourcePath),
-			Time: secondsString(summaryDuration(file.Summary)),
-		}
-
-		if file.Summary == nil {
-			testSuite.Tests = 1
-			testSuite.Failures = 1
-			testSuite.TestCases = append(testSuite.TestCases, junitTestCase{
-				ClassName: file.SourcePath,
-				Name:      "load",
-				Time:      "0.000",
-				Failure:   &junitFailure{Message: fileErrorString(file), Text: fileErrorString(file)},
-			})
-		} else {
-			for _, result := range file.Summary.Results {
-				tc := junitTestCase{
-					ClassName: file.SourcePath,
-					Name:      result.Name,
-					Time:      secondsString(result.Duration),
-				}
-				if !result.Success {
-					msg := "step failed"
-					if result.Error != nil {
-						msg = result.Error.Error()
-					}
-					tc.Failure = &junitFailure{Message: msg, Text: msg}
-					testSuite.Failures++
-				}
-				testSuite.Tests++
-				testSuite.TestCases = append(testSuite.TestCases, tc)
-			}
-		}
-
-		report.Tests += testSuite.Tests
-		report.Failures += testSuite.Failures
-		report.Suites = append(report.Suites, testSuite)
-	}
-
-	content, err := xml.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return err
-	}
-	content = append([]byte(xml.Header), content...)
-	content = append(content, '\n')
-	return writeReportFile(path, content)
+	return output.WriteJUnitFile(path, buildRunResult(suite.Files, suite.StartedAt, suite.FinishedAt))
 }
 
 func writeReportFile(path string, content []byte) error {
@@ -259,18 +180,4 @@ func summaryDuration(summ *summary.Summary) time.Duration {
 		return 0
 	}
 	return summ.TotalTime
-}
-
-func secondsString(duration time.Duration) string {
-	if duration < 0 {
-		duration = 0
-	}
-	return fmt.Sprintf("%.3f", duration.Seconds())
-}
-
-func fileErrorString(file runExecutionResult) string {
-	if file.Err != nil {
-		return file.Err.Error()
-	}
-	return "flow failed"
 }

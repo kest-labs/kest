@@ -7,7 +7,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/kest-labs/kest/api/internal/bootstrap"
@@ -66,15 +65,8 @@ func (c *ServeCommand) Run(args []string) error {
 	// Create router
 	r := gin.Default()
 
-	// CORS
-	corsConfig := cors.Config{
-		AllowOrigins:     cfg.CORS.AllowOrigins,
-		AllowMethods:     cfg.CORS.AllowMethods,
-		AllowHeaders:     cfg.CORS.AllowHeaders,
-		ExposeHeaders:    cfg.CORS.ExposeHeaders,
-		AllowCredentials: cfg.CORS.AllowCredentials,
-	}
-	r.Use(cors.New(corsConfig))
+	// CORS, trusted proxies and rate limiting
+	bootstrap.ApplyGlobalMiddleware(r, cfg)
 
 	// Register routes
 	routes.Setup(r, application.Handlers)

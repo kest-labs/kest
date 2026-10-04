@@ -107,23 +107,23 @@ class HttpClient {
 
   // Pure promise-based methods
   public get<T = unknown>(url: string, config?: RequestConfig): Promise<T> {
-    return this.instance.get(url, config);
+    return this.instance.get(url, config) as Promise<T>;
   }
 
   public post<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
-    return this.instance.post(url, data, config);
+    return this.instance.post(url, data, config) as Promise<T>;
   }
 
   public put<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
-    return this.instance.put(url, data, config);
+    return this.instance.put(url, data, config) as Promise<T>;
   }
 
   public patch<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T> {
-    return this.instance.patch(url, data, config);
+    return this.instance.patch(url, data, config) as Promise<T>;
   }
 
   public delete<T = unknown>(url: string, config?: RequestConfig): Promise<T> {
-    return this.instance.delete(url, config);
+    return this.instance.delete(url, config) as Promise<T>;
   }
 }
 

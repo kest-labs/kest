@@ -12,7 +12,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/kest-labs/kest/api/internal/app"
 	"github.com/kest-labs/kest/api/internal/bootstrap"
+	"github.com/kest-labs/kest/api/internal/infra/config"
 	"github.com/kest-labs/kest/api/internal/infra/middleware"
 	"github.com/kest-labs/kest/api/internal/wiring"
 	"github.com/kest-labs/kest/api/routes"
@@ -37,6 +39,16 @@ import (
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
+
+// newRouter builds the HTTP engine. Global middleware (CORS, trusted proxies,
+// rate limiting) must be registered before the routes, otherwise gin does not
+// apply it to them.
+func newRouter(cfg *config.Config, handlers *app.Handlers) *gin.Engine {
+	r := gin.Default()
+	bootstrap.ApplyGlobalMiddleware(r, cfg)
+	routes.Setup(r, handlers)
+	return r
+}
 
 func main() {
 	// Initialize logger
@@ -68,11 +80,8 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Create router
-	r := gin.Default()
-
-	// Setup API routes (no static files)
-	routes.Setup(r, application.Handlers)
+	// Create router with CORS and rate limiting applied before any route
+	r := newRouter(cfg, application.Handlers)
 
 	// Start server
 	serverAddr := fmt.Sprintf(":%d", cfg.Server.Port)

@@ -26,7 +26,7 @@ var keyCmd = &cobra.Command{
 	Use:   "key [connection-key]",
 	Short: "Connect this project to Kest Web with a one-line key",
 	Long: `Connect the current Kest project to Kest Web using the connection key copied
-from the Web Console. The key contains the platform URL, project ID, and project-scoped
+from the Web Console. The key contains the platform URL, workspace ID, and workspace-scoped
 CLI token, so you do not need to edit .kest/config.yaml by hand.`,
 	Example: `  # Paste the command copied from Kest Web
   kest key kest_key_eyJ2ZXJzaW9uIjoxLCJwbGF0Zm9ybV91cmwiOiJodHRwczovL2FwaS5rZXN0LmRldi92MSJ9`,
@@ -62,7 +62,7 @@ func runKeyConnect(rawKey string) error {
 
 	conf.PlatformURL = payload.PlatformURL
 	conf.PlatformToken = payload.PlatformToken
-	conf.PlatformWorkspaceID = payload.PlatformProjectID
+	conf.PlatformWorkspaceID = payload.PlatformWorkspaceID
 	if payload.PlatformAutoSyncHistory == nil {
 		conf.PlatformAutoSyncHistory = true
 	} else {
@@ -90,7 +90,7 @@ func parseConnectionKey(rawKey string) (*connectionKeyPayload, error) {
 	}
 
 	if strings.HasPrefix(key, "kest_pat_") {
-		return nil, fmt.Errorf("this is a raw CLI token, not a connection key. Copy the full `kest key ...` command from the Web project's CLI Sync card")
+		return nil, fmt.Errorf("this is a raw CLI token, not a connection key. Copy the full `kest key ...` command from the Web workspace's CLI Sync card")
 	}
 
 	if !strings.HasPrefix(key, connectionKeyPrefix) {
@@ -112,8 +112,8 @@ func parseConnectionKey(rawKey string) (*connectionKeyPayload, error) {
 	payload.PlatformToken = strings.TrimSpace(payload.PlatformToken)
 	payload.PlatformProjectID = strings.TrimSpace(payload.PlatformProjectID)
 	payload.PlatformWorkspaceID = strings.TrimSpace(payload.PlatformWorkspaceID)
-	if payload.PlatformProjectID == "" {
-		payload.PlatformProjectID = payload.PlatformWorkspaceID
+	if payload.PlatformWorkspaceID == "" {
+		payload.PlatformWorkspaceID = payload.PlatformProjectID
 	}
 
 	switch {
@@ -121,7 +121,7 @@ func parseConnectionKey(rawKey string) (*connectionKeyPayload, error) {
 		return nil, fmt.Errorf("connection key is missing platform_url")
 	case payload.PlatformToken == "":
 		return nil, fmt.Errorf("connection key is missing platform_token")
-	case payload.PlatformProjectID == "":
+	case payload.PlatformWorkspaceID == "":
 		return nil, fmt.Errorf("connection key is missing platform_workspace_id")
 	}
 

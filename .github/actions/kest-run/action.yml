@@ -1,0 +1,187 @@
+name: Kest Run
+description: Run Kest API flows, publish a JUnit report and a Markdown job summary.
+author: kest-labs
+
+inputs:
+  flows:
+    description: Flow files, directories or globs (whitespace or newline separated). Empty runs the profile include patterns (all *.flow.md).
+    required: false
+    default: ""
+  env:
+    description: Kest environment name passed as --env (e.g. staging).
+    required: false
+    default: ""
+  base-url:
+    description: Base URL override passed as --base-url (e.g. http://127.0.0.1:8080).
+    required: false
+    default: ""
+  vars:
+    description: Newline separated key=value pairs passed as --var.
+    required: false
+    default: ""
+  args:
+    description: Extra arguments appended to `kest run` (e.g. --fail-fast --profile ci).
+    required: false
+    default: ""
+  kest-version:
+    description: >-
+      Kest version to install: "latest" (newest GitHub release via install.sh),
+      a release tag such as "v1.4.0", or "source" to build the CLI from the
+      checkout of this action (requires Go).
+    required: false
+    default: latest
+  working-directory:
+    description: Directory to run Kest in (the Kest workspace root).
+    required: false
+    default: "."
+  json-path:
+    description: Where to write the JSON result (relative to working-directory).
+    required: false
+    default: kest-results/result.json
+  junit-path:
+    description: Where to write the JUnit XML report (relative to working-directory).
+    required: false
+    default: kest-results/junit.xml
+  fail-on-error:
+    description: Fail the step when Kest exits non-zero.
+    required: false
+    default: "true"
+
+outputs:
+  exit-code:
+    description: Kest exit code (0 pass, 1 assertion failure, 2 runtime error, 3 config error).
+    value: ${{ steps.run.outputs.exit-code }}
+  passed:
+    description: Number of passed steps.
+    value: ${{ steps.summary.outputs.passed }}
+  failed:
+    description: Number of failed steps.
+    value: ${{ steps.summary.outputs.failed }}
+  json-path:
+    description: Absolute path of the JSON result.
+    value: ${{ steps.run.outputs.json-path }}
+  junit-path:
+    description: Absolute path of the JUnit XML report.
+    value: ${{ steps.run.outputs.junit-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Kest
+      shell: bash
+      env:
+        KEST_VERSION: ${{ inputs.kest-version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        bin_dir="${RUNNER_TEMP}/kest-bin"
+        mkdir -p "$bin_dir"
+        repo_root="$(cd "$ACTION_PATH/../../.." && pwd)"
+
+        case "$KEST_VERSION" in
+          source)
+            if ! command -v go >/dev/null 2>&1; then
+              echo "::error::kest-version=source requires Go (add actions/setup-go before this action)"
+              exit 1
+            fi
+            (cd "$repo_root/cli" && go build -o "$bin_dir/kest" .)
+            ;;
+          latest|"")
+            # install.sh installs the newest release into /usr/local/bin when
+            # writable, otherwise ~/.local/bin; copy it next to the others.
+            bash "$repo_root/install.sh"
+            for candidate in /usr/local/bin/kest "$HOME/.local/bin/kest"; do
+              if [ -x "$candidate" ]; then
+                cp "$candidate" "$bin_dir/kest"
+                break
+              fi
+            done
+            ;;
+          *)
+            os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+            arch="$(uname -m)"
+            case "$arch" in
+              x86_64) arch=amd64 ;;
+              aarch64|arm64) arch=arm64 ;;
+            esac
+            url="https://github.com/kest-labs/kest/releases/download/${KEST_VERSION}/kest_${os}_${arch}.tar.gz"
+            if curl -fsSL "$url" -o "$RUNNER_TEMP/kest.tar.gz"; then
+              tar -xzf "$RUNNER_TEMP/kest.tar.gz" -C "$bin_dir" kest
+            elif command -v go >/dev/null 2>&1; then
+              echo "Release asset not found, building ${KEST_VERSION} with go install"
+              GOBIN="$bin_dir" go install "github.com/kest-labs/kest/cli@${KEST_VERSION}"
+              mv "$bin_dir/cli" "$bin_dir/kest"
+            else
+              echo "::error::Could not download Kest ${KEST_VERSION} from ${url} and Go is not available"
+              exit 1
+            fi
+            ;;
+        esac
+
+        if [ ! -x "$bin_dir/kest" ]; then
+          echo "::error::Kest installation failed"
+          exit 1
+        fi
+        echo "$bin_dir" >> "$GITHUB_PATH"
+        "$bin_dir/kest" --version
+
+    - name: Run Kest
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        KEST_FLOWS: ${{ inputs.flows }}
+        KEST_RUN_ENV: ${{ inputs.env }}
+        KEST_RUN_BASE_URL: ${{ inputs.base-url }}
+        KEST_RUN_VARS: ${{ inputs.vars }}
+        KEST_RUN_ARGS: ${{ inputs.args }}
+        KEST_JSON_PATH: ${{ inputs.json-path }}
+        KEST_JUNIT_PATH: ${{ inputs.junit-path }}
+        KEST_DISABLE_AUTO_BRIDGE: "1"
+      run: |
+        set -uo pipefail
+        args=(run)
+        if [ -n "$KEST_FLOWS" ]; then
+          read -r -d '' -a flows <<< "$KEST_FLOWS" || true
+          args+=("${flows[@]}")
+        fi
+        [ -n "$KEST_RUN_ENV" ] && args+=(--env "$KEST_RUN_ENV")
+        [ -n "$KEST_RUN_BASE_URL" ] && args+=(--base-url "$KEST_RUN_BASE_URL")
+        while IFS= read -r pair; do
+          pair="$(echo "$pair" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          [ -n "$pair" ] && args+=(--var "$pair")
+        done <<< "$KEST_RUN_VARS"
+        if [ -n "$KEST_RUN_ARGS" ]; then
+          read -r -d '' -a extra <<< "$KEST_RUN_ARGS" || true
+          args+=("${extra[@]}")
+        fi
+
+        mkdir -p "$(dirname "$KEST_JSON_PATH")" "$(dirname "$KEST_JUNIT_PATH")"
+        args+=(--json --junit "$KEST_JUNIT_PATH")
+
+        echo "kest ${args[*]}"
+        kest "${args[@]}" > "$KEST_JSON_PATH"
+        code=$?
+
+        abs() { case "$1" in /*) echo "$1" ;; *) echo "$(pwd)/$1" ;; esac; }
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "json-path=$(abs "$KEST_JSON_PATH")" >> "$GITHUB_OUTPUT"
+        echo "junit-path=$(abs "$KEST_JUNIT_PATH")" >> "$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Write job summary
+      id: summary
+      shell: bash
+      env:
+        KEST_JSON_FILE: ${{ steps.run.outputs.json-path }}
+        KEST_EXIT_CODE: ${{ steps.run.outputs.exit-code }}
+      run: python3 "${{ github.action_path }}/summary.py"
+
+    - name: Check result
+      if: inputs.fail-on-error == 'true' && steps.run.outputs.exit-code != '0'
+      shell: bash
+      env:
+        KEST_EXIT_CODE: ${{ steps.run.outputs.exit-code }}
+      run: |
+        echo "::error::Kest failed with exit code ${KEST_EXIT_CODE} (1 assertion failure, 2 runtime error, 3 config error)"
+        exit "$KEST_EXIT_CODE"

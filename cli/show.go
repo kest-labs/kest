@@ -86,7 +86,7 @@ func printRecord(r *storage.Record) {
 	sectionStyle := lipgloss.NewStyle().Bold(true).Underline(true).MarginTop(1)
 
 	fmt.Printf("\n%s\n", titleStyle.Render(fmt.Sprintf("════ Record #%d ════", r.ID)))
-	fmt.Printf("Time: %s\n", r.CreatedAt.Format("2006-01-02 15:04:05"))
+	fmt.Printf("Time: %s\n", r.CreatedAt.Local().Format("2006-01-02 15:04:05"))
 
 	fmt.Println(sectionStyle.Render("─── Request ───"))
 	fmt.Printf("%s %s\n", r.Method, r.URL)
@@ -104,7 +104,10 @@ func printRecord(r *storage.Record) {
 	}
 
 	fmt.Println(sectionStyle.Render("─── Response ───"))
-	fmt.Printf("Status: %d    Duration: %dms\n", r.ResponseStatus, r.DurationMs)
+	fmt.Printf("Status: %s    Duration: %dms\n", statusLabel(r.ResponseStatus), r.DurationMs)
+	if r.Failure != "" {
+		fmt.Printf("Failure: %s\n", r.Failure)
+	}
 
 	fmt.Println("\nHeaders:")
 	var respHeaders map[string][]string

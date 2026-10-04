@@ -14,28 +14,29 @@ This page focuses on local CLI usage. For workspace sync, use the [Kest Cloud Sy
 Install the CLI with the installer:
 
 ```bash
-curl -fsSL https://kest.dev/install.sh | sh
+curl -fsSL https://kest.dev/install.sh | bash
 ```
 
-Create the local Kest workspace files:
+Create the local Kest workspace files, pointing `base_url` at your API:
 
 ```bash
-kest init
+kest init --base-url http://localhost:8080
 ```
 
-`kest init` creates the local `.kest` directory structure:
+`kest init` creates the local `.kest` directory structure and prints the next commands to run:
 
 ```text
 .kest/
   config.yaml
   flow.config.yaml
   flow/
+    smoke.flow.md
   logs/
 ```
 
 - `.kest/config.yaml` stores local CLI settings, environments, AI configuration, and optional platform connection settings.
 - `.kest/flow.config.yaml` defines flow run profiles such as `local` and `ci`.
-- `.kest/flow/` is the default place for `.flow.md` files.
+- `.kest/flow/` is the default place for `.flow.md` files; `smoke.flow.md` is a runnable sample (`kest run .kest/flow/smoke.flow.md`).
 - `.kest/logs/` stores local session logs.
 
 ## Send one-off API requests

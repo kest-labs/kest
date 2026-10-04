@@ -22,6 +22,12 @@ type Limiter interface {
 	Reset(ctx context.Context, key string) error
 }
 
+// Taker is implemented by stores that can check and record a hit
+// atomically. Middleware prefers it over the racy Allow+Hit sequence.
+type Taker interface {
+	Take(ctx context.Context, key string) (allowed bool, remaining int, resetAt time.Time)
+}
+
 // Config holds rate limiter configuration
 type Config struct {
 	// Max number of requests allowed
@@ -168,6 +174,24 @@ func (s *MemoryStore) Hit(ctx context.Context, key string) (int, time.Time) {
 	return remaining, e.resetAt
 }
 
+// Take atomically checks and records a hit for key. It implements Taker.
+func (s *MemoryStore) Take(ctx context.Context, key string) (bool, int, time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	e, exists := s.entries[key]
+	if !exists || now.After(e.resetAt) {
+		e = &entry{resetAt: now.Add(s.window)}
+		s.entries[key] = e
+	}
+	if e.hits >= s.max {
+		return false, 0, e.resetAt
+	}
+	e.hits++
+	return true, s.max - e.hits, e.resetAt
+}
+
 // Reset resets the limiter for a key
 func (s *MemoryStore) Reset(ctx context.Context, key string) error {
 	s.mu.Lock()
@@ -201,16 +225,24 @@ func Middleware(cfg Config) gin.HandlerFunc {
 
 		key := cfg.KeyFunc(c)
 
-		// Check if allowed
-		allowed, _, resetAt := cfg.Store.Allow(c.Request.Context(), key)
+		var (
+			allowed   bool
+			remaining int
+			resetAt   time.Time
+		)
+		if taker, ok := cfg.Store.(Taker); ok {
+			allowed, remaining, resetAt = taker.Take(c.Request.Context(), key)
+		} else {
+			allowed, _, resetAt = cfg.Store.Allow(c.Request.Context(), key)
+			if allowed {
+				remaining, resetAt = cfg.Store.Hit(c.Request.Context(), key)
+			}
+		}
 		if !allowed {
 			cfg.ErrorHandler(c, resetAt)
 			c.Abort()
 			return
 		}
-
-		// Record the hit
-		remaining, resetAt := cfg.Store.Hit(c.Request.Context(), key)
 
 		// Set rate limit headers
 		c.Header("X-RateLimit-Limit", strconv.Itoa(cfg.Max))

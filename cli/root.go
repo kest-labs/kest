@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
@@ -67,12 +68,20 @@ func Execute() {
 	}
 }
 
+// configWarnOnce limits the "failed to load config" warning to one per
+// process; commands call loadConfigWarn several times per request.
+var configWarnOnce sync.Once
+
 // loadConfigWarn loads config and prints a warning to stderr if it fails.
-// Returns a non-nil Config in all cases (empty fallback on error).
+// A missing config file is not an error (defaults apply); only unreadable or
+// invalid files warn, once per process. Returns a non-nil Config in all
+// cases (empty fallback on error).
 func loadConfigWarn() *config.Config {
 	conf, err := config.LoadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to load config: %v\n", err)
+		configWarnOnce.Do(func() {
+			fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to load config: %v\n", err)
+		})
 		conf = &config.Config{}
 	}
 	if env := strings.TrimSpace(os.Getenv("KEST_PLATFORM_URL")); env != "" {
@@ -112,10 +121,16 @@ func loadConfigWarn() *config.Config {
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&QuietMode, "quiet", false, "Suppress decorative output (for CI/CD pipelines)")
 	rootCmd.PersistentFlags().StringVar(&OutputFormat, "output", "", "Output format: json for machine-readable output")
+	rootCmd.PersistentFlags().BoolVar(&JSONFlag, "json", false, "Print exactly one machine-readable JSON result to stdout (same as --output json)")
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		output.Quiet = QuietMode
-		output.JSONOutput = OutputFormat == "json"
+		output.JSONOutput = jsonModeRequested() && isJSONCapable(cmd)
+		if output.JSONOutput {
+			// Keep stdout reserved for the single JSON document. The process
+			// exits after the command, so the redirect is never restored.
+			output.RedirectHumanOutput()
+		}
 
 		if shouldAutoStartBridge(cmd, os.Args[1:]) {
 			if err := ensureBridgeRunning(); err != nil {

@@ -184,6 +184,7 @@ func executeTwoStepFlow(t *testing.T, variableMapping string, downstreamHeaders 
 
 	repo := newRunnerRepoStub("1", "101", "202")
 	runner := NewRunner(repo, "mock://flow")
+	runner.client = &http.Client{} // uses the stubbed http.DefaultTransport
 	run := &FlowRunPO{
 		ID:     "1",
 		FlowID: "99",
