@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/kest-labs/kest/cli/internal/ai"
+	"github.com/kest-labs/kest/cli/internal/output"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -21,42 +24,83 @@ explain root causes, and suggest fixes. Requires ai_key to be configured.`,
   kest why 42`,
 	Args:         cobra.MaximumNArgs(1),
 	SilenceUsage: true,
+	Annotations:  map[string]string{jsonCapableAnnotation: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		store, err := storage.NewStore()
+		ref := ""
+		if len(args) > 0 {
+			ref = args[0]
+		}
+		res, err := diagnoseRecord(ref)
+		if output.JSONOutput {
+			return finishJSON("why", res, err)
+		}
 		if err != nil {
 			return err
 		}
-		defer store.Close()
-
-		var record *storage.Record
-		if len(args) == 0 {
-			record, err = store.GetLastRecord()
-		} else {
-			var id int64
-			fmt.Sscanf(args[0], "%d", &id)
-			record, err = store.GetRecord(id)
+		if data, ok := res.Data.(whyData); ok {
+			fmt.Println(data.Diagnosis)
 		}
-		if err != nil {
-			return fmt.Errorf("no record found: %w", err)
-		}
-
-		// Get recent history for context
-		history, _ := store.GetHistory(10, record.Project)
-
-		conf := loadConfigWarn()
-		client := ai.NewClient(conf.AIKey, conf.AIBaseURL, conf.AIModel)
-
-		fmt.Printf("🧠 Analyzing record #%d: %s %s → %d ...\n\n", record.ID, record.Method, record.URL, record.ResponseStatus)
-
-		prompt := buildWhyPrompt(record, history)
-		result, err := client.Chat(whySystemPrompt, prompt)
-		if err != nil {
-			return fmt.Errorf("AI analysis failed: %w", err)
-		}
-
-		fmt.Println(result)
 		return nil
 	},
+}
+
+// whyData is the command-specific payload of a `why` result.
+type whyData struct {
+	RecordID  int64  `json:"record_id"`
+	Model     string `json:"model"`
+	Diagnosis string `json:"diagnosis"`
+}
+
+// diagnoseRecord asks the configured AI model to diagnose a recorded request
+// ("" or "last" for the latest record, otherwise a record ID).
+func diagnoseRecord(ref string) (*output.Result, error) {
+	res := output.NewResult("why")
+
+	conf := loadConfigWarn()
+	if strings.TrimSpace(conf.AIKey) == "" {
+		err := fmt.Errorf("AI is not configured: set an API key with 'kest config set ai_key <key>'")
+		res.SetError(output.ErrorKindAINotConfigured, err.Error())
+		return res, &ExitError{Code: ExitConfigError, Err: err}
+	}
+
+	store, err := storage.NewStore()
+	if err != nil {
+		return res, &ExitError{Code: ExitRuntimeError, Err: err}
+	}
+	defer store.Close()
+
+	var record *storage.Record
+	if ref == "" || ref == "last" {
+		record, err = store.GetLastRecord()
+	} else {
+		var id int64
+		id, err = strconv.ParseInt(ref, 10, 64)
+		if err != nil {
+			return res, &ExitError{Code: ExitConfigError, Err: fmt.Errorf("invalid record ID: %s", ref)}
+		}
+		record, err = store.GetRecord(id)
+	}
+	if err != nil {
+		err = fmt.Errorf("no record found: %w", err)
+		res.SetError(output.ErrorKindNotFound, err.Error())
+		return res, &ExitError{Code: ExitConfigError, Err: err}
+	}
+
+	// Get recent history for context
+	history, _ := store.GetHistory(10, record.Project)
+
+	client := ai.NewClient(conf.AIKey, conf.AIBaseURL, conf.AIModel)
+
+	fmt.Printf("🧠 Analyzing record #%d: %s %s → %d ...\n\n", record.ID, record.Method, record.URL, record.ResponseStatus)
+
+	prompt := buildWhyPrompt(record, history)
+	diagnosis, err := client.Chat(whySystemPrompt, prompt)
+	if err != nil {
+		return res, &ExitError{Code: ExitRuntimeError, Err: fmt.Errorf("AI analysis failed: %w", err)}
+	}
+
+	res.Data = whyData{RecordID: record.ID, Model: client.Model, Diagnosis: diagnosis}
+	return res, nil
 }
 
 func init() {

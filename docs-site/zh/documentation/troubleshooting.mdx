@@ -1,0 +1,134 @@
+---
+title: 故障排查
+description: 排查常见 Kest CLI、Cloud Sync、flow、CI、bridge 和 docs 部署问题。
+---
+
+# 故障排查
+
+当 Kest 命令、同步流程、CI run、本地 bridge 或 docs 部署不符合预期时，可以从这里开始排查。
+
+## CLI 安装
+
+检查版本：
+
+```bash
+kest --version
+```
+
+如果命令不存在，重新安装：
+
+```bash
+curl -fsSL https://kest.dev/install.sh | sh
+```
+
+如果 binary 已安装但 shell 找不到，检查 `PATH`。
+
+## Cloud Sync 配置
+
+查看当前 Cloud 配置：
+
+```bash
+kest config list
+```
+
+使用 Web connection key 重新连接：
+
+```bash
+kest key kest_key_...
+```
+
+或手动配置：
+
+```bash
+kest sync config \
+  --platform-url https://api.kest.dev/v1 \
+  --platform-token kest_pat_... \
+  --workspace-id <workspace-id> \
+  --auto-sync-history
+```
+
+## Token Scope 不足
+
+如果 sync 返回 scope 错误，在 workspace Keys 页面生成包含所需 scope 的新 key：
+
+- `collection:read`：API spec sync。
+- `collection:run`：request history sync。
+- `flow:run`：runnable flows 和 run result sync。
+- `flow:write`：flow definition sync。
+
+然后重新连接：
+
+```bash
+kest key kest_key_...
+```
+
+## Flow Variables
+
+用 strict mode 捕获缺失变量：
+
+```bash
+kest run auth.flow.md --strict
+```
+
+查看变量解析：
+
+```bash
+kest run auth.flow.md --debug-vars
+```
+
+单次运行传入值：
+
+```bash
+kest run auth.flow.md --var email=demo@example.com
+```
+
+## CI 结果没有显示在 Cloud
+
+确认 CI 命令包含 sync 和 CI runner 类型：
+
+```bash
+kest run --profile ci --sync --runner-type server_ci
+```
+
+确认 CI 环境有：
+
+- 有效的 Cloud token。
+- 目标 workspace ID。
+- 到 `https://api.kest.dev/v1` 的网络访问。
+- 可访问的 `KEST_BASE_URL`。
+
+## Bridge 找不到
+
+启动 bridge：
+
+```bash
+kest bridge
+```
+
+检查健康状态：
+
+```bash
+curl http://127.0.0.1:8788/health
+```
+
+如果 Web 仍然无法使用，检查 browser origin 设置和本地防火墙规则。
+
+## Docs 没更新
+
+`docs.kest.dev` 由 Mintlify 从 `docs-site/` 发布。只 merge 到 `main` 不一定会发布，Mintlify 配置也必须正确。
+
+检查：
+
+- Mintlify 项目 repository 是 `kest-labs/kest`。
+- 部署分支是 `main`。
+- Root directory 是 `docs-site`。
+- 如果使用 deploy workflow，需要 GitHub secrets `MINTLIFY_API_KEY` 和 `MINTLIFY_PROJECT_ID`。
+
+本地验证：
+
+```bash
+cd docs-site
+mint validate
+```
+
+如果线上仍然是旧内容，在 Mintlify dashboard 手动触发部署。

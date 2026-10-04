@@ -22,7 +22,8 @@ func getTerminalWidth() int {
 // Quiet suppresses decorative output (emoji, boxes). Set by --quiet/-q.
 var Quiet bool
 
-// JSONOutput enables structured JSON output. Set by --output json.
+// JSONOutput enables structured JSON output. Set by --json / --output json
+// for commands that support it.
 var JSONOutput bool
 
 var (
@@ -50,9 +51,8 @@ var (
 )
 
 func PrintResponse(method, url string, status int, duration string, body []byte, recordID int64, startTime time.Time) {
-	// JSON output mode: structured, machine-readable
+	// JSON output mode: the command emits a single output.Result instead.
 	if JSONOutput {
-		printResponseJSON(method, url, status, duration, body, recordID, startTime)
 		return
 	}
 
@@ -126,37 +126,4 @@ func PrintResponse(method, url string, status int, duration string, body []byte,
 	}
 
 	fmt.Println(doc.String())
-}
-
-type jsonResponse struct {
-	Method    string      `json:"method"`
-	URL       string      `json:"url"`
-	Status    int         `json:"status"`
-	Duration  string      `json:"duration"`
-	Body      interface{} `json:"body"`
-	RecordID  int64       `json:"record_id,omitempty"`
-	Timestamp string      `json:"timestamp,omitempty"`
-}
-
-func printResponseJSON(method, url string, status int, duration string, body []byte, recordID int64, startTime time.Time) {
-	resp := jsonResponse{
-		Method:   method,
-		URL:      url,
-		Status:   status,
-		Duration: duration,
-		RecordID: recordID,
-	}
-	if !startTime.IsZero() {
-		resp.Timestamp = startTime.Format(time.RFC3339)
-	}
-
-	var parsed interface{}
-	if err := json.Unmarshal(body, &parsed); err == nil {
-		resp.Body = parsed
-	} else {
-		resp.Body = string(body)
-	}
-
-	out, _ := json.MarshalIndent(resp, "", "  ")
-	fmt.Println(string(out))
 }

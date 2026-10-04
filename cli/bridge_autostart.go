@@ -46,7 +46,7 @@ func shouldAutoStartBridge(cmd *cobra.Command, argv []string) bool {
 	}
 
 	switch cmd.Name() {
-	case "bridge", "help", "completion":
+	case "bridge", "help", "completion", "mcp":
 		return false
 	}
 

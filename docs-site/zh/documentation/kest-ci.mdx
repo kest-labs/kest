@@ -1,0 +1,139 @@
+---
+title: Kest CI
+description: 在 CI 中运行 Kest flows，输出 JSON/JUnit 报告，并把 flow run 结果同步回 Kest Cloud。
+---
+
+# Kest CI
+
+Kest CI 使用开发者本地同一套 `.flow.md` 文件。在 CI 中，Kest 可以输出机器可读报告，并把运行结果同步回 Cloud workspace。
+
+## 推荐命令
+
+使用 `ci` profile 并同步结果：
+
+```bash
+kest run --profile ci --sync --quiet --output json
+```
+
+输出 JSON 和 JUnit 报告：
+
+```bash
+kest run --profile ci \
+  --sync \
+  --runner-type server_ci \
+  --report-json .kest/reports/flow-results.json \
+  --report-junit .kest/reports/flow-results.xml
+```
+
+需要在 Kest Web 中显示为 CI runner 时使用 `server_ci`。本地测试机器可以使用 `test_machine`。
+
+## Flow Profile
+
+`kest init` 会创建 `.kest/flow.config.yaml`。典型 CI profile：
+
+```yaml
+profiles:
+  ci:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: staging
+    strict: true
+    fail_fast: false
+    sync: true
+    reports:
+      json: ".kest/reports/flow-results.json"
+      junit: ".kest/reports/flow-results.xml"
+```
+
+用 flag 选择：
+
+```bash
+kest run --profile ci
+```
+
+或使用环境变量：
+
+```bash
+KEST_PROFILE=ci kest run
+```
+
+## GitHub Actions 示例
+
+```yaml
+name: Kest Flow CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  kest-flow:
+    runs-on: ubuntu-latest
+    env:
+      KEST_BASE_URL: https://staging.example.com
+      KEST_PROFILE: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Kest
+        run: curl -fsSL https://kest.dev/install.sh | sh
+
+      - name: Configure Cloud sync
+        run: |
+          kest sync config \
+            --platform-url https://api.kest.dev/v1 \
+            --platform-token "$KEST_CLOUD_TOKEN" \
+            --workspace-id "$KEST_WORKSPACE_ID" \
+            --auto-sync-history
+        env:
+          KEST_CLOUD_TOKEN: ${{ secrets.KEST_CLOUD_TOKEN }}
+          KEST_WORKSPACE_ID: ${{ secrets.KEST_WORKSPACE_ID }}
+
+      - name: Run flows
+        run: |
+          mkdir -p .kest/reports
+          kest run --profile ci \
+            --sync \
+            --runner-type server_ci \
+            --report-json .kest/reports/flow-results.json \
+            --report-junit .kest/reports/flow-results.xml
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kest-flow-reports
+          path: .kest/reports
+```
+
+## 报告
+
+Kest 可以输出：
+
+- JSON：用于自动化、dashboard 和自定义通知。
+- JUnit XML：用于 CI 测试结果视图。
+- HTML：用于本地查看，使用 `--html` 或 `--open`。
+
+## Cloud 可见性
+
+使用 `--sync` 时，Kest 会把 flow 定义和运行结果同步到 Cloud：
+
+```text
+POST /workspaces/{workspaceId}/cli/flows/sync
+POST /workspaces/{workspaceId}/cli/flow-runs/sync
+```
+
+Web 控制台会展示运行状态、step 结果、runner 类型、耗时、日志和失败上下文。
+
+## 失败行为
+
+Kest 退出码：
+
+- `0`：所有断言通过。
+- `1`：断言失败。
+- `2`：运行时错误。
+- `3`：用法或配置错误。
+
+如果希望第一个失败就停止，使用 `--fail-fast`。如果希望得到完整失败报告，使用默认聚合模式。

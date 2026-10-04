@@ -1,0 +1,27 @@
+---
+title: Workspace Collaboration
+description: Roles, membership, and workspace boundaries in Kest.
+---
+
+# Workspace collaboration
+
+Workspace is the collaboration boundary in Kest. API specs, collections, environments, test cases, flows, history, keys, and members belong to a workspace.
+
+## Roles
+
+Workspace roles:
+
+- `owner`: owns the workspace and can administer all workspace settings.
+- `admin`: manages members, invitations, CLI keys, and most workspace settings.
+- `write`: creates and edits API specs, requests, examples, environments, test cases, and flows.
+- `read`: views workspace content and run history.
+
+## Invitations
+
+Admins can invite teammates from the Members area. Invitations can be direct or link-based, and can include expiration and max-use limits.
+
+## CLI and CI access
+
+Machine access is handled with workspace-scoped CLI tokens from the Keys page. Use these tokens for Kest Cloud Sync and CI automation instead of browser JWTs.
+
+Legacy project routes may exist for backward compatibility, but new product documentation and workflows should use workspace terminology and workspace routes.

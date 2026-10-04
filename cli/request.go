@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -101,7 +103,8 @@ func createRequestCmd(method string) *cobra.Command {
 				defer func() { ActiveRunCtx = nil }()
 			}
 
-			_, err := ExecuteRequest(RequestOptions{
+			startedAt := time.Now()
+			res, err := ExecuteRequest(RequestOptions{
 				Method:      method,
 				URL:         args[0],
 				Data:        reqData,
@@ -118,9 +121,13 @@ func createRequestCmd(method string) *cobra.Command {
 				RetryWait:   reqRetryWait,
 				Forms:       reqForms,
 			})
+			if output.JSONOutput {
+				return finishJSON("request", buildRequestResult(res, startedAt, time.Now()), err)
+			}
 			return err
 		},
 	}
+	markJSONCapable(cmd)
 
 	cmd.Flags().StringVarP(&reqData, "data", "d", "", "Request body data")
 	cmd.Flags().StringSliceVarP(&reqHeaders, "header", "H", []string{}, "Request headers")
@@ -240,6 +247,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		strictURL, err := variable.InterpolateStrict(processedURL, vars)
 		if err != nil {
 			result.Error = err
+			result.ErrorKind = output.ErrorKindVariable
 			result.Success = false
 			return result, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
@@ -253,8 +261,9 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		u, err := url.Parse(finalURL)
 		if err != nil {
 			result.Error = err
+			result.ErrorKind = output.ErrorKindConfig
 			result.Success = false
-			return result, err
+			return result, &ExitError{Code: ExitConfigError, Err: err}
 		}
 		q := u.Query()
 		for _, param := range opts.Queries {
@@ -263,6 +272,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				strictParam, err := variable.InterpolateStrict(param, vars)
 				if err != nil {
 					result.Error = err
+					result.ErrorKind = output.ErrorKindVariable
 					result.Success = false
 					return result, &ExitError{Code: ExitRuntimeError, Err: err}
 				}
@@ -293,6 +303,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			strictHeader, err := variable.InterpolateStrict(h, vars)
 			if err != nil {
 				result.Error = err
+				result.ErrorKind = output.ErrorKindVariable
 				result.Success = false
 				return result, &ExitError{Code: ExitRuntimeError, Err: err}
 			}
@@ -313,6 +324,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			strictData, err := variable.InterpolateStrict(opts.Data, vars)
 			if err != nil {
 				result.Error = err
+				result.ErrorKind = output.ErrorKindVariable
 				result.Success = false
 				return result, &ExitError{Code: ExitRuntimeError, Err: err}
 			}
@@ -322,8 +334,9 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			content, err := os.ReadFile(processedData[1:])
 			if err != nil {
 				result.Error = err
+				result.ErrorKind = output.ErrorKindConfig
 				result.Success = false
-				return result, err
+				return result, &ExitError{Code: ExitConfigError, Err: err}
 			}
 			body = content
 		} else {
@@ -351,13 +364,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				file, err := os.Open(filePath)
 				if err != nil {
 					result.Error = err
+					result.ErrorKind = output.ErrorKindConfig
 					result.Success = false
-					return result, err
+					return result, &ExitError{Code: ExitConfigError, Err: err}
 				}
 				defer file.Close()
 				part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
 				if err != nil {
 					result.Error = err
+					result.ErrorKind = output.ErrorKindInternal
 					result.Success = false
 					return result, err
 				}
@@ -380,6 +395,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	// Execute request with retry logic
 	var resp *client.Response
 	var err error
+	errKind := output.ErrorKindNetwork
 	maxRetries := opts.Retry
 	if maxRetries < 0 {
 		maxRetries = 0
@@ -404,11 +420,13 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			Stream:  opts.Stream,
 		})
 
+		errKind = classifyRequestError(err)
 		// Check duration assertion
 		if err == nil && opts.MaxDuration > 0 {
 			durationMs := resp.Duration.Milliseconds()
 			if durationMs > int64(opts.MaxDuration) {
 				err = fmt.Errorf("duration assertion failed: %dms > %dms", durationMs, opts.MaxDuration)
+				errKind = output.ErrorKindTimeout
 			}
 		}
 
@@ -424,6 +442,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		if attempt == maxRetries {
 			fmt.Printf("❌ Request Failed after %d attempts: %v\n", attempt+1, err)
 			result.Error = err
+			result.ErrorKind = errKind
 			result.Success = false
 			return result, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
@@ -498,6 +517,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		var firstErr string
 		for _, assertion := range opts.Asserts {
 			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
+			result.Assertions = append(result.Assertions, summary.AssertionResult{Expr: assertion, Passed: passed, Message: msg})
 			if passed {
 				fmt.Printf("  ✅ %s\n", assertion)
 				logger.LogToSession("Assertion Passed: %s", assertion)
@@ -526,6 +546,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		result.Success = allPassed
 		if !allPassed {
 			result.Error = fmt.Errorf("%s", firstErr)
+			result.ErrorKind = output.ErrorKindAssertion
 			return result, &ExitError{Code: ExitAssertionFailed, Err: result.Error}
 		}
 	}
@@ -534,6 +555,7 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		fmt.Println("\nSoft Assertions:")
 		for _, assertion := range opts.SoftAsserts {
 			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
+			result.Assertions = append(result.Assertions, summary.AssertionResult{Expr: assertion, Passed: passed, Message: msg, Soft: true})
 			if passed {
 				fmt.Printf("  ✅ %s\n", assertion)
 				continue
@@ -590,6 +612,24 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	}
 	result.RecordID = recordID
 	return result, nil
+}
+
+// buildRequestResult wraps a single request outcome, including redacted
+// request/response headers and bodies, in the versioned result.
+func buildRequestResult(tr summary.TestResult, startedAt, finishedAt time.Time) *output.Result {
+	res := output.NewResult("request")
+	res.AddStep(output.StepFromTestResult(tr, output.StepOptions{IncludeBodies: true}))
+	res.SetDuration(startedAt, finishedAt)
+	return res
+}
+
+// classifyRequestError maps a transport error to a machine-readable kind.
+func classifyRequestError(err error) string {
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return output.ErrorKindTimeout
+	}
+	return output.ErrorKindNetwork
 }
 
 func cloneStringMap(input map[string]string) map[string]string {

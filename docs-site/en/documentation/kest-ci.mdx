@@ -1,0 +1,139 @@
+---
+title: Kest CI
+description: Run Kest flows in CI, publish JSON and JUnit reports, and sync flow run results back to Kest Cloud.
+---
+
+# Kest CI
+
+Kest CI runs the same `.flow.md` files that developers use locally. In CI, Kest can write machine-readable reports and sync run results back to the Cloud workspace.
+
+## Recommended Command
+
+Use the `ci` profile and sync results:
+
+```bash
+kest run --profile ci --sync --quiet --output json
+```
+
+Write JSON and JUnit reports:
+
+```bash
+kest run --profile ci \
+  --sync \
+  --runner-type server_ci \
+  --report-json .kest/reports/flow-results.json \
+  --report-junit .kest/reports/flow-results.xml
+```
+
+Use `server_ci` when results should appear in Kest Web as a CI runner. Use `test_machine` for local test machines.
+
+## Flow Profile
+
+`kest init` creates `.kest/flow.config.yaml`. A typical CI profile looks like this:
+
+```yaml
+profiles:
+  ci:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: staging
+    strict: true
+    fail_fast: false
+    sync: true
+    reports:
+      json: ".kest/reports/flow-results.json"
+      junit: ".kest/reports/flow-results.xml"
+```
+
+Select it with a flag:
+
+```bash
+kest run --profile ci
+```
+
+Or with an environment variable:
+
+```bash
+KEST_PROFILE=ci kest run
+```
+
+## GitHub Actions Example
+
+```yaml
+name: Kest Flow CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  kest-flow:
+    runs-on: ubuntu-latest
+    env:
+      KEST_BASE_URL: https://staging.example.com
+      KEST_PROFILE: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Kest
+        run: curl -fsSL https://kest.dev/install.sh | sh
+
+      - name: Configure Cloud sync
+        run: |
+          kest sync config \
+            --platform-url https://api.kest.dev/v1 \
+            --platform-token "$KEST_CLOUD_TOKEN" \
+            --workspace-id "$KEST_WORKSPACE_ID" \
+            --auto-sync-history
+        env:
+          KEST_CLOUD_TOKEN: ${{ secrets.KEST_CLOUD_TOKEN }}
+          KEST_WORKSPACE_ID: ${{ secrets.KEST_WORKSPACE_ID }}
+
+      - name: Run flows
+        run: |
+          mkdir -p .kest/reports
+          kest run --profile ci \
+            --sync \
+            --runner-type server_ci \
+            --report-json .kest/reports/flow-results.json \
+            --report-junit .kest/reports/flow-results.xml
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kest-flow-reports
+          path: .kest/reports
+```
+
+## Reports
+
+Kest can write:
+
+- JSON for automation, dashboards, and custom notifications.
+- JUnit XML for CI test result viewers.
+- HTML for local review with `--html` or `--open`.
+
+## Cloud Visibility
+
+With `--sync`, Kest sends flow definitions and run results to Cloud:
+
+```text
+POST /workspaces/{workspaceId}/cli/flows/sync
+POST /workspaces/{workspaceId}/cli/flow-runs/sync
+```
+
+The Web console shows run status, step results, runner type, duration, logs, and failure context.
+
+## Failure Behavior
+
+Kest exits with:
+
+- `0` when all assertions pass.
+- `1` when assertions fail.
+- `2` for runtime errors.
+- `3` for usage or configuration errors.
+
+Use `--fail-fast` when the workflow should stop at the first failing flow. Use the default aggregate mode when you want a full failure report.

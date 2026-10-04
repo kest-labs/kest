@@ -1,0 +1,142 @@
+---
+title: Assertions and Variables
+description: Capture values, interpolate variables, use built-in dynamic values, and assert API behavior in Kest flows.
+---
+
+# Assertions and Variables
+
+Kest flows use variables to pass values between steps and assertions to verify API behavior.
+
+## Variable Interpolation
+
+Use `{{name}}` anywhere in URLs, headers, bodies, captures, and assertions:
+
+```md
+GET {{base_url}}/v1/users/{{user_id}}
+Authorization: Bearer {{token}}
+```
+
+Provide a default value:
+
+```md
+{{email | default: "demo@example.com"}}
+```
+
+Pass values from the CLI:
+
+```bash
+kest run auth.flow.md --var email=demo@example.com --var password=secret
+```
+
+## Built-in Values
+
+Common built-ins:
+
+- `{{$uuid}}`
+- `{{$timestamp}}`
+- `{{$unixMs}}`
+- `{{$isoDate}}`
+- `{{$randomEmail}}`
+- `{{$randomString}}`
+- `{{$randomInt}}`
+- `{{$env.NAME}}`
+
+Example:
+
+```json
+{
+  "email": "{{$randomEmail}}",
+  "request_id": "{{$uuid}}",
+  "sent_at": "{{$isoDate}}"
+}
+```
+
+## Captures
+
+Capture values from a response:
+
+```md
+[Captures]
+token = body.access_token
+user_id = body.data.id
+first_item = body.items.0.id
+```
+
+Captured values are available to later steps in the same run:
+
+```md
+GET {{base_url}}/v1/users/{{user_id}}
+Authorization: Bearer {{token}}
+```
+
+## Assertions
+
+Use `[Asserts]` for hard failures:
+
+```md
+[Asserts]
+status == 200
+duration < 1000
+body.id exists
+body.email contains "@"
+```
+
+Use `[Soft Asserts]` when a failed check should be reported without failing the whole run:
+
+```md
+[Soft Asserts]
+body.warning not exists
+```
+
+## Operators
+
+Supported assertion operators include:
+
+- `==`
+- `!=`
+- `>`
+- `>=`
+- `<`
+- `<=`
+- `exists`
+- `not exists`
+- `contains`
+- `startsWith`
+- `endsWith`
+- `matches`
+- `length`
+
+Examples:
+
+```md
+[Asserts]
+status == 201
+body.items length > 0
+body.email matches ".*@example.com"
+body.name startsWith "Demo"
+```
+
+## Strict Mode
+
+Strict mode fails early when a required variable is missing:
+
+```bash
+kest run auth.flow.md --strict
+```
+
+Debug variable resolution:
+
+```bash
+kest run auth.flow.md --debug-vars
+```
+
+## Variable Precedence
+
+Use the most specific source for test data:
+
+- Values passed with `--var` for one run.
+- Captures produced earlier in the run.
+- Environment and config variables.
+- Defaults in `{{name | default: "value"}}`.
+
+For CI, prefer explicit environment configuration plus `--strict` so missing values fail clearly.

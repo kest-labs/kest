@@ -1,0 +1,89 @@
+---
+title: Local Bridge
+description: 使用 kest bridge 让 Kest Web 通过本机 runner 访问本地和内网 API。
+---
+
+# Local Bridge
+
+`kest bridge` 会启动一个本地 runner，让 Kest Web 可以从你的机器发出请求。目标 API 在 localhost、私有网络中，或受浏览器 CORS 限制时，这个能力很有用。
+
+## 启动 Bridge
+
+```bash
+kest bridge
+```
+
+默认地址：
+
+```text
+http://127.0.0.1:8788
+```
+
+健康检查：
+
+```text
+GET http://127.0.0.1:8788/health
+```
+
+请求执行端点：
+
+```text
+POST http://127.0.0.1:8788/run
+```
+
+## Web 请求工作台
+
+Bridge 运行后，Web 请求工作台可以通过你的本机执行请求。请求仍然可以使用 workspace environments、headers、variables 和 examples。
+
+结果会保存回 workspace history，包括：
+
+- 请求 method 和 URL。
+- 变量解析后的 headers 和 body。
+- 响应 status、headers 和 body。
+- 耗时和错误详情。
+
+## 为什么需要 Bridge
+
+浏览器不能安全地直接调用所有本地或内网 API。Bridge 把请求执行保留在你的机器上，同时让 Web 管理请求模型和历史记录。
+
+常见场景：
+
+- 在 Web 中测试 `localhost` 服务。
+- 调用只有私有网络可访问的 staging 服务。
+- 手动调试 API 时绕过浏览器 CORS 限制。
+- 复用 workspace environments，并在本机执行请求。
+
+## 安全边界
+
+Bridge 默认监听 loopback：
+
+```text
+127.0.0.1
+```
+
+只应在你信任当前 Web 会话的机器上运行。Bridge 可以从你的网络上下文发请求，因此应把 bridge 访问视为本地执行能力。
+
+## CORS
+
+Bridge 支持 CORS，方便 Kest Web 从浏览器访问。如果环境需要更严格的 origin 控制，可以显式指定：
+
+```bash
+kest bridge --cors strict --allow-origin https://kest.dev
+```
+
+本地开发使用默认模式。共享测试机器建议使用 strict mode。
+
+## 故障排查
+
+如果 Web 找不到 bridge：
+
+```bash
+curl http://127.0.0.1:8788/health
+```
+
+如果目标 API 失败但 bridge health 通过，检查：
+
+- 目标 API 在同一台机器上是否可达。
+- 选中的 environment 是否有正确 base URL。
+- 必需 variables 是否存在。
+- 本地防火墙或 VPN 规则是否允许请求。

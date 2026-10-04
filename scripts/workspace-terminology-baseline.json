@@ -785,11 +785,10 @@
       }
     },
     "cli/history.go": {
-      "total": 7,
+      "total": 4,
       "matches": {
         "project": 1,
         "projects": 2,
-        "projectID": 3,
         "ProjectID": 1
       }
     },
@@ -946,5 +945,5 @@
       }
     }
   },
-  "generatedAt": "2026-05-27T11:54:25.877Z"
+  "generatedAt": "2026-10-04T04:27:31.689Z"
 }

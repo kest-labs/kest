@@ -1,6 +1,6 @@
 ---
 title: Authentication
-description: JWT authentication and project-scoped CLI token authentication.
+description: JWT authentication and workspace-scoped CLI token authentication.
 ---
 
 # Authentication
@@ -9,7 +9,7 @@ Kest currently exposes two authentication modes.
 
 ## Bearer JWT
 
-Most user, project, and collaboration endpoints require a bearer JWT in the `Authorization` header.
+Most user, workspace, and collaboration endpoints require a bearer JWT in the `Authorization` header.
 
 ```http
 Authorization: Bearer <jwt-token>
@@ -17,19 +17,19 @@ Authorization: Bearer <jwt-token>
 
 You receive this token from `POST /login`.
 
-## Project-scoped CLI token
+## Workspace-scoped CLI token
 
-CLI sync endpoints accept a project token instead of a user JWT.
+Kest Cloud Sync endpoints accept a workspace CLI token instead of a user JWT.
 
 ```http
 Authorization: Bearer <kest_pat_...>
 ```
 
-These tokens are created with `POST /projects/{id}/cli-tokens` and are scoped per project.
+These tokens are created with `POST /workspaces/{id}/cli-tokens` and are scoped to one workspace.
 
 ## Practical rules
 
 - Use JWTs for browser or user-driven platform actions.
-- Use CLI tokens for machine-to-platform sync flows.
+- Use CLI tokens for machine-to-Cloud sync flows.
 - Do not mix a CLI token with user endpoints such as `/users/profile`.
-- Treat project IDs in the URL and request body as a contract: Kest rejects mismatches for CLI sync requests.
+- Treat workspace IDs in the URL and request body as a contract: Kest rejects mismatches for sync requests.

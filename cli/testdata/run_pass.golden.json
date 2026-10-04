@@ -1,0 +1,38 @@
+{
+  "command": "run",
+  "exit_code": 0,
+  "ok": true,
+  "schema_version": 1,
+  "steps": [
+    {
+      "assertions": [
+        {
+          "expr": "status == 200",
+          "ok": true
+        },
+        {
+          "expr": "body.ok == true",
+          "ok": true
+        }
+      ],
+      "captures": {
+        "version": "1.2.3"
+      },
+      "duration_ms": 0,
+      "method": "GET",
+      "name": "Health check",
+      "ok": true,
+      "record_id": "<record_id>",
+      "source": "health.flow.md",
+      "status": 200,
+      "url": "http://SERVER/health"
+    }
+  ],
+  "summary": {
+    "duration_ms": 0,
+    "failed": 0,
+    "passed": 1,
+    "skipped": 0,
+    "total": 1
+  }
+}

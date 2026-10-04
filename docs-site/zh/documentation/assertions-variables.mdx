@@ -1,0 +1,142 @@
+---
+title: Assertions 和 Variables
+description: 在 Kest flows 中捕获值、插入变量、使用内置动态值，并断言 API 行为。
+---
+
+# Assertions 和 Variables
+
+Kest flows 使用 variables 在 steps 之间传递值，使用 assertions 验证 API 行为。
+
+## 变量插值
+
+在 URL、headers、body、captures 和 assertions 中使用 `{{name}}`：
+
+```md
+GET {{base_url}}/v1/users/{{user_id}}
+Authorization: Bearer {{token}}
+```
+
+提供默认值：
+
+```md
+{{email | default: "demo@example.com"}}
+```
+
+从 CLI 传入变量：
+
+```bash
+kest run auth.flow.md --var email=demo@example.com --var password=secret
+```
+
+## 内置动态值
+
+常用 built-ins：
+
+- `{{$uuid}}`
+- `{{$timestamp}}`
+- `{{$unixMs}}`
+- `{{$isoDate}}`
+- `{{$randomEmail}}`
+- `{{$randomString}}`
+- `{{$randomInt}}`
+- `{{$env.NAME}}`
+
+示例：
+
+```json
+{
+  "email": "{{$randomEmail}}",
+  "request_id": "{{$uuid}}",
+  "sent_at": "{{$isoDate}}"
+}
+```
+
+## Captures
+
+从响应中捕获值：
+
+```md
+[Captures]
+token = body.access_token
+user_id = body.data.id
+first_item = body.items.0.id
+```
+
+捕获的值可以在后续 steps 中使用：
+
+```md
+GET {{base_url}}/v1/users/{{user_id}}
+Authorization: Bearer {{token}}
+```
+
+## Assertions
+
+用 `[Asserts]` 表示硬失败：
+
+```md
+[Asserts]
+status == 200
+duration < 1000
+body.id exists
+body.email contains "@"
+```
+
+用 `[Soft Asserts]` 表示只记录失败，不让整个 run 失败：
+
+```md
+[Soft Asserts]
+body.warning not exists
+```
+
+## Operators
+
+支持的 assertion operators：
+
+- `==`
+- `!=`
+- `>`
+- `>=`
+- `<`
+- `<=`
+- `exists`
+- `not exists`
+- `contains`
+- `startsWith`
+- `endsWith`
+- `matches`
+- `length`
+
+示例：
+
+```md
+[Asserts]
+status == 201
+body.items length > 0
+body.email matches ".*@example.com"
+body.name startsWith "Demo"
+```
+
+## Strict Mode
+
+Strict mode 会在变量缺失时提前失败：
+
+```bash
+kest run auth.flow.md --strict
+```
+
+调试变量解析：
+
+```bash
+kest run auth.flow.md --debug-vars
+```
+
+## 变量优先级
+
+测试数据应尽量使用最具体的来源：
+
+- 单次运行传入的 `--var`。
+- 当前 run 中前面 steps 产生的 captures。
+- Environment 和 config variables。
+- `{{name | default: "value"}}` 中的默认值。
+
+CI 中建议显式配置环境，并使用 `--strict` 让变量缺失清晰失败。

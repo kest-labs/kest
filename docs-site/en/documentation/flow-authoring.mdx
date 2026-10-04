@@ -1,0 +1,209 @@
+---
+title: Flow Authoring Reference
+description: Write Markdown-native Kest flows with setup, steps, captures, assertions, edges, teardown, and profiles.
+---
+
+# Flow Authoring Reference
+
+Kest flows are Markdown files ending in `.flow.md`. They describe API workflows in text that can be reviewed by humans, run by the CLI, and synced to Kest Cloud.
+
+## File Structure
+
+A flow file can contain:
+
+- `flow` metadata.
+- `setup` blocks.
+- `step` blocks.
+- `edge` blocks.
+- `teardown` blocks.
+
+````md
+# Auth smoke test
+
+```flow
+@flow id=auth-smoke
+@name Auth smoke test
+@version 1.0.0
+@env staging
+@tags smoke,auth
+```
+
+```step
+@id login
+@name Login
+@type http
+@retry 2
+
+POST {{base_url}}/v1/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+[Captures]
+token = body.access_token
+
+[Asserts]
+status == 200
+body.access_token exists
+```
+
+```step
+@id profile
+@name Fetch profile
+@type http
+
+GET {{base_url}}/v1/users/profile
+Authorization: Bearer {{token}}
+
+[Asserts]
+status == 200
+```
+
+```edge
+login -> profile
+```
+````
+
+## Flow Metadata
+
+Use the `flow` block for stable identity and labels:
+
+~~~md
+```flow
+@flow id=checkout-smoke
+@name Checkout smoke
+@version 1.0.0
+@env staging
+@tags checkout,smoke
+```
+~~~
+
+The `id` should stay stable across file moves so Cloud can track revisions and run history.
+
+## HTTP Steps
+
+HTTP steps describe a request and optional captures/assertions:
+
+~~~md
+```step
+@id create-user
+@name Create user
+@type http
+@retry 2
+@retry-wait 500ms
+@timeout 10s
+
+POST {{base_url}}/v1/users
+Content-Type: application/json
+
+{
+  "email": "{{$randomEmail}}"
+}
+
+[Captures]
+user_id = body.id
+
+[Asserts]
+status == 201
+duration < 1000
+```
+~~~
+
+Common step directives:
+
+- `@id`: stable step ID.
+- `@name`: display name.
+- `@type`: `http` or `exec`.
+- `@retry`: retry count.
+- `@retry-wait`: wait between retries.
+- `@timeout` or `@max-duration`: execution timeout.
+- `@wait`: wait before running the step.
+
+## Exec Steps
+
+Exec steps run local shell commands:
+
+~~~md
+```step
+@id seed-user
+@name Seed user
+@type exec
+@timeout 30s
+
+echo '{"email":"seed@example.com"}'
+
+[Captures]
+seed_email = stdout.email
+```
+~~~
+
+Use exec steps for local setup, fixture creation, or tooling that is already present in the CI environment.
+
+## Edges
+
+Edges define execution order:
+
+~~~md
+```edge
+login -> profile
+profile -> logout
+```
+~~~
+
+When edges are present, Kest runs the flow as a graph. Without edges, steps run in file order.
+
+## Setup and Teardown
+
+Use setup for prerequisites and teardown for cleanup:
+
+~~~md
+```setup
+@id prepare
+@type exec
+
+echo "prepare test data"
+```
+
+```teardown
+@id cleanup
+@type exec
+
+echo "cleanup test data"
+```
+~~~
+
+## Profiles
+
+`.kest/flow.config.yaml` controls default targets and run behavior:
+
+```yaml
+profiles:
+  local:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: local
+    strict: true
+    fail_fast: false
+
+  ci:
+    include:
+      - ".kest/flow/**/*.flow.md"
+    env: staging
+    strict: true
+    sync: true
+```
+
+Run a profile:
+
+```bash
+kest run --profile ci
+```
+
+Override the base URL for one run:
+
+```bash
+kest run --profile ci --base-url https://staging.example.com
+```
