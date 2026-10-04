@@ -1,0 +1,227 @@
+{
+  "info": {
+    "_postman_id": "7c1f9b8e-3f43-4d4e-9c1a-1e7a5d3c2b10",
+    "name": "Acme Store API",
+    "description": "Public API for the Acme store.\n\n```json\n{\"example\": true}\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.acme.test/v1" },
+    { "key": "pageSize", "value": "20" },
+    { "key": "clientSecret", "value": "do-not-copy-me" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": { "type": "text/javascript", "exec": ["pm.request.headers.add({key: 'X-Trace', value: pm.variables.replaceIn('{{$guid}}')});"] }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"] }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Login and token handling.",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"requestId\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login succeeds\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.token_type).to.eql(\"Bearer\");",
+                  "    pm.expect(jsonData.user.active).to.be.true;",
+                  "    pm.environment.set(\"accessToken\", jsonData.access_token);",
+                  "    pm.collectionVariables.set(\"userId\", jsonData.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Api-Key", "value": "sk_live_hardcoded123" }
+            ],
+            "url": "{{baseUrl}}/auth/refresh"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "auth": {
+        "type": "apikey",
+        "apikey": [
+          { "key": "key", "value": "X-Partner-Key", "type": "string" },
+          { "key": "value", "value": "{{partnerKey}}", "type": "string" },
+          { "key": "in", "value": "header", "type": "string" }
+        ]
+      },
+      "item": [
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Debug", "value": "1", "disabled": true }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders?limit={{pageSize}}&status=open&debug=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "limit", "value": "{{pageSize}}" },
+                { "key": "status", "value": "open" },
+                { "key": "debug", "value": "true", "disabled": true }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns a page\", () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body.meta['page']).to.eql(1);",
+                  "});",
+                  "pm.test(\"every order is open\", function () {",
+                  "  body.items.forEach(function (o) { pm.expect(o.status).to.eql('open'); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/:orderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", ":orderId"],
+              "variable": [ { "key": "orderId", "value": "ord_123" } ]
+            }
+          }
+        },
+        {
+          "name": "Fulfilment",
+          "item": [
+            {
+              "name": "Ship order",
+              "request": {
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    { "key": "username", "value": "{{warehouseUser}}", "type": "string" },
+                    { "key": "password", "value": "{{warehousePassword}}", "type": "string" }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    { "key": "carrier", "value": "UPS Ground" },
+                    { "key": "order_id", "value": "{{orderId}}" }
+                  ]
+                },
+                "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/ship" }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": { "exec": ["pm.variables.set('shipAt', new Date().toISOString());"] }
+                },
+                {
+                  "listen": "test",
+                  "script": { "exec": ["pm.test('shipped', function () {", "  pm.response.to.have.status(202);", "});"] }
+                }
+              ]
+            },
+            {
+              "name": "Upload label",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "label", "type": "file", "src": "/tmp/label.pdf" },
+                    { "key": "note", "value": "fragile", "type": "text" }
+                  ]
+                },
+                "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/label" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "GraphQL search",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query Search($q: String!) { products(q: $q) { id name } }",
+                "variables": "{\"q\": \"{{searchTerm}}\"}"
+              }
+            },
+            "url": { "raw": "{{baseUrl}}/graphql" }
+          }
+        }
+      ]
+    }
+  ]
+}

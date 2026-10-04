@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: Pet Clinic API
+  version: 1.2.0
+servers:
+  - url: https://{region}.petclinic.test/api
+    variables:
+      region:
+        default: eu
+tags:
+  - name: owners
+    description: Pet owners
+  - name: pets
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: OK
+  /owners:
+    get:
+      tags: [owners]
+      summary: List owners
+      operationId: listOwners
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 20
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A page of owners
+    post:
+      tags: [owners]
+      summary: Create owner
+      operationId: createOwner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewOwner"
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad request
+  /owners/{ownerId}:
+    parameters:
+      - name: ownerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          example: 42
+    get:
+      tags: [owners]
+      summary: Get owner
+      operationId: getOwner
+      responses:
+        2XX:
+          description: Owner
+    delete:
+      tags: [owners]
+      summary: Delete owner
+      operationId: deleteOwner
+      security:
+        - apiKeyAuth: []
+      responses:
+        "204":
+          description: Deleted
+  /owners/{ownerId}/pets:
+    post:
+      tags: [pets]
+      summary: Add a pet
+      parameters:
+        - name: ownerId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: X-Request-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            example:
+              name: Rex
+              species: dog
+      responses:
+        "201":
+          description: Created
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+  schemas:
+    NewOwner:
+      type: object
+      required: [firstName, email]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        firstName:
+          type: string
+          example: Ada
+        email:
+          type: string
+          format: email
+        address:
+          $ref: "#/components/schemas/Address"
+        tags:
+          type: array
+          items:
+            type: string
+            enum: [vip, regular]
+    Address:
+      type: object
+      properties:
+        city:
+          type: string
+          example: Berlin
+        zip:
+          type: string
