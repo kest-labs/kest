@@ -12,7 +12,10 @@ import (
 )
 
 type TestResult struct {
-	StepID          string
+	StepID string
+	// IncludedFrom is the path of the file a step was pulled in from with
+	// `@use`; empty for a flow's own steps.
+	IncludedFrom    string
 	Name            string
 	Method          string
 	URL             string
@@ -172,6 +175,7 @@ type RunJSON struct {
 type TestResultJSON struct {
 	Name            string            `json:"name"`
 	StepID          string            `json:"step_id,omitempty"`
+	IncludedFrom    string            `json:"included_from,omitempty"`
 	Method          string            `json:"method,omitempty"`
 	URL             string            `json:"url,omitempty"`
 	Status          int               `json:"status,omitempty"`
@@ -207,6 +211,7 @@ func (s *Summary) WriteJSON(w io.Writer, sourcePath, logPath string) error {
 		item := TestResultJSON{
 			Name:            result.Name,
 			StepID:          result.StepID,
+			IncludedFrom:    result.IncludedFrom,
 			Method:          result.Method,
 			URL:             result.URL,
 			Status:          result.Status,

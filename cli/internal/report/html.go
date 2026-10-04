@@ -91,6 +91,7 @@ type runResultView struct {
 	StartedAt       string
 	Error           string
 	RecordID        int64
+	IncludedFrom    string
 	CommandSection  codeSectionView
 	RequestHeaders  headerTableView
 	RequestBody     codeSectionView
@@ -227,17 +228,18 @@ func buildRunPageView(summ *summary.Summary, opts RunHTMLOptions, generatedAt ti
 		statusText := runStatusText(result)
 		statusTone := statusClass(result.Status, result.Success, result.Method)
 		results = append(results, runResultView{
-			AnchorID:    anchorID,
-			Name:        fallback(result.Name, fmt.Sprintf("Step %d", index+1)),
-			Method:      fallback(result.Method, "STEP"),
-			MethodClass: methodClass(result.Method),
-			URL:         result.URL,
-			StatusText:  statusText,
-			StatusClass: statusTone,
-			Duration:    formatDuration(result.Duration),
-			StartedAt:   formatTimestamp(result.StartTime),
-			Error:       errorString(result.Error),
-			RecordID:    result.RecordID,
+			AnchorID:     anchorID,
+			Name:         fallback(result.Name, fmt.Sprintf("Step %d", index+1)),
+			Method:       fallback(result.Method, "STEP"),
+			MethodClass:  methodClass(result.Method),
+			URL:          result.URL,
+			StatusText:   statusText,
+			StatusClass:  statusTone,
+			Duration:     formatDuration(result.Duration),
+			StartedAt:    formatTimestamp(result.StartTime),
+			Error:        errorString(result.Error),
+			RecordID:     result.RecordID,
+			IncludedFrom: result.IncludedFrom,
 			CommandSection: codeSectionView{
 				ID:           fmt.Sprintf("%s-command", anchorID),
 				Title:        "Command",
@@ -1068,6 +1070,7 @@ const runPageBodyTemplate = `
           <span>Started {{.StartedAt}}</span>
           <span>Duration {{.Duration}}</span>
           {{if gt .RecordID 0}}<span>Recorded as #{{.RecordID}}</span>{{end}}
+          {{if .IncludedFrom}}<span>Included from {{.IncludedFrom}}</span>{{end}}
         </p>
         {{if .Error}}
           <div class="card" style="margin-top: 14px; padding: 14px 16px; border-radius: 18px; background: rgba(185, 28, 28, 0.08); border-color: rgba(185, 28, 28, 0.15); box-shadow: none;">

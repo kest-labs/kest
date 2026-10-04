@@ -13,5 +13,9 @@ func loadFlowDocument(path string) (FlowDoc, []KestBlock, error) {
 		return FlowDoc{}, nil, err
 	}
 	doc, legacy := ParseFlowDocument(string(content))
+	doc, err = ExpandFlowIncludes(doc, path)
+	if err != nil {
+		return doc, legacy, err
+	}
 	return doc, legacy, nil
 }

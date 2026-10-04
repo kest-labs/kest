@@ -20,13 +20,32 @@ func FlowToMermaid(doc FlowDoc) string {
 		return "step"
 	}
 
+	// Steps pulled in with @use run first (setup phase); draw them as a chain
+	// leading into the first own step. Their ids contain dots, which Mermaid
+	// node ids cannot, so every id goes through mermaidID.
+	var included []FlowStep
+	for _, step := range doc.Setup {
+		if step.IncludedFrom != "" && step.ID != "" {
+			included = append(included, step)
+		}
+	}
+	for _, step := range included {
+		fmt.Fprintf(&b, "  %s[\"%s\"]\n", mermaidID(step.ID), escapeMermaidLabel(stepName(step)))
+	}
+	for i := 0; i+1 < len(included); i++ {
+		fmt.Fprintf(&b, "  %s --> %s\n", mermaidID(included[i].ID), mermaidID(included[i+1].ID))
+	}
+	if len(included) > 0 && len(doc.Steps) > 0 && doc.Steps[0].ID != "" {
+		fmt.Fprintf(&b, "  %s --> %s\n", mermaidID(included[len(included)-1].ID), mermaidID(doc.Steps[0].ID))
+	}
+
 	for _, step := range doc.Steps {
 		id := step.ID
 		if id == "" {
 			continue
 		}
 		label := escapeMermaidLabel(stepName(step))
-		fmt.Fprintf(&b, "  %s[\"%s\"]\n", id, label)
+		fmt.Fprintf(&b, "  %s[\"%s\"]\n", mermaidID(id), label)
 	}
 
 	if len(doc.Edges) == 0 {
@@ -36,7 +55,7 @@ func FlowToMermaid(doc FlowDoc) string {
 			if from == "" || to == "" {
 				continue
 			}
-			fmt.Fprintf(&b, "  %s --> %s\n", from, to)
+			fmt.Fprintf(&b, "  %s --> %s\n", mermaidID(from), mermaidID(to))
 		}
 		return b.String()
 	}
@@ -56,7 +75,7 @@ func FlowToMermaid(doc FlowDoc) string {
 		if from == "" || to == "" || hasOut[from] || hasIn[to] {
 			continue
 		}
-		fmt.Fprintf(&b, "  %s --> %s\n", from, to)
+		fmt.Fprintf(&b, "  %s --> %s\n", mermaidID(from), mermaidID(to))
 	}
 
 	for _, edge := range doc.Edges {
@@ -65,9 +84,9 @@ func FlowToMermaid(doc FlowDoc) string {
 		}
 		if edge.On != "" {
 			label := escapeMermaidLabel(edge.On)
-			fmt.Fprintf(&b, "  %s -->|%s| %s\n", edge.From, label, edge.To)
+			fmt.Fprintf(&b, "  %s -->|%s| %s\n", mermaidID(edge.From), label, mermaidID(edge.To))
 		} else {
-			fmt.Fprintf(&b, "  %s --> %s\n", edge.From, edge.To)
+			fmt.Fprintf(&b, "  %s --> %s\n", mermaidID(edge.From), mermaidID(edge.To))
 		}
 	}
 
@@ -76,4 +95,9 @@ func FlowToMermaid(doc FlowDoc) string {
 
 func escapeMermaidLabel(value string) string {
 	return strings.ReplaceAll(value, "\"", "'")
+}
+
+// mermaidID makes a step id usable as a Mermaid node id.
+func mermaidID(id string) string {
+	return strings.ReplaceAll(id, ".", "_")
 }

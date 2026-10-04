@@ -13,6 +13,8 @@
 
 - **Flow-level defaults** — `@default-header`, `@default-assert` and `@auto-content-type json` in the `flow` block apply headers/assertions to every HTTP step unless the step opts out with `@no-defaults` (a default assertion is also skipped when the step asserts the same subject, e.g. its own `status == 201`). Nothing changes for flows that do not declare them; Kest still never adds a `Content-Type` on its own without `@auto-content-type`.
 
+- **`@use` includes** — `@use ./common/login.flow.md [as alias]` in the `flow` block runs another flow's `setup`/`step` blocks first (setup phase), sharing captured variables, with step ids namespaced (`login.<id>`). Missing files, cycles and duplicate namespaces fail with a clear error and the line of the `@use`. Included steps are marked in the console (`[login] ...`), `--json`/JUnit/flow reports (`included_from`), the HTML report and Mermaid output.
+
 ### Changes
 
 - **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.

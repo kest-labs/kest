@@ -56,20 +56,22 @@ type Summary struct {
 
 // Step is one executed request (or exec/snapshot step).
 type Step struct {
-	Name       string            `json:"name"`
-	Source     string            `json:"source,omitempty"`
-	Method     string            `json:"method,omitempty"`
-	URL        string            `json:"url,omitempty"`
-	Status     int               `json:"status"`
-	DurationMs int64             `json:"duration_ms"`
-	OK         bool              `json:"ok"`
-	RecordID   int64             `json:"record_id,omitempty"`
-	RequestID  string            `json:"request_id,omitempty"`
-	Assertions []Assertion       `json:"assertions"`
-	Captures   map[string]string `json:"captures,omitempty"`
-	Request    *HTTPMessage      `json:"request,omitempty"`
-	Response   *HTTPMessage      `json:"response,omitempty"`
-	Error      *Error            `json:"error,omitempty"`
+	Name   string `json:"name"`
+	Source string `json:"source,omitempty"`
+	// IncludedFrom is set for steps pulled in with `@use`.
+	IncludedFrom string            `json:"included_from,omitempty"`
+	Method       string            `json:"method,omitempty"`
+	URL          string            `json:"url,omitempty"`
+	Status       int               `json:"status"`
+	DurationMs   int64             `json:"duration_ms"`
+	OK           bool              `json:"ok"`
+	RecordID     int64             `json:"record_id,omitempty"`
+	RequestID    string            `json:"request_id,omitempty"`
+	Assertions   []Assertion       `json:"assertions"`
+	Captures     map[string]string `json:"captures,omitempty"`
+	Request      *HTTPMessage      `json:"request,omitempty"`
+	Response     *HTTPMessage      `json:"response,omitempty"`
+	Error        *Error            `json:"error,omitempty"`
 }
 
 // Assertion is the outcome of a single assertion expression.
@@ -125,16 +127,17 @@ type StepOptions struct {
 // StepFromTestResult converts an executed test result into a redacted Step.
 func StepFromTestResult(tr summary.TestResult, opts StepOptions) Step {
 	step := Step{
-		Name:       tr.Name,
-		Source:     opts.Source,
-		Method:     tr.Method,
-		URL:        platformsync.SanitizeURL(tr.URL),
-		Status:     tr.Status,
-		DurationMs: tr.Duration.Milliseconds(),
-		OK:         tr.Success,
-		RecordID:   tr.RecordID,
-		RequestID:  tr.RequestID,
-		Assertions: make([]Assertion, 0, len(tr.Assertions)),
+		Name:         tr.Name,
+		Source:       opts.Source,
+		IncludedFrom: tr.IncludedFrom,
+		Method:       tr.Method,
+		URL:          platformsync.SanitizeURL(tr.URL),
+		Status:       tr.Status,
+		DurationMs:   tr.Duration.Milliseconds(),
+		OK:           tr.Success,
+		RecordID:     tr.RecordID,
+		RequestID:    tr.RequestID,
+		Assertions:   make([]Assertion, 0, len(tr.Assertions)),
 	}
 	if step.Name == "" {
 		step.Name = strings.TrimSpace(tr.Method + " " + step.URL)
