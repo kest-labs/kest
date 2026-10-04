@@ -62,10 +62,9 @@ Authorization: Bearer {{token}}
 status == 200
 ```
 
-```edge
-login -> profile
-```
 ````
+
+steps 按文件顺序执行，这个 flow 不需要 `edge` blocks。
 
 ## Flow 元数据
 
@@ -144,16 +143,25 @@ Exec step 适合本地准备、fixture 创建，或调用 CI 环境中已有的�
 
 ## Edges
 
-Edges 定义执行顺序：
+Edges 是可选的。没有 edges 时 steps 按文件顺序执行，等价于在每对相邻 step 之间写了 `@on success` 的 edge，所以不要写这种 edge（`kest lint` 会报告为 `redundant-edge`，`kest lint --fix` 自动删除）。
+
+只有需要非线性顺序时才使用 edge，例如让某个 step 先于它上面声明的 step 执行：
 
 ~~~md
 ```edge
-login -> profile
-profile -> logout
+@from login
+@to profile
+@on success
 ```
 ~~~
 
-有 edges 时，Kest 按图执行 flow。没有 edges 时，steps 按文件顺序执行。
+Edges 对 `step` blocks 做拓扑排序，没有 edge 关联的 steps 保持文件顺序；`@on` 仅作标签。edge 引用未知 step 或出现环时，整个文件回退为文件顺序。
+
+## Flow 级默认值、@use 与密钥
+
+在 `flow` block 中声明默认值：`@default-header Name: value`、`@default-assert expr`、`@auto-content-type json`；step 内写 `@no-defaults` 可跳过。`@use ./common/login.flow.md [as alias]` 会先运行被包含文件的 `setup`/`step`（step id 加命名空间前缀，捕获的变量共享）。不要提交明文凭据：使用 `"password": "{{$env.ADMIN_PASSWORD}}"`，它先读取系统环境变量，再读取 `.kest/.env`。
+
+`kest lint [paths...]` 检查 flow（`--json`、`--fix`、`--rule`、`--disable`）。`--fix` 会重新解析并确认执行计划完全一致，否则跳过。
 
 ## Setup 和 Teardown
 

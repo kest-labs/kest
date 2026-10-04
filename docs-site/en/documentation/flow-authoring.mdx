@@ -195,6 +195,23 @@ The included file's `setup` and `step` blocks run first, in the setup phase, bef
 
 Do not commit credentials. Use `"password": "{{$env.ADMIN_PASSWORD}}"`: `$env.NAME` reads the OS environment first, then `.kest/.env`. `kest lint` flags literal secrets (`inline-secret`).
 
+## Linting with `kest lint`
+
+`kest lint [paths...]` checks flows (directories recurse) and `--fix` rewrites the safe findings:
+
+| Rule | Severity | `--fix` |
+| --- | --- | --- |
+| `invalid-flow` | error | no |
+| `redundant-edge` | warning | deletes the edge block |
+| `trailing-delete-cleanup` | warning | moves trailing `DELETE` steps into `teardown` |
+| `inline-secret` | warning | no (suggests `{{$env.NAME}}`, never prints the value) |
+| `legacy-format` | warning | converts ```` ```kest ```` blocks to ```` ```step ```` |
+| `duplicate-step-block` | info | no (suggests `@use`) |
+| `missing-assert` | warning | no |
+| `unreferenced-capture` | warning | no |
+
+Use `--json` for machine-readable output, `--rule` / `--disable` to select rules and `--fail-on warning` to fail CI on warnings. Every fix is verified: the file is parsed again and must run exactly the same requests in the same order, otherwise the fix is skipped and explained.
+
 ## Setup and Teardown
 
 Use setup for prerequisites and teardown for cleanup:

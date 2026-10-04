@@ -15,6 +15,8 @@
 
 - **`@use` includes** — `@use ./common/login.flow.md [as alias]` in the `flow` block runs another flow's `setup`/`step` blocks first (setup phase), sharing captured variables, with step ids namespaced (`login.<id>`). Missing files, cycles and duplicate namespaces fail with a clear error and the line of the `@use`. Included steps are marked in the console (`[login] ...`), `--json`/JUnit/flow reports (`included_from`), the HTML report and Mermaid output.
 
+- **`kest lint`** — lints `.flow.md` files (directories recurse; `--json`, `--rule`, `--disable`, `--fail-on`, `--list-rules`). Rules: `invalid-flow` (error), `redundant-edge`, `trailing-delete-cleanup`, `inline-secret`, `legacy-format`, `missing-assert`, `unreferenced-capture` (warnings), `duplicate-step-block` (info). `--fix` deletes redundant edges, moves trailing `DELETE` cleanup steps into `teardown` blocks and converts legacy ```` ```kest ```` blocks to ```` ```step ````; every fix is verified to leave the execution plan identical (otherwise skipped and explained) and is idempotent. Secrets are reported without ever printing their value.
+
 ### Changes
 
 - **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.

@@ -103,7 +103,7 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 [Captures]
@@ -252,9 +252,66 @@ kest run user.flow.md -v
 
 ---
 
+## 🧹 Linting and Migrating: `kest lint`
+
+`kest lint [paths...]` checks flow files (directories are searched recursively).
+It never changes a file unless you pass `--fix`.
+
+| Rule | Severity | What it reports | `--fix` |
+| :--- | :--- | :--- | :--- |
+| `invalid-flow` | error | step without `METHOD URL`, edge to an unknown step, duplicate step id, broken `@use` (with line) | no |
+| `redundant-edge` | warning | an edge that only links a step to the next one with `@on success` | deletes the edge block |
+| `trailing-delete-cleanup` | warning | the last steps are `DELETE` requests that only use captured variables | moves them into `teardown` blocks |
+| `inline-secret` | warning | literal `password`/`passwd`/`secret`/`token`/`api_key`/`Authorization` values, Bearer tokens longer than 20 characters | no (suggests `{{$env.NAME}}`; the secret is never printed) |
+| `legacy-format` | warning | legacy ` ```kest ` blocks | converts to ` ```step ` |
+| `duplicate-step-block` | info | the same request block (e.g. a login) in 3+ of the linted files | no (suggests `@use`) |
+| `missing-assert` | warning | an HTTP step with no assertions (flow-level `@default-assert` counts) | no |
+| `unreferenced-capture` | warning | a captured variable no later step uses | no |
+
+```bash
+kest lint                                  # whole directory
+kest lint .kest/flow --json                # machine-readable
+kest lint --fix                            # apply the safe fixes
+kest lint --fix --rule legacy-format old/  # only migrate the legacy format
+kest lint --disable missing-assert         # skip rules (comma separated or repeated)
+kest lint --fail-on warning                # CI: fail on warnings too
+```
+
+Exit code: `0` when nothing at or above `--fail-on` (default `error`) was found,
+`1` otherwise, `3` for usage errors.
+
+**`--fix` never changes what a flow does.** After every fix the file is parsed
+again and its execution plan (the ordered list of requests, with headers, body,
+captures and assertions) must be identical to the original; a fix that cannot be
+proven equivalent is skipped and explained (`skipped_fixes` in `--json`). Running
+`--fix` twice changes nothing the second time.
+
+Details worth knowing:
+
+- `redundant-edge` keeps edges that matter: if deleting a linear edge would
+  change the step order (because of other, non-linear edges), that edge stays.
+- `trailing-delete-cleanup` only fires when every trailing `DELETE` references
+  variables captured earlier in the file, captures nothing itself, is not named
+  by an edge and no `teardown` block precedes it. Implicit step ids are kept
+  (`@id step-N` is added) so reports keep identifying the step the same way.
+  Teardown steps run after the main steps; a failure earlier in the file does
+  not skip them once teardown is a `finally` (the moved steps then also run
+  after a failed run, which is the point).
+- `legacy-format` converts a file only when every block is a valid request and
+  the file has no other flow blocks (a file that mixes ` ```kest ` with
+  ` ```step ` is *not* converted: `kest run` ignores the legacy blocks of such a
+  file today, converting would start running them). `# trailing comments` on
+  capture/assert lines, which the legacy parser dropped, are removed so the
+  assertions stay the same. The converted file runs with flow semantics: strict
+  variable validation and step ids `step-1`, `step-2`, ... Trailing whitespace
+  after a JSON body (invisible) is dropped; other bodies with trailing
+  whitespace are not converted.
+
+---
+
 ## 📘 Legacy Kest Blocks (Still Supported)
 
-Legacy blocks are kept for compatibility.
+Legacy blocks are kept for compatibility; `kest lint --fix --rule legacy-format` migrates them.
 ### Complete Syntax Specification
 
 ```kest
@@ -268,7 +325,7 @@ Authorization: Bearer {{token}}
 # 3. Request Body (Leave an empty line after headers)
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 # 4. Variable Capture (Core Feature)
@@ -311,7 +368,7 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 [Captures]

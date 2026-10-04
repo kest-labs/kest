@@ -63,6 +63,7 @@ Website: https://kest.dev
 - `kest watch login.flow.md` — auto-rerun on file change
 - `kest snap /api/users` — save snapshot; `--verify` to check; `--update` to accept
 - `kest chain login.flow.md` — visualize variable flow between steps
+- `kest lint [paths]` — lint flows (redundant edges, inline secrets, legacy `kest` blocks, duplicate steps...); `--fix` applies verified-safe fixes, `--json` for agents
 - `kest vars` — list captured variables for current project/environment
 
 ### Mock Server
