@@ -22,6 +22,7 @@
 
 ### Fixes
 
+- **A bare ``` code fence no longer crashes flow parsing** — a fenced block without an info string (plain code in the prose of a `.flow.md`) panicked `kest run` with an index-out-of-range error.
 - **`kest why` can now see failed requests** — requests and flow steps that fail an assertion are saved to history (with the failure reason) instead of being dropped, and `kest why` includes that reason in its analysis. Existing history databases get the new column automatically.
 - **Network errors and timeouts are saved to history** — a request that gets no response (connection refused, DNS, TLS, timeout) or exceeds `--max-time` is recorded with the error as its failure reason (status `0`, shown as `ERR` in `kest history`), so `kest why` can explain it and `kest replay` can retry it. `--no-record` is respected. `kest mock` skips these records.
 - **No more "failed to load config" warning when there is no config file** — a `.kest` directory without `config.yaml` now silently uses defaults; only unreadable or invalid config files warn, and only once per command. `~/.kest` (the history directory) is no longer mistaken for a workspace root, so directories under `$HOME` without their own `.kest` are not lumped into one workspace (set `KEST_WORKSPACE_ROOT=$HOME` to opt in).
