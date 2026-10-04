@@ -497,7 +497,7 @@ func describeStep(step FlowStep, phase, selection string) listedStep {
 
 // buildFlowListing resolves the plan for one file the same way a run would.
 func buildFlowListing(path string, sel runSelection, cliVars map[string]string) (listedFlow, error) {
-	listing := listedFlow{Source: path, Tags: []string{}}
+	listing := listedFlow{Source: path, Tags: []string{}, Steps: []listedStep{}}
 	doc, legacy, err := loadFlowQuiet(path)
 	if err != nil {
 		return listing, err

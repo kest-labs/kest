@@ -272,3 +272,17 @@ func TestListHumanOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestListEmptyFlowHasEmptyStepsArray(t *testing.T) {
+	server, _ := newResourceServer(t, http.StatusCreated, "")
+	work := isolateKest(t)
+	runSel = runSelection{list: true}
+	writeFlow(t, work, "meta.flow.md", "```flow\n@flow id=empty\n@tags a\n```\n")
+	raw, err := runJSONExplicit(t, []string{"meta.flow.md"}, server.URL)
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if !strings.Contains(string(raw), `"steps": []`) || strings.Contains(string(raw), `"steps": null`) {
+		t.Fatalf("steps should be an empty array:\n%s", raw)
+	}
+}
