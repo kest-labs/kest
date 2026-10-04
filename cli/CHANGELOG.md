@@ -13,6 +13,8 @@
 
 ### Fixes
 
+- **`kest why` can now see failed requests** — requests and flow steps that fail an assertion are saved to history (with the failure reason) instead of being dropped, and `kest why` includes that reason in its analysis. Existing history databases get the new column automatically.
+- **`kest why` no longer sends credentials to the AI provider** — headers such as Authorization, Cookie and X-Api-Key, and secret body fields, are redacted from the prompt.
 - **Built-in variables in flows** — steps using `{{$uuid}}`, `{{$timestamp}}`, `{{$env.NAME}}` and other built-ins no longer fail with "required variable not provided".
 
 ## v0.7.5 (2026-04-30)

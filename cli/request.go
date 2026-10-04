@@ -545,13 +545,15 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 
 		result.Success = allPassed
 		if !allPassed {
+			// Keep going so the failed request is still saved to history,
+			// where `kest why` and `kest replay` can find it.
 			result.Error = fmt.Errorf("%s", firstErr)
 			result.ErrorKind = output.ErrorKindAssertion
-			return result, &ExitError{Code: ExitAssertionFailed, Err: result.Error}
 		}
 	}
+	assertFailed := result.Error != nil
 
-	if len(opts.SoftAsserts) > 0 {
+	if len(opts.SoftAsserts) > 0 && !assertFailed {
 		fmt.Println("\nSoft Assertions:")
 		for _, assertion := range opts.SoftAsserts {
 			passed, msg := variable.Assert(resp.Status, resp.Body, resp.Duration.Milliseconds(), vars, assertion)
@@ -589,6 +591,9 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			Project:         conf.ProjectID,
 			CreatedAt:       startTime.UTC(),
 		}
+		if assertFailed {
+			record.Failure = result.Error.Error()
+		}
 		var saveErr error
 		recordID, saveErr = store.SaveRecord(record)
 		if saveErr != nil {
@@ -603,6 +608,14 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 				platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
 			}
 		}
+	}
+
+	result.RecordID = recordID
+	if assertFailed {
+		if recordID > 0 && !opts.SilentOutput {
+			fmt.Printf("\n💡 Saved as record #%d. Run `kest why` to diagnose.\n", recordID)
+		}
+		return result, &ExitError{Code: ExitAssertionFailed, Err: result.Error}
 	}
 
 	result.Success = true

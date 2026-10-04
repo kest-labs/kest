@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/kest-labs/kest/cli/internal/ai"
 	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -134,7 +136,7 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 - Status: %d
 - Duration: %dms
 - Time: %s
-
+%s
 ### Request Headers:
 %s
 
@@ -150,9 +152,10 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 		record.ResponseStatus,
 		record.DurationMs,
 		record.CreatedAt.Format("2006-01-02 15:04:05"),
+		failureLine(record.Failure),
 		formatHeadersForPrompt(reqHeaders),
-		truncateForPrompt(record.RequestBody, 2000),
-		truncateForPrompt(record.ResponseBody, 3000),
+		truncateForPrompt(sanitizedBody(record.RequestBody), 2000),
+		truncateForPrompt(sanitizedBody(record.ResponseBody), 3000),
 	)
 
 	if len(history) > 1 {
@@ -174,20 +177,34 @@ func formatHeadersForPrompt(headers map[string]string) string {
 	if len(headers) == 0 {
 		return "(none)"
 	}
+	// The prompt goes to a third-party AI provider: redact credentials
+	// (Authorization, cookies, API keys) the same way platform sync does.
+	safe := platformsync.SanitizeStringMap(headers)
+	keys := make([]string, 0, len(safe))
+	for k := range safe {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	result := ""
-	for k, v := range headers {
-		// Mask authorization tokens for safety
-		if k == "Authorization" || k == "authorization" {
-			if len(v) > 20 {
-				result += fmt.Sprintf("  %s: %s...%s\n", k, v[:15], v[len(v)-4:])
-			} else {
-				result += fmt.Sprintf("  %s: ***\n", k)
-			}
-		} else {
-			result += fmt.Sprintf("  %s: %s\n", k, v)
-		}
+	for _, k := range keys {
+		result += fmt.Sprintf("  %s: %s\n", k, safe[k])
 	}
 	return result
+}
+
+// failureLine reports why Kest marked the request as failed, so the model
+// can explain e.g. a 200 response that broke an assertion.
+func failureLine(failure string) string {
+	if strings.TrimSpace(failure) == "" {
+		return ""
+	}
+	return fmt.Sprintf("- Kest failure: %s\n", failure)
+}
+
+// sanitizedBody redacts secret fields (passwords, tokens) from a body.
+func sanitizedBody(body string) string {
+	safe, _ := platformsync.SanitizeBody(body)
+	return safe
 }
 
 func truncateForPrompt(s string, maxLen int) string {
