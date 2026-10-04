@@ -65,6 +65,9 @@ Kest Flow (.flow.md) allows you to use standard Markdown to document and test yo
   # Set exec step timeout and verbose output
   kest run hmac.flow.md --exec-timeout 10 -v --debug-vars
 
+  # Machine-readable result for agents and CI, plus a JUnit report
+  kest run tests/ --json --junit .kest/reports/junit.xml
+
   # Generate an HTML report
   kest run login.flow.md --html
 
@@ -99,6 +102,7 @@ func init() {
 	runCmd.Flags().BoolVar(&runSync, "sync", false, "Sync flow definitions and run results to the Kest web workspace")
 	runCmd.Flags().StringVar(&runReportJSON, "report-json", "", "Write aggregate flow results to a JSON file")
 	runCmd.Flags().StringVar(&runReportJUnit, "report-junit", "", "Write aggregate flow results to a JUnit XML file")
+	runCmd.Flags().StringVar(&runReportJUnit, "junit", "", "Write a JUnit XML report to this path (alias of --report-junit)")
 	runCmd.Flags().BoolVar(&runHTML, "html", false, "Generate an HTML report after the run")
 	runCmd.Flags().BoolVar(&runOpen, "open", false, "Generate and open an HTML report after the run")
 	runCmd.Flags().StringVar(&runWorkspaceFlow, "workspace-flow", "", "Run enabled flow markdown from the Kest web workspace (all, flow id, source id, or source path)")
@@ -118,6 +122,19 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 // flagChanged reports whether a run flag was explicitly set, so profile
 // defaults do not override it. Errors carry an ExitError with the exit code.
 func runSuite(args []string, flagChanged func(string) bool) (*output.Result, error) {
+	res, err := executeRunSuite(args, flagChanged)
+	if res == nil && err != nil && runReportJUnit != "" {
+		// The run never started (bad profile, no targets, ...). Still write
+		// the requested JUnit file so CI reports the failure instead of
+		// silently missing test results.
+		if writeErr := output.WriteJUnitFile(runReportJUnit, finalizeResult("run", nil, err)); writeErr != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to write JUnit report: %v\n", writeErr)
+		}
+	}
+	return res, err
+}
+
+func executeRunSuite(args []string, flagChanged func(string) bool) (*output.Result, error) {
 	cfg, root, err := loadFlowRunConfig()
 	if err != nil {
 		return nil, &ExitError{Code: ExitConfigError, Err: err}
