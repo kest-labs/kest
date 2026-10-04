@@ -863,16 +863,10 @@
       }
     },
     "cli/key.go": {
-      "total": 6,
+      "total": 3,
       "matches": {
-        "project": 5,
+        "project": 2,
         "ProjectPath": 1
-      }
-    },
-    "cli/key_test.go": {
-      "total": 1,
-      "matches": {
-        "project": 1
       }
     },
     "cli/replay.go": {
@@ -945,5 +939,5 @@
       }
     }
   },
-  "generatedAt": "2026-10-04T04:27:31.689Z"
+  "generatedAt": "2026-10-04T04:33:34.131Z"
 }
