@@ -151,7 +151,7 @@ func BuildRequestHistoryEntry(record *storage.Record, sourceCommand, clientID st
 		OccurredAt:    normalizedEventTime(record.CreatedAt),
 		EntityType:    "cli_request",
 		EntityID:      fmt.Sprintf("%d", record.ID),
-		Action:        requestHistoryAction(record.ResponseStatus),
+		Action:        requestHistoryAction(record),
 		Message:       buildRequestHistoryMessage(record),
 		Data:          buildRequestHistoryData(record, sourceCommand, clientID),
 	}
@@ -305,7 +305,11 @@ func buildRequestHistoryMessage(record *storage.Record) string {
 	if target == "" {
 		target = "request"
 	}
-	return fmt.Sprintf("%s %s -> %d", strings.ToUpper(strings.TrimSpace(record.Method)), target, record.ResponseStatus)
+	method := strings.ToUpper(strings.TrimSpace(record.Method))
+	if record.ResponseStatus == 0 {
+		return fmt.Sprintf("%s %s -> no response", method, target)
+	}
+	return fmt.Sprintf("%s %s -> %d", method, target, record.ResponseStatus)
 }
 
 func buildRequestHistoryData(record *storage.Record, sourceCommand, clientID string) map[string]any {
@@ -348,6 +352,10 @@ func buildRequestHistoryData(record *storage.Record, sourceCommand, clientID str
 			"source":    HistorySyncSource,
 			"client_id": clientID,
 		},
+	}
+
+	if failure := strings.TrimSpace(record.Failure); failure != "" {
+		data["failure"] = SanitizeLog(failure)
 	}
 
 	if len(truncated) > 0 {
@@ -446,8 +454,10 @@ func loadSanitizedLogExcerpt(logPath string) (string, bool) {
 	return SanitizeLogExcerpt(string(content))
 }
 
-func requestHistoryAction(status int) string {
-	if status >= 400 {
+func requestHistoryAction(record *storage.Record) string {
+	// Status 0 means no HTTP response was received (network error); a
+	// non-empty Failure covers assertion and --max-time failures.
+	if record.ResponseStatus >= 400 || record.ResponseStatus == 0 || strings.TrimSpace(record.Failure) != "" {
 		return "run_failed"
 	}
 	return "run"

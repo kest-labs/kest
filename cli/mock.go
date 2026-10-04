@@ -55,7 +55,9 @@ This is a zero-config mock server — no setup, no manual examples. Your real AP
 		routes := make(map[string]*route)
 		// Records are ordered DESC, so first occurrence is latest
 		for _, r := range records {
-			if r.Path == "" {
+			// Status 0 means the request never got a response (network
+			// error); there is nothing to mock.
+			if r.Path == "" || r.ResponseStatus == 0 {
 				continue
 			}
 			key := r.Method + " " + r.Path

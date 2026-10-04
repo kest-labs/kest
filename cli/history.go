@@ -88,7 +88,7 @@ var historyCmd = &cobra.Command{
 				formatTime(r.CreatedAt),
 				r.Method,
 				truncate(r.URL, 40),
-				strconv.Itoa(r.ResponseStatus),
+				historyStatusCell(r.ResponseStatus),
 				fmt.Sprintf("%dms", r.DurationMs),
 			)
 		}
@@ -117,6 +117,9 @@ type historyEntry struct {
 	DurationMs  int64  `json:"duration_ms"`
 	Environment string `json:"environment,omitempty"`
 	CreatedAt   string `json:"created_at"`
+	// Failure is why Kest marked the request as failed (assertion,
+	// --max-time, or a network error when Status is 0).
+	Failure string `json:"failure,omitempty"`
 }
 
 // historyScope returns the storage scope for history queries: the current
@@ -162,6 +165,7 @@ func buildHistoryResult(records []storage.Record) *output.Result {
 			DurationMs:  r.DurationMs,
 			Environment: r.Environment,
 			CreatedAt:   r.CreatedAt.UTC().Format(time.RFC3339),
+			Failure:     platformsync.SanitizeLog(r.Failure),
 		})
 	}
 	res.Summary.Total = len(entries)
@@ -235,6 +239,14 @@ func matchStatusFilter(status int, filter string) bool {
 		return false
 	}
 	return status == code
+}
+
+// historyStatusCell shows "ERR" for records that never got an HTTP response.
+func historyStatusCell(status int) string {
+	if status == 0 {
+		return "ERR"
+	}
+	return strconv.Itoa(status)
 }
 
 func formatTime(t time.Time) string {

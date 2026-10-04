@@ -93,6 +93,22 @@ func replayRecord(ref string, asserts []string, wantDiff bool) (*output.Result, 
 	if err != nil {
 		tr.Error = err
 		tr.ErrorKind = classifyRequestError(err)
+		// Keep the failed attempt in history (status 0) so `kest why`
+		// can explain the network error.
+		// Copy the original request (and its environment/workspace scope),
+		// then clear the response.
+		failed := *oldRecord
+		failed.ID = 0
+		failed.ResponseStatus = 0
+		failed.ResponseHeaders = json.RawMessage("{}")
+		failed.ResponseBody = ""
+		failed.DurationMs = time.Since(startedAt).Milliseconds()
+		failed.Failure = err.Error()
+		failed.CreatedAt = time.Now().UTC()
+		if failedID, saveErr := store.SaveRecord(&failed); saveErr == nil {
+			tr.RecordID = failedID
+			fmt.Printf("❌ Replay failed: %v\n💡 Saved as record #%d. Run `kest why` to diagnose.\n", err, failedID)
+		}
 		res.AddStep(output.StepFromTestResult(tr, output.StepOptions{IncludeBodies: true}))
 		res.SetDuration(startedAt, time.Now())
 		return res, &ExitError{Code: ExitRuntimeError, Err: err}

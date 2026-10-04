@@ -166,3 +166,41 @@ func TestQueueRunHistoryEnqueuesAggregateEvent(t *testing.T) {
 		t.Fatalf("expected response body redacted, got %s", body)
 	}
 }
+
+func TestBuildRequestHistoryEntryNetworkFailure(t *testing.T) {
+	record := &storage.Record{
+		ID:              7,
+		Method:          "get",
+		URL:             "http://127.0.0.1:1/health",
+		Path:            "/health",
+		RequestHeaders:  json.RawMessage(`{}`),
+		ResponseStatus:  0,
+		ResponseHeaders: json.RawMessage(`{}`),
+		Failure:         `Get "http://127.0.0.1:1/health": dial tcp 127.0.0.1:1: connect: connection refused`,
+		CreatedAt:       time.Now(),
+	}
+	entry := BuildRequestHistoryEntry(record, "get", "client-1")
+	if entry.Action != "run_failed" {
+		t.Fatalf("action = %q, want run_failed", entry.Action)
+	}
+	if !strings.Contains(entry.Message, "no response") {
+		t.Fatalf("message = %q, want 'no response'", entry.Message)
+	}
+	if failure, _ := entry.Data["failure"].(string); !strings.Contains(failure, "connection refused") {
+		t.Fatalf("failure not synced: %#v", entry.Data["failure"])
+	}
+	if _, err := json.Marshal(entry); err != nil {
+		t.Fatalf("entry does not marshal: %v", err)
+	}
+}
+
+func TestBuildRequestHistoryEntryAssertionFailureIsFailed(t *testing.T) {
+	record := &storage.Record{ID: 8, Method: "GET", URL: "http://x.test/a", ResponseStatus: 200, Failure: "assertion failed: status == 201"}
+	if got := BuildRequestHistoryEntry(record, "get", "c").Action; got != "run_failed" {
+		t.Fatalf("action = %q, want run_failed", got)
+	}
+	record.Failure = ""
+	if got := BuildRequestHistoryEntry(record, "get", "c").Action; got != "run" {
+		t.Fatalf("action = %q, want run", got)
+	}
+}

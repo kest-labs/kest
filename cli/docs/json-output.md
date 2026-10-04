@@ -91,7 +91,9 @@ Notes:
   fails with `snapshot_mismatch`.
 - `history` puts records in `data.records`
   (`id`, `method`, `url`, `status`, `duration_ms`, `environment`,
-  `created_at`) and never includes headers or bodies.
+  `created_at`, and `failure` when Kest marked the request failed) and never
+  includes headers or bodies. `status` is `0` when no HTTP response was
+  received (connection refused, DNS, TLS, timeout); `failure` holds the error.
 - `snap` (save mode) returns `data.snapshot_path`.
 
 ### Error kinds

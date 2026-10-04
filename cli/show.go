@@ -104,7 +104,10 @@ func printRecord(r *storage.Record) {
 	}
 
 	fmt.Println(sectionStyle.Render("─── Response ───"))
-	fmt.Printf("Status: %d    Duration: %dms\n", r.ResponseStatus, r.DurationMs)
+	fmt.Printf("Status: %s    Duration: %dms\n", statusLabel(r.ResponseStatus), r.DurationMs)
+	if r.Failure != "" {
+		fmt.Printf("Failure: %s\n", r.Failure)
+	}
 
 	fmt.Println("\nHeaders:")
 	var respHeaders map[string][]string

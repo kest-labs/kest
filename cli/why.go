@@ -93,7 +93,7 @@ func diagnoseRecord(ref string) (*output.Result, error) {
 
 	client := ai.NewClient(conf.AIKey, conf.AIBaseURL, conf.AIModel)
 
-	fmt.Printf("🧠 Analyzing record #%d: %s %s → %d ...\n\n", record.ID, record.Method, record.URL, record.ResponseStatus)
+	fmt.Printf("🧠 Analyzing record #%d: %s %s → %s ...\n\n", record.ID, record.Method, record.URL, statusLabel(record.ResponseStatus))
 
 	prompt := buildWhyPrompt(record, history)
 	diagnosis, err := client.Chat(whySystemPrompt, prompt)
@@ -133,7 +133,7 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 	prompt := fmt.Sprintf(`## Target Request (Record #%d)
 - Method: %s
 - URL: %s
-- Status: %d
+- Status: %s
 - Duration: %dms
 - Time: %s
 %s
@@ -148,8 +148,8 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 `,
 		record.ID,
 		record.Method,
-		record.URL,
-		record.ResponseStatus,
+		platformsync.SanitizeURL(record.URL),
+		promptStatus(record.ResponseStatus),
 		record.DurationMs,
 		record.CreatedAt.Format("2006-01-02 15:04:05"),
 		failureLine(record.Failure),
@@ -164,8 +164,8 @@ func buildWhyPrompt(record *storage.Record, history []storage.Record) string {
 			if h.ID == record.ID {
 				continue
 			}
-			prompt += fmt.Sprintf("- #%d: %s %s → %d (%dms) at %s\n",
-				h.ID, h.Method, h.URL, h.ResponseStatus, h.DurationMs,
+			prompt += fmt.Sprintf("- #%d: %s %s → %s (%dms) at %s\n",
+				h.ID, h.Method, platformsync.SanitizeURL(h.URL), statusLabel(h.ResponseStatus), h.DurationMs,
 				h.CreatedAt.Format("15:04:05"))
 		}
 	}
@@ -192,13 +192,30 @@ func formatHeadersForPrompt(headers map[string]string) string {
 	return result
 }
 
+// statusLabel renders a recorded status; 0 means no HTTP response arrived.
+func statusLabel(status int) string {
+	if status == 0 {
+		return "no response"
+	}
+	return fmt.Sprintf("%d", status)
+}
+
+// promptStatus tells the model explicitly when the request never got an
+// HTTP response, so it diagnoses the transport error instead of a "status 0".
+func promptStatus(status int) string {
+	if status == 0 {
+		return "none (no HTTP response was received; see Kest failure for the network/transport error)"
+	}
+	return fmt.Sprintf("%d", status)
+}
+
 // failureLine reports why Kest marked the request as failed, so the model
 // can explain e.g. a 200 response that broke an assertion.
 func failureLine(failure string) string {
 	if strings.TrimSpace(failure) == "" {
 		return ""
 	}
-	return fmt.Sprintf("- Kest failure: %s\n", failure)
+	return fmt.Sprintf("- Kest failure: %s\n", platformsync.SanitizeLog(failure))
 }
 
 // sanitizedBody redacts secret fields (passwords, tokens) from a body.

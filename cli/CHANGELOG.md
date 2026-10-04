@@ -14,6 +14,7 @@
 ### Fixes
 
 - **`kest why` can now see failed requests** — requests and flow steps that fail an assertion are saved to history (with the failure reason) instead of being dropped, and `kest why` includes that reason in its analysis. Existing history databases get the new column automatically.
+- **Network errors and timeouts are saved to history** — a request that gets no response (connection refused, DNS, TLS, timeout) or exceeds `--max-time` is recorded with the error as its failure reason (status `0`, shown as `ERR` in `kest history`), so `kest why` can explain it and `kest replay` can retry it. `--no-record` is respected. `kest mock` skips these records.
 - **`kest why` no longer sends credentials to the AI provider** — headers such as Authorization, Cookie and X-Api-Key, and secret body fields, are redacted from the prompt.
 - **Built-in variables in flows** — steps using `{{$uuid}}`, `{{$timestamp}}`, `{{$env.NAME}}` and other built-ins no longer fail with "required variable not provided".
 

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/kest-labs/kest/cli/internal/client"
+	"github.com/kest-labs/kest/cli/internal/config"
 	"github.com/kest-labs/kest/cli/internal/logger"
 	"github.com/kest-labs/kest/cli/internal/output"
 	"github.com/kest-labs/kest/cli/internal/platformsync"
@@ -441,11 +442,30 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		// If last attempt, show error
 		if attempt == maxRetries {
 			fmt.Printf("❌ Request Failed after %d attempts: %v\n", attempt+1, err)
-			result.Error = err
-			result.ErrorKind = errKind
-			result.Success = false
-			return result, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
+	}
+
+	if err != nil {
+		// A transport error (connection refused, DNS, TLS, timeout) leaves
+		// resp nil; a --max-time violation keeps the slow response. Either
+		// way the attempt is saved so `kest why` and `kest replay` can use it.
+		result.Error = err
+		result.ErrorKind = errKind
+		result.Success = false
+		if resp != nil {
+			result.Status = resp.Status
+			result.Duration = resp.Duration
+			result.ResponseHeaders = cloneHeaderMap(resp.Headers)
+			result.ResponseBody = string(resp.Body)
+			result.RequestID = extractRequestID(resp.Headers, resp.Body)
+		}
+		if !opts.NoRecord {
+			result.RecordID = saveRequestRecord(store, conf, env.BaseURL, opts, finalURL, headers, body, resp, err.Error(), startTime)
+		}
+		if result.RecordID > 0 && !opts.SilentOutput {
+			fmt.Printf("💡 Saved as record #%d. Run `kest why` to diagnose.\n", result.RecordID)
+		}
+		return result, &ExitError{Code: ExitRuntimeError, Err: err}
 	}
 
 	// Logging
@@ -568,46 +588,12 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		}
 	}
 
-	if !opts.NoRecord && store != nil {
-		headerJSON, _ := json.Marshal(headers)
-		respHeaderJSON, _ := json.Marshal(resp.Headers)
-
-		u, _ := url.Parse(finalURL)
-		queryJSON, _ := json.Marshal(u.Query())
-
-		record := &storage.Record{
-			Method:          strings.ToUpper(method),
-			URL:             finalURL,
-			BaseURL:         env.BaseURL,
-			Path:            u.Path,
-			QueryParams:     queryJSON,
-			RequestHeaders:  headerJSON,
-			RequestBody:     string(body),
-			ResponseStatus:  resp.Status,
-			ResponseHeaders: respHeaderJSON,
-			ResponseBody:    string(resp.Body),
-			DurationMs:      resp.Duration.Milliseconds(),
-			Environment:     conf.ActiveEnv,
-			Project:         conf.ProjectID,
-			CreatedAt:       startTime.UTC(),
-		}
+	if !opts.NoRecord {
+		failure := ""
 		if assertFailed {
-			record.Failure = result.Error.Error()
+			failure = result.Error.Error()
 		}
-		var saveErr error
-		recordID, saveErr = store.SaveRecord(record)
-		if saveErr != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Failed to save request history: %v\n", saveErr)
-			logger.LogToSession("save history failed: %v", saveErr)
-		}
-		record.ID = recordID
-		if recordID > 0 && !opts.SkipHistorySync {
-			if err := platformsync.QueueRequestHistory(conf, store, record, method); err != nil {
-				logger.LogToSession("history auto-sync enqueue failed for record %d: %v", recordID, err)
-			} else {
-				platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
-			}
-		}
+		recordID = saveRequestRecord(store, conf, env.BaseURL, opts, finalURL, headers, body, resp, failure, startTime)
 	}
 
 	result.RecordID = recordID
@@ -625,6 +611,60 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	}
 	result.RecordID = recordID
 	return result, nil
+}
+
+// saveRequestRecord writes one request attempt to the local history and
+// queues it for platform sync. resp may be nil when no HTTP response was
+// received (network error); the record then has ResponseStatus 0 and the
+// error in Failure. It returns the new record ID, or 0 when nothing was saved.
+func saveRequestRecord(store *storage.Store, conf *config.Config, baseURL string, opts RequestOptions, finalURL string, headers map[string]string, body []byte, resp *client.Response, failure string, startTime time.Time) int64 {
+	if store == nil || conf == nil {
+		return 0
+	}
+	headerJSON, _ := json.Marshal(headers)
+
+	record := &storage.Record{
+		Method:          strings.ToUpper(opts.Method),
+		URL:             finalURL,
+		BaseURL:         baseURL,
+		RequestHeaders:  headerJSON,
+		RequestBody:     string(body),
+		ResponseHeaders: json.RawMessage("{}"),
+		Environment:     conf.ActiveEnv,
+		Project:         conf.ProjectID,
+		Failure:         failure,
+		CreatedAt:       startTime.UTC(),
+	}
+	if u, err := url.Parse(finalURL); err == nil {
+		record.Path = u.Path
+		record.QueryParams, _ = json.Marshal(u.Query())
+	} else {
+		record.QueryParams = json.RawMessage("{}")
+	}
+	if resp != nil {
+		record.ResponseStatus = resp.Status
+		record.ResponseHeaders, _ = json.Marshal(resp.Headers)
+		record.ResponseBody = string(resp.Body)
+		record.DurationMs = resp.Duration.Milliseconds()
+	} else {
+		record.DurationMs = time.Since(startTime).Milliseconds()
+	}
+
+	recordID, saveErr := store.SaveRecord(record)
+	if saveErr != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  Failed to save request history: %v\n", saveErr)
+		logger.LogToSession("save history failed: %v", saveErr)
+		return 0
+	}
+	record.ID = recordID
+	if recordID > 0 && !opts.SkipHistorySync {
+		if err := platformsync.QueueRequestHistory(conf, store, record, opts.Method); err != nil {
+			logger.LogToSession("history auto-sync enqueue failed for record %d: %v", recordID, err)
+		} else {
+			platformsync.MaybeFlushHistoryOutbox(conf, store, 5)
+		}
+	}
+	return recordID
 }
 
 // buildRequestResult wraps a single request outcome, including redacted
