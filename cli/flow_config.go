@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/kest-labs/kest/cli/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -167,34 +168,7 @@ func selectFlowRunProfile(cfg flowRunConfig, requested string) (string, flowRunP
 }
 
 func findKestWorkspaceRoot() (string, error) {
-	if root := strings.TrimSpace(os.Getenv("KEST_WORKSPACE_ROOT")); root != "" {
-		abs, err := filepath.Abs(root)
-		if err != nil {
-			return "", err
-		}
-		if _, err := os.Stat(filepath.Join(abs, ".kest")); err != nil {
-			return "", err
-		}
-		return abs, nil
-	}
-
-	curr, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(curr, ".kest")); err == nil {
-			return curr, nil
-		}
-
-		parent := filepath.Dir(curr)
-		if parent == curr {
-			break
-		}
-		curr = parent
-	}
-	return "", nil
+	return config.FindWorkspaceRoot()
 }
 
 func resolveRunTargets(args []string, profile flowRunProfile, root string) ([]string, error) {
