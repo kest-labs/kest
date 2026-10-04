@@ -204,6 +204,20 @@ $ kest run login.flow.md
 
 ## 🔥 More Features
 
+### Import — bring your Postman collections, curl commands and OpenAPI specs
+
+```bash
+kest import postman acme.postman_collection.json --env staging.postman_environment.json
+kest import curl "curl -X POST https://api.example.com/users -d '{\"name\":\"kest\"}'"
+kest import openapi openapi.yaml          # one smoke flow per tag
+```
+
+Folders become `.flow.md` files, `{{variables}}` keep working, simple `pm.test`
+status/JSON checks become `[Asserts]`, `pm.environment.set(...)` becomes
+`[Captures]`, and secrets are never copied — they turn into variables you pass
+with `--var`. Anything that cannot be translated safely is kept as a
+"Manual review" note and listed at the end. See [docs/import.md](docs/import.md).
+
 ### Mock Server — zero config, from your history
 
 ```bash
@@ -335,6 +349,19 @@ kest watch login.flow.md                # Auto-rerun on change
 kest snap /api/users                    # Save snapshot
 kest snap /api/users --verify           # Verify against snapshot
 kest mock --port 8080                   # Mock server from history
+```
+
+</details>
+
+<details>
+<summary><b>Import</b></summary>
+
+```bash
+kest import postman coll.json --env env.json -o .kest/flow/acme   # Postman v2.0/v2.1
+kest import postman coll.json --env env.json --write-config       # also update .kest/config.yaml
+kest import curl "curl https://api.example.com/health"            # print a step block
+pbpaste | kest import curl -o smoke.flow.md --append              # build a flow from curls
+kest import openapi https://example.com/openapi.json              # smoke flow per tag
 ```
 
 </details>
