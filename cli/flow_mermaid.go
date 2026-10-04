@@ -41,6 +41,24 @@ func FlowToMermaid(doc FlowDoc) string {
 		return b.String()
 	}
 
+	// Steps that no explicit edge touches still run in file order; draw the
+	// implicit sequential edge between neighbours that have no explicit
+	// outgoing/incoming edge, so partially-specified flows are not drawn with
+	// disconnected nodes.
+	hasOut := map[string]bool{}
+	hasIn := map[string]bool{}
+	for _, edge := range doc.Edges {
+		hasOut[edge.From] = true
+		hasIn[edge.To] = true
+	}
+	for i := 0; i+1 < len(doc.Steps); i++ {
+		from, to := doc.Steps[i].ID, doc.Steps[i+1].ID
+		if from == "" || to == "" || hasOut[from] || hasIn[to] {
+			continue
+		}
+		fmt.Fprintf(&b, "  %s --> %s\n", from, to)
+	}
+
 	for _, edge := range doc.Edges {
 		if edge.From == "" || edge.To == "" {
 			continue

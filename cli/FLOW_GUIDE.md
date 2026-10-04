@@ -158,12 +158,34 @@ nonce = nonce
 - The full variable chain is available for interpolation in the command.
 - Captured values are stored in the run context and available to all subsequent steps.
 
-### 4) Edge Block (Flow Graph)
+### 4) Edge Block (Flow Graph) - optional
+
+**You normally do not need edges.** Steps run in file order, top to bottom. A file
+with no `edge` blocks is executed exactly like the same file with a
+`@from stepN @to stepN+1 @on success` edge between every pair of neighbouring
+steps, so do not write those: they are pure boilerplate (`kest lint` reports
+them as `redundant-edge` and `kest lint --fix` deletes them).
+
+Edges are only needed for non-linear control flow, i.e. when a step must run
+**before** a step that is declared above it:
+
 ```edge
 @from login
 @to profile
 @on success
 ```
+
+How edges work today:
+
+- The runner orders `step` blocks with a topological sort of the edges. Ties
+  (steps no edge relates) keep file order.
+- `@on` is informational: it labels the edge in Mermaid output and in the web
+  graph, but it does not make an edge conditional.
+- If edges reference an unknown step or form a cycle, the whole file falls back
+  to file order.
+- `setup` and `teardown` blocks are never reordered by edges.
+- Mermaid output (`-v`) always draws the implicit sequential edges between
+  steps that no explicit edge touches.
 
 ### Mermaid Preview (in `-v` mode)
 Kest prints a Mermaid flowchart for the parsed Flow document when you run with `-v`:

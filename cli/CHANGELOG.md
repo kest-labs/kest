@@ -7,6 +7,8 @@
 - **`{{$basicAuth(user, pass)}}` built-in** — base64-encodes two variables for an HTTP Basic `Authorization` header. `kest import` now emits it for Basic auth, so you pass the username and password with `--var` instead of precomputing an encoded value.
 - **Default success check for imported Postman requests** — requests with no Postman test script get `status >= 200` / `status < 300`, like curl and OpenAPI imports.
 
+- **Edges are optional; flows are sequential by default** — documented (and covered by an equivalence test) that a flow with no `edge` blocks runs exactly like the same flow with a linear `@on success` edge between every pair of neighbouring steps. `@on` is informational. Mermaid output now draws implicit sequential edges for steps no explicit edge touches. Adds a hidden `kest flow-plan <file>` command that prints the resolved execution plan as JSON.
+
 ### Changes
 
 - **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.
