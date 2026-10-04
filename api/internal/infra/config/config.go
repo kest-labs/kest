@@ -197,7 +197,7 @@ func Load() (*Config, error) {
 			File:  env.Get("LOG_FILE", "storage/logs/app.log"),
 		},
 		CORS: CORSConfig{
-			AllowOrigins:     env.GetSlice("CORS_ALLOW_ORIGINS", []string{"*"}),
+			AllowOrigins:     resolveCORSOrigins(),
 			AllowMethods:     env.GetSlice("CORS_ALLOW_METHODS", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 			AllowHeaders:     env.GetSlice("CORS_ALLOW_HEADERS", []string{"Origin", "Content-Type", "Accept", "Authorization"}),
 			ExposeHeaders:    env.GetSlice("CORS_EXPOSE_HEADERS", []string{"Content-Length"}),
@@ -247,8 +247,20 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	logWarnings(NormalizeCORS(&cfg.CORS, !cfg.IsLocalDevelopment()))
+
 	GlobalConfig = cfg
 	return cfg, nil
+}
+
+// resolveCORSOrigins reads CORS_ALLOW_ORIGINS, falling back to the legacy
+// ALLOWED_ORIGINS key still used by docker-compose.yml and render.yaml.
+// Defaults to "*" (credentials are then disabled by NormalizeCORS).
+func resolveCORSOrigins() []string {
+	if origins := env.GetSlice("CORS_ALLOW_ORIGINS"); len(origins) > 0 {
+		return origins
+	}
+	return env.GetSlice("ALLOWED_ORIGINS", []string{"*"})
 }
 
 func resolveServerPort() int {
