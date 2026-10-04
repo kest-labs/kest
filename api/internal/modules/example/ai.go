@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/kest-labs/kest/api/internal/infra/config"
+	infrahttp "github.com/kest-labs/kest/api/internal/infra/http"
 	requestmodule "github.com/kest-labs/kest/api/internal/modules/request"
 )
 
@@ -159,7 +159,7 @@ func (c *exampleLLMClient) complete(ctx context.Context, system, user string) (s
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := infrahttp.ReadAllLimited(resp.Body, infrahttp.LLMMaxResponseBytes)
 	if err != nil {
 		return "", err
 	}

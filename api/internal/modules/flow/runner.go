@@ -267,7 +267,7 @@ func (r *Runner) executeStep(ctx context.Context, step *FlowStepPO, variables ma
 	defer resp.Body.Close()
 
 	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, truncated, err := infrahttp.ReadLimited(resp.Body, infrahttp.RunnerMaxResponseBytes())
 	if err != nil {
 		result.Status = RunStatusFailed
 		result.ErrorMessage = fmt.Sprintf("failed to read response: %v", err)
@@ -279,6 +279,9 @@ func (r *Runner) executeStep(ctx context.Context, step *FlowStepPO, variables ma
 		"status":  resp.StatusCode,
 		"headers": resp.Header,
 		"body":    string(respBody),
+	}
+	if truncated {
+		respInfo["truncated"] = true
 	}
 	respJSON, _ := json.Marshal(respInfo)
 	result.Response = string(respJSON)

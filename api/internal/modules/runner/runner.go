@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -41,7 +40,10 @@ type Response struct {
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
 	Time       int64             `json:"time"` // milliseconds
-	Size       int               `json:"size"` // bytes
+	Size       int               `json:"size"` // bytes captured
+	// Truncated is true when the body exceeded RUNNER_MAX_RESPONSE_MB and
+	// only the first Size bytes were captured.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, error) {
@@ -84,7 +86,10 @@ func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, 
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, truncated, err := infrahttp.ReadLimited(resp.Body, infrahttp.RunnerMaxResponseBytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
 	elapsed := time.Since(start).Milliseconds()
 
 	response := &Response{
@@ -94,6 +99,7 @@ func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, 
 		Body:       string(body),
 		Time:       elapsed,
 		Size:       len(body),
+		Truncated:  truncated,
 	}
 
 	return response, nil

@@ -70,6 +70,7 @@ func (e *Executor) Execute(ctx context.Context, tc *testcase.TestCaseResponse, e
 	// 2. Perform Request
 	client := kest_http.New().
 		WithHTTPClient(e.outboundClient()).
+		MaxResponseBytes(kest_http.RunnerMaxResponseBytes()).
 		Timeout(10 * time.Second).
 		WithHeaders(headers)
 
@@ -138,6 +139,10 @@ func (e *Executor) Execute(ctx context.Context, tc *testcase.TestCaseResponse, e
 		if !res.Passed {
 			passed = false
 		}
+	}
+
+	if resp.Truncated() && result.Message == "" {
+		result.Message = fmt.Sprintf("response body truncated at %d bytes", len(resp.Body()))
 	}
 
 	if passed {

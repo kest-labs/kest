@@ -143,6 +143,9 @@ type RunnerConfig struct {
 	AllowPrivateNetworks bool
 	// MaxRedirects bounds redirect hops (RUNNER_MAX_REDIRECTS, default 10).
 	MaxRedirects int
+	// MaxResponseBytes caps captured response bodies
+	// (RUNNER_MAX_RESPONSE_MB, default 10MB).
+	MaxResponseBytes int64
 }
 
 // ClickHouseConfig holds ClickHouse configuration
@@ -262,6 +265,7 @@ func Load() (*Config, error) {
 	logWarnings(NormalizeCORS(&cfg.CORS, !cfg.IsLocalDevelopment()))
 
 	cfg.Runner.MaxRedirects = env.GetInt("RUNNER_MAX_REDIRECTS", 10)
+	cfg.Runner.MaxResponseBytes = int64(env.GetInt("RUNNER_MAX_RESPONSE_MB", 10)) * 1024 * 1024
 	allowPrivate, source := resolveRunnerAllowPrivateNetworks(cfg.IsLocalDevelopment())
 	cfg.Runner.AllowPrivateNetworks = allowPrivate
 	logRunnerNetworkMode(allowPrivate, source)
