@@ -60,7 +60,7 @@ func diagnoseRecord(ref string) (*output.Result, error) {
 
 	conf := loadConfigWarn()
 	if strings.TrimSpace(conf.AIKey) == "" {
-		err := fmt.Errorf("AI is not configured: set an API key with 'kest config set ai_key <key>'")
+		err := fmt.Errorf("AI is not configured: set an OpenAI-compatible key with 'kest config set ai_key <key>', or inspect the record yourself with 'kest show %s'", showRef(ref))
 		res.SetError(output.ErrorKindAINotConfigured, err.Error())
 		return res, &ExitError{Code: ExitConfigError, Err: err}
 	}
@@ -190,6 +190,13 @@ func formatHeadersForPrompt(headers map[string]string) string {
 		result += fmt.Sprintf("  %s: %s\n", k, safe[k])
 	}
 	return result
+}
+
+func showRef(ref string) string {
+	if ref == "" {
+		return "last"
+	}
+	return ref
 }
 
 // statusLabel renders a recorded status; 0 means no HTTP response arrived.

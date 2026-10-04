@@ -89,11 +89,12 @@ func defaultFlowRunConfig() flowRunConfig {
 	return flowRunConfig{
 		Version: 1,
 		Profiles: map[string]flowRunProfile{
+			// The local profile inherits the active environment and its
+			// base_url from .kest/config.yaml, so `kest run` hits the same
+			// server as `kest get`.
 			"local": {
 				Include:  allFlowFiles,
 				Exclude:  defaultExclude,
-				Env:      "local",
-				BaseURL:  "http://127.0.0.1:5119",
 				Strict:   &strict,
 				FailFast: &failFast,
 				Sync:     &localSync,

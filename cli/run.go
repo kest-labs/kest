@@ -459,6 +459,9 @@ func runScenarioWithResult(filePath string) (*runExecutionResult, error) {
 		fmt.Printf("💡 Tip: Use this path for deep-context debugging in AI Editors (Cursor/Windsurf)\n")
 		fmt.Printf("📘 Need help writing flows? Run 'kest guide' for a quick tutorial.\n")
 	}
+	if !output.JSONOutput {
+		printFailedStepHint(summ)
+	}
 
 	reportErr := maybeGenerateRunReport(filePath, summ, logPath)
 	maybeQueueRunHistory(filePath, summ, logPath)
@@ -839,6 +842,9 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 		fmt.Printf("\n📄 Full session logs generated at: %s\n", logPath)
 		fmt.Printf("💡 Tip: Use this path for deep-context debugging in AI Editors (Cursor/Windsurf)\n")
 		fmt.Printf("📘 Need help writing flows? Run 'kest guide' for a quick tutorial.\n")
+	}
+	if !output.JSONOutput {
+		printFailedStepHint(summ)
 	}
 
 	reportErr := maybeGenerateRunReport(filePath, summ, logPath)
@@ -1296,4 +1302,26 @@ func splitArguments(s string) []string {
 		args = append(args, current.String())
 	}
 	return args
+}
+
+// printFailedStepHint points at the history record of the first failed step,
+// so the next command (show / why / replay) is one copy-paste away.
+func printFailedStepHint(summ *summary.Summary) {
+	if summ == nil {
+		return
+	}
+	for _, r := range summ.Results {
+		if r.Success || r.RecordID == 0 {
+			continue
+		}
+		name := strings.TrimSpace(r.Name)
+		if name == "" {
+			name = strings.TrimSpace(r.Method + " " + r.URL)
+		}
+		fmt.Printf("\n💡 %s failed and was saved as record #%d. Next:\n", name, r.RecordID)
+		fmt.Printf("   kest show %d      # full request/response\n", r.RecordID)
+		fmt.Printf("   kest why %d       # AI diagnosis (needs: kest config set ai_key <key>)\n", r.RecordID)
+		fmt.Printf("   kest replay %d    # re-send after fixing your code\n", r.RecordID)
+		return
+	}
 }

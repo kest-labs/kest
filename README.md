@@ -23,34 +23,33 @@ Kest is organized as a flat, high-visibility monorepo to ensure perfect synchron
 ### 1. Install the CLI
 The fastest way to get started with the Kest toolset:
 ```bash
-curl -fsSL https://kest.dev/install.sh | sh
+curl -fsSL https://kest.dev/install.sh | bash
 ```
-*Built via GoReleaser. Supported on macOS, Linux, and Windows.*
+*Built via GoReleaser. Supported on macOS and Linux.* `kest mcp` and `--json` are newer than
+the latest release; see [cli/README.md](./cli/README.md#-quick-start-60-seconds) to build from source.
 
 ### 2. Basic Usage
 ```bash
-kest init                                                    # Initialize project
-kest get /api/users -a "status==200"                         # Test an endpoint
-kest post /api/login -d '{"user":"admin"}' -c "token=data.token"  # Capture token
-kest run auth.flow.md                                        # Run a Markdown flow
+kest init --base-url http://localhost:8080                   # Initialize workspace + sample flow
+kest get / -a "status < 500"                                 # Test an endpoint
+kest run .kest/flow/smoke.flow.md                            # Run a Markdown flow
+claude mcp add kest -- kest mcp                              # Let Claude Code verify your API
 ```
 
 ### 3. Connect CLI To The Web Console
 
-Use this flow when you want to push local CLI history back into a Kest project as API Specs.
+Use this flow when you want to push local CLI history back into a Kest workspace as API Specs.
 
-1. Open the target project in the Web Console.
-2. Go to the project detail page.
-3. In the `CLI Sync` card, click `Generate CLI Token`.
-4. Copy the one-time token or the generated setup command.
+1. Open the target workspace in the Web Console.
+2. In the `CLI Sync` card, click `Generate CLI Token`.
+3. Copy the one-time token or the generated `kest key ...` setup command.
 
-Then configure the CLI once inside your local Kest project:
+Then configure the CLI once inside your local Kest workspace (the token is prompted for):
 
 ```bash
 kest sync config \
   --platform-url "https://api.kest.dev/v1" \
-  --platform-token "kest_pat_..." \
-  --project-id "12"
+  --workspace-id "12"
 ```
 
 This writes the following fields into `.kest/config.yaml`:
@@ -58,7 +57,7 @@ This writes the following fields into `.kest/config.yaml`:
 ```yaml
 platform_url: https://api.kest.dev/v1
 platform_token: kest_pat_...
-platform_project_id: "12"
+platform_workspace_id: "12"
 ```
 
 Check the saved configuration:
@@ -81,9 +80,9 @@ kest sync push
 
 Notes:
 
-- `platform_token` is a Kest project token, not an OpenAI `sk-...` key.
-- The token is scoped to a single project and is checked against the URL project ID on upload.
-- The CLI upload endpoint is `POST /v1/projects/:id/cli/spec-sync`.
+- `platform_token` is a Kest workspace token, not an OpenAI `sk-...` key.
+- The token is scoped to a single workspace and is checked against the URL workspace ID on upload.
+- The CLI upload endpoint is `POST /v1/workspaces/:id/cli/spec-sync`.
 
 ---
 

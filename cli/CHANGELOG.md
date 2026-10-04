@@ -9,6 +9,10 @@
 
 ### Changes
 
+- **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.
+- **`kest run` uses your configured base URL by default** — the built-in `local` profile no longer forces `env: local` and `base_url: http://127.0.0.1:5119`; flows now hit the active environment's `base_url` from `.kest/config.yaml`, like `kest get`. Set `env`/`base_url` in `.kest/flow.config.yaml` to override.
+- **Failed flow runs print the next step** — the record ID of the first failed step with ready-to-run `kest show` / `kest why` / `kest replay` commands. Flow steps no longer dump `--- Debug Info ---` for 4xx responses unless `--verbose`.
+- **`kest history` and `kest show` print local time** instead of UTC.
 - **`kest generate` is deprecated** — it still works but prints a notice; use `kest import openapi`.
 
 ### Fixes

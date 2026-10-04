@@ -473,7 +473,9 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	// Logging
 	logger.LogRequest(method, finalURL, headers, string(body), resp.Status, resp.Headers, string(resp.Body), resp.Duration)
 
-	if opts.Verbose || resp.Status >= 400 {
+	// Flow steps (SilentOutput) report failures in the run summary; only
+	// dump debug info for them in verbose mode.
+	if opts.Verbose || (resp.Status >= 400 && !opts.SilentOutput) {
 		fmt.Printf("\n--- Debug Info ---\n")
 		fmt.Printf("Note: Headers are canonicalized per HTTP spec (e.g. X-Tenant-ID => X-Tenant-Id).\n")
 		fmt.Printf("Request: %s %s\n", method, finalURL)

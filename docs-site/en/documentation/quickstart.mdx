@@ -1,9 +1,36 @@
 ---
 title: Quickstart
-description: Make your first authenticated Kest API requests.
+description: Verify your API with the Kest CLI in 60 seconds, then make your first authenticated Kest platform API requests.
 ---
 
 # Quickstart
+
+## Kest CLI in 60 seconds
+
+Kest is the API verification layer for AI coding agents. Run these in your API
+repository while your server is running (replace the base URL with yours):
+
+```bash
+curl -fsSL https://kest.dev/install.sh | bash
+kest init --base-url http://localhost:8080   # .kest/ workspace + sample flow
+kest get / -a "status < 500"                 # first request, recorded to history
+kest run .kest/flow/smoke.flow.md            # run the sample flow
+claude mcp add kest -- kest mcp              # let Claude Code verify its changes
+```
+
+When a step fails, `kest run` prints the record ID; inspect it with
+`kest show <id>`, re-send it with `kest replay <id>`, or get an AI diagnosis
+with `kest why <id>` (needs `kest config set ai_key <key>`).
+
+> `kest mcp` and `--json` are newer than the latest release (v0.7.7). Until the
+> next release, build from source:
+> `git clone https://github.com/kest-labs/kest.git && cd kest/cli && go build -o ~/.local/bin/kest .`
+
+See [Kest CLI](/en/documentation/kest-cli) for the full command reference.
+
+## Platform API
+
+The rest of this page covers the Kest platform (Web Console) API.
 
 ## Base URLs
 

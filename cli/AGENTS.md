@@ -15,9 +15,9 @@ Website: https://kest.dev
 ## Command Reference
 
 ### Setup
-- `curl -fsSL https://kest.dev/install.sh | sh` — one-line install
-- `go install github.com/kest-labs/kest/cmd/kest@latest` — install via Go
-- `kest init` — initialize project (creates `.kest/config.yaml`)
+- `curl -fsSL https://kest.dev/install.sh | bash` — one-line install (latest release)
+- `git clone https://github.com/kest-labs/kest.git && cd kest/cli && go build -o ~/.local/bin/kest .` — build from source
+- `kest init --base-url http://localhost:8080` — initialize a workspace (creates `.kest/config.yaml` and a sample `.kest/flow/smoke.flow.md`)
 - `kest guide` — show Flow (.flow.md) tutorial and best practices
 
 ### REST Testing

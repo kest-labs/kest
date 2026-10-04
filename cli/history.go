@@ -250,6 +250,8 @@ func historyStatusCell(status int) string {
 }
 
 func formatTime(t time.Time) string {
+	// Records are stored in UTC; show them in the user's local time.
+	t = t.Local()
 	now := time.Now()
 	if t.Year() == now.Year() && t.YearDay() == now.YearDay() {
 		return t.Format("15:04:05") + " today"
