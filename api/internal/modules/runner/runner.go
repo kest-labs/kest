@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	infrahttp "github.com/kest-labs/kest/api/internal/infra/http"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/variable"
 )
@@ -19,15 +19,19 @@ type Runner interface {
 }
 
 type runner struct {
+	// client overrides the shared SSRF-safe outbound client (tests only).
 	client *http.Client
 }
 
 func New() Runner {
-	return &runner{
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+	return &runner{}
+}
+
+func (r *runner) httpClient() *http.Client {
+	if r.client != nil {
+		return r.client
 	}
+	return infrahttp.SharedOutboundClient()
 }
 
 type Response struct {
@@ -36,7 +40,10 @@ type Response struct {
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
 	Time       int64             `json:"time"` // milliseconds
-	Size       int               `json:"size"` // bytes
+	Size       int               `json:"size"` // bytes captured
+	// Truncated is true when the body exceeded RUNNER_MAX_RESPONSE_MB and
+	// only the first Size bytes were captured.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, error) {
@@ -73,13 +80,16 @@ func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, 
 	r.applyAuth(httpReq, req.Auth, vars)
 	r.applyBodyType(httpReq, req.BodyType)
 
-	resp, err := r.client.Do(httpReq)
+	resp, err := r.httpClient().Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, truncated, err := infrahttp.ReadLimited(resp.Body, infrahttp.RunnerMaxResponseBytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
 	elapsed := time.Since(start).Milliseconds()
 
 	response := &Response{
@@ -89,6 +99,7 @@ func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, 
 		Body:       string(body),
 		Time:       elapsed,
 		Size:       len(body),
+		Truncated:  truncated,
 	}
 
 	return response, nil

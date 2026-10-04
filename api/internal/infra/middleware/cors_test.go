@@ -31,6 +31,33 @@ func TestCORS_AllowAll(t *testing.T) {
 	}
 }
 
+func TestCORS_WildcardNeverSendsCredentials(t *testing.T) {
+	if DefaultCORSConfig().AllowCredentials {
+		t.Fatal("DefaultCORSConfig must not combine '*' with credentials")
+	}
+
+	router := gin.New()
+	router.Use(CORSWithConfig(CORSConfig{
+		AllowOrigins:     []string{"*"},
+		AllowCredentials: true,
+	}))
+	router.GET("/test", func(c *gin.Context) {
+		c.String(200, "ok")
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "http://evil.example")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("expected '*' (never a reflected origin), got %q", got)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Credentials"); got != "" {
+		t.Errorf("expected no credentials header with wildcard, got %q", got)
+	}
+}
+
 func TestCORS_SpecificOrigin(t *testing.T) {
 	router := gin.New()
 	router.Use(CORSWithConfig(CORSConfig{

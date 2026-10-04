@@ -80,7 +80,7 @@ func NewHttpKernel(application *app.Application) *HttpKernel {
 	r.Use(metrics.Middleware())
 
 	// Apply Global Middleware (CORS mainly)
-	applyGlobalMiddleware(r, application.Config)
+	ApplyGlobalMiddleware(r, application.Config)
 
 	// Initialize Health Checks
 	h := health.New()
@@ -201,7 +201,15 @@ func setGinMode(mode string) {
 	}
 }
 
-func applyGlobalMiddleware(r *gin.Engine, cfg *config.Config) {
+// ApplyGlobalMiddleware registers CORS, trusted proxies and rate limiting.
+// It must run before routes are registered.
+func ApplyGlobalMiddleware(r *gin.Engine, cfg *config.Config) {
+	if len(cfg.Server.TrustedProxies) > 0 {
+		if err := r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
+			log.Printf("Warning: invalid TRUSTED_PROXIES: %v", err)
+		}
+	}
+
 	corsConfig := cors.Config{
 		AllowOrigins:     cfg.CORS.AllowOrigins,
 		AllowMethods:     cfg.CORS.AllowMethods,
@@ -210,4 +218,7 @@ func applyGlobalMiddleware(r *gin.Engine, cfg *config.Config) {
 		AllowCredentials: cfg.CORS.AllowCredentials,
 	}
 	r.Use(cors.New(corsConfig))
+
+	// Rate limiting (auth endpoints per IP, run endpoints per user/IP)
+	r.Use(middleware.RateLimiters(cfg)...)
 }

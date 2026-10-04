@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	infrahttp "github.com/kest-labs/kest/api/internal/infra/http"
 )
 
 // llmClient is a minimal OpenAI-compatible chat completion client.
@@ -99,7 +101,7 @@ func (c *llmClient) complete(ctx context.Context, system, user string) (string, 
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := infrahttp.ReadAllLimited(resp.Body, infrahttp.LLMMaxResponseBytes)
 	if err != nil {
 		return "", err
 	}
@@ -161,7 +163,7 @@ func (c *llmClient) completeStream(
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		raw, _ := io.ReadAll(resp.Body)
+		raw, _, _ := infrahttp.ReadLimited(resp.Body, infrahttp.ErrorBodyMaxBytes)
 		return "", fmt.Errorf("LLM API error (%d): %s", resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
 

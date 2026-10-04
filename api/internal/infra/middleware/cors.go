@@ -29,8 +29,9 @@ type CORSConfig struct {
 	// Default: ["Content-Length"]
 	ExposeHeaders []string
 
-	// AllowCredentials indicates whether the request can include user credentials
-	// Default: true
+	// AllowCredentials indicates whether the request can include user credentials.
+	// It is never honored together with a "*" origin.
+	// Default: false
 	AllowCredentials bool
 
 	// MaxAge indicates how long (in seconds) the results of a preflight request can be cached
@@ -52,7 +53,7 @@ func DefaultCORSConfig() CORSConfig {
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
 		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
-		AllowCredentials: true,
+		AllowCredentials: false, // never combine "*" with credentials
 		MaxAge:           86400,
 	}
 }
@@ -61,12 +62,14 @@ func DefaultCORSConfig() CORSConfig {
 func CORS() gin.HandlerFunc {
 	// Try to use global config
 	if config.GlobalConfig != nil {
+		cors := config.GlobalConfig.CORS
+		config.NormalizeCORS(&cors, !config.GlobalConfig.IsLocalDevelopment())
 		return CORSWithConfig(CORSConfig{
-			AllowOrigins:     config.GlobalConfig.CORS.AllowOrigins,
-			AllowMethods:     config.GlobalConfig.CORS.AllowMethods,
-			AllowHeaders:     config.GlobalConfig.CORS.AllowHeaders,
-			ExposeHeaders:    config.GlobalConfig.CORS.ExposeHeaders,
-			AllowCredentials: config.GlobalConfig.CORS.AllowCredentials,
+			AllowOrigins:     cors.AllowOrigins,
+			AllowMethods:     cors.AllowMethods,
+			AllowHeaders:     cors.AllowHeaders,
+			ExposeHeaders:    cors.ExposeHeaders,
+			AllowCredentials: cors.AllowCredentials,
 			MaxAge:           86400,
 		})
 	}
