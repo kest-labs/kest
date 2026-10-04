@@ -2,7 +2,10 @@ package config
 
 import (
 	"log"
+	"os"
 	"strings"
+
+	"github.com/kest-labs/kest/api/pkg/env"
 )
 
 // localDevelopmentEnvs are the APP_ENV values treated as local development.
@@ -73,6 +76,29 @@ func NormalizeCORS(c *CORSConfig, production bool) []string {
 				"Set CORS_ALLOW_ORIGINS to your frontend origin(s).")
 	}
 	return warnings
+}
+
+// resolveRunnerAllowPrivateNetworks decides whether runners may reach
+// private/loopback networks. An explicit RUNNER_ALLOW_PRIVATE_NETWORKS always
+// wins; otherwise private networks are allowed only in local development
+// (so self-hosters testing http://localhost keep working) and blocked
+// everywhere else. It returns the decision and a description of its source.
+func resolveRunnerAllowPrivateNetworks(localDevelopment bool) (bool, string) {
+	if raw, ok := os.LookupEnv("RUNNER_ALLOW_PRIVATE_NETWORKS"); ok && strings.TrimSpace(raw) != "" {
+		return env.GetBool("RUNNER_ALLOW_PRIVATE_NETWORKS", !localDevelopment), "RUNNER_ALLOW_PRIVATE_NETWORKS"
+	}
+	if localDevelopment {
+		return true, "local development default"
+	}
+	return false, "production default"
+}
+
+func logRunnerNetworkMode(allowPrivate bool, source string) {
+	if allowPrivate {
+		log.Printf("[config] Request runners may reach private/loopback networks (%s). Set RUNNER_ALLOW_PRIVATE_NETWORKS=false to block them.", source)
+		return
+	}
+	log.Printf("[config] Request runners block private/loopback/link-local networks (%s). Set RUNNER_ALLOW_PRIVATE_NETWORKS=true to allow them.", source)
 }
 
 func logWarnings(warnings []string) {

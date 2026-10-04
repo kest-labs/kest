@@ -96,3 +96,26 @@ func TestNormalizeCORS_GinContribNeverSendsCredentialsWithWildcard(t *testing.T)
 		t.Fatalf("expected no ACAC header with wildcard origin, got %q", got)
 	}
 }
+
+func TestResolveRunnerAllowPrivateNetworks_Defaults(t *testing.T) {
+	t.Setenv("RUNNER_ALLOW_PRIVATE_NETWORKS", "")
+
+	if allow, _ := resolveRunnerAllowPrivateNetworks(true); !allow {
+		t.Error("local development must allow private networks by default")
+	}
+	if allow, _ := resolveRunnerAllowPrivateNetworks(false); allow {
+		t.Error("production must block private networks by default")
+	}
+}
+
+func TestResolveRunnerAllowPrivateNetworks_ExplicitOverrideWins(t *testing.T) {
+	t.Setenv("RUNNER_ALLOW_PRIVATE_NETWORKS", "true")
+	if allow, source := resolveRunnerAllowPrivateNetworks(false); !allow || source != "RUNNER_ALLOW_PRIVATE_NETWORKS" {
+		t.Errorf("explicit true must win in production, got %v (%s)", allow, source)
+	}
+
+	t.Setenv("RUNNER_ALLOW_PRIVATE_NETWORKS", "false")
+	if allow, _ := resolveRunnerAllowPrivateNetworks(true); allow {
+		t.Error("explicit false must win in local development")
+	}
+}

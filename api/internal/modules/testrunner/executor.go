@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -15,14 +16,20 @@ import (
 
 // Executor handles the execution of a test case
 type Executor struct {
-	client *kest_http.Client
+	// httpClient overrides the shared SSRF-safe outbound client (tests only).
+	httpClient *http.Client
 }
 
 // NewExecutor creates a new test case executor
 func NewExecutor() *Executor {
-	return &Executor{
-		client: kest_http.New(),
+	return &Executor{}
+}
+
+func (e *Executor) outboundClient() *http.Client {
+	if e.httpClient != nil {
+		return e.httpClient
 	}
+	return kest_http.SharedOutboundClient()
 }
 
 // Execute runs a single test case
@@ -62,6 +69,7 @@ func (e *Executor) Execute(ctx context.Context, tc *testcase.TestCaseResponse, e
 
 	// 2. Perform Request
 	client := kest_http.New().
+		WithHTTPClient(e.outboundClient()).
 		Timeout(10 * time.Second).
 		WithHeaders(headers)
 

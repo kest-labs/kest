@@ -73,13 +73,30 @@ func (c *Client) WithToken(token string) *Client {
 	return c
 }
 
+// WithHTTPClient sets the underlying *http.Client (e.g. SharedOutboundClient
+// for user-supplied URLs). The client is never mutated by this builder.
+func (c *Client) WithHTTPClient(hc *http.Client) *Client {
+	if hc != nil {
+		c.httpClient = hc
+	}
+	return c
+}
+
 // WithBasicAuth adds Basic authentication
 func (c *Client) WithBasicAuth(username, password string) *Client {
-	c.httpClient.Transport = &basicAuthTransport{
+	// Copy the client so a shared *http.Client is never mutated, and keep its
+	// transport (which may enforce outbound restrictions).
+	base := c.httpClient.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	hc := *c.httpClient
+	hc.Transport = &basicAuthTransport{
 		username: username,
 		password: password,
-		base:     http.DefaultTransport,
+		base:     base,
 	}
+	c.httpClient = &hc
 	return c
 }
 

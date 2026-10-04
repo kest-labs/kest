@@ -25,6 +25,7 @@ type Config struct {
 	Middleware MiddlewareConfig
 	Tracing    TracingConfig
 	ClickHouse ClickHouseConfig
+	Runner     RunnerConfig
 }
 
 type AppConfig struct {
@@ -131,6 +132,17 @@ type TracingConfig struct {
 	Endpoint   string  // OTLP endpoint (e.g., "localhost:4317")
 	Insecure   bool    // Use insecure connection
 	SampleRate float64 // Sampling rate (0.0 to 1.0)
+}
+
+// RunnerConfig controls outbound requests made on behalf of users
+// (request runner, flow runner, test-case runner).
+type RunnerConfig struct {
+	// AllowPrivateNetworks permits loopback/private/link-local targets.
+	// RUNNER_ALLOW_PRIVATE_NETWORKS overrides; otherwise true only in local
+	// development (see IsLocalDevelopmentMode).
+	AllowPrivateNetworks bool
+	// MaxRedirects bounds redirect hops (RUNNER_MAX_REDIRECTS, default 10).
+	MaxRedirects int
 }
 
 // ClickHouseConfig holds ClickHouse configuration
@@ -248,6 +260,11 @@ func Load() (*Config, error) {
 	}
 
 	logWarnings(NormalizeCORS(&cfg.CORS, !cfg.IsLocalDevelopment()))
+
+	cfg.Runner.MaxRedirects = env.GetInt("RUNNER_MAX_REDIRECTS", 10)
+	allowPrivate, source := resolveRunnerAllowPrivateNetworks(cfg.IsLocalDevelopment())
+	cfg.Runner.AllowPrivateNetworks = allowPrivate
+	logRunnerNetworkMode(allowPrivate, source)
 
 	GlobalConfig = cfg
 	return cfg, nil

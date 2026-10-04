@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	infrahttp "github.com/kest-labs/kest/api/internal/infra/http"
 )
 
 // StepEvent represents a real-time event during flow execution
@@ -35,6 +37,8 @@ type AssertResult struct {
 type Runner struct {
 	repo    Repository
 	baseURL string
+	// client overrides the shared SSRF-safe outbound client (tests only).
+	client *http.Client
 }
 
 // NewRunner creates a new flow runner
@@ -246,7 +250,10 @@ func (r *Runner) executeStep(ctx context.Context, step *FlowStepPO, variables ma
 	}
 
 	// Execute request
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := r.client
+	if client == nil {
+		client = infrahttp.SharedOutboundClient()
+	}
 	start := time.Now()
 	resp, err := client.Do(req)
 	duration := time.Since(start)

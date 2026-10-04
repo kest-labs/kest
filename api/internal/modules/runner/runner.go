@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	infrahttp "github.com/kest-labs/kest/api/internal/infra/http"
 	"github.com/kest-labs/kest/api/internal/modules/request"
 	"github.com/kest-labs/kest/api/internal/modules/variable"
 )
@@ -19,15 +20,19 @@ type Runner interface {
 }
 
 type runner struct {
+	// client overrides the shared SSRF-safe outbound client (tests only).
 	client *http.Client
 }
 
 func New() Runner {
-	return &runner{
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+	return &runner{}
+}
+
+func (r *runner) httpClient() *http.Client {
+	if r.client != nil {
+		return r.client
 	}
+	return infrahttp.SharedOutboundClient()
 }
 
 type Response struct {
@@ -73,7 +78,7 @@ func (r *runner) Run(req *request.Request, vars variable.Variables) (*Response, 
 	r.applyAuth(httpReq, req.Auth, vars)
 	r.applyBodyType(httpReq, req.BodyType)
 
-	resp, err := r.client.Do(httpReq)
+	resp, err := r.httpClient().Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
