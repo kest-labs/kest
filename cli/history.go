@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kest-labs/kest/cli/internal/output"
+	"github.com/kest-labs/kest/cli/internal/platformsync"
 	"github.com/kest-labs/kest/cli/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -48,11 +50,15 @@ var historyCmd = &cobra.Command{
 
   # Show history from all projects
   kest history --global`,
+	Annotations: map[string]string{jsonCapableAnnotation: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		conf := loadConfigWarn()
 
 		store, err := storage.NewStore()
 		if err != nil {
+			if output.JSONOutput {
+				return finishJSON("history", nil, &ExitError{Code: ExitRuntimeError, Err: err})
+			}
 			return err
 		}
 		defer store.Close()
@@ -64,11 +70,17 @@ var historyCmd = &cobra.Command{
 
 		records, err := store.GetHistory(historyLimit, projectID)
 		if err != nil {
+			if output.JSONOutput {
+				return finishJSON("history", nil, &ExitError{Code: ExitRuntimeError, Err: err})
+			}
 			return err
 		}
 
 		// Apply client-side filters
 		records = applyHistoryFilters(records)
+		if output.JSONOutput {
+			return finishJSON("history", buildHistoryResult(records), nil)
+		}
 
 		fmt.Printf("%-5s %-20s %-6s %-40s %-6s %-10s\n", "ID", "TIME", "METHOD", "URL", "STATUS", "DURATION")
 		fmt.Println(strings.Repeat("-", 90))
@@ -97,6 +109,38 @@ func init() {
 	historyCmd.Flags().StringVar(&historyURLFilter, "url", "", "Filter by URL substring")
 	historyCmd.Flags().StringVar(&historySince, "since", "", "Filter records newer than duration (e.g. 1h, 30m, 2h30m)")
 	rootCmd.AddCommand(historyCmd)
+}
+
+// historyEntry is the redacted, machine-readable form of a history record.
+type historyEntry struct {
+	ID          int64  `json:"id"`
+	Method      string `json:"method"`
+	URL         string `json:"url"`
+	Status      int    `json:"status"`
+	DurationMs  int64  `json:"duration_ms"`
+	Environment string `json:"environment,omitempty"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// buildHistoryResult lists records without headers or bodies; sensitive
+// query parameters in URLs are redacted.
+func buildHistoryResult(records []storage.Record) *output.Result {
+	res := output.NewResult("history")
+	entries := make([]historyEntry, 0, len(records))
+	for _, r := range records {
+		entries = append(entries, historyEntry{
+			ID:          r.ID,
+			Method:      r.Method,
+			URL:         platformsync.SanitizeURL(r.URL),
+			Status:      r.ResponseStatus,
+			DurationMs:  r.DurationMs,
+			Environment: r.Environment,
+			CreatedAt:   r.CreatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	res.Summary.Total = len(entries)
+	res.Data = map[string]any{"records": entries}
+	return res
 }
 
 // applyHistoryFilters filters the record slice based on CLI flag values.

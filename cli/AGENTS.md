@@ -73,8 +73,8 @@ Website: https://kest.dev
 - `kest grpc host:443 service/Method --tls --cert ca.pem`
 
 ### CI/CD
-- `kest run tests/ --quiet --output json` — structured output, no decoration
-- Exit codes: 0=success, 1=assertion fail, 2=runtime error
+- `kest run tests/ --json` — exactly one versioned JSON result on stdout (see `docs/json-output.md`)
+- Exit codes: 0=success, 1=assertion/snapshot failure, 2=runtime error (network, timeout, exec), 3=usage/config error
 
 ### Configuration
 - `kest config set ai_key <key>` — set AI API key

@@ -29,7 +29,20 @@ type TestResult struct {
 	FailedAssertion string
 	Command         string
 	Error           error
-	Success         bool
+	// ErrorKind classifies Error for machine-readable output
+	// (e.g. "assertion", "network", "variable", "config", "exec", "timeout").
+	ErrorKind string
+	// Assertions holds the outcome of every evaluated assertion, in order.
+	Assertions []AssertionResult
+	Success    bool
+}
+
+// AssertionResult is the outcome of a single assertion expression.
+type AssertionResult struct {
+	Expr    string
+	Passed  bool
+	Message string
+	Soft    bool
 }
 
 func latencyStats(results []TestResult) (time.Duration, time.Duration) {
@@ -60,8 +73,10 @@ type Summary struct {
 	TotalTests  int
 	PassedTests int
 	FailedTests int
-	TotalTime   time.Duration
-	StartTime   time.Time
+	// SkippedTests counts steps that were not executed (e.g. after --fail-fast).
+	SkippedTests int
+	TotalTime    time.Duration
+	StartTime    time.Time
 }
 
 func NewSummary() *Summary {

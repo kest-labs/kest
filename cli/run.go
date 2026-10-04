@@ -78,6 +78,7 @@ Kest Flow (.flow.md) allows you to use standard Markdown to document and test yo
   kest run auth.kest`,
 	Args:         cobra.ArbitraryArgs,
 	SilenceUsage: true,
+	Annotations:  map[string]string{jsonCapableAnnotation: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runScenarios(cmd, args)
 	},
@@ -106,15 +107,26 @@ func init() {
 }
 
 func runScenarios(cmd *cobra.Command, args []string) error {
+	res, err := runSuite(args, cmd.Flags().Changed)
+	if output.JSONOutput {
+		return finishJSON("run", res, err)
+	}
+	return err
+}
+
+// runSuite executes the run targets and returns the versioned result.
+// flagChanged reports whether a run flag was explicitly set, so profile
+// defaults do not override it. Errors carry an ExitError with the exit code.
+func runSuite(args []string, flagChanged func(string) bool) (*output.Result, error) {
 	cfg, root, err := loadFlowRunConfig()
 	if err != nil {
-		return err
+		return nil, &ExitError{Code: ExitConfigError, Err: err}
 	}
 	profileName, profile, err := selectFlowRunProfile(cfg, runProfile)
 	if err != nil {
-		return err
+		return nil, &ExitError{Code: ExitConfigError, Err: err}
 	}
-	applyRunProfile(cmd, profile)
+	applyRunProfile(flagChanged, profile)
 
 	conf := loadConfigWarn()
 	effectiveEnv := conf.ActiveEnv
@@ -130,7 +142,7 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		var err error
 		workspaceID, err = validateFlowSyncConfig(conf)
 		if err != nil {
-			return err
+			return nil, &ExitError{Code: ExitConfigError, Err: err}
 		}
 	}
 
@@ -141,14 +153,14 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		var err error
 		targets, webFlowByPath, cleanupWebFlows, err = prepareWorkspaceFlowTargets(conf, workspaceID, runWorkspaceFlow)
 		if err != nil {
-			return err
+			return nil, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
 		defer cleanupWebFlows()
 	} else {
 		var err error
 		targets, err = resolveRunTargets(args, profile, root)
 		if err != nil {
-			return err
+			return nil, &ExitError{Code: ExitConfigError, Err: err}
 		}
 	}
 
@@ -180,6 +192,7 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		}
 	}
 	finishedAt := time.Now().UTC()
+	res := buildRunResult(results, startedAt, finishedAt)
 
 	reportTargets := flowReportTargets{JSON: runReportJSON, JUnit: runReportJUnit}
 	if reportTargets.JSON == "" {
@@ -196,22 +209,26 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 		FinishedAt:  finishedAt,
 		Files:       results,
 	}, reportTargets); err != nil {
-		return err
+		return res, &ExitError{Code: ExitRuntimeError, Err: err}
 	}
 
 	if runSync {
 		if err := syncFlowDefinitions(conf, workspaceID, results, profileName, root); err != nil {
-			return err
+			return res, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
 		if err := syncFlowRuns(conf, workspaceID, results, profileName, effectiveEnv, effectiveBaseURL, root, normalizeCLIRunnerType(runRunnerType)); err != nil {
-			return err
+			return res, &ExitError{Code: ExitRuntimeError, Err: err}
 		}
 	}
 
 	if len(runErrs) > 0 {
-		return fmt.Errorf("flow suite failed: %s", strings.Join(runErrs, "; "))
+		code := exitCodeForResult(res)
+		if code == ExitSuccess {
+			code = ExitRuntimeError
+		}
+		return res, &ExitError{Code: code, Err: fmt.Errorf("flow suite failed: %s", strings.Join(runErrs, "; "))}
 	}
-	return nil
+	return res, nil
 }
 
 func prepareWorkspaceFlowTargets(conf *config.Config, workspaceID string, selector string) ([]string, map[string]platformsync.RunnableFlow, func(), error) {
@@ -289,20 +306,20 @@ func sanitizeFlowFileName(value string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-func applyRunProfile(cmd *cobra.Command, profile flowRunProfile) {
-	if !cmd.Flags().Changed("env") && strings.TrimSpace(os.Getenv("KEST_ENV")) == "" && profile.Env != "" {
+func applyRunProfile(flagChanged func(string) bool, profile flowRunProfile) {
+	if !flagChanged("env") && strings.TrimSpace(os.Getenv("KEST_ENV")) == "" && profile.Env != "" {
 		runEnv = profile.Env
 	}
-	if !cmd.Flags().Changed("base-url") && strings.TrimSpace(os.Getenv("KEST_BASE_URL")) == "" && profile.BaseURL != "" {
+	if !flagChanged("base-url") && strings.TrimSpace(os.Getenv("KEST_BASE_URL")) == "" && profile.BaseURL != "" {
 		runBaseURL = profile.BaseURL
 	}
-	if !cmd.Flags().Changed("strict") && profile.Strict != nil {
+	if !flagChanged("strict") && profile.Strict != nil {
 		runStrict = *profile.Strict
 	}
-	if !cmd.Flags().Changed("fail-fast") && profile.FailFast != nil {
+	if !flagChanged("fail-fast") && profile.FailFast != nil {
 		runFailFast = *profile.FailFast
 	}
-	if !cmd.Flags().Changed("sync") && profile.Sync != nil {
+	if !flagChanged("sync") && profile.Sync != nil {
 		runSync = *profile.Sync
 	}
 }
@@ -364,11 +381,6 @@ func runScenarioWithResult(filePath string) (*runExecutionResult, error) {
 	}
 
 	summ := summary.NewSummary()
-	restoreOutput := func() {}
-	if output.JSONOutput {
-		restoreOutput = suppressStdout()
-		defer restoreOutput()
-	}
 
 	fmt.Printf("\n🚀 Running %d test(s) from %s\n", len(blocks), filePath)
 	if runParallel {
@@ -422,11 +434,7 @@ func runScenarioWithResult(filePath string) (*runExecutionResult, error) {
 	}
 
 	logPath := logger.GetSessionPath()
-	if output.JSONOutput {
-		restoreOutput()
-		restoreOutput = func() {}
-		summ.PrintJSON(filePath, logPath)
-	} else {
+	if !output.JSONOutput {
 		summ.Print()
 	}
 	if logPath != "" && !output.JSONOutput {
@@ -476,6 +484,7 @@ func executeMultiLineBlock(raw string, lineNum int, showOutput bool, verbose boo
 	opts, err := ParseBlock(raw)
 	if err != nil {
 		result.Error = fmt.Errorf("parse error at line %d: %v", lineNum, err)
+		result.ErrorKind = output.ErrorKindConfig
 		result.Success = false
 		return result
 	}
@@ -515,6 +524,7 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 	parts := splitArguments(line)
 	if len(parts) < 2 {
 		result.Error = fmt.Errorf("invalid command format")
+		result.ErrorKind = output.ErrorKindConfig
 		result.Success = false
 		return result
 	}
@@ -544,6 +554,7 @@ func executeTestLine(line string, lineNum int, showOutput bool, verbose bool) su
 	err := fs.Parse(parts[2:])
 	if err != nil {
 		result.Error = err
+		result.ErrorKind = output.ErrorKindConfig
 		result.Success = false
 		return result
 	}
@@ -599,11 +610,6 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 	teardownSteps := doc.Teardown
 
 	totalSteps := len(setupSteps) + len(steps) + len(teardownSteps)
-	restoreOutput := func() {}
-	if output.JSONOutput {
-		restoreOutput = suppressStdout()
-		defer restoreOutput()
-	}
 	fmt.Printf("\n🚀 Running %d step(s) from %s\n", totalSteps, filePath)
 	if runParallel {
 		fmt.Printf("⚠️  Parallel mode is ignored for flow steps; running sequentially.\n\n")
@@ -646,12 +652,13 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 
 		if err := validateFlowStepVariables(step, captureOrigins, failedSteps); err != nil {
 			result := summary.TestResult{
-				StepID:  step.ID,
-				Name:    stepName(step),
-				Method:  strings.ToUpper(step.Request.Method),
-				URL:     step.Request.URL,
-				Success: false,
-				Error:   err,
+				StepID:    step.ID,
+				Name:      stepName(step),
+				Method:    strings.ToUpper(step.Request.Method),
+				URL:       step.Request.URL,
+				Success:   false,
+				Error:     err,
+				ErrorKind: output.ErrorKindVariable,
 			}
 			summ.AddResult(result)
 			failedSteps[stepName(step)] = true
@@ -683,10 +690,11 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 
 		if step.Request.Method == "" || step.Request.URL == "" {
 			result := summary.TestResult{
-				StepID:  step.ID,
-				Name:    stepName(step),
-				Success: false,
-				Error:   fmt.Errorf("invalid step (missing METHOD/URL) at line %d", step.LineNum),
+				StepID:    step.ID,
+				Name:      stepName(step),
+				Success:   false,
+				Error:     fmt.Errorf("invalid step (missing METHOD/URL) at line %d", step.LineNum),
+				ErrorKind: output.ErrorKindConfig,
 			}
 			summ.AddResult(result)
 			failedSteps[stepName(step)] = true
@@ -725,6 +733,9 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 		result.StepID = step.ID
 		result.Success = (err == nil)
 		result.Error = err
+		if err == nil {
+			result.ErrorKind = ""
+		}
 
 		// Process captures after successful request
 		if err == nil && len(step.Request.Captures) > 0 {
@@ -799,13 +810,12 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 			break
 		}
 	}
+	if skipped := len(combined) - summ.TotalTests; skipped > 0 {
+		summ.SkippedTests = skipped
+	}
 
 	logPath := logger.GetSessionPath()
-	if output.JSONOutput {
-		restoreOutput()
-		restoreOutput = func() {}
-		summ.PrintJSON(filePath, logPath)
-	} else {
+	if !output.JSONOutput {
 		summ.Print()
 	}
 	if logPath != "" && !output.JSONOutput {
@@ -919,6 +929,7 @@ func executeExecStep(step FlowStep) summary.TestResult {
 
 	if step.Exec.Command == "" {
 		result.Success = false
+		result.ErrorKind = output.ErrorKindConfig
 		result.Error = fmt.Errorf("exec step has no command at line %d", step.LineNum)
 		return result
 	}
@@ -954,12 +965,14 @@ func executeExecStep(step FlowStep) summary.TestResult {
 
 	if ctx.Err() == context.DeadlineExceeded {
 		result.Success = false
-		result.Error = fmt.Errorf("exec timed out after %ds", execTimeout)
+		result.ErrorKind = output.ErrorKindTimeout
+		result.Error = fmt.Errorf("exec timed out after %ds", timeoutSec)
 		fmt.Printf("  ❌ %v\n", result.Error)
 		return result
 	}
 	if err != nil {
 		result.Success = false
+		result.ErrorKind = output.ErrorKindExec
 		result.Error = fmt.Errorf("exec failed: %v\nstderr: %s", err, strings.TrimSpace(stderr.String()))
 		fmt.Printf("  ❌ %v\n", result.Error)
 		return result
@@ -1111,7 +1124,10 @@ func executeFlowStepWithPoll(step FlowStep, opts RequestOptions) (summary.TestRe
 			return res, nil
 		}
 		vars := buildVarChain()
-		if ok, failMsg := evaluateAssertionSet(res, vars, hardAsserts); !ok {
+		results, ok, failMsg := evaluateAssertionSet(res, vars, hardAsserts)
+		res.Assertions = append(results, res.Assertions...)
+		if !ok {
+			res.ErrorKind = output.ErrorKindAssertion
 			return res, fmt.Errorf("assertion failed: %s", failMsg)
 		}
 		return res, nil
@@ -1130,11 +1146,13 @@ func executeFlowStepWithPoll(step FlowStep, opts RequestOptions) (summary.TestRe
 		lastRes = res
 		if err == nil {
 			vars := buildVarChain()
-			if ok, failMsg := evaluateAssertionSet(res, vars, hardAsserts); ok {
-				return res, nil
-			} else {
-				lastErr = fmt.Errorf("poll assertions pending: %s", failMsg)
+			results, ok, failMsg := evaluateAssertionSet(res, vars, hardAsserts)
+			lastRes.Assertions = append(results, res.Assertions...)
+			if ok {
+				return lastRes, nil
 			}
+			lastRes.ErrorKind = output.ErrorKindAssertion
+			lastErr = fmt.Errorf("poll assertions pending: %s", failMsg)
 		} else {
 			lastErr = err
 		}
@@ -1147,18 +1165,24 @@ func executeFlowStepWithPoll(step FlowStep, opts RequestOptions) (summary.TestRe
 
 	if lastErr == nil {
 		lastErr = fmt.Errorf("poll timed out after %dms", step.PollTimeoutMs)
+		lastRes.ErrorKind = output.ErrorKindTimeout
 	}
 	return lastRes, lastErr
 }
 
-func evaluateAssertionSet(res summary.TestResult, vars map[string]string, assertions []string) (bool, string) {
+// evaluateAssertionSet evaluates every assertion and returns the individual
+// outcomes, whether all passed, and a description of the first failure.
+func evaluateAssertionSet(res summary.TestResult, vars map[string]string, assertions []string) ([]summary.AssertionResult, bool, string) {
+	results := make([]summary.AssertionResult, 0, len(assertions))
+	firstFailure := ""
 	for _, assertion := range assertions {
 		passed, msg := variable.Assert(res.Status, []byte(res.ResponseBody), res.Duration.Milliseconds(), vars, assertion)
-		if !passed {
-			return false, fmt.Sprintf("%s (%s)", assertion, msg)
+		results = append(results, summary.AssertionResult{Expr: assertion, Passed: passed, Message: msg})
+		if !passed && firstFailure == "" {
+			firstFailure = fmt.Sprintf("%s (%s)", assertion, msg)
 		}
 	}
-	return true, ""
+	return results, firstFailure == "", firstFailure
 }
 
 // buildVarChain assembles the full variable map following the priority chain:
@@ -1212,19 +1236,6 @@ func sortByIndex(ids []string, index map[string]int) []string {
 		return index[ids[i]] < index[ids[j]]
 	})
 	return ids
-}
-
-func suppressStdout() func() {
-	devNull, err := os.Open(os.DevNull)
-	if err != nil {
-		return func() {}
-	}
-	oldStdout := os.Stdout
-	os.Stdout = devNull
-	return func() {
-		os.Stdout = oldStdout
-		_ = devNull.Close()
-	}
 }
 
 func stepName(step FlowStep) string {

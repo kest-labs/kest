@@ -112,10 +112,16 @@ func loadConfigWarn() *config.Config {
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&QuietMode, "quiet", false, "Suppress decorative output (for CI/CD pipelines)")
 	rootCmd.PersistentFlags().StringVar(&OutputFormat, "output", "", "Output format: json for machine-readable output")
+	rootCmd.PersistentFlags().BoolVar(&JSONFlag, "json", false, "Print exactly one machine-readable JSON result to stdout (same as --output json)")
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		output.Quiet = QuietMode
-		output.JSONOutput = OutputFormat == "json"
+		output.JSONOutput = jsonModeRequested() && isJSONCapable(cmd)
+		if output.JSONOutput {
+			// Keep stdout reserved for the single JSON document. The process
+			// exits after the command, so the redirect is never restored.
+			output.RedirectHumanOutput()
+		}
 
 		if shouldAutoStartBridge(cmd, os.Args[1:]) {
 			if err := ensureBridgeRunning(); err != nil {
