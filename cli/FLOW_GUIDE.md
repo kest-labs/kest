@@ -103,7 +103,7 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 [Captures]
@@ -158,7 +158,17 @@ nonce = nonce
 - The full variable chain is available for interpolation in the command.
 - Captured values are stored in the run context and available to all subsequent steps.
 
-### 4) Edge Block (Flow Graph)
+### 4) Edge Block (Flow Graph) - optional
+
+**You normally do not need edges.** Steps run in file order, top to bottom. A file
+with no `edge` blocks is executed exactly like the same file with a
+`@from stepN @to stepN+1 @on success` edge between every pair of neighbouring
+steps, so do not write those: they are pure boilerplate (`kest lint` reports
+them as `redundant-edge` and `kest lint --fix` deletes them).
+
+Edges are only needed for non-linear control flow, i.e. when a step must run
+**before** a step that is declared above it:
+
 ```edge
 @from login
 @to profile
@@ -212,6 +222,75 @@ DELETE /orders/{{order_id}}
 
 You no longer need a trailing DELETE step at the end of the main steps.
 
+How edges work today:
+
+- The runner orders `step` blocks with a topological sort of the edges. Ties
+  (steps no edge relates) keep file order.
+- `@on` is informational: it labels the edge in Mermaid output and in the web
+  graph, but it does not make an edge conditional.
+- If edges reference an unknown step or form a cycle, the whole file falls back
+  to file order.
+- `setup` and `teardown` blocks are never reordered by edges.
+- Mermaid output (`-v`) always draws the implicit sequential edges between
+  steps that no explicit edge touches.
+
+### 5) Flow-level Defaults (headers and assertions)
+
+67% of steps assert `status == 200` and almost as many repeat a
+`Content-Type: application/json` header. Declare them once in the `flow` block:
+
+```flow
+@flow id=orders
+@default-header Accept: application/json
+@default-assert status == 200
+@auto-content-type json
+```
+
+- `@default-header Name: value` (repeatable) is added to every HTTP step
+  (`setup`, `step`, `teardown`) unless the step sets the same header itself.
+- `@default-assert <expr>` (repeatable) is appended to every HTTP step's
+  assertions unless the step already asserts the same *subject* (first token),
+  so a step with its own `status == 201` does not also get `status == 200`.
+- `@auto-content-type json` adds `Content-Type: application/json` to a request
+  whose body is valid JSON and that has no `Content-Type` header after config
+  defaults, flow defaults and step headers are merged.
+- A step with `@no-defaults` is left completely untouched. Exec steps are never
+  touched.
+
+Why directives and not a new ` ```defaults ` block: the `flow` block already is a
+list of `@key value` lines that the parser merges, and an older kest simply
+ignores an unknown directive instead of misreading a whole block.
+
+Defaults are resolved when the file is parsed, so they appear everywhere a step
+does: run output, `--json` (`assertions`), the HTML report and `kest flow-plan`.
+
+Without `@auto-content-type`, Kest never invents a `Content-Type`: only
+`defaults.headers` in `.kest/config.yaml` (written by `kest init`) and your own
+headers are sent. Existing flows therefore behave exactly as before.
+
+### 6) Reusing steps: `@use`
+
+```flow
+@flow id=orders
+@use ./common/login.flow.md
+@use ./common/seed.flow.md as seed
+```
+
+- The included file's `setup` and `step` blocks run **first**, in the setup
+  phase, before the including file's own steps. Its `teardown` blocks are added
+  at the end of the including file's teardown.
+- Captured variables are shared: after the include, `{{token}}` works as usual
+  (variables are **not** prefixed).
+- Step ids are namespaced to avoid collisions: `login.<step-id>` (the file name
+  without `.flow.md`), or `<alias>.<step-id>` with `as alias`. Nested includes
+  compose (`outer.inner.step`).
+- Paths are relative to the including file. Missing files, a file that includes
+  itself and include cycles are reported with the line of the `@use`.
+- Included steps are shown distinctly: console and report names get a
+  `[login]` prefix and JSON results carry `"included_from": "./common/login.flow.md"`.
+- Defaults (`@default-*`) of the including file are not applied to included
+  steps; the included file's own defaults are.
+
 ### Mermaid Preview (in `-v` mode)
 Kest prints a Mermaid flowchart for the parsed Flow document when you run with `-v`:
 ```bash
@@ -220,9 +299,66 @@ kest run user.flow.md -v
 
 ---
 
+## 🧹 Linting and Migrating: `kest lint`
+
+`kest lint [paths...]` checks flow files (directories are searched recursively).
+It never changes a file unless you pass `--fix`.
+
+| Rule | Severity | What it reports | `--fix` |
+| :--- | :--- | :--- | :--- |
+| `invalid-flow` | error | step without `METHOD URL`, edge to an unknown step, duplicate step id, broken `@use` (with line) | no |
+| `redundant-edge` | warning | an edge that only links a step to the next one with `@on success` | deletes the edge block |
+| `trailing-delete-cleanup` | warning | the last steps are `DELETE` requests that only use captured variables | moves them into `teardown` blocks |
+| `inline-secret` | warning | literal `password`/`passwd`/`secret`/`token`/`api_key`/`Authorization` values, Bearer tokens longer than 20 characters | no (suggests `{{$env.NAME}}`; the secret is never printed) |
+| `legacy-format` | warning | legacy ` ```kest ` blocks | converts to ` ```step ` |
+| `duplicate-step-block` | info | the same request block (e.g. a login) in 3+ of the linted files | no (suggests `@use`) |
+| `missing-assert` | warning | an HTTP step with no assertions (flow-level `@default-assert` counts) | no |
+| `unreferenced-capture` | warning | a captured variable no later step uses | no |
+
+```bash
+kest lint                                  # whole directory
+kest lint .kest/flow --json                # machine-readable
+kest lint --fix                            # apply the safe fixes
+kest lint --fix --rule legacy-format old/  # only migrate the legacy format
+kest lint --disable missing-assert         # skip rules (comma separated or repeated)
+kest lint --fail-on warning                # CI: fail on warnings too
+```
+
+Exit code: `0` when nothing at or above `--fail-on` (default `error`) was found,
+`1` otherwise, `3` for usage errors.
+
+**`--fix` never changes what a flow does.** After every fix the file is parsed
+again and its execution plan (the ordered list of requests, with headers, body,
+captures and assertions) must be identical to the original; a fix that cannot be
+proven equivalent is skipped and explained (`skipped_fixes` in `--json`). Running
+`--fix` twice changes nothing the second time.
+
+Details worth knowing:
+
+- `redundant-edge` keeps edges that matter: if deleting a linear edge would
+  change the step order (because of other, non-linear edges), that edge stays.
+- `trailing-delete-cleanup` only fires when every trailing `DELETE` references
+  variables captured earlier in the file, captures nothing itself, is not named
+  by an edge and no `teardown` block precedes it. Implicit step ids are kept
+  (`@id step-N` is added) so reports keep identifying the step the same way.
+  Teardown steps run after the main steps; a failure earlier in the file does
+  not skip them once teardown is a `finally` (the moved steps then also run
+  after a failed run, which is the point).
+- `legacy-format` converts a file only when every block is a valid request and
+  the file has no other flow blocks (a file that mixes ` ```kest ` with
+  ` ```step ` is *not* converted: `kest run` ignores the legacy blocks of such a
+  file today, converting would start running them). `# trailing comments` on
+  capture/assert lines, which the legacy parser dropped, are removed so the
+  assertions stay the same. The converted file runs with flow semantics: strict
+  variable validation and step ids `step-1`, `step-2`, ... Trailing whitespace
+  after a JSON body (invisible) is dropped; other bodies with trailing
+  whitespace are not converted.
+
+---
+
 ## 📘 Legacy Kest Blocks (Still Supported)
 
-Legacy blocks are kept for compatibility.
+Legacy blocks are kept for compatibility; `kest lint --fix --rule legacy-format` migrates them.
 ### Complete Syntax Specification
 
 ```kest
@@ -236,7 +372,7 @@ Authorization: Bearer {{token}}
 # 3. Request Body (Leave an empty line after headers)
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 # 4. Variable Capture (Core Feature)
@@ -279,7 +415,7 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 [Captures]
@@ -328,6 +464,30 @@ Content-Type: application/json
 **Available Built-in Variables**:
 - `{{$randomInt}}` - Random integer (0-10000)
 - `{{$timestamp}}` - Current Unix timestamp
+
+### Secrets and Credentials: `{{$env.NAME}}`
+
+Never commit passwords, tokens or API keys into a flow file. Read them from the
+environment instead:
+
+```step
+@id login
+POST /v1/login
+Content-Type: application/json
+
+{ "username": "admin", "password": "{{$env.ADMIN_PASSWORD}}" }
+```
+
+`{{$env.NAME}}` is resolved from, in order:
+
+1. the OS environment (`ADMIN_PASSWORD=... kest run login.flow.md`) - always wins;
+2. the workspace file `.kest/.env` (next to `.kest/config.yaml`), a plain
+   `KEY=VALUE` file (`#` comments, optional `export `, single/double quotes).
+
+`kest init` adds `.env` to `.kest/.gitignore`, so `.kest/.env` is never committed.
+An application-level `./.env` is **not** read: it usually belongs to the application
+under test. An unset name resolves to an empty string. `kest lint` reports
+literal secrets as `inline-secret`.
 
 ### Variable Priority
 

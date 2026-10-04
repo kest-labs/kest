@@ -12,6 +12,16 @@
 
 - **Select flows and steps with `kest run`** — `--tag a,b` runs only flow files whose `@tags` include any given tag; `--only id,id`, `--from id` and `--skip id` run part of a single flow (setup, teardown and the earlier steps that capture variables the selected steps need run automatically, `--no-deps` turns that off and errors on missing variables); unknown step ids fail fast with close matches; `--list` (with `--json`) prints step ids, names, line numbers, captures and the resolved plan without executing anything.
 
+- **Edges are optional; flows are sequential by default** — documented (and covered by an equivalence test) that a flow with no `edge` blocks runs exactly like the same flow with a linear `@on success` edge between every pair of neighbouring steps. `@on` is informational. Mermaid output now draws implicit sequential edges for steps no explicit edge touches. Adds a hidden `kest flow-plan <file>` command that prints the resolved execution plan as JSON.
+
+- **`.kest/.env` feeds `{{$env.NAME}}`** — put secrets in `.kest/.env` (`KEY=VALUE`) instead of committing them in flows; OS environment variables take precedence, and an application-level `./.env` is deliberately not loaded. `kest init` ignores `.kest/.env` in the generated `.kest/.gitignore` and mentions it in its output.
+
+- **Flow-level defaults** — `@default-header`, `@default-assert` and `@auto-content-type json` in the `flow` block apply headers/assertions to every HTTP step unless the step opts out with `@no-defaults` (a default assertion is also skipped when the step asserts the same subject, e.g. its own `status == 201`). Nothing changes for flows that do not declare them; Kest still never adds a `Content-Type` on its own without `@auto-content-type`.
+
+- **`@use` includes** — `@use ./common/login.flow.md [as alias]` in the `flow` block runs another flow's `setup`/`step` blocks first (setup phase), sharing captured variables, with step ids namespaced (`login.<id>`). Missing files, cycles and duplicate namespaces fail with a clear error and the line of the `@use`. Included steps are marked in the console (`[login] ...`), `--json`/JUnit/flow reports (`included_from`), the HTML report and Mermaid output.
+
+- **`kest lint`** — lints `.flow.md` files (directories recurse; `--json`, `--rule`, `--disable`, `--fail-on`, `--list-rules`). Rules: `invalid-flow` (error), `redundant-edge`, `trailing-delete-cleanup`, `inline-secret`, `legacy-format`, `missing-assert`, `unreferenced-capture` (warnings), `duplicate-step-block` (info). `--fix` deletes redundant edges, moves trailing `DELETE` cleanup steps into `teardown` blocks and converts legacy ```` ```kest ```` blocks to ```` ```step ````; every fix is verified to leave the execution plan identical (otherwise skipped and explained) and is idempotent. Secrets are reported without ever printing their value.
+
 ### Changes
 
 - **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.

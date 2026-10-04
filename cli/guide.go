@@ -53,7 +53,7 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "password123"
+  "password": "{{$env.ADMIN_PASSWORD}}"
 }
 
 [Captures]
@@ -95,6 +95,17 @@ signature = $line.0
 ` + "```" + `
 
 Capture modes: $stdout (all output), $line.N (Nth line), or a gjson path for JSON output.
+
+## ✂️ Less Boilerplate
+
+- Steps run in file order: you do NOT need ` + "`edge`" + ` blocks for a straight line.
+- Keep secrets out of flows: "{{$env.NAME}}" reads the environment, then .kest/.env.
+- Declare defaults once in the flow block:
+    @default-header Accept: application/json
+    @default-assert status == 200
+    @auto-content-type json
+- Share steps between files: "@use ./common/login.flow.md" in the flow block.
+- Clean up old flows automatically: "kest lint" and "kest lint --fix".
 
 ## 🚀 Running & Watching
 

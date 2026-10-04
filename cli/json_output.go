@@ -131,7 +131,7 @@ func buildRunResult(files []runExecutionResult, startedAt, finishedAt time.Time)
 			message := "flow failed to load"
 			if file.Err != nil {
 				message = file.Err.Error()
-				if !errors.Is(file.Err, os.ErrNotExist) && !errors.Is(file.Err, os.ErrPermission) {
+				if !errors.Is(file.Err, os.ErrNotExist) && !errors.Is(file.Err, os.ErrPermission) && !isFlowIncludeError(file.Err) {
 					kind = output.ErrorKindInternal
 				}
 			}

@@ -55,6 +55,7 @@ type flowJSONFileReport struct {
 
 type flowJSONStepReport struct {
 	StepID         string `json:"step_id,omitempty"`
+	IncludedFrom   string `json:"included_from,omitempty"`
 	Name           string `json:"name"`
 	Method         string `json:"method"`
 	URL            string `json:"url,omitempty"`
@@ -152,15 +153,16 @@ func buildFlowJSONFileReport(file runExecutionResult) flowJSONFileReport {
 
 func buildFlowJSONStepReport(result summary.TestResult) flowJSONStepReport {
 	item := flowJSONStepReport{
-		StepID:     result.StepID,
-		Name:       result.Name,
-		Method:     result.Method,
-		URL:        result.URL,
-		Status:     result.Status,
-		Success:    result.Success,
-		Skipped:    result.Skipped,
-		Phase:      result.Phase,
-		DurationMs: result.Duration.Milliseconds(),
+		StepID:       result.StepID,
+		IncludedFrom: result.IncludedFrom,
+		Name:         result.Name,
+		Method:       result.Method,
+		URL:          result.URL,
+		Status:       result.Status,
+		Success:      result.Success,
+		Skipped:      result.Skipped,
+		Phase:        result.Phase,
+		DurationMs:   result.Duration.Milliseconds(),
 	}
 	if result.Skipped {
 		item.SkippedBecause = result.SkippedBecause

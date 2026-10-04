@@ -51,6 +51,11 @@ type RequestOptions struct {
 	// Ctx cancels the request and its retry waits (set by the flow runner so
 	// Ctrl-C stops the in-flight request). Nil means not cancellable.
 	Ctx context.Context
+
+	// AutoJSONContentType adds Content-Type: application/json to a JSON body
+	// when no Content-Type header is set. Set by flows that declare
+	// @auto-content-type json; never set for ad-hoc `kest get/post`.
+	AutoJSONContentType bool
 }
 
 var (
@@ -396,6 +401,8 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		headers["Content-Type"] = writer.FormDataContentType()
 		body = buf.Bytes()
 	}
+
+	applyAutoContentType(opts, headers, body)
 
 	result.RequestHeaders = cloneStringMap(headers)
 	result.RequestBody = string(body)

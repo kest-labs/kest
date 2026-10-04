@@ -409,6 +409,10 @@ func runScenarioWithResult(filePath string) (*runExecutionResult, error) {
 	var blocks []KestBlock
 	if strings.HasSuffix(filePath, ".md") {
 		doc, legacy := ParseFlowDocument(string(content))
+		if doc, err = ExpandFlowIncludes(doc, filePath); err != nil {
+			now := time.Now().UTC()
+			return &runExecutionResult{SourcePath: filePath, Err: err, StartedAt: now, FinishedAt: now}, err
+		}
 		if len(doc.Setup) > 0 || len(doc.Steps) > 0 || len(doc.Teardown) > 0 || len(doc.Edges) > 0 || doc.Meta.ID != "" {
 			return runFlowDocumentWithResult(doc, filePath)
 		}
@@ -685,6 +689,7 @@ func runFlowDocumentWithResult(doc FlowDoc, filePath string) (*runExecutionResul
 	if unrun := len(runner.steps) - summ.TotalTests; unrun > 0 {
 		summ.SkippedTests += unrun
 	}
+	annotateIncludedResults(summ, doc)
 
 	logPath := logger.GetSessionPath()
 	if !output.JSONOutput {

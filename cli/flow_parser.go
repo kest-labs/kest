@@ -7,7 +7,8 @@ import (
 
 type FlowBlock struct {
 	Kind    string
-	LineNum int
+	LineNum int // line of the opening fence (1-based)
+	EndLine int // line of the closing fence (1-based)
 	Raw     string
 }
 
@@ -51,6 +52,7 @@ func ParseFlowMarkdown(content string) []FlowBlock {
 				blocks = append(blocks, FlowBlock{
 					Kind:    kind,
 					LineNum: blockStartLine,
+					EndLine: lineNum,
 					Raw:     current.String(),
 				})
 			}
