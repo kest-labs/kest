@@ -279,3 +279,27 @@ body.data.status == "ready"
 - LLM/Agent 测试方面，仅核对到 AutoRestTest 论文摘要层面；搜索结果中出现的其他新论文（含 2026 年编号）我没有打开阅读，未引用。
 - "近 16% 的 Google 测试有 flaky 记录"取自搜索摘要，请引用前回到原博客核对。
 - 本报告的评分是基于抽样阅读 + 正则统计的判断，不是自动评测；正则统计可能漏掉非常规写法。
+
+---
+
+## 附：实现状态（截至本分支）
+
+上文 A.7 / C.3 中的部分建议已在 `feat/flow-improvements` 分支落地，状态如下。均已用 431 份去重后的真实 flow 回归（解析零失败、零 panic）。
+
+| 建议 | 状态 | 说明 |
+|---|---|---|
+| 级联失败归并为一个根因 | 已实现 | 依赖失败步骤的后续步骤标记为 `skipped`，输出 `skipped_because`；JSON / JUnit / HTML 均带该字段 |
+| `teardown` 无论成败都执行 | 已实现 | 含 `--fail-fast` 与 SIGINT/SIGTERM；依赖未捕获变量的 teardown 步骤会被跳过 |
+| tags 选择、只跑部分步骤 | 已实现 | `--tag`、`--only`、`--from`、`--skip`、`--list` |
+| include / fixture 复用 | 已实现 | `@use ./common/login.flow.md`，步骤 id 带命名空间 |
+| 凭证不进 flow | 部分 | `.kest/.env` 自动加载，`kest lint` 报告明文凭证；批量改写由人工完成 |
+| 线性 edge 样板 | 已实现 | 无 edge 即顺序执行；`kest lint --fix` 删除冗余 edge |
+| 手写末尾 DELETE → teardown | 已实现 | `kest lint --fix` |
+| 默认请求头 / 默认断言 | 已实现 | `@default-header`、`@default-assert`；JSON Content-Type 自动添加需 `@auto-content-type json` 显式开启 |
+| 运行内稳定的 `{{$runId}}` | **未实现** | `$uuid` 仍是每次引用都重新生成 |
+| 响应头断言、`isUuid` 等类型谓词 | **未实现** | 断言引擎仍只支持 status / duration / body 路径 |
+| OpenAPI schema 一致性断言 | **未实现** | 押注 #1 |
+| API 覆盖率报告 | **未实现** | 押注 #2 |
+| 按改动选择 `verify --changed` | **未实现** | 押注 #3 |
+
+已知缺口：`--fail-fast` 下被中止的步骤只计入 `summary.skipped`，没有逐个出现在 JSON 的 `steps` 里。
