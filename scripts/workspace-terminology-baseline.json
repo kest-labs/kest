@@ -688,10 +688,10 @@
       }
     },
     "cli/AGENTS.md": {
-      "total": 5,
+      "total": 4,
       "matches": {
-        "project": 4,
-        "projects": 1
+        "projects": 1,
+        "project": 3
       }
     },
     "cli/CHANGELOG.md": {
@@ -728,9 +728,9 @@
       }
     },
     "cli/README.md": {
-      "total": 8,
+      "total": 1,
       "matches": {
-        "project": 8
+        "project": 1
       }
     },
     "cli/SCENARIO_GUIDE.md": {
@@ -792,21 +792,14 @@
         "ProjectID": 1
       }
     },
-    "cli/init.go": {
-      "total": 1,
-      "matches": {
-        "project": 1
-      }
-    },
     "cli/internal/config/config.go": {
-      "total": 18,
+      "total": 15,
       "matches": {
         "ProjectID": 2,
         "ProjectPath": 2,
         "project": 1,
         "Project": 1,
-        "projectRoot": 9,
-        "findProjectRoot": 3
+        "projectRoot": 9
       }
     },
     "cli/internal/logger/logger.go": {
@@ -939,5 +932,5 @@
       }
     }
   },
-  "generatedAt": "2026-10-04T04:33:34.131Z"
+  "generatedAt": "2026-10-04T05:08:21.621Z"
 }

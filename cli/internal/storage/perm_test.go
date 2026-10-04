@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -41,24 +40,19 @@ func TestNewStoreAddsFailureColumnToOldDatabase(t *testing.T) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	// Schema written by versions before the failure column existed.
-	old, err := sql.Open("sqlite", filepath.Join(dir, "records.db"))
+	// Simulate a database written before the failure column existed: create
+	// the current schema, save a record, then drop the column.
+	seed, err := NewStore()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := old.Exec(`CREATE TABLE records (
-		id INTEGER PRIMARY KEY AUTOINCREMENT, method VARCHAR(10) NOT NULL, url TEXT NOT NULL,
-		base_url TEXT, path TEXT, query_params TEXT, request_headers TEXT, request_body TEXT,
-		response_status INTEGER, response_headers TEXT, response_body TEXT, duration_ms INTEGER,
-		environment VARCHAR(50), project VARCHAR(100), created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); err != nil {
+	if _, err := seed.SaveRecord(&Record{Method: "GET", URL: "http://old", ResponseStatus: 200}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := old.Exec(`INSERT INTO records (method, url, base_url, path, query_params, request_headers, request_body,
-		response_status, response_headers, response_body, duration_ms, environment, project)
-		VALUES ('GET', 'http://old', '', '/', '{}', '{}', '', 200, '{}', '', 1, '', '')`); err != nil {
+	if _, err := seed.db.Exec(`ALTER TABLE records DROP COLUMN failure`); err != nil {
 		t.Fatal(err)
 	}
-	old.Close()
+	seed.Close()
 
 	store, err := NewStore()
 	if err != nil {
