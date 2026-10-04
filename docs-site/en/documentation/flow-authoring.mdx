@@ -186,6 +186,15 @@ When a step fails, later steps that use a `{{variable}}` it was supposed to capt
 
 Skipped steps are not executed, are not failures and never change the exit code; steps that do not depend on the failed step still run. `--json` reports them with `outcome: "skipped"`, `skipped_because` and `skip_reason`, and JUnit emits `<skipped/>`.
 
+## Teardown always runs
+
+`teardown` steps behave like a `finally` block: they run after setup and the main steps finish, including after failures, with `--fail-fast`, and after Ctrl-C or SIGTERM (the in-flight request is cancelled, teardown gets up to 10 seconds, and Kest exits with 130 or 143).
+
+- Teardown steps run in declared order. Kest does not reverse them, so write the cleanup for the last created resource first.
+- A teardown step that needs a variable the run never captured is skipped with a reason instead of failing.
+- A failing teardown step is reported with `phase: "teardown"` and never hides the original failure.
+- Each flow file runs its own teardown, also in directory runs.
+
 ## Profiles
 
 `.kest/flow.config.yaml` controls default targets and run behavior:

@@ -114,6 +114,8 @@ Notes:
 | `network`           | Connection refused, DNS failure, TLS error, ...      | 2         |
 | `timeout`           | Request/exec timed out or exceeded `--max-time`      | 2         |
 | `exec`              | An `@type exec` step command failed                  | 2         |
+| `teardown`          | A `teardown` step failed (`phase: "teardown"`)       | 2         |
+| `interrupted`       | Run stopped by Ctrl-C (130) or SIGTERM (143)         | 130       |
 | `internal`          | Unexpected failure inside Kest                       | 2         |
 | `config`            | Bad flags, unreadable flow/data file, invalid step   | 3         |
 | `variable`          | A required `{{variable}}` was not provided           | 3         |

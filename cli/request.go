@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,6 +48,9 @@ type RequestOptions struct {
 	SilentOutput    bool     // Suppress PrintResponse box (used by flow runner)
 	Forms           []string // -F/--form fields: "fieldname=value" or "fieldname=@filepath"
 	SkipHistorySync bool     // Skip platform history sync (used by aggregate run commands)
+	// Ctx cancels the request and its retry waits (set by the flow runner so
+	// Ctrl-C stops the in-flight request). Nil means not cancellable.
+	Ctx context.Context
 }
 
 var (
@@ -407,7 +411,11 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
 			fmt.Printf("⏱️  Retry attempt %d/%d (waiting %dms)...\n", attempt, maxRetries, opts.RetryWait)
-			time.Sleep(time.Duration(opts.RetryWait) * time.Millisecond)
+			if !sleepCtx(opts.Ctx, time.Duration(opts.RetryWait)*time.Millisecond) {
+				err = opts.Ctx.Err()
+				errKind = output.ErrorKindInterrupted
+				break
+			}
 		}
 
 		httpTimeout := 30 * time.Second
@@ -421,9 +429,14 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			Body:    body,
 			Timeout: httpTimeout,
 			Stream:  opts.Stream,
+			Ctx:     opts.Ctx,
 		})
 
 		errKind = classifyRequestError(err)
+		if err != nil && opts.Ctx != nil && opts.Ctx.Err() != nil {
+			errKind = output.ErrorKindInterrupted
+			break
+		}
 		// Check duration assertion
 		if err == nil && opts.MaxDuration > 0 {
 			durationMs := resp.Duration.Milliseconds()
@@ -693,7 +706,27 @@ func buildRequestResult(tr summary.TestResult, startedAt, finishedAt time.Time) 
 }
 
 // classifyRequestError maps a transport error to a machine-readable kind.
+// sleepCtx waits for d or until ctx is cancelled. It reports false when the
+// wait was cut short by cancellation. A nil ctx never cancels.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	if ctx == nil {
+		time.Sleep(d)
+		return true
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 func classifyRequestError(err error) string {
+	if errors.Is(err, context.Canceled) {
+		return output.ErrorKindInterrupted
+	}
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
 		return output.ErrorKindTimeout

@@ -8,6 +8,8 @@
 - **`{{$basicAuth(user, pass)}}` built-in** — base64-encodes two variables for an HTTP Basic `Authorization` header. `kest import` now emits it for Basic auth, so you pass the username and password with `--var` instead of precomputing an encoded value.
 - **Default success check for imported Postman requests** — requests with no Postman test script get `status >= 200` / `status < 300`, like curl and OpenAPI imports.
 
+- **`teardown` is a real `finally` block** — teardown steps now always run after setup and the main steps, including after failures, with `--fail-fast`, and after Ctrl-C / SIGTERM (the in-flight request is cancelled, teardown gets up to 10s, and the run exits 130 / 143; a second signal quits immediately). Teardown steps that need a variable the run never captured are skipped with the reason instead of failing or using a stale value. A failing teardown step is reported with `phase: "teardown"` / `kind: "teardown"` (exit code 2 if nothing else failed) and never hides the original failure. You no longer need a hand-written trailing DELETE step.
+
 ### Changes
 
 - **`kest init` gets you to a first run** — new `--base-url` flag, a runnable sample flow at `.kest/flow/smoke.flow.md`, and the exact next commands (including `claude mcp add kest -- kest mcp`). The generated config no longer contains a placeholder `api_key`, and the template `ci` profile no longer enables platform sync.

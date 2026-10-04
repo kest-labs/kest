@@ -74,7 +74,7 @@ Website: https://kest.dev
 
 ### CI/CD
 - `kest run tests/ --json` — exactly one versioned JSON result on stdout (see `docs/json-output.md`)
-- Exit codes: 0=success, 1=assertion/snapshot failure, 2=runtime error (network, timeout, exec), 3=usage/config error
+- Exit codes: 0=success, 1=assertion/snapshot failure, 2=runtime error (network, timeout, exec, failed teardown), 3=usage/config error, 130/143=interrupted by SIGINT/SIGTERM
 
 ### MCP (AI agents)
 - `kest mcp` — stdio MCP server exposing kest_request, kest_run_flow, kest_replay, kest_snapshot_verify, kest_history, kest_why

@@ -185,6 +185,33 @@ considered missing, so it does not cause a skip. The same information is in
 `--json` (`outcome: "skipped"`, `skipped_because`, `skip_reason` on each step,
 `summary.skipped`), JUnit (`<skipped/>`), the HTML report and `--report-json`.
 
+### Teardown is a `finally` block
+
+`teardown` steps always run after setup and the main steps finish: after
+failures, with `--fail-fast`, and after Ctrl-C / SIGTERM (the in-flight request
+is cancelled, teardown gets up to 10 seconds, then Kest exits with 130 / 143; a
+second Ctrl-C quits immediately). Each flow file runs its own teardown, also in
+directory runs.
+
+- Teardown steps run in declared order. Kest does not reverse them: if you
+  create A then B, write the teardown that deletes B before the one that
+  deletes A.
+- A teardown step that needs a variable the run never captured (the creating
+  step failed, was skipped or was not reached) is **skipped** with the reason,
+  never run against a stale value from an earlier run.
+- A failing teardown step is reported with phase `teardown` and error kind
+  `teardown` (exit code 2 when nothing else failed). It never hides the
+  original failure: the exit code still comes from the first failed step, and
+  the remaining teardown steps still run.
+
+```teardown
+@id cleanup
+@name Delete order
+DELETE /orders/{{order_id}}
+```
+
+You no longer need a trailing DELETE step at the end of the main steps.
+
 ### Mermaid Preview (in `-v` mode)
 Kest prints a Mermaid flowchart for the parsed Flow document when you run with `-v`:
 ```bash

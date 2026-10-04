@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -66,8 +67,13 @@ type flowRunner struct {
 	captured map[string]bool
 
 	firstFailed *flowStepRef
-	// stopReason is set when the remaining steps are not run (--fail-fast).
+	// stopReason is set when the remaining steps are not run: "--fail-fast"
+	// or "interrupted". Teardown still runs.
 	stopReason string
+	// ctx is cancelled by Ctrl-C / SIGTERM; stepCtx is the context the
+	// current step runs with (a separate grace context during teardown).
+	ctx     context.Context
+	stepCtx context.Context
 }
 
 func newFlowRunner(doc FlowDoc, steps []FlowStep, summ *summary.Summary, cliVars map[string]string) *flowRunner {
@@ -80,7 +86,9 @@ func newFlowRunner(doc FlowDoc, steps []FlowStep, summ *summary.Summary, cliVars
 		origins:  map[string][]string{},
 		state:    map[string]*stepOutcome{},
 		captured: map[string]bool{},
+		ctx:      currentRunCtx(),
 	}
+	r.stepCtx = r.ctx
 	add := func(phase string, list []FlowStep) {
 		for i, step := range list {
 			key := fmt.Sprintf("%s:%d", phase, i)
@@ -317,18 +325,45 @@ func (r *flowRunner) recordPass(ref flowStepRef, result summary.TestResult) {
 	}
 }
 
-// runAll executes the steps in order and stops early only when --fail-fast
-// is set and a step failed.
+// runAll runs setup and the main steps in order, then always runs teardown
+// (a "finally" block): after failures, after --fail-fast stops the run and
+// after Ctrl-C / SIGTERM. Only the main steps are cut short by --fail-fast.
 func (r *flowRunner) runAll() {
-	for i, ref := range r.steps {
-		if !r.runStep(ref) {
-			r.stopReason = "--fail-fast"
-			if remaining := len(r.steps) - i - 1; remaining > 0 {
-				fmt.Printf("   Skipped %d remaining step(s)\n", remaining)
-			}
-			return
+	var main, teardown []flowStepRef
+	for _, ref := range r.steps {
+		if ref.phase == phaseTeardown {
+			teardown = append(teardown, ref)
+		} else {
+			main = append(main, ref)
 		}
 	}
+
+	for i, ref := range main {
+		if r.ctx.Err() != nil {
+			r.stopReason = "interrupted"
+			fmt.Printf("\n⚠️  Run interrupted; skipping %d remaining step(s)\n", len(main)-i)
+			break
+		}
+		if !r.runStep(ref) {
+			r.stopReason = "--fail-fast"
+			if remaining := len(main) - i - 1; remaining > 0 {
+				fmt.Printf("   Skipped %d remaining step(s) (teardown still runs)\n", remaining)
+			}
+			break
+		}
+	}
+
+	if len(teardown) == 0 {
+		return
+	}
+	fmt.Printf("\n🧹 Teardown (always runs)\n")
+	ctx, cancel := teardownContext(r.ctx)
+	defer cancel()
+	r.stepCtx = ctx
+	for _, ref := range teardown {
+		r.runStep(ref)
+	}
+	r.stepCtx = r.ctx
 }
 
 // runStep runs (or skips) one step. It returns false when execution must
@@ -342,15 +377,24 @@ func (r *flowRunner) runStep(ref flowStepRef) bool {
 
 	if step.WaitMs > 0 {
 		fmt.Printf("\n  ⏳ %s waiting %dms before execution\n", ref.name(), step.WaitMs)
-		time.Sleep(time.Duration(step.WaitMs) * time.Millisecond)
+		sleepCtx(r.stepCtx, time.Duration(step.WaitMs)*time.Millisecond)
 	}
 
 	fail := func(result summary.TestResult) bool {
 		result.StepID = step.ID
 		result.Phase = ref.phase
+		if ref.phase == phaseTeardown {
+			// A failing teardown step is reported with its own marker so it
+			// is never mistaken for (or hides) the failure that came first.
+			if result.Error != nil {
+				result.Error = fmt.Errorf("teardown failed: %w", result.Error)
+			}
+			result.ErrorKind = output.ErrorKindTeardown
+			fmt.Printf("    ⚠️  Teardown step %s failed; cleanup may be incomplete\n", ref.name())
+		}
 		r.summ.AddResult(result)
 		r.recordFailure(ref)
-		if runFailFast {
+		if runFailFast && ref.phase != phaseTeardown {
 			fmt.Printf("\n⚠️  Stopping execution (--fail-fast enabled)\n")
 			fmt.Printf("   Failed step: %s\n", ref.name())
 			if result.Error != nil {
@@ -375,7 +419,7 @@ func (r *flowRunner) runStep(ref flowStepRef) bool {
 
 	if step.Type == "exec" {
 		fmt.Printf("\n  ▶ %s (exec, line %d)\n", ref.name(), step.LineNum)
-		result := executeExecStep(step)
+		result := executeExecStep(r.stepCtx, step)
 		if !result.Success {
 			fmt.Printf("❌ Failed at exec step %s\n\n", ref.name())
 			return fail(result)
@@ -402,6 +446,7 @@ func (r *flowRunner) runStep(ref flowStepRef) bool {
 	opts.StrictVars = runStrict
 	opts.SilentOutput = true
 	opts.SkipHistorySync = true
+	opts.Ctx = r.stepCtx
 	if step.Retry > 0 {
 		opts.Retry = step.Retry
 	}

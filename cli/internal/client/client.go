@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,6 +24,9 @@ type RequestOptions struct {
 	Body    []byte
 	Timeout time.Duration
 	Stream  bool
+	// Ctx cancels the in-flight request (Ctrl-C during a flow run). Nil means
+	// the request cannot be cancelled.
+	Ctx context.Context
 }
 
 type Response struct {
@@ -46,7 +50,11 @@ func Execute(opt RequestOptions) (*Response, error) {
 		Transport: sharedTransport,
 	}
 
-	req, err := http.NewRequest(opt.Method, opt.URL, bytes.NewBuffer(opt.Body))
+	ctx := opt.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, opt.Method, opt.URL, bytes.NewBuffer(opt.Body))
 	if err != nil {
 		return nil, err
 	}

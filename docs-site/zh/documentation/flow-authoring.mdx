@@ -186,6 +186,15 @@ echo "cleanup test data"
 
 被跳过的 step 不会执行，不算失败，也不会改变退出码；不依赖失败 step 的 step 仍会运行。`--json` 用 `outcome: "skipped"`、`skipped_because` 和 `skip_reason` 表示，JUnit 输出 `<skipped/>`。
 
+## Teardown 总会执行
+
+`teardown` steps 相当于 `finally`：无论 setup 和主 steps 是否失败、是否使用 `--fail-fast`，或收到 Ctrl-C / SIGTERM，都会执行（正在进行的请求会被取消，teardown 最多再运行 10 秒，Kest 以 130 或 143 退出）。
+
+- Teardown steps 按声明顺序执行，Kest 不会反转顺序，所以请先写清理最后创建的资源的 step。
+- 需要的变量从未被捕获时，teardown step 会被跳过并给出原因，而不是失败。
+- teardown step 失败会以 `phase: "teardown"` 报告，且不会掩盖最初的失败。
+- 每个 flow 文件各自执行 teardown，目录运行时也是如此。
+
 ## Profiles
 
 `.kest/flow.config.yaml` 控制默认 targets 和运行行为：

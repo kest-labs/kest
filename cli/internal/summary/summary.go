@@ -239,6 +239,15 @@ func (s *Summary) verdict() string {
 	default:
 		b.WriteString("\n\033[32m✓ All tests passed!\033[0m\n")
 	}
+	for _, r := range s.Results {
+		if r.Phase == "teardown" && !r.Success && !r.Skipped {
+			msg := "failed"
+			if r.Error != nil {
+				msg = strings.SplitN(strings.TrimSpace(r.Error.Error()), "\n", 2)[0]
+			}
+			fmt.Fprintf(&b, "  \033[31mTeardown failed:\033[0m %s - %s (cleanup may be incomplete)\n", r.Name, msg)
+		}
+	}
 	if roots, _ := s.skipRoots(); len(roots) > 0 {
 		for _, root := range roots {
 			for _, r := range s.Results {

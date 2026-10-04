@@ -39,6 +39,8 @@ func exitCodeForKind(kind string) int {
 		return ExitSuccess
 	case output.ErrorKindAssertion, output.ErrorKindSnapshot:
 		return ExitAssertionFailed
+	case output.ErrorKindInterrupted:
+		return ExitInterrupted
 	case output.ErrorKindConfig, output.ErrorKindVariable, output.ErrorKindNotFound, output.ErrorKindAINotConfigured:
 		return ExitConfigError
 	default:

@@ -180,10 +180,18 @@ func executeRunSuite(args []string, flagChanged func(string) bool) (*output.Resu
 		}
 	}
 
+	// Ctrl-C / SIGTERM stop the run gracefully: the in-flight request is
+	// cancelled, teardown runs and results are still reported.
+	stopSignals := installRunSignals()
+	defer stopSignals()
+
 	startedAt := time.Now().UTC()
 	results := make([]runExecutionResult, 0, len(targets))
 	var runErrs []string
 	for _, target := range targets {
+		if currentRunCtx().Err() != nil {
+			break
+		}
 		result, err := runScenarioWithResult(target)
 		if result == nil {
 			result = &runExecutionResult{
@@ -237,6 +245,9 @@ func executeRunSuite(args []string, flagChanged func(string) bool) (*output.Resu
 		}
 	}
 
+	if sig := interruptedBy(); sig != nil {
+		return res, &ExitError{Code: exitCodeForSignal(sig), Err: fmt.Errorf("run interrupted by %v", sig)}
+	}
 	if len(runErrs) > 0 {
 		code := exitCodeForResult(res)
 		if code == ExitSuccess {
@@ -764,7 +775,7 @@ func orderFlowSteps(doc FlowDoc) []FlowStep {
 // The full variable chain (config → captured → CLI → exec) is available
 // for interpolation in the command. Captured values are stored in the
 // active RunContext so subsequent steps can reference them.
-func executeExecStep(step FlowStep) summary.TestResult {
+func executeExecStep(parent context.Context, step FlowStep) summary.TestResult {
 	startTime := time.Now()
 	result := summary.TestResult{
 		StepID:    step.ID,
@@ -796,7 +807,10 @@ func executeExecStep(step FlowStep) summary.TestResult {
 		}
 	}
 	timeout := time.Duration(timeoutSec) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 
 	shell, flag := ShellCommand()
@@ -809,6 +823,13 @@ func executeExecStep(step FlowStep) summary.TestResult {
 	duration := time.Since(startTime)
 	result.Duration = duration
 
+	if parent.Err() != nil {
+		result.Success = false
+		result.ErrorKind = output.ErrorKindInterrupted
+		result.Error = fmt.Errorf("exec interrupted")
+		fmt.Printf("  ❌ %v\n", result.Error)
+		return result
+	}
 	if ctx.Err() == context.DeadlineExceeded {
 		result.Success = false
 		result.ErrorKind = output.ErrorKindTimeout
@@ -957,7 +978,11 @@ func executeFlowStepWithPoll(step FlowStep, opts RequestOptions) (summary.TestRe
 		if time.Now().After(deadline) {
 			break
 		}
-		time.Sleep(time.Duration(intervalMs) * time.Millisecond)
+		if !sleepCtx(opts.Ctx, time.Duration(intervalMs)*time.Millisecond) {
+			lastErr = fmt.Errorf("poll interrupted")
+			lastRes.ErrorKind = output.ErrorKindInterrupted
+			break
+		}
 	}
 
 	if lastErr == nil {

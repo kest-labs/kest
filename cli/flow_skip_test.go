@@ -98,9 +98,24 @@ func eightStepFlow() string {
 
 func runFlowResult(t *testing.T, content, baseURL string) (*output.Result, []byte, error) {
 	t.Helper()
+	return runFlowResultWith(t, content, baseURL, nil)
+}
+
+// runFlowResultWith isolates Kest, applies setup (run flags) and runs the flow.
+func runFlowResultWith(t *testing.T, content, baseURL string, setup func()) (*output.Result, []byte, error) {
+	t.Helper()
 	work := isolateKest(t)
+	if setup != nil {
+		setup()
+	}
+	return runFlowIn(t, work, content, baseURL)
+}
+
+// runFlowIn runs a flow in an already isolated workspace.
+func runFlowIn(t *testing.T, work, content, baseURL string) (*output.Result, []byte, error) {
+	t.Helper()
 	writeFlow(t, work, "flow.flow.md", content)
-	raw, err := runJSON(t, []string{"flow.flow.md"}, baseURL)
+	raw, err := runJSONExplicit(t, []string{"flow.flow.md"}, baseURL)
 	var res output.Result
 	if jerr := json.Unmarshal(raw, &res); jerr != nil {
 		t.Fatalf("invalid JSON: %v\n%s", jerr, raw)
@@ -305,4 +320,27 @@ func mustReadFile(t *testing.T, path string) []byte {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	return data
+}
+
+// runJSONExplicit is runJSON for tests that set run flags directly: flags
+// that differ from their defaults count as explicitly set, so the built-in
+// profile does not override them.
+func runJSONExplicit(t *testing.T, args []string, baseURL string) ([]byte, error) {
+	t.Helper()
+	runBaseURL = baseURL
+	var buf bytes.Buffer
+	restore := output.SetJSONSink(&buf)
+	defer restore()
+	changed := func(name string) bool {
+		switch name {
+		case "base-url":
+			return baseURL != ""
+		case "fail-fast":
+			return runFailFast
+		}
+		return false
+	}
+	res, err := runSuite(args, changed)
+	err = finishJSON("run", res, err)
+	return buf.Bytes(), err
 }

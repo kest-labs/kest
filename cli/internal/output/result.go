@@ -28,6 +28,11 @@ const (
 	ErrorKindSnapshot        = "snapshot_mismatch"
 	ErrorKindAINotConfigured = "ai_not_configured"
 	ErrorKindInternal        = "internal"
+	// ErrorKindTeardown marks a failed teardown step. It exits with the
+	// runtime error code and never replaces an earlier failure.
+	ErrorKindTeardown = "teardown"
+	// ErrorKindInterrupted marks a step cut short by Ctrl-C / SIGTERM.
+	ErrorKindInterrupted = "interrupted"
 )
 
 // Result is the single JSON document emitted by --json / --output json and

@@ -20,7 +20,8 @@ kest run tests/ --json --junit kest-results/junit.xml > kest-results/result.json
 - `--json` prints exactly one JSON document to stdout; see
   [json-output.md](json-output.md).
 - Exit codes: `0` pass, `1` assertion failure, `2` runtime error (network,
-  timeout, exec), `3` usage/config error.
+  timeout, exec, failed teardown), `3` usage/config error, `130`/`143`
+  interrupted by SIGINT/SIGTERM (teardown still runs).
 
 The `ci` profile in `.kest/flow.config.yaml` can set the report paths so you do
 not have to pass them on every run (`reports.junit`, `reports.json`).
