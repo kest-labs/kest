@@ -62,10 +62,9 @@ Authorization: Bearer {{token}}
 status == 200
 ```
 
-```edge
-login -> profile
-```
 ````
+
+Steps run top to bottom, so this flow needs no `edge` blocks.
 
 ## Flow Metadata
 
@@ -144,16 +143,57 @@ Use exec steps for local setup, fixture creation, or tooling that is already pre
 
 ## Edges
 
-Edges define execution order:
+Edges are optional. Without edges, steps run in file order, which is identical to a flow that has a `@on success` edge between every pair of neighbouring steps, so you do not need to write those (`kest lint` reports them as `redundant-edge`).
+
+Use an edge only for non-linear order, for example to run a step before a step declared above it:
 
 ~~~md
 ```edge
-login -> profile
-profile -> logout
+@from login
+@to profile
+@on success
 ```
 ~~~
 
-When edges are present, Kest runs the flow as a graph. Without edges, steps run in file order.
+Edges order the `step` blocks with a topological sort; steps no edge relates keep file order. `@on` is a label only. If edges reference unknown steps or form a cycle, the file falls back to file order. `setup` and `teardown` blocks are never reordered.
+
+## Flow-level Defaults
+
+Declare defaults once in the `flow` block instead of repeating them in every step:
+
+~~~md
+```flow
+@flow id=orders
+@default-header Accept: application/json
+@default-assert status == 200
+@auto-content-type json
+```
+~~~
+
+- `@default-header Name: value` is added to every HTTP step unless the step sets the same header.
+- `@default-assert expr` is added to every HTTP step unless the step already asserts the same subject (for example a step with its own `status == 201` skips the default `status == 200`).
+- `@auto-content-type json` sends `Content-Type: application/json` for JSON bodies that have no `Content-Type` header. Without this opt-in Kest never adds one.
+- Put `@no-defaults` in a step to skip all of the above for that step.
+
+Default assertions are evaluated like any other assertion, so they appear in the run output, JSON, and HTML report.
+
+## Reusing Steps with `@use`
+
+Share a login (or any setup) across files:
+
+~~~md
+```flow
+@flow id=orders
+@use ./common/login.flow.md
+@use ./common/seed.flow.md as seed
+```
+~~~
+
+The included file's `setup` and `step` blocks run first, in the setup phase, before this file's own steps. Captured variables are shared (`{{token}}` stays `{{token}}`), but step ids are namespaced (`login.step-id`, or `seed.step-id` with `as seed`) so they never collide. Paths are relative to the including file. Missing files and include cycles are reported with the line of the `@use`.
+
+## Secrets
+
+Do not commit credentials. Use `"password": "{{$env.ADMIN_PASSWORD}}"`: `$env.NAME` reads the OS environment first, then `.kest/.env`. `kest lint` flags literal secrets (`inline-secret`).
 
 ## Setup and Teardown
 

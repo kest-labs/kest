@@ -187,6 +187,63 @@ How edges work today:
 - Mermaid output (`-v`) always draws the implicit sequential edges between
   steps that no explicit edge touches.
 
+### 5) Flow-level Defaults (headers and assertions)
+
+67% of steps assert `status == 200` and almost as many repeat a
+`Content-Type: application/json` header. Declare them once in the `flow` block:
+
+```flow
+@flow id=orders
+@default-header Accept: application/json
+@default-assert status == 200
+@auto-content-type json
+```
+
+- `@default-header Name: value` (repeatable) is added to every HTTP step
+  (`setup`, `step`, `teardown`) unless the step sets the same header itself.
+- `@default-assert <expr>` (repeatable) is appended to every HTTP step's
+  assertions unless the step already asserts the same *subject* (first token),
+  so a step with its own `status == 201` does not also get `status == 200`.
+- `@auto-content-type json` adds `Content-Type: application/json` to a request
+  whose body is valid JSON and that has no `Content-Type` header after config
+  defaults, flow defaults and step headers are merged.
+- A step with `@no-defaults` is left completely untouched. Exec steps are never
+  touched.
+
+Why directives and not a new ` ```defaults ` block: the `flow` block already is a
+list of `@key value` lines that the parser merges, and an older kest simply
+ignores an unknown directive instead of misreading a whole block.
+
+Defaults are resolved when the file is parsed, so they appear everywhere a step
+does: run output, `--json` (`assertions`), the HTML report and `kest flow-plan`.
+
+Without `@auto-content-type`, Kest never invents a `Content-Type`: only
+`defaults.headers` in `.kest/config.yaml` (written by `kest init`) and your own
+headers are sent. Existing flows therefore behave exactly as before.
+
+### 6) Reusing steps: `@use`
+
+```flow
+@flow id=orders
+@use ./common/login.flow.md
+@use ./common/seed.flow.md as seed
+```
+
+- The included file's `setup` and `step` blocks run **first**, in the setup
+  phase, before the including file's own steps. Its `teardown` blocks are added
+  at the end of the including file's teardown.
+- Captured variables are shared: after the include, `{{token}}` works as usual
+  (variables are **not** prefixed).
+- Step ids are namespaced to avoid collisions: `login.<step-id>` (the file name
+  without `.flow.md`), or `<alias>.<step-id>` with `as alias`. Nested includes
+  compose (`outer.inner.step`).
+- Paths are relative to the including file. Missing files, a file that includes
+  itself and include cycles are reported with the line of the `@use`.
+- Included steps are shown distinctly: console and report names get a
+  `[login]` prefix and JSON results carry `"included_from": "./common/login.flow.md"`.
+- Defaults (`@default-*`) of the including file are not applied to included
+  steps; the included file's own defaults are.
+
 ### Mermaid Preview (in `-v` mode)
 Kest prints a Mermaid flowchart for the parsed Flow document when you run with `-v`:
 ```bash

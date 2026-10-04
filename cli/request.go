@@ -47,6 +47,11 @@ type RequestOptions struct {
 	SilentOutput    bool     // Suppress PrintResponse box (used by flow runner)
 	Forms           []string // -F/--form fields: "fieldname=value" or "fieldname=@filepath"
 	SkipHistorySync bool     // Skip platform history sync (used by aggregate run commands)
+
+	// AutoJSONContentType adds Content-Type: application/json to a JSON body
+	// when no Content-Type header is set. Set by flows that declare
+	// @auto-content-type json; never set for ad-hoc `kest get/post`.
+	AutoJSONContentType bool
 }
 
 var (
@@ -392,6 +397,8 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		headers["Content-Type"] = writer.FormDataContentType()
 		body = buf.Bytes()
 	}
+
+	applyAutoContentType(opts, headers, body)
 
 	result.RequestHeaders = cloneStringMap(headers)
 	result.RequestBody = string(body)

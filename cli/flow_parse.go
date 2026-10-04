@@ -17,7 +17,7 @@ func ParseFlowDocument(content string) (FlowDoc, []KestBlock) {
 		switch b.Kind {
 		case "flow":
 			if isFlowMetaBlock(b.Raw) {
-				doc.Meta = mergeFlowMeta(doc.Meta, parseFlowMeta(b.Raw))
+				doc.Meta = mergeFlowMeta(doc.Meta, parseFlowMetaAt(b.Raw, b.LineNum))
 			} else {
 				legacy = append(legacy, KestBlock{LineNum: b.LineNum, Raw: b.Raw, IsBlock: true})
 			}
@@ -45,6 +45,7 @@ func ParseFlowDocument(content string) (FlowDoc, []KestBlock) {
 	doc.Setup = ensureStepIDs(doc.Setup)
 	doc.Steps = ensureStepIDs(doc.Steps)
 	doc.Teardown = ensureStepIDs(doc.Teardown)
+	applyFlowDefaults(&doc)
 	return doc, legacy
 }
 
@@ -78,13 +79,31 @@ func mergeFlowMeta(base FlowMeta, next FlowMeta) FlowMeta {
 	if len(next.Tags) > 0 {
 		base.Tags = next.Tags
 	}
+	base.DefaultHeaderLines = append(base.DefaultHeaderLines, next.DefaultHeaderLines...)
+	base.DefaultAsserts = append(base.DefaultAsserts, next.DefaultAsserts...)
+	base.Uses = append(base.Uses, next.Uses...)
+	if next.AutoContentType {
+		base.AutoContentType = true
+	}
+	for k, v := range next.DefaultHeaders {
+		if base.DefaultHeaders == nil {
+			base.DefaultHeaders = map[string]string{}
+		}
+		base.DefaultHeaders[k] = v
+	}
 	return base
 }
 
 func parseFlowMeta(raw string) FlowMeta {
+	return parseFlowMetaAt(raw, 0)
+}
+
+// parseFlowMetaAt parses a flow metadata block whose fence starts at blockLine
+// (0 when unknown). Line numbers of @use directives are blockLine + offset.
+func parseFlowMetaAt(raw string, blockLine int) FlowMeta {
 	meta := FlowMeta{}
 	lines := strings.Split(raw, "\n")
-	for _, line := range lines {
+	for idx, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
@@ -107,6 +126,18 @@ func parseFlowMeta(raw string) FlowMeta {
 			meta.Env = val
 		case "tags":
 			meta.Tags = splitCSV(val)
+		case "use":
+			if use, ok := parseFlowUse(val, blockLine+idx+1); ok {
+				meta.Uses = append(meta.Uses, use)
+			}
+		case "default-header":
+			addDefaultHeader(&meta, val)
+		case "default-assert":
+			if val != "" {
+				meta.DefaultAsserts = append(meta.DefaultAsserts, val)
+			}
+		case "auto-content-type":
+			meta.AutoContentType = strings.EqualFold(val, "json") || strings.EqualFold(val, "on") || strings.EqualFold(val, "true")
 		}
 	}
 	return meta
@@ -147,6 +178,8 @@ func parseFlowStep(b FlowBlock) FlowStep {
 				step.PollIntervalMs = parseDurationToMS(val)
 			case "timeout":
 				step.ExecTimeoutMs = parseDurationToMS(val)
+			case "no-defaults":
+				step.NoDefaults = true
 			case "on-fail":
 				fmt.Printf("⚠️  Warning: @on-fail is not yet implemented (line %d), ignoring.\n", b.LineNum)
 				step.OnFail = val
