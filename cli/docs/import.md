@@ -29,7 +29,10 @@ Without `--write-config` the importer prints a YAML snippet you can paste into
 * **Relative URLs + `base_url`.** The most common URL prefix (`{{baseUrl}}` or a
   literal origin) becomes the environment `base_url`; steps use relative paths
   so the same flow runs against dev, staging and production
-  (`kest env use <name>` or `kest run --base-url ...`).
+  (`kest env use <name>` or `kest run --base-url ...`). URLs that start with a
+  different variable (e.g. `{{auth_root}}/token`) are kept as-is: Kest
+  interpolates first and applies `base_url` only if the result is still
+  relative.
 * **Variables are snake_case.** `{{baseUrl}}` → `{{base_url}}`,
   `{{userId}}` → `{{user_id}}`. Kest reads `.kest/config.yaml` case-insensitively,
   so mixed-case names would not resolve reliably. Names are renamed consistently

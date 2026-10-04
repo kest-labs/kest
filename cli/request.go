@@ -227,32 +227,35 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 		fmt.Println()
 	}
 
-	// Handle base URL
-	processedURL := targetURL
-	if !strings.HasPrefix(targetURL, "http") && env.BaseURL != "" {
-		processedURL = strings.TrimSuffix(env.BaseURL, "/") + "/" + strings.TrimPrefix(targetURL, "/")
-	}
-
-	// Interpolate URL with warnings in verbose mode
-	var finalURL string
-	if opts.Verbose {
-		var warnings []string
-		finalURL, warnings = variable.InterpolateWithWarning(processedURL, vars, true)
-		if len(warnings) > 0 {
-			fmt.Printf("⚠️  Warning: Undefined variables in URL: %v\n", warnings)
+	// Interpolate first, then apply the base URL only if the result is still
+	// relative: `{{api_root}}/users` with api_root=https://x.test must not
+	// get base_url prepended.
+	var urlWarnings []string
+	interpolateURL := func(raw string) (string, error) {
+		if opts.StrictVars {
+			return variable.InterpolateStrict(raw, vars)
 		}
-	} else {
-		finalURL = variable.Interpolate(processedURL, vars)
-	}
-	if opts.StrictVars {
-		strictURL, err := variable.InterpolateStrict(processedURL, vars)
-		if err != nil {
-			result.Error = err
-			result.ErrorKind = output.ErrorKindVariable
-			result.Success = false
-			return result, &ExitError{Code: ExitRuntimeError, Err: err}
+		if opts.Verbose {
+			out, warnings := variable.InterpolateWithWarning(raw, vars, true)
+			urlWarnings = append(urlWarnings, warnings...)
+			return out, nil
 		}
-		finalURL = strictURL
+		return variable.Interpolate(raw, vars), nil
+	}
+	finalURL, err := interpolateURL(targetURL)
+	if err == nil && !isAbsoluteHTTPURL(finalURL) && env.BaseURL != "" {
+		var base string
+		base, err = interpolateURL(env.BaseURL)
+		finalURL = joinBaseURL(base, finalURL)
+	}
+	if err != nil {
+		result.Error = err
+		result.ErrorKind = output.ErrorKindVariable
+		result.Success = false
+		return result, &ExitError{Code: ExitRuntimeError, Err: err}
+	}
+	if len(urlWarnings) > 0 {
+		fmt.Printf("⚠️  Warning: Undefined variables in URL: %v\n", urlWarnings)
 	}
 	// Update result.URL to the interpolated value so logs always show the real URL
 	result.URL = finalURL
@@ -395,7 +398,6 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 
 	// Execute request with retry logic
 	var resp *client.Response
-	var err error
 	errKind := output.ErrorKindNetwork
 	maxRetries := opts.Retry
 	if maxRetries < 0 {
@@ -665,6 +667,18 @@ func saveRequestRecord(store *storage.Store, conf *config.Config, baseURL string
 		}
 	}
 	return recordID
+}
+
+// isAbsoluteHTTPURL reports whether u already names a scheme and host
+// (http:// or https://, case-insensitive), so no base URL applies.
+func isAbsoluteHTTPURL(u string) bool {
+	lower := strings.ToLower(strings.TrimSpace(u))
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
+}
+
+// joinBaseURL joins a base URL and a relative path with exactly one slash.
+func joinBaseURL(base, path string) string {
+	return strings.TrimSuffix(base, "/") + "/" + strings.TrimPrefix(path, "/")
 }
 
 // buildRequestResult wraps a single request outcome, including redacted

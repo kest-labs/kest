@@ -443,7 +443,9 @@ func (p *postmanImporter) relativeURL(u, loc string) string {
 		return "/"
 	}
 	if strings.HasPrefix(u, "{{") {
-		p.res.warn(loc, "URL %q starts with a variable other than the base URL; Kest prepends base_url to non-http URLs, so make it absolute or relative", u)
+		// Kept as-is: Kest interpolates first and applies base_url only when
+		// the result is still relative, so {{api_root}}/users works whether
+		// api_root is an absolute URL or a path prefix.
 		return u
 	}
 	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") && !strings.HasPrefix(u, "/") {
