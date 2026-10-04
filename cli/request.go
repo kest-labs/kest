@@ -567,7 +567,12 @@ func ExecuteRequest(opts RequestOptions) (summary.TestResult, error) {
 			Project:         conf.ProjectID,
 			CreatedAt:       startTime.UTC(),
 		}
-		recordID, _ = store.SaveRecord(record)
+		var saveErr error
+		recordID, saveErr = store.SaveRecord(record)
+		if saveErr != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Failed to save request history: %v\n", saveErr)
+			logger.LogToSession("save history failed: %v", saveErr)
+		}
 		record.ID = recordID
 		if recordID > 0 && !opts.SkipHistorySync {
 			if err := platformsync.QueueRequestHistory(conf, store, record, method); err != nil {

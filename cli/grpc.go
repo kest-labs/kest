@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/kest-labs/kest/cli/internal/client"
@@ -71,7 +72,10 @@ var grpcCmd = &cobra.Command{
 				Environment:    env,
 				CreatedAt:      time.Now().UTC(),
 			}
-			recordID, _ := store.SaveRecord(record)
+			recordID, saveErr := store.SaveRecord(record)
+			if saveErr != nil {
+				fmt.Fprintf(os.Stderr, "⚠️  Failed to save gRPC history: %v\n", saveErr)
+			}
 			record.ID = recordID
 			if recordID > 0 {
 				if err := platformsync.QueueRequestHistory(conf, store, record, "grpc"); err != nil {

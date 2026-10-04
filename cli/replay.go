@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -84,7 +85,10 @@ var replayCmd = &cobra.Command{
 			Project:         oldRecord.Project,
 			CreatedAt:       time.Now().UTC(),
 		}
-		newID, _ := store.SaveRecord(record)
+		newID, saveErr := store.SaveRecord(record)
+		if saveErr != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Failed to save replay history: %v\n", saveErr)
+		}
 		record.ID = newID
 		conf := loadConfigWarn()
 		if newID > 0 {
