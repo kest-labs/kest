@@ -149,6 +149,17 @@ environments:
 
 ---
 
+## 密钥与 `{{$env.NAME}}`
+
+不要把密码/令牌写进 flow 文件，使用 `{{$env.NAME}}`：
+
+```json
+{ "password": "{{$env.ADMIN_PASSWORD}}" }
+```
+
+查找顺序：操作系统环境变量（优先）→ 工作区的 `.kest/.env`（`KEY=VALUE` 格式）。
+`kest init` 会把 `.env` 写入 `.kest/.gitignore`。项目根目录的 `./.env` **不会**被读取。
+
 ## 优先级示例
 
 ```yaml

@@ -51,6 +51,16 @@ Example:
 }
 ```
 
+### Secrets with `{{$env.NAME}}`
+
+Keep credentials out of flow files. `{{$env.NAME}}` is read from the OS
+environment first, then from `.kest/.env` (a `KEY=VALUE` file in your
+workspace; `kest init` git-ignores it). An application-level `./.env` is not read.
+
+```json
+{ "username": "admin", "password": "{{$env.ADMIN_PASSWORD}}" }
+```
+
 ## Captures
 
 Capture values from a response:

@@ -304,6 +304,30 @@ Content-Type: application/json
 - `{{$randomInt}}` - Random integer (0-10000)
 - `{{$timestamp}}` - Current Unix timestamp
 
+### Secrets and Credentials: `{{$env.NAME}}`
+
+Never commit passwords, tokens or API keys into a flow file. Read them from the
+environment instead:
+
+```step
+@id login
+POST /v1/login
+Content-Type: application/json
+
+{ "username": "admin", "password": "{{$env.ADMIN_PASSWORD}}" }
+```
+
+`{{$env.NAME}}` is resolved from, in order:
+
+1. the OS environment (`ADMIN_PASSWORD=... kest run login.flow.md`) - always wins;
+2. the workspace file `.kest/.env` (next to `.kest/config.yaml`), a plain
+   `KEY=VALUE` file (`#` comments, optional `export `, single/double quotes).
+
+`kest init` adds `.env` to `.kest/.gitignore`, so `.kest/.env` is never committed.
+An application-level `./.env` is **not** read: it usually belongs to the application
+under test. An unset name resolves to an empty string. `kest lint` reports
+literal secrets as `inline-secret`.
+
 ### Variable Priority
 
 When variables with the same name come from multiple sources, the priority is (highest wins):

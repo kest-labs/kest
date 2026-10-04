@@ -131,6 +131,7 @@ profiles:
 		gitignoreContent := `# Kest
 *.log
 *.db
+# Secrets for {{$env.NAME}} in flows (see: kest guide). Never commit this file.
 .env
 logs/
 reports/
@@ -146,6 +147,8 @@ reports/
 		fmt.Printf("  - %s\n", name)
 	}
 	fmt.Printf("\nRequests go to %s (dev). Change it in .kest/config.yaml or re-run with --base-url.\n", baseURL)
+	fmt.Println("Secrets: put them in .kest/.env (git-ignored via .kest/.gitignore), e.g. ADMIN_PASSWORD=...,")
+	fmt.Println("then reference them in flows as {{$env.ADMIN_PASSWORD}}. OS environment variables take precedence.")
 	printInitNextSteps(baseURL)
 	return nil
 }

@@ -272,7 +272,25 @@ func resolveBuiltin(name string) string {
 	}
 	// $env.VAR_NAME → read from OS environment
 	if strings.HasPrefix(name, envVarPrefix) {
-		return os.Getenv(strings.TrimPrefix(name, envVarPrefix))
+		return lookupEnv(strings.TrimPrefix(name, envVarPrefix))
+	}
+	return ""
+}
+
+// EnvFallback, when set, is consulted for $env.NAME when the OS environment
+// does not define NAME. The CLI wires it to the workspace's .kest/.env file.
+var EnvFallback func(name string) (string, bool)
+
+// lookupEnv resolves $env.NAME: the OS environment always wins, then the
+// fallback (.kest/.env). An unset name resolves to the empty string.
+func lookupEnv(name string) string {
+	if v, ok := os.LookupEnv(name); ok {
+		return v
+	}
+	if EnvFallback != nil {
+		if v, ok := EnvFallback(name); ok {
+			return v
+		}
 	}
 	return ""
 }
