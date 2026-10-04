@@ -183,6 +183,18 @@ func finishCurlImport(stdout, stderr io.Writer, res *importer.Result) error {
 		if res.Env.BaseURL != "" {
 			fmt.Fprintf(stderr, "\nbase_url: %s  (set it in .kest/config.yaml or run with --base-url)\n", res.Env.BaseURL)
 		}
+		if len(res.Env.Variables) > 0 {
+			names := make([]string, 0, len(res.Env.Variables))
+			for k := range res.Env.Variables {
+				names = append(names, k)
+			}
+			sort.Strings(names)
+			flags := make([]string, 0, len(names))
+			for _, k := range names {
+				flags = append(flags, fmt.Sprintf("--var %s=%s", k, res.Env.Variables[k]))
+			}
+			fmt.Fprintf(stderr, "\nVariables: %s\n", strings.Join(flags, " "))
+		}
 		printSecretsHint(stderr, res.Env)
 		printImportWarnings(stderr, res.Warnings)
 		return nil

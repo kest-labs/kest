@@ -12,6 +12,10 @@ import (
 	"strings"
 )
 
+// basicAuthHeader is the Authorization value emitted for HTTP Basic auth; the
+// $basicAuth built-in encodes the two variables at run time.
+const basicAuthHeader = "Basic {{$basicAuth(basic_username, basic_password)}}"
+
 // KV is an ordered name/value pair used for headers and query parameters.
 type KV struct {
 	Name  string

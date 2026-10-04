@@ -68,10 +68,14 @@ kest run .kest/flow/acme --var user_password=...
 | GraphQL body | JSON `{"query": ..., "variables": ...}` |
 | Collection / folder / request auth (inherited) | Header with variables |
 | `bearer` | `Authorization: Bearer {{token}}` (or the variable used in Postman) |
-| `basic` | `Authorization: Basic {{basic_auth}}` — pass `--var basic_auth=$(printf '%s' 'user:pass' \| base64)` |
+| `basic` | `Authorization: Basic {{$basicAuth(user_var, pass_var)}}`, reusing the Postman variables (or `basic_username` / `basic_password`); the password is never copied |
 | `apikey` (header or query) | `<key>: {{var}}` header or query param |
 | Collection variables + environment file | Environment snippet / `--write-config` |
 | Dynamic variables | `$guid`/`$randomUUID` → `$uuid`, `$timestamp`, `$isoTimestamp` → `$isoDate`, `$randomInt`, `$randomEmail` |
+
+Requests with no Postman test script get `status >= 200` / `status < 300`,
+matching curl and OpenAPI imports. Requests whose test script could not be
+translated get no guessed assertion; the script is kept as a note instead.
 
 ### Test scripts
 
@@ -149,7 +153,8 @@ and, on stderr, the `base_url` to configure plus `--var token=...`.
   `--data-urlencode`, `--json`, `-G/--get`, `-I/--head`, `-u/--user`, `--oauth2-bearer`,
   `-A/--user-agent`, `-e/--referer`, `-b/--cookie`, `--url`. Transport flags
   (`-s`, `-L`, `-k`, `--compressed`, `-o`, `--max-time`, ...) are ignored.
-* `-u user:pass` becomes `Authorization: Basic {{basic_auth}}`; bearer tokens,
+* `-u user:pass` becomes `Authorization: Basic {{$basicAuth(basic_username, basic_password)}}`
+  (the username is kept as a variable, the password must be passed with `--var`); bearer tokens,
   API keys and cookies become variables.
 * `-F/--form` (multipart) and `-T/--upload-file` are not translated (note + warning).
 * `-o file.flow.md` writes a complete flow file; add `--append` to add the step
@@ -176,14 +181,14 @@ kest import openapi https://petstore3.swagger.io/api/v3/openapi.json
   type-based placeholder; `readOnly` properties are skipped). Form-urlencoded
   bodies are supported; other content types produce a warning.
 * Security: HTTP bearer → `Authorization: Bearer {{token}}`, HTTP basic →
-  `Basic {{basic_auth}}`, apiKey → header/query/cookie with a variable,
+  `Basic {{$basicAuth(basic_username, basic_password)}}`, apiKey → header/query/cookie with a variable,
   OAuth2/OpenID Connect → bearer token (with a warning). `security: []` on an
   operation disables auth for it.
 * Assertion: `status == <lowest documented 2xx>`, or `status >= 200` +
   `status < 300` for `2XX` or when no 2xx response is documented.
 
-The older `kest generate -f spec.json` command still exists; `kest import
-openapi` is the recommended replacement because it emits `step` blocks with
+The older `kest generate -f spec.json` command is deprecated: it still runs but
+prints a notice pointing here. `kest import openapi` emits `step` blocks with
 assertions, variables and auth.
 
 ## After importing

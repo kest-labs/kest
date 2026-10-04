@@ -389,6 +389,7 @@ func (p *postmanImporter) convertRequest(it pmItem, inherited *pmAuth, location 
 	}
 
 	// Scripts.
+	hasTestScript := false
 	for _, ev := range it.Event {
 		lines := scriptLines(ev.Script.Exec)
 		code := strings.TrimSpace(strings.Join(lines, "\n"))
@@ -397,6 +398,7 @@ func (p *postmanImporter) convertRequest(it pmItem, inherited *pmAuth, location 
 		}
 		switch ev.Listen {
 		case "test":
+			hasTestScript = true
 			tr := translateTestScript(lines)
 			st.Asserts = appendUnique(st.Asserts, tr.Asserts...)
 			st.Captures = appendUnique(st.Captures, tr.Captures...)
@@ -412,6 +414,12 @@ func (p *postmanImporter) convertRequest(it pmItem, inherited *pmAuth, location 
 			st.Notes = append(st.Notes, Note{Title: "Postman pre-request script was not translated. Consider an `@type exec` step.", Lang: "javascript", Content: code})
 			p.res.warn(loc, "pre-request script not translated (kept as a note)")
 		}
+	}
+	if len(st.Asserts) == 0 && !hasTestScript {
+		// Match curl/OpenAPI imports so untested requests still check for success.
+		// Requests whose test script could not be translated stay assertion-free
+		// rather than get a guessed check; the script is kept as a note.
+		st.Asserts = []string{"status >= 200", "status < 300"}
 	}
 	return st, true
 }
@@ -584,17 +592,23 @@ func (p *postmanImporter) applyAuth(st *Step, auth *pmAuth, loc string) {
 	case "basic":
 		user := auth.Params["username"]
 		pass := auth.Params["password"]
+		userVar, passVar := "basic_username", "basic_password"
 		if n, ok := isPureVar(user); ok {
-			p.authVars[VarName(n)] = true
+			userVar = VarName(n)
+		} else if user != "" {
+			p.res.Env.setVar(userVar, user)
+		} else {
+			p.res.Env.addRequired(userVar)
 		}
 		if n, ok := isPureVar(pass); ok {
-			p.authVars[VarName(n)] = true
-			p.res.Env.addSecret(VarName(n))
+			passVar = VarName(n)
+		} else {
+			p.res.warn("auth", "basic auth password was not copied; pass it with --var %s=...", passVar)
 		}
-		p.authVars["basic_auth"] = true
-		p.res.Env.addSecret("basic_auth")
-		st.Headers = append(st.Headers, KV{Name: "Authorization", Value: "Basic {{basic_auth}}"})
-		p.res.warn("auth", "basic auth (username %s) mapped to `Authorization: Basic {{basic_auth}}`; pass --var basic_auth=$(printf '%%s' 'user:password' | base64)", renameVars(user, nil))
+		p.authVars[userVar] = true
+		p.authVars[passVar] = true
+		p.res.Env.addSecret(passVar)
+		st.Headers = append(st.Headers, KV{Name: "Authorization", Value: "Basic {{$basicAuth(" + userVar + ", " + passVar + ")}}"})
 	case "apikey":
 		key := auth.Params["key"]
 		if key == "" {

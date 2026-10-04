@@ -115,13 +115,16 @@ func TestImportPostmanRoundTrip(t *testing.T) {
 	if ship.Request.URL != "/orders/{{order_id}}/ship" || ship.Request.Data != "carrier=UPS+Ground&order_id={{order_id}}" {
 		t.Fatalf("ship order = %s %q", ship.Request.URL, ship.Request.Data)
 	}
-	if !containsString(ship.Request.Headers, "Authorization: Basic {{basic_auth}}") {
+	if !containsString(ship.Request.Headers, "Authorization: Basic {{$basicAuth(warehouse_user, warehouse_password)}}") {
 		t.Fatalf("basic auth not mapped: %q", ship.Request.Headers)
 	}
 
 	get := steps["orders.flow.md#get-order"]
 	if get.Request.URL != "/orders/{{order_id}}" {
 		t.Fatalf("path variable not converted: %s", get.Request.URL)
+	}
+	if strings.Join(get.Request.Asserts, "|") != "status >= 200|status < 300" {
+		t.Fatalf("request without a test script should default to a 2xx check, got %q", get.Request.Asserts)
 	}
 	health := steps["acme-store-api.flow.md#health"]
 	for _, h := range health.Request.Headers {
@@ -283,7 +286,7 @@ func TestImportCurlRoundTrip(t *testing.T) {
 			method:  "get",
 			url:     "/search",
 			queries: "q=hello world",
-			header:  "Authorization: Basic {{basic_auth}}",
+			header:  "Authorization: Basic {{$basicAuth(basic_username, basic_password)}}",
 		},
 		{
 			name:       "--json implies POST and headers",

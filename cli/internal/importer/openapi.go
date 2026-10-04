@@ -397,8 +397,9 @@ func applyOpenAPISecurity(doc *openapi3.T, op *openapi3.Operation, st *Step, res
 				st.Headers = append(st.Headers, KV{Name: "Authorization", Value: "Bearer {{token}}"})
 				res.Env.addSecret("token")
 			case "basic":
-				st.Headers = append(st.Headers, KV{Name: "Authorization", Value: "Basic {{basic_auth}}"})
-				res.Env.addSecret("basic_auth")
+				st.Headers = append(st.Headers, KV{Name: "Authorization", Value: basicAuthHeader})
+				res.Env.addRequired("basic_username")
+				res.Env.addSecret("basic_password")
 			default:
 				res.warn("security", "HTTP auth scheme %q not supported; add the header manually", s.Scheme)
 			}

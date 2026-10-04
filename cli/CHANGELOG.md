@@ -1,5 +1,20 @@
 # Kest CLI Changelog
 
+## Unreleased
+
+### New Features
+
+- **`{{$basicAuth(user, pass)}}` built-in** — base64-encodes two variables for an HTTP Basic `Authorization` header. `kest import` now emits it for Basic auth, so you pass the username and password with `--var` instead of precomputing an encoded value.
+- **Default success check for imported Postman requests** — requests with no Postman test script get `status >= 200` / `status < 300`, like curl and OpenAPI imports.
+
+### Changes
+
+- **`kest generate` is deprecated** — it still works but prints a notice; use `kest import openapi`.
+
+### Fixes
+
+- **Built-in variables in flows** — steps using `{{$uuid}}`, `{{$timestamp}}`, `{{$env.NAME}}` and other built-ins no longer fail with "required variable not provided".
+
 ## v0.7.5 (2026-04-30)
 
 ### New Features

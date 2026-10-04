@@ -318,9 +318,11 @@ func ImportCurl(command string, opts CurlOptions) (*Result, error) {
 		st.Headers = append(st.Headers, KV{Name: h.Name, Value: value})
 	}
 	if userCreds != "" {
-		st.Headers = append(st.Headers, KV{Name: "Authorization", Value: "Basic {{basic_auth}}"})
-		res.Env.addSecret("basic_auth")
-		res.warn(loc, "-u credentials mapped to `Authorization: Basic {{basic_auth}}`; pass --var basic_auth=$(printf '%%s' 'user:password' | base64)")
+		user, _, _ := strings.Cut(userCreds, ":")
+		st.Headers = append(st.Headers, KV{Name: "Authorization", Value: basicAuthHeader})
+		res.Env.setVar("basic_username", user)
+		res.Env.addSecret("basic_password")
+		res.warn(loc, "-u password was not copied; pass it with --var basic_password=...")
 	}
 	if jsonBody {
 		if !hasCT {

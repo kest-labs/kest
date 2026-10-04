@@ -133,10 +133,17 @@ func isKestBuiltin(name string) bool {
 }
 
 // referencedVars lists non-builtin variable names used in s.
+// basicAuthArgsRe extracts the variable names passed to {{$basicAuth(user, pass)}}.
+var basicAuthArgsRe = regexp.MustCompile(`^\$basicAuth\(\s*([^,\s()]+)\s*,\s*([^,\s()]+)\s*\)$`)
+
 func referencedVars(s string) []string {
 	var out []string
 	for _, m := range placeholderRe.FindAllStringSubmatch(s, -1) {
 		name := strings.TrimSpace(m[1])
+		if args := basicAuthArgsRe.FindStringSubmatch(name); args != nil {
+			out = append(out, args[1], args[2])
+			continue
+		}
 		if strings.HasPrefix(name, "$") || strings.TrimSpace(m[2]) != "" {
 			continue
 		}
