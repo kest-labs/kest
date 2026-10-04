@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kest-labs/kest/api/pkg/env"
@@ -26,6 +27,7 @@ type Config struct {
 	Tracing    TracingConfig
 	ClickHouse ClickHouseConfig
 	Runner     RunnerConfig
+	RateLimit  RateLimitConfig
 }
 
 type AppConfig struct {
@@ -46,6 +48,9 @@ type ServerConfig struct {
 	ReadTimeout    int
 	WriteTimeout   int
 	RequestTimeout int // Request timeout in seconds (for middleware)
+	// TrustedProxies lists proxy IPs/CIDRs whose X-Forwarded-For is trusted
+	// for the client IP (TRUSTED_PROXIES). Empty keeps gin's default.
+	TrustedProxies []string
 }
 
 // MiddlewareConfig holds middleware configuration
@@ -75,6 +80,7 @@ func (d DatabaseConfig) DBName() string {
 }
 
 type RedisConfig struct {
+	Enabled  bool // REDIS_ENABLED, default false
 	Host     string
 	Port     int
 	Password string
@@ -148,6 +154,18 @@ type RunnerConfig struct {
 	MaxResponseBytes int64
 }
 
+// RateLimitConfig configures request rate limiting.
+type RateLimitConfig struct {
+	Enabled bool   // RATE_LIMIT_ENABLED, default true
+	Store   string // RATE_LIMIT_STORE: "memory" or "redis"; default redis when REDIS_ENABLED
+	// Auth endpoints (login, register, password reset, CLI token creation), per IP.
+	AuthMax    int           // RATE_LIMIT_AUTH_MAX, default 10
+	AuthWindow time.Duration // RATE_LIMIT_AUTH_WINDOW, default 1m
+	// Request/flow/test-case run endpoints, per user (or per IP when anonymous).
+	RunMax    int           // RATE_LIMIT_RUN_MAX, default 60
+	RunWindow time.Duration // RATE_LIMIT_RUN_WINDOW, default 1m
+}
+
 // ClickHouseConfig holds ClickHouse configuration
 type ClickHouseConfig struct {
 	Enabled   bool
@@ -177,11 +195,12 @@ func Load() (*Config, error) {
 			JWTExpire:   time.Duration(expireDays) * 24 * time.Hour,
 		},
 		Server: ServerConfig{
-			Host:         env.Get("SERVER_HOST", ""),
-			Port:         resolveServerPort(),
-			Mode:         env.Get("GIN_MODE", "debug"),
-			ReadTimeout:  env.GetInt("SERVER_READ_TIMEOUT", 60),
-			WriteTimeout: env.GetInt("SERVER_WRITE_TIMEOUT", 60),
+			Host:           env.Get("SERVER_HOST", ""),
+			Port:           resolveServerPort(),
+			Mode:           env.Get("GIN_MODE", "debug"),
+			ReadTimeout:    env.GetInt("SERVER_READ_TIMEOUT", 60),
+			WriteTimeout:   env.GetInt("SERVER_WRITE_TIMEOUT", 60),
+			TrustedProxies: env.GetSlice("TRUSTED_PROXIES"),
 		},
 		Database: DatabaseConfig{
 			Enabled:      env.GetBool("DB_ENABLED", true),
@@ -197,6 +216,7 @@ func Load() (*Config, error) {
 			MaxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 100),
 		},
 		Redis: RedisConfig{
+			Enabled:  env.GetBool("REDIS_ENABLED", false),
 			Host:     env.Get("REDIS_HOST", "localhost"),
 			Port:     env.GetInt("REDIS_PORT", 6379),
 			Password: env.Get("REDIS_PASSWORD", ""),
@@ -263,6 +283,19 @@ func Load() (*Config, error) {
 	}
 
 	logWarnings(NormalizeCORS(&cfg.CORS, !cfg.IsLocalDevelopment()))
+
+	defaultStore := "memory"
+	if cfg.Redis.Enabled {
+		defaultStore = "redis"
+	}
+	cfg.RateLimit = RateLimitConfig{
+		Enabled:    env.GetBool("RATE_LIMIT_ENABLED", true),
+		Store:      strings.ToLower(env.Get("RATE_LIMIT_STORE", defaultStore)),
+		AuthMax:    env.GetInt("RATE_LIMIT_AUTH_MAX", 10),
+		AuthWindow: env.GetDuration("RATE_LIMIT_AUTH_WINDOW", time.Minute),
+		RunMax:     env.GetInt("RATE_LIMIT_RUN_MAX", 60),
+		RunWindow:  env.GetDuration("RATE_LIMIT_RUN_WINDOW", time.Minute),
+	}
 
 	cfg.Runner.MaxRedirects = env.GetInt("RUNNER_MAX_REDIRECTS", 10)
 	cfg.Runner.MaxResponseBytes = int64(env.GetInt("RUNNER_MAX_RESPONSE_MB", 10)) * 1024 * 1024
