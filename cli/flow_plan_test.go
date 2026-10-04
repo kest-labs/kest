@@ -72,6 +72,14 @@ func TestMermaidImplicitEdgesForUntouchedNeighbours(t *testing.T) {
 	}
 }
 
+// A bare ``` fence (no language) used to panic the parser.
+func TestParseFlowMarkdownBareFenceDoesNotPanic(t *testing.T) {
+	doc, _ := ParseFlowDocument("# Notes\n\n```\nplain text\n```\n\n```step\n@id a\nGET /a\n```\n")
+	if len(doc.Steps) != 1 || doc.Steps[0].ID != "a" {
+		t.Fatalf("steps = %+v", doc.Steps)
+	}
+}
+
 func TestMermaidDrawsImplicitSequentialEdges(t *testing.T) {
 	doc, _ := ParseFlowDocument(syntheticFlow(3, false))
 	out := FlowToMermaid(doc)

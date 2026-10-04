@@ -23,7 +23,7 @@ func lintPlan(f *lintFile) []FlowPlanEntry {
 	if f.isFlowMode() {
 		return BuildFlowPlan(f.Doc)
 	}
-	var plan []FlowPlanEntry
+	plan := []FlowPlanEntry{}
 	for i, kb := range f.Legacy {
 		opts, err := ParseBlock(kb.Raw)
 		e := FlowPlanEntry{Phase: "step", ID: fmt.Sprintf("step-%d", i+1)}
@@ -265,6 +265,10 @@ func planLegacyConversion(f *lintFile) legacyConversion {
 		return conv
 	}
 	for _, b := range conv.Blocks {
+		if first := strings.TrimSpace(strings.SplitN(b.Raw, "\n", 2)[0]); strings.HasPrefix(first, "#") || strings.HasPrefix(first, "@") {
+			conv.Reason = fmt.Sprintf("the block at line %d starts with a comment/directive line: the legacy parser sends it as the request line, the step format skips it", b.LineNum)
+			return conv
+		}
 		opts, err := ParseBlock(b.Raw)
 		if err != nil {
 			conv.Reason = fmt.Sprintf("the block at line %d is not a valid request (%v)", b.LineNum, err)
@@ -273,12 +277,18 @@ func planLegacyConversion(f *lintFile) legacyConversion {
 		// The step parser trims the request, the legacy parser keeps a
 		// trailing newline in the body. That is invisible for JSON but could
 		// matter for other payloads, so only JSON bodies may differ.
-		if trimmed := strings.TrimSpace(opts.Data); trimmed != opts.Data && !json.Valid([]byte(trimmed)) {
+		if trimmed := strings.TrimSpace(opts.Data); trimmed != opts.Data && !looksLikeJSON(trimmed) {
 			conv.Reason = fmt.Sprintf("the body of the block at line %d has trailing whitespace that the step format would drop", b.LineNum)
 			return conv
 		}
 	}
 	return conv
+}
+
+// looksLikeJSON is true for valid JSON and for JSON with {{placeholders}} in
+// value position, which is not valid JSON until interpolated.
+func looksLikeJSON(s string) bool {
+	return json.Valid([]byte(s)) || strings.HasPrefix(s, "{") || strings.HasPrefix(s, "[")
 }
 
 var kestFenceRe = regexp.MustCompile("(?i)^(\\s*(?:```|~~~)\\s*)kest\\b")

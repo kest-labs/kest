@@ -34,7 +34,11 @@ func ParseFlowMarkdown(content string) []FlowBlock {
 			if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
 				fence = trimmed[:3]
 				info := strings.TrimSpace(trimmed[3:])
-				kind = strings.ToLower(strings.Fields(info + " ")[0])
+				// A bare fence (no info string) is an ordinary code block: kind "".
+				kind = ""
+				if fields := strings.Fields(info); len(fields) > 0 {
+					kind = strings.ToLower(fields[0])
+				}
 				inBlock = true
 				blockStartLine = lineNum
 				current.Reset()

@@ -31,7 +31,7 @@ type FlowPlanEntry struct {
 // BuildFlowPlan returns the execution plan of doc: setup steps, then the
 // steps in dependency order (see orderFlowSteps), then teardown steps.
 func BuildFlowPlan(doc FlowDoc) []FlowPlanEntry {
-	var plan []FlowPlanEntry
+	plan := []FlowPlanEntry{}
 	add := func(phase string, steps []FlowStep) {
 		for _, s := range steps {
 			captures := append(append([]string{}, s.Request.Captures...), s.Exec.Captures...)
@@ -94,13 +94,24 @@ var flowPlanCmd = &cobra.Command{
 	Hidden: true,
 	Args:   cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		doc, _, err := loadFlowDocument(args[0])
+		data, err := os.ReadFile(args[0])
 		if err != nil {
 			return &ExitError{Code: ExitConfigError, Err: err}
 		}
+		f := newLintFile(args[0], string(data))
+		plan := lintPlan(f) // legacy files get their legacy-block plan
+		if f.isFlowMode() {
+			var doc FlowDoc
+			var lerr error
+			quietly(func() { doc, _, lerr = loadFlowDocument(args[0]) }) // parser warnings must not corrupt the JSON
+			if lerr != nil {
+				return &ExitError{Code: ExitConfigError, Err: lerr}
+			}
+			plan = BuildFlowPlan(doc)
+		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		return enc.Encode(BuildFlowPlan(doc))
+		return enc.Encode(plan)
 	},
 }
 

@@ -313,7 +313,7 @@ func TestLegacyFormatNotConvertedWhenUnfaithful(t *testing.T) {
 	badBlock := "```kest\nnonsense\n```\n"
 	textBody := "```kest\nPOST /a\nContent-Type: text/plain\n\nhello\n\n[Asserts]\nstatus == 200\n```\n"
 	withID := "```flow\n@flow id=x\n```\n\n```kest\nGET /a\n```\n"
-	for name, src := range map[string]string{"mixed": mixed, "json": withJSON, "bad": badBlock, "id": withID, "text": textBody} {
+	for name, src := range map[string]string{"mixed": mixed, "json": withJSON, "bad": badBlock, "id": withID, "text": textBody, "comment": "```kest\n# explain\nGET /a\n```\n"} {
 		got := lintOne(t, src, "legacy-format")
 		if len(got) != 1 || got[0].Fixable || !strings.Contains(got[0].Message, "cannot be converted automatically") {
 			t.Errorf("%s: findings = %+v", name, got)
